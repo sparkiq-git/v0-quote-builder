@@ -1,0 +1,886 @@
+"use client"
+import { useState, useEffect, type ReactNode } from "react"
+import { Card, CardContent } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
+import { Plane, Info, Mail, Phone } from "lucide-react"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Badge } from "@/components/ui/badge"
+
+import { PublicQuoteOptionCard } from "@/components/quotes/public-quote-option-card"
+import { useMockStore } from "@/lib/mock/store"
+import { formatDate, formatCurrency } from "@/lib/utils/format"
+import { useToast } from "@/hooks/use-toast"
+
+interface PublicQuotePageProps {
+  params: { token: string }
+}
+
+/* ---------- Primitives ---------- */
+
+function SectionCard({
+  children,
+  className = "",
+  contentClassName = "",
+}: {
+  children: ReactNode
+  className?: string
+  contentClassName?: string
+}) {
+  return (
+    <Card className={`shadow-sm ${className}`}>
+      <CardContent className={`pt-0 ${contentClassName}`}>{children}</CardContent>
+    </Card>
+  )
+}
+
+/* ---------- Connector ---------- */
+
+function ElegantConnector() {
+  return (
+    <div className="relative w-full h-4 md:h-5 overflow-hidden select-none" aria-hidden="true">
+      <span className="absolute top-1/2 -translate-y-1/2 left-[12%] right-[55%] h-[2px] bg-gray-200 rounded" />
+      <span className="absolute top-1/2 -translate-y-1/2 left-[55%] right-[12%] h-[2px] bg-gray-200 rounded" />
+      <svg
+        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+        width="14"
+        height="10"
+        viewBox="0 0 14 10"
+        fill="none"
+        aria-hidden="true"
+      >
+        <path d="M1 5h6.5M7 2l4 3-4 3" stroke="#9CA3AF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+      <span className="absolute left-[7%] top-1/2 -translate-y-1/2 w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-blue-600" />
+      <span className="absolute right-[7%] top-1/2 -translate-y-1/2 w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-blue-600" />
+    </div>
+  )
+}
+
+/* ---------- Helpers ---------- */
+
+function airportLabel(code?: string) {
+  if (!code) return ""
+  switch (code) {
+    case "MIA":
+      return "Miami, FL"
+    case "TEB":
+      return "Teterboro, NJ"
+    case "SFO":
+      return "San Francisco, CA"
+    case "BOS":
+      return "Boston, MA"
+    case "FXE":
+      return "Fort Lauderdale Exec, FL"
+    default:
+      return code
+  }
+}
+
+function TripInfoList({
+  date,
+  passengers,
+  origin,
+  destination,
+}: {
+  date: string
+  passengers: number
+  origin: string
+  destination: string
+}) {
+  return (
+    <div className="space-y-1 text-xs leading-5">
+      <div>
+        <span className="font-medium">Date:</span> {date}
+      </div>
+      <div>
+        <span className="font-medium">Passengers:</span> {passengers}
+      </div>
+      <div>
+        <span className="font-medium">Origin:</span> {airportLabel(origin)}
+      </div>
+      <div>
+        <span className="font-medium">Destination:</span> {airportLabel(destination)}
+      </div>
+    </div>
+  )
+}
+
+/* ---------- Info control ---------- */
+
+function TripInfoControl({
+  date,
+  passengers,
+  origin,
+  destination,
+  dialogId,
+}: {
+  date: string
+  passengers: number
+  origin: string
+  destination: string
+  dialogId: string
+}) {
+  return (
+    <>
+      {/* Desktop */}
+      <div className="hidden md:inline-flex">
+        <Popover>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              className="inline-flex h-6 w-6 items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-300"
+              aria-label="Trip details"
+            >
+              <Info className="h-3.5 w-3.5 text-gray-500" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent side="left" align="center" sideOffset={8} className="w-64 p-3 border bg-white shadow-sm">
+            <TripInfoList date={date} passengers={passengers} origin={origin} destination={destination} />
+          </PopoverContent>
+        </Popover>
+      </div>
+
+      {/* Mobile */}
+      <div className="md:hidden">
+        <Dialog>
+          <DialogTrigger asChild>
+            <button
+              type="button"
+              className="inline-flex h-7 w-7 items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-300"
+              aria-label="Trip details"
+            >
+              <Info className="h-3.5 w-3.5 text-gray-500" />
+            </button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[360px]" aria-describedby={dialogId}>
+            <DialogHeader>
+              <DialogTitle>Trip details</DialogTitle>
+              <DialogDescription id={dialogId}>Overview for this leg.</DialogDescription>
+            </DialogHeader>
+            <TripInfoList date={date} passengers={passengers} origin={origin} destination={destination} />
+            <DialogFooter />
+          </DialogContent>
+        </Dialog>
+      </div>
+    </>
+  )
+}
+
+/* ---------- Leg Row ---------- */
+
+function LegRow({ leg, index }: { leg: any; index: number }) {
+  const codeCls =
+    "font-extrabold leading-none tracking-tight uppercase whitespace-nowrap text-[clamp(0.95rem,1.6vw,1.05rem)]"
+
+  return (
+    <div className="px-2 py-1.5 grid items-center gap-x-2 gap-y-1 [grid-template-columns:max-content_1fr_max-content_auto]">
+      {/* Date */}
+      <div className="col-span-4 row-start-1 text-xs text-gray-500 mt-0.5">{formatDate(leg.departureDate)}</div>
+
+      {/* Origin */}
+      <div className="col-start-1 row-start-2">
+        <div className={codeCls}>{leg.origin}</div>
+      </div>
+
+      {/* Connector */}
+      <div className="col-start-2 row-start-2 min-w-0">
+        <ElegantConnector />
+      </div>
+
+      {/* Destination */}
+      <div className="col-start-3 row-start-2 justify-self-end">
+        <div className={codeCls}>{leg.destination}</div>
+      </div>
+
+      {/* Info */}
+      <div className="col-start-4 row-span-2 self-center justify-self-end pr-1 md:pr-2">
+        <TripInfoControl
+          date={formatDate(leg.departureDate)}
+          passengers={leg.passengers}
+          origin={leg.origin}
+          destination={leg.destination}
+          dialogId={`leg-${index + 1}-trip-info`}
+        />
+      </div>
+    </div>
+  )
+}
+
+/* ===================================================================== */
+
+export default function PublicQuotePage({ params }: PublicQuotePageProps) {
+  const { getQuoteByToken, dispatch, createItineraryFromQuote, getItineraryByQuoteId } = useMockStore()
+  const { toast } = useToast()
+  const [hasViewed, setHasViewed] = useState(false)
+  const [isDeclineModalOpen, setIsDeclineModalOpen] = useState(false)
+  const [declineReason, setDeclineReason] = useState("")
+  const [declineNotes, setDeclineNotes] = useState("")
+  const [showValidationAlert, setShowValidationAlert] = useState(false)
+  const [isLocked, setIsLocked] = useState(false)
+
+  const quote = getQuoteByToken(params.token)
+  const existingItinerary = quote ? getItineraryByQuoteId(quote.id) : null
+
+  useEffect(() => {
+    if (quote && !hasViewed) {
+      dispatch({
+        type: "ADD_EVENT",
+        payload: {
+          id: `event-${Date.now()}`,
+          type: "quote_viewed",
+          quoteId: quote.id,
+          timestamp: new Date().toISOString(),
+        },
+      })
+      setHasViewed(true)
+    }
+  }, [quote, hasViewed, dispatch])
+
+  useEffect(() => {
+    const isSubmitted =
+      quote?.status === "prepare_payment" || quote?.status === "awaiting_payment" || quote?.status === "paid"
+    const isDeclined = quote?.status === "declined"
+    const locked = Boolean(isSubmitted || isDeclined)
+    setIsLocked(locked)
+
+    if (quote && quote.options.length === 1 && !quote.selectedOptionId && !locked) {
+      handleSelectOption(quote.options[0].id)
+    }
+
+    if (quote?.status === "paid" && !existingItinerary) {
+      try {
+        const itinerary = createItineraryFromQuote(quote.id)
+        toast({
+          title: "Itinerary Created",
+          description: "Your itinerary has been automatically created and is ready for viewing.",
+        })
+      } catch (error) {
+        console.error("Failed to create itinerary:", error)
+      }
+    }
+  }, [quote, existingItinerary, createItineraryFromQuote, toast])
+
+  const selectedOption = quote.options.find((o) => o.id === quote.selectedOptionId) || null
+
+  const handleSelectOption = (optionId: string) => {
+    if (isLocked) return
+    setShowValidationAlert(false)
+    dispatch({ type: "UPDATE_QUOTE", payload: { id: quote.id, updates: { selectedOptionId: optionId } } })
+    dispatch({
+      type: "ADD_EVENT",
+      payload: {
+        id: `event-${Date.now()}`,
+        type: "option_selected",
+        quoteId: quote.id,
+        timestamp: new Date().toISOString(),
+        metadata: { optionId },
+      },
+    })
+    toast({
+      title: "Option selected",
+      description: "Your selection has been recorded. We'll be in touch soon to finalize your booking.",
+    })
+  }
+
+  const handleSubmitQuote = () => {
+    if (!quote.selectedOptionId) {
+      setShowValidationAlert(true)
+      toast({
+        title: "Aircraft selection required",
+        description: "You must select an aircraft option before requesting to book.",
+        variant: "destructive",
+      })
+      setTimeout(() => setShowValidationAlert(false), 5000)
+      return
+    }
+    dispatch({ type: "UPDATE_QUOTE", payload: { id: quote.id, updates: { status: "prepare_payment" } } })
+    dispatch({
+      type: "ADD_EVENT",
+      payload: {
+        id: `event-${Date.now()}`,
+        type: "quote_submitted",
+        quoteId: quote.id,
+        timestamp: new Date().toISOString(),
+        metadata: { selectedOptionId: quote.selectedOptionId },
+      },
+    })
+    toast({
+      title: "Quote submitted successfully!",
+      description:
+        "We've received your quote submission. The contract and payment details will be sent to your email shortly.",
+    })
+  }
+
+  const handleDeclineQuote = () => {
+    if (!declineReason) {
+      toast({
+        title: "Reason required",
+        description: "Please select a reason for declining the quote.",
+        variant: "destructive",
+      })
+      return
+    }
+    dispatch({ type: "UPDATE_QUOTE", payload: { id: quote.id, updates: { status: "declined" } } })
+    dispatch({
+      type: "ADD_EVENT",
+      payload: {
+        id: `event-${Date.now()}`,
+        type: "quote_declined",
+        quoteId: quote.id,
+        timestamp: new Date().toISOString(),
+        metadata: { reason: declineReason, notes: declineNotes },
+      },
+    })
+    toast({
+      title: "Quote declined",
+      description: "Your decline has been recorded and the broker has been notified. Thank you for your time.",
+    })
+    setIsDeclineModalOpen(false)
+    setDeclineReason("")
+    setDeclineNotes("")
+  }
+
+  // REAL DATA (from store) wired into props/sections
+  const servicesTotal = quote.services.reduce((sum, s) => sum + s.amount, 0)
+  const selectedOptionTotal = selectedOption
+    ? selectedOption.operatorCost + selectedOption.commission + selectedOption.tax
+    : 0
+  const grandTotal = selectedOptionTotal + servicesTotal
+
+  const displayOptions =
+    (["prepare_payment", "awaiting_payment", "paid"] as const).includes(quote.status) && quote.selectedOptionId
+      ? [
+          ...quote.options.filter((o) => o.id === quote.selectedOptionId),
+          ...quote.options.filter((o) => o.id !== quote.selectedOptionId),
+        ]
+      : quote.options
+
+  const getStatusDisplay = (status: string) => {
+    switch (status) {
+      case "pending_acceptance":
+        return { text: "Pending Your Response", variant: "outline" as const }
+      case "prepare_payment":
+        return { text: "Contract Being Sent", variant: "default" as const }
+      case "awaiting_payment":
+        return { text: "Contract Sent - Awaiting Payment", variant: "secondary" as const }
+      case "paid":
+        return { text: "Paid & Confirmed", variant: "default" as const }
+      case "declined":
+        return { text: "Declined", variant: "destructive" as const }
+      case "expired":
+        return { text: "Expired", variant: "secondary" as const }
+      default:
+        return { text: status.replace("_", " "), variant: "outline" as const }
+    }
+  }
+
+  const statusDisplay = getStatusDisplay(quote.status)
+
+  const getButtonText = () => {
+    if (!isLocked) {
+      return quote.selectedOptionId ? "Request to Book" : "Select an aircraft to book"
+    }
+    switch (quote.status) {
+      case "prepare_payment":
+        return "Contract Being Sent"
+      case "awaiting_payment":
+        return "Contract Sent – Awaiting Payment"
+      case "paid":
+        return "Paid & Confirmed"
+      case "declined":
+        return "Quote Declined"
+      case "expired":
+        return "Quote Expired"
+      default:
+        return "Contract sent - awaiting payment"
+    }
+  }
+
+  const getButtonStyle = () => {
+    if (!isLocked) {
+      return quote.selectedOptionId
+        ? { background: "#1e40af !important", color: "#ffffff !important" }
+        : { background: "#e5e7eb !important", color: "#4b5563 !important" }
+    }
+    switch (quote.status) {
+      case "paid":
+        return { background: "#059669 !important", color: "#ffffff !important" }
+      case "declined":
+      case "expired":
+        return { background: "#dc2626 !important", color: "#ffffff !important" }
+      default:
+        return { background: "#6b7280 !important", color: "#ffffff !important" }
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 lg:h-screen lg:overflow-hidden overflow-x-hidden">
+      {/* ========================= MOBILE (REORDERED) ========================= */}
+      <div className="lg:hidden">
+        <div className="p-4 space-y-3">
+          <SectionCard>
+            {/* Branding */}
+            <div className="flex items-center gap-2">
+              <img src="/images/aero-iq-logo.png" alt="Aero IQ" className="h-5 w-auto mb-3" />
+            </div>
+
+            {/* Customer */}
+            <div className="space-y-0">
+              <div>
+                <p className="font-medium text-sm">{quote.customer?.name ?? "Fernando Arriaga"}</p>
+                <p className="text-xs text-gray-600">{quote.customer?.company ?? "Spark IQ"}</p>
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <Mail className="h-4 w-4 text-gray-500" />
+                  <span className="text-xs">{quote.customer?.email ?? "farriaga@sparkiq.io"}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Phone className="h-4 w-4 text-gray-500" />
+                  <span className="text-xs">{quote.customer?.phone ?? "619-606-1123"}</span>
+                </div>
+              </div>
+            </div>
+          </SectionCard>
+
+          {/* Trip Summary directly under Customer */}
+          <SectionCard>
+            <div className="divide-y divide-gray-200">
+              <p className="font-medium text-sm">Trip Summary</p>
+              {quote.legs.map((leg, index) => (
+                <LegRow key={index} leg={leg} index={index} />
+              ))}
+            </div>
+          </SectionCard>
+
+          {/* Additional Services (list) */}
+          {quote.services.length > 0 && (
+            <SectionCard>
+              <p className="font-medium text-sm">Additional Services</p>
+              <ul className="space-y-0 text-xs">
+                {quote.services.map((service) => (
+                  <li key={service.id} className="text-gray-700">
+                    <span className="font-medium">{service.name}</span>
+                    {service.description && <span className="text-gray-500"> — {service.description}</span>}
+                  </li>
+                ))}
+              </ul>
+            </SectionCard>
+          )}
+
+          {/* Total Trip Cost */}
+          <SectionCard>
+            <div className="space-y-0">
+              <p className="font-medium text-sm mb-2">Total Trip Cost</p>
+
+              <div className="grid grid-cols-2 items-center">
+                <span className="text-gray-700 text-xs">Selected Aircraft</span>
+                <span className="font-medium text-right text-xs">{formatCurrency(selectedOptionTotal)}</span>
+              </div>
+
+              {quote.services.map((s) => (
+                <div key={s.id} className="grid grid-cols-2 items-center text-xs">
+                  <span className="text-gray-600">{s.name}</span>
+                  <span className="text-right">{formatCurrency(s.amount)}</span>
+                </div>
+              ))}
+
+              <div className="grid grid-cols-2 items-center font-bold text-sm pt-3 border-t border-gray-200">
+                <span>Grand Total</span>
+                <span className="text-right">{formatCurrency(grandTotal)}</span>
+              </div>
+            </div>
+          </SectionCard>
+
+          {/* Aircraft Options (moved AFTER totals on mobile) */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-gray-600 text-xs">Aircraft Options</p>
+              <Badge variant={statusDisplay.variant} className="text-xs">
+                {statusDisplay.text}
+              </Badge>
+            </div>
+            {displayOptions.map((option) => (
+              <div key={option.id} className="w-full">
+                <PublicQuoteOptionCard
+                  option={option}
+                  isSelected={option.id === quote.selectedOptionId}
+                  isLocked={isLocked}
+                  onSelect={() => handleSelectOption(option.id)}
+                  primaryColor={quote.branding.primaryColor}
+                  hasSelectedOption={!!quote.selectedOptionId}
+                />
+              </div>
+            ))}
+          </div>
+
+          {/* Mobile Terms (visible on phones) */}
+          {quote.options.length >= 1 && quote.terms && (
+            <SectionCard className="mt-2">
+              <p className="text-xs text-muted-foreground whitespace-pre-wrap">{quote.terms}</p>
+            </SectionCard>
+          )}
+
+          {/* Actions */}
+          <div
+            className="
+              sticky bottom-0 -mx-6 px-6 pt-3 pb-4 z-50
+              bg-white/50 dark:bg-gray-950/50
+              supports-[backdrop-filter]:backdrop-blur
+              supports-[backdrop-filter]:bg-white/30
+              dark:supports-[backdrop-filter]:bg-gray-950/30
+              before:content-[''] before:absolute before:inset-x-0 before:-top-6 before:h-6
+              before:bg-gradient-to-t before:from-white/50 before:to-transparent
+              dark:before:from-gray-950/50 dark:before:to-transparent
+            "
+          >
+            <div className="space-y-3 pb-6">
+              {quote.status === "paid" && existingItinerary && (
+                <Button asChild className="w-full !bg-blue-600 hover:!bg-blue-700 !text-white !font-semibold">
+                  <a href={`/itineraries/${existingItinerary.publicHash}`} target="_blank" rel="noopener noreferrer">
+                    View Your Itinerary
+                  </a>
+                </Button>
+              )}
+
+              <Button
+                onClick={quote.selectedOptionId ? handleSubmitQuote : undefined}
+                disabled={isLocked || !quote.selectedOptionId}
+                className={`w-full hover:opacity-90 transition-opacity !font-semibold ${
+                  !isLocked && quote.selectedOptionId ? "!bg-blue-700" : ""
+                }`}
+                style={{
+                  ...getButtonStyle(),
+                  borderColor: "transparent !important",
+                }}
+              >
+                {getButtonText()}
+              </Button>
+
+              {/* Decline dialog (mobile) */}
+              <Dialog open={isDeclineModalOpen} onOpenChange={setIsDeclineModalOpen}>
+                <DialogTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full border-red-400 text-red-600 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950 bg-transparent"
+                  >
+                    Decline Quote
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[425px] mx-4">
+                  <DialogHeader>
+                    <DialogTitle>Decline Quote</DialogTitle>
+                    <DialogDescription>
+                      Please let us know why you're declining this quote. This helps us improve our service.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="grid gap-4 py-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="reason">Reason for declining *</Label>
+                      <Select value={declineReason} onValueChange={setDeclineReason}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a reason" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="too_expensive">Too expensive</SelectItem>
+                          <SelectItem value="wrong_dates">Wrong dates or timing</SelectItem>
+                          <SelectItem value="wrong_info">Incorrect information</SelectItem>
+                          <SelectItem value="found_alternative">Found alternative option</SelectItem>
+                          <SelectItem value="trip_cancelled">Trip cancelled</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="notes">Special notes (optional)</Label>
+                      <Textarea
+                        id="notes"
+                        placeholder="Any additional feedback..."
+                        value={declineNotes}
+                        onChange={(e) => setDeclineNotes(e.target.value)}
+                        rows={3}
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsDeclineModalOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      onClick={() => {
+                        if (!declineReason) return
+                        setIsDeclineModalOpen(false)
+                      }}
+                    >
+                      Decline Quote
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ========================= DESKTOP ========================= */}
+      <div className="hidden lg:block h-screen overflow-hidden overflow-x-hidden">
+        <div className="absolute inset-0 z-10">
+          <div className="h-full flex">
+            {/* LEFT PANE (full height scroll) */}
+            <div className="w-1/4 h-full overflow-y-auto overflow-x-hidden">
+              <div className="relative h-full p-6 pb-28 space-y-3">
+                <SectionCard>
+                  {/* Branding */}
+                  <div className="flex items-center gap-2 mb-5">
+                    <img src="/images/aero-iq-logo.png" alt="Aero IQ" className="h-5 w-auto" />
+                  </div>
+
+                  {/* Customer */}
+                  <div className="space-y-0">
+                    <div>
+                      <p className="font-medium text-sm">{quote.customer?.name ?? "Fernando Arriaga"}</p>
+                      <p className="text-xs text-gray-600">{quote.customer?.company ?? "Spark IQ"}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <Mail className="h-4 w-4 text-gray-500" />
+                        <span className="text-xs">{quote.customer?.email ?? "farriaga@sparkiq.io"}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Phone className="h-4 w-4 text-gray-500" />
+                        <span className="text-xs">{quote.customer?.phone ?? "619-606-1123"}</span>
+                      </div>
+                    </div>
+                  </div>
+                </SectionCard>
+
+                {/* Trip Summary */}
+                <SectionCard>
+                  <p className="font-medium text-sm mb-2">Trip Summary</p>
+                  <div className="divide-y divide-gray-200">
+                    {quote.legs.map((leg, index) => (
+                      <LegRow key={index} leg={leg} index={index} />
+                    ))}
+                  </div>
+                </SectionCard>
+
+                {/* Additional Services */}
+                {quote.services.length > 0 && (
+                  <SectionCard>
+                    <p className="font-medium text-sm mb-2">Additional Services</p>
+                    <ul className="space-y-0 text-xs">
+                      {quote.services.map((service) => (
+                        <li key={service.id} className="text-gray-700">
+                          <span className="font-medium">{service.name}</span>
+                          {service.description && <span className="text-gray-500"> — {service.description}</span>}
+                        </li>
+                      ))}
+                    </ul>
+                  </SectionCard>
+                )}
+
+                {/* Total Trip Cost */}
+                <SectionCard>
+                  <div className="space-y-0">
+                    <p className="font-medium text-sm mb-2">Total Trip Cost</p>
+                    <div className="grid grid-cols-2 items-center">
+                      <span className="text-gray-700 text-xs">Selected Aircraft</span>
+                      <span className="font-medium text-right text-xs">{formatCurrency(selectedOptionTotal)}</span>
+                    </div>
+
+                    {quote.services.map((s) => (
+                      <div key={s.id} className="grid grid-cols-2 items-center text-xs">
+                        <span className="text-gray-600">{s.name}</span>
+                        <span className="text-right">{formatCurrency(s.amount)}</span>
+                      </div>
+                    ))}
+
+                    <div className="grid grid-cols-2 items-center font-bold text-sm pt-3 border-t border-gray-200">
+                      <span>Grand Total</span>
+                      <span className="text-right">{formatCurrency(grandTotal)}</span>
+                    </div>
+                  </div>
+                </SectionCard>
+
+                {/* FULL-BLEED STICKY ACTIONS */}
+                <div
+                  className="
+                    sticky bottom-0 -mx-6 px-6 pt-3 pb-4 z-50
+                    bg-white/50 dark:bg-gray-950/50
+                    supports-[backdrop-filter]:backdrop-blur
+                    supports-[backdrop-filter]:bg-white/30
+                    dark:supports-[backdrop-filter]:bg-gray-950/30
+                    before:content-[''] before:absolute before:inset-x-0 before:-top-6 before:h-6
+                    before:bg-gradient-to-t before:from-white/50 before:to-transparent
+                    dark:before:from-gray-950/50 dark:before:to-transparent
+                  "
+                >
+                  <div className="space-y-3">
+                    {quote.status === "paid" && existingItinerary && (
+                      <Button asChild className="w-full !bg-blue-600 hover:!bg-blue-700 !text-white !font-semibold">
+                        <a
+                          href={`/itineraries/${existingItinerary.publicHash}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          View Your Itinerary
+                        </a>
+                      </Button>
+                    )}
+
+                    <Button
+                      onClick={quote.selectedOptionId ? handleSubmitQuote : undefined}
+                      disabled={isLocked || !quote.selectedOptionId}
+                      className={`w-full hover:opacity-90 transition-opacity relative z-50 !font-semibold ${
+                        !isLocked && quote.selectedOptionId ? "!bg-blue-700" : ""
+                      }`}
+                      style={{
+                        ...getButtonStyle(),
+                        borderColor: "transparent !important",
+                      }}
+                    >
+                      {getButtonText()}
+                    </Button>
+
+                    {/* Desktop Decline Quote */}
+                    <Dialog open={isDeclineModalOpen} onOpenChange={setIsDeclineModalOpen}>
+                      <DialogTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className="w-full border-red-400 text-red-600 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950 bg-transparent"
+                        >
+                          Decline Quote
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-[425px] mx-4">
+                        <DialogHeader>
+                          <DialogTitle>Decline Quote</DialogTitle>
+                          <DialogDescription>
+                            Please let us know why you're declining this quote. This helps us improve our service.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="grid gap-4 py-4">
+                          <div className="grid gap-2">
+                            <Label htmlFor="reason">Reason for declining *</Label>
+                            <Select value={declineReason} onValueChange={setDeclineReason}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select a reason" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="too_expensive">Too expensive</SelectItem>
+                                <SelectItem value="wrong_dates">Wrong dates or timing</SelectItem>
+                                <SelectItem value="wrong_info">Incorrect information</SelectItem>
+                                <SelectItem value="found_alternative">Found alternative option</SelectItem>
+                                <SelectItem value="trip_cancelled">Trip cancelled</SelectItem>
+                                <SelectItem value="other">Other</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="grid gap-2">
+                            <Label htmlFor="notes">Special notes (optional)</Label>
+                            <Textarea
+                              id="notes"
+                              placeholder="Any additional feedback..."
+                              value={declineNotes}
+                              onChange={(e) => setDeclineNotes(e.target.value)}
+                              rows={3}
+                            />
+                          </div>
+                        </div>
+                        <DialogFooter>
+                          <Button variant="outline" onClick={() => setIsDeclineModalOpen(false)}>
+                            Cancel
+                          </Button>
+                          <Button variant="destructive" onClick={handleDeclineQuote}>
+                            Decline Quote
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Right spacer */}
+            <div className="flex-1 bg-gray-50 dark:bg-gray-900" />
+          </div>
+        </div>
+
+        {/* Right pane: options (full height scroll) */}
+        <div className="absolute top-0 right-0 bottom-1 left-1/4 z-20 overflow-x-hidden">
+          <div className="h-full pt-6 pb-6 px-3">
+            <div className="h-full overflow-y-auto overflow-x-hidden bg-white/95 border border-gray-200 rounded-lg p-0">
+              <div className="p-0">
+                <div className="px-4 py-3 border-b border-gray-200 bg-white/80 mb-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-medium text-gray-900">Aircraft Options</h3>
+                    <Badge variant={statusDisplay.variant} className="text-xs">
+                      {statusDisplay.text}
+                    </Badge>
+                  </div>
+                </div>
+
+                <div className="-mx-2 space-y-2">
+                  {displayOptions.map((option) => (
+                    <div key={option.id} className="w-full px-2">
+                      <PublicQuoteOptionCard
+                        option={option}
+                        isSelected={option.id === quote.selectedOptionId}
+                        isLocked={isLocked}
+                        onSelect={() => handleSelectOption(option.id)}
+                        primaryColor={quote.branding.primaryColor}
+                        hasSelectedOption={!!quote.selectedOptionId}
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                {/* Desktop Terms (same width as cards) */}
+                
+{quote.options.length >= 1 && quote.terms && (
+  <div className="flex justify-center pl-6 pr-6">
+    <Card className="mt-3 mb-3 w-full">
+      <CardContent className="pl-1">
+        <p className="text-xs text-muted-foreground whitespace-pre-wrap">
+          {quote.terms}
+        </p>
+      </CardContent>
+    </Card>
+  </div>
+)}
+
+
+                {quote.options.length === 0 && (
+                  <Card className="mx-2">
+                    <CardContent className="flex flex-col items-center justify-center py-12">
+                      <Plane className="h-14 w-14 text-muted-foreground mb-3" />
+                      <h3 className="text-base font-semibold mb-1">No aircraft options available</h3>
+                      <p className="text-muted-foreground text-center text-sm">
+                        Please contact us directly to discuss aircraft options for your trip.
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+        {/* /Right pane */}
+      </div>
+    </div>
+  )
+}
