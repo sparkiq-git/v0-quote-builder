@@ -22,9 +22,7 @@ export function AppHeader() {
     <header className="flex h-16 items-center gap-4 border-b bg-background px-6 dark:border-white/10">
       <SidebarTrigger />
 
-      <div className="flex items-center gap-2">
-        <span className="font-medium">{"Brokers Portal"}</span>
-      </div>
+      
 
       <div className="ml-auto flex items-center gap-2">
         <DropdownMenu>

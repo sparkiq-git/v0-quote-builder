@@ -30,6 +30,8 @@ export function ModelsTable() {
   const [categoryFilter, setCategoryFilter] = useState("all")
   const [statusFilter, setStatusFilter] = useState<"active" | "all">("active")
   const [deleteModelId, setDeleteModelId] = useState<string | null>(null)
+  const [editModelId, setEditModelId] = useState<string | null>(null)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
 
   // Filter models
   const filteredModels = (state.aircraftModels || []).filter((model) => {
@@ -135,7 +137,11 @@ export function ModelsTable() {
                 return (
                   <TableRow
                     key={model.id}
-                    className={`${model.isArchived ? "opacity-60" : ""} hover:bg-muted/50 transition-colors`}
+                    className={`${model.isArchived ? "opacity-60" : ""} hover:bg-muted/50 transition-colors cursor-pointer`}
+                    onClick={() => {
+                      setEditModelId(model.id)
+                      setIsEditDialogOpen(true)
+                    }}
                   >
                     <TableCell>
                       <div className="space-y-1">
@@ -168,7 +174,7 @@ export function ModelsTable() {
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
+                          <Button variant="ghost" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
@@ -186,19 +192,32 @@ export function ModelsTable() {
                             </DropdownMenuItem>
                           </ModelCreateDialog>
                           {!model.isArchived && (
-                            <DropdownMenuItem onClick={() => handleArchiveModel(model.id)}>
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleArchiveModel(model.id)
+                              }}
+                            >
                               <Archive className="mr-2 h-4 w-4" />
                               Archive
                             </DropdownMenuItem>
                           )}
                           {model.isArchived && (
-                            <DropdownMenuItem onClick={() => handleUnarchiveModel(model.id)}>
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleUnarchiveModel(model.id)
+                              }}
+                            >
                               <ArchiveRestore className="mr-2 h-4 w-4" />
                               Unarchive
                             </DropdownMenuItem>
                           )}
                           <DropdownMenuItem
-                            onClick={() => setDeleteModelId(model.id)}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setDeleteModelId(model.id)
+                            }}
                             disabled={tails.length > 0}
                             className="text-destructive"
                           >
@@ -235,6 +254,13 @@ export function ModelsTable() {
           )}
         </div>
       )}
+
+      {/* Edit Dialog */}
+      <ModelCreateDialog
+        modelId={editModelId || undefined}
+        open={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+      />
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!deleteModelId} onOpenChange={() => setDeleteModelId(null)}>

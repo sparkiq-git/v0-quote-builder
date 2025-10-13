@@ -3,7 +3,6 @@ import type { Metadata } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
 import "./globals.css"
 import { MockStoreProvider } from "@/lib/mock/store"
-import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/toaster"
 
 const geistSans = Geist({
@@ -32,12 +31,10 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} antialiased`} suppressHydrationWarning>
       <body>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-          <MockStoreProvider>
-            {children}
-            <Toaster />
-          </MockStoreProvider>
-        </ThemeProvider>
+        <MockStoreProvider>
+          {children}
+          <Toaster />
+        </MockStoreProvider>
       </body>
     </html>
   )

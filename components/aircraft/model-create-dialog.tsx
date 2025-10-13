@@ -26,14 +26,19 @@ import type { AircraftModel } from "@/lib/types"
 import { Plus, X } from "lucide-react"
 
 interface ModelCreateDialogProps {
-  children: React.ReactNode
+  children?: React.ReactNode
   modelId?: string
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
-export function ModelCreateDialog({ children, modelId }: ModelCreateDialogProps) {
+export function ModelCreateDialog({ children, modelId, open: controlledOpen, onOpenChange }: ModelCreateDialogProps) {
   const { state, dispatch, getModelById, getCategoryById } = useMockStore()
   const { toast } = useToast()
-  const [open, setOpen] = useState(false)
+  const [internalOpen, setInternalOpen] = useState(false)
+  const open = controlledOpen !== undefined ? controlledOpen : internalOpen
+  const setOpen = onOpenChange || setInternalOpen
+
   const [images, setImages] = useState<string[]>([])
   const [newImageUrl, setNewImageUrl] = useState("")
   const isEditing = !!modelId
@@ -183,7 +188,7 @@ export function ModelCreateDialog({ children, modelId }: ModelCreateDialogProps)
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>{children}</DialogTrigger>
+      {children && <DialogTrigger asChild>{children}</DialogTrigger>}
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{isEditing ? "Edit Aircraft Model" : "Create Aircraft Model"}</DialogTitle>

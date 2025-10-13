@@ -32,6 +32,8 @@ export function TailsTable() {
   const [modelFilter, setModelFilter] = useState("all")
   const [archiveFilter, setArchiveFilter] = useState<"active" | "all">("active")
   const [deleteTailId, setDeleteTailId] = useState<string | null>(null)
+  const [editTailId, setEditTailId] = useState<string | null>(null)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
 
   const filteredTails = (state.aircraftTails || []).filter((tail) => {
     const model = getModelById(tail.modelId)
@@ -170,7 +172,11 @@ export function TailsTable() {
                 return (
                   <TableRow
                     key={tail.id}
-                    className={`${tail.isArchived ? "opacity-60" : ""} hover:bg-muted/50 transition-colors`}
+                    onClick={() => {
+                      setEditTailId(tail.id)
+                      setIsEditDialogOpen(true)
+                    }}
+                    className={`${tail.isArchived ? "opacity-60" : ""} hover:bg-muted/50 transition-colors cursor-pointer`}
                   >
                     <TableCell>
                       <div className="space-y-1">
@@ -236,7 +242,7 @@ export function TailsTable() {
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
+                          <Button variant="ghost" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
@@ -293,6 +299,9 @@ export function TailsTable() {
           )}
         </div>
       )}
+
+      {/* Edit Dialog */}
+      <TailCreateDialog tailId={editTailId || undefined} open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen} />
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!deleteTailId} onOpenChange={() => setDeleteTailId(null)}>

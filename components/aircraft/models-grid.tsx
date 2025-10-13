@@ -117,6 +117,8 @@ export function ModelsGrid() {
   const [categoryFilter, setCategoryFilter] = useState("all")
   const [statusFilter, setStatusFilter] = useState<"active" | "all">("active")
   const [deleteModelId, setDeleteModelId] = useState<string | null>(null)
+  const [editModelId, setEditModelId] = useState<string | null>(null)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
 
   const filteredModels = (state.aircraftModels || []).filter((model) => {
     const category = getCategoryById(model.categoryId)
@@ -210,7 +212,11 @@ export function ModelsGrid() {
             return (
               <Card
                 key={model.id}
-                className={`${model.isArchived ? "opacity-60" : ""} hover:shadow-lg transition-shadow`}
+                className={`${model.isArchived ? "opacity-60" : ""} hover:shadow-lg transition-shadow cursor-pointer`}
+                onClick={() => {
+                  setEditModelId(model.id)
+                  setIsEditDialogOpen(true)
+                }}
               >
                 <CardHeader className="p-4">
                   <ImageCarousel images={model.images || []} alt={model.name} />
@@ -262,7 +268,12 @@ export function ModelsGrid() {
                 <CardFooter className="p-4 pt-0">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="sm" className="w-full bg-transparent">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full bg-transparent"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <MoreHorizontal className="h-4 w-4 mr-2" />
                         Actions
                       </Button>
@@ -281,19 +292,32 @@ export function ModelsGrid() {
                         </DropdownMenuItem>
                       </ModelCreateDialog>
                       {!model.isArchived && (
-                        <DropdownMenuItem onClick={() => handleArchiveModel(model.id)}>
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleArchiveModel(model.id)
+                          }}
+                        >
                           <Archive className="mr-2 h-4 w-4" />
                           Archive
                         </DropdownMenuItem>
                       )}
                       {model.isArchived && (
-                        <DropdownMenuItem onClick={() => handleUnarchiveModel(model.id)}>
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleUnarchiveModel(model.id)
+                          }}
+                        >
                           <ArchiveRestore className="mr-2 h-4 w-4" />
                           Unarchive
                         </DropdownMenuItem>
                       )}
                       <DropdownMenuItem
-                        onClick={() => setDeleteModelId(model.id)}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setDeleteModelId(model.id)
+                        }}
                         disabled={tails.length > 0}
                         className="text-destructive"
                       >
@@ -328,6 +352,13 @@ export function ModelsGrid() {
           )}
         </div>
       )}
+
+      {/* Edit Dialog */}
+      <ModelCreateDialog
+        modelId={editModelId || undefined}
+        open={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+      />
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!deleteModelId} onOpenChange={() => setDeleteModelId(null)}>

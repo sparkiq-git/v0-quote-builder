@@ -1,31 +1,72 @@
 "use client"
 
 import Link from "next/link"
+import { useMemo } from "react"
+import { getServerUser } from "@/lib/supabase/server"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Users, FileText, Eye, TrendingUp, Clock, ArrowRight, Plus, Activity } from "lucide-react"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { Users, FileText, Clock, Plus, Calendar, Plane } from "lucide-react"
 import { useMockStore } from "@/lib/mock/store"
-import { formatTimeAgo, formatCurrency } from "@/lib/utils/format"
+import { formatTimeAgo } from "@/lib/utils/format"
+import { RouteMap } from "@/components/dashboard/route-map"
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb"
 
+
+/* ---------------------------------- page ---------------------------------- */
 export default function DashboardPage() {
-  const { state, getMetrics } = useMockStore()
+  const { user, role, tenantId } = await getServerUser()
+
+    if (!user) {
+    redirect("/sign-in")
+  }
+  const { state, getMetrics, loading } = useMockStore()
+
   const metrics = getMetrics()
 
-  // Get recent activity
-  const recentLeads = state.leads
-    .filter((lead) => lead.status !== "deleted")
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    .slice(0, 3)
+  const recentLeads = useMemo(
+    () =>
+      state.leads
+        .filter((l) => l.status !== "deleted")
+        .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))
+        .slice(0, 3),
+    [state.leads],
+  )
 
-  const recentQuotes = state.quotes
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    .slice(0, 3)
+  const recentQuotes = useMemo(
+    () => state.quotes.sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)).slice(0, 3),
+    [state.quotes],
+  )
 
-  const recentEvents = state.events
-    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-    .slice(0, 5)
+  const pendingConversionLeads = state.leads.filter((l) => l.status === "new").length
+  const quotesAwaitingAcceptance = state.quotes.filter((q) => q.status === "pending_acceptance").length
+  const unpaidQuotes = state.quotes.filter((q) => q.status === "awaiting_payment").length
+  const paidQuotes = state.quotes.filter((q) => q.status === "paid").length
+
+  const upcomingTrips = useMemo(() => {
+    const now = new Date()
+    const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+
+    return state.quotes.filter((quote) => {
+      if (quote.status !== "paid") return false
+
+      // Check if any leg has a departure date within the next 7 days
+      return quote.legs.some((leg) => {
+        if (!leg.departureDate) return false
+        const departureDate = new Date(leg.departureDate)
+        return departureDate >= now && departureDate <= sevenDaysFromNow
+      })
+    }).length
+  }, [state.quotes])
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
@@ -36,7 +77,6 @@ export default function DashboardPage() {
       case "pending_acceptance":
         return "outline"
       case "accepted_by_requester":
-        return "default"
       case "accepted":
         return "default"
       case "declined":
@@ -48,112 +88,164 @@ export default function DashboardPage() {
     }
   }
 
+  if (loading) {
+    return (
+      <div className="space-y-6 sm:space-y-8">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Welcome back!</h1>
+          <p className="text-muted-foreground text-sm sm:text-base">Loading your dashboard...</p>
+        </div>
+
+        {/* Loading skeleton for KPI cards */}
+        <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-6">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <Card key={i} className="col-span-1 h-full flex flex-col">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1">
+                <div className="h-4 bg-muted rounded animate-pulse w-16" />
+                <div className="h-6 bg-muted rounded animate-pulse w-12" />
+              </CardHeader>
+              <CardContent className="grid grid-rows-[auto_auto] gap-1 flex-1">
+                <div className="h-6 bg-muted rounded animate-pulse w-8" />
+                <div className="h-3 bg-muted rounded animate-pulse w-24" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Loading skeleton for route map */}
+        <Card className="h-96">
+          <CardContent className="h-full flex items-center justify-center">
+            <div className="text-center space-y-2">
+              <div className="h-8 w-8 bg-muted rounded animate-pulse mx-auto" />
+              <p className="text-muted-foreground text-sm">Loading route map...</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  function MetricCard({
+    title,
+    icon: Icon,
+    currentValue,
+    description,
+  }: {
+    title: string
+    icon: any
+    currentValue: number
+    description: string
+  }) {
+    return (
+      <Card className="col-span-1 h-full flex flex-col">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1">
+          <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <Icon className="h-4 w-4" />
+            {title}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-rows-[auto_auto] gap-1 flex-1">
+          <div className="text-2xl font-bold leading-none">{currentValue}</div>
+          <p className="text-xs text-muted-foreground mb-0 min-h-4 truncate">{description}</p>
+        </CardContent>
+      </Card>
+    )
+  }
+
   return (
-    <div className="space-y-8">
-      {/* Welcome Section */}
+    <div className="space-y-6 sm:space-y-8">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground">Welcome back! Here's what's happening with your charter business today.</p>
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Welcome back!</h1>
+        <p className="text-muted-foreground text-xs sm:text-base">Here's what's happening today.</p>
       </div>
 
-      {/* Metrics Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Leads Today</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{metrics.leadsToday}</div>
-            <p className="text-xs text-muted-foreground">
-              <TrendingUp className="inline h-3 w-3 mr-1" />
-              New inquiries received
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Quotes Pending</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{metrics.quotesPending}</div>
-            <p className="text-xs text-muted-foreground">
-              <Clock className="inline h-3 w-3 mr-1" />
-              Awaiting customer response
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Views This Week</CardTitle>
-            <Eye className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{metrics.viewsThisWeek}</div>
-            <p className="text-xs text-muted-foreground">
-              <Activity className="inline h-3 w-3 mr-1" />
-              Quote page visits
-            </p>
-          </CardContent>
-        </Card>
-
-        
+      <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-6">
+        <MetricCard
+          title="Leads"
+          icon={Users}
+          currentValue={pendingConversionLeads}
+          description="Pending conversion to quote"
+        />
+        <MetricCard
+          title="Quotes"
+          icon={FileText}
+          currentValue={quotesAwaitingAcceptance}
+          description="Awaiting client acceptance"
+        />
+        <MetricCard title="Unpaid" icon={Clock} currentValue={unpaidQuotes} description="Still awaiting payment" />
+        <MetricCard title="Paid" icon={Calendar} currentValue={paidQuotes} description="Quotes already paid" />
+        <MetricCard
+          title="Upcoming"
+          icon={Plane}
+          currentValue={upcomingTrips}
+          description="Paid trips in next 7 days"
+        />
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        {/* Recent Leads */}
-        <Card className="col-span-4">
+      <RouteMap />
+
+      <div className="grid gap-4 grid-cols-1 lg:grid-cols-7">
+        <Card className="col-span-1 lg:col-span-4">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Recent Leads</CardTitle>
-                <CardDescription>Latest customer inquiries</CardDescription>
+              <div className="flex items-center space-x-2">
+                <div>
+                  <CardTitle className="text-base sm:text-lg">Recent Leads</CardTitle>
+                  <CardDescription className="text-xs sm:text-sm">Latest customer inquiries</CardDescription>
+                </div>
               </div>
-              <Button asChild size="sm">
-                <Link href="/leads">
-                  View All
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
             </div>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               {recentLeads.length > 0 ? (
                 recentLeads.map((lead) => (
-                  <div key={lead.id} className="flex items-center justify-between space-x-4">
-                    <div className="flex items-center space-x-4">
-                      <Avatar>
-                        <AvatarFallback>
-                          {lead.customer.name
-                            .split(" ")
-                            .map((n) => n[0])
-                            .join("")}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="text-sm font-medium leading-none">{lead.customer.name}</p>
-                        <p className="text-sm text-muted-foreground">
+                  <div key={lead.id} className="flex items-center justify-between space-x-2 sm:space-x-4">
+                    <div className="flex items-center space-x-2 sm:space-x-4 min-w-0 flex-1">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Avatar className="h-8 w-8 sm:h-10 sm:w-10">
+                              <AvatarFallback className="text-xs sm:text-sm">
+                                {lead.customer.name
+                                  .split(" ")
+                                  .map((n: string) => n[0])
+                                  .join("")}
+                              </AvatarFallback>
+                            </Avatar>
+                          </TooltipTrigger>
+                        </Tooltip>
+                      </TooltipProvider>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs sm:text-sm font-medium leading-none truncate">{lead.customer.name}</p>
+                        <p className="text-xs text-muted-foreground truncate">
                           {lead.legs[0]?.origin} → {lead.legs[0]?.destination}
                           {lead.legs.length > 1 && ` +${lead.legs.length - 1} more`}
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <Badge variant={getStatusBadgeVariant(lead.status)}>{lead.status.replace("_", " ")}</Badge>
-                      <p className="text-sm text-muted-foreground">{formatTimeAgo(lead.createdAt)}</p>
+                    <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Badge variant={getStatusBadgeVariant(lead.status)} className="text-xs">
+                              {lead.status.replace("_", " ")}
+                            </Badge>
+                          </TooltipTrigger>
+                        </Tooltip>
+                      </TooltipProvider>
+                      <p className="text-xs text-muted-foreground hidden sm:block">{formatTimeAgo(lead.createdAt)}</p>
                     </div>
                   </div>
                 ))
               ) : (
                 <div className="text-center py-6">
-                  <Users className="mx-auto h-12 w-12 text-muted-foreground" />
+                  <Users className="mx-auto h-8 w-8 sm:h-12 sm:w-12 text-muted-foreground" />
                   <h3 className="mt-2 text-sm font-semibold">No leads yet</h3>
-                  <p className="mt-1 text-sm text-muted-foreground">Get started by adding your first lead.</p>
-                  <div className="mt-6">
+                  <p className="mt-1 text-xs sm:text-sm text-muted-foreground">
+                    Get started by adding your first lead.
+                  </p>
+                  <div className="mt-4 sm:mt-6">
                     <Button asChild size="sm">
                       <Link href="/leads">
                         <Plus className="mr-2 h-4 w-4" />
@@ -167,52 +259,72 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Recent Activity */}
-        <Card className="col-span-3">
+        <Card className="col-span-1 lg:col-span-3">
           <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
-            <CardDescription>Latest system events</CardDescription>
+            <div className="flex items-center space-x-2">
+              <div>
+                <CardTitle className="text-base sm:text-lg">Recent Quotes</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">Latest quotes generated</CardDescription>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {recentEvents.length > 0 ? (
-                recentEvents.map((event) => {
-                  const quote = event.quoteId ? state.quotes.find((q) => q.id === event.quoteId) : null
-                  const lead = event.leadId ? state.leads.find((l) => l.id === event.leadId) : null
-
-                  let description = ""
-                  let icon = <Activity className="h-4 w-4" />
-
-                  switch (event.type) {
-                    case "quote_viewed":
-                      description = quote ? `Quote viewed by ${quote.customer.name}` : "Quote viewed"
-                      icon = <Eye className="h-4 w-4" />
-                      break
-                    case "option_selected":
-                      description = quote ? `Option selected by ${quote.customer.name}` : "Option selected"
-                      icon = <FileText className="h-4 w-4" />
-                      break
-                    case "lead_created":
-                      description = lead ? `New lead from ${lead.customer.name}` : "New lead created"
-                      icon = <Users className="h-4 w-4" />
-                      break
-                  }
-
-                  return (
-                    <div key={event.id} className="flex items-center space-x-4">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">{icon}</div>
-                      <div className="flex-1 space-y-1">
-                        <p className="text-sm font-medium leading-none">{description}</p>
-                        <p className="text-sm text-muted-foreground">{formatTimeAgo(event.timestamp)}</p>
+            <div className="space-y-3 sm:space-y-4">
+              {recentQuotes.length > 0 ? (
+                recentQuotes.map((quote) => (
+                  <div key={quote.id} className="flex items-center justify-between space-x-2 sm:space-x-4">
+                    <div className="flex items-center space-x-2 sm:space-x-4 min-w-0 flex-1">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Avatar className="h-8 w-8 sm:h-10 sm:w-10">
+                              <AvatarFallback className="text-xs sm:text-sm">
+                                {quote.customer.name
+                                  .split(" ")
+                                  .map((n: string) => n[0])
+                                  .join("")}
+                              </AvatarFallback>
+                            </Avatar>
+                          </TooltipTrigger>
+                        </Tooltip>
+                      </TooltipProvider>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs sm:text-sm font-medium leading-none truncate">{quote.customer.name}</p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {quote.legs[0]?.origin} → {quote.legs[0]?.destination}
+                          {quote.legs.length > 1 && ` +${quote.legs.length - 1} more`}
+                        </p>
                       </div>
                     </div>
-                  )
-                })
+                    <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Badge variant={getStatusBadgeVariant(quote.status)} className="text-xs">
+                              {quote.status.replace("_", " ")}
+                            </Badge>
+                          </TooltipTrigger>
+                        </Tooltip>
+                      </TooltipProvider>
+                      <p className="text-xs text-muted-foreground hidden sm:block">{formatTimeAgo(quote.createdAt)}</p>
+                    </div>
+                  </div>
+                ))
               ) : (
                 <div className="text-center py-6">
-                  <Activity className="mx-auto h-12 w-12 text-muted-foreground" />
-                  <h3 className="mt-2 text-sm font-semibold">No activity yet</h3>
-                  <p className="mt-1 text-sm text-muted-foreground">Activity will appear here as you use the system.</p>
+                  <FileText className="mx-auto h-8 w-8 sm:h-12 sm:w-12 text-muted-foreground" />
+                  <h3 className="mt-2 text-sm font-semibold">No quotes yet</h3>
+                  <p className="mt-1 text-xs sm:text-sm text-muted-foreground">
+                    Get started by generating your first quote.
+                  </p>
+                  <div className="mt-4 sm:mt-6">
+                    <Button asChild size="sm">
+                      <Link href="/quotes">
+                        <Plus className="mr-2 h-4 w-4" />
+                        Generate Quote
+                      </Link>
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>
@@ -220,32 +332,62 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* Quick Actions */}
       <Card>
         <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
-          <CardDescription>Common tasks to get you started</CardDescription>
+          <div className="flex items-center space-x-2">
+            <div>
+              <CardTitle className="text-base sm:text-lg">Quick Actions</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">Common tasks to get you started</CardDescription>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-wrap gap-2">
-            <Button asChild variant="outline">
-              <Link href="/leads">
-                <Users className="mr-2 h-4 w-4" />
-                View All Leads
-              </Link>
-            </Button>
-            <Button asChild variant="outline">
-              <Link href="/quotes">
-                <FileText className="mr-2 h-4 w-4" />
-                Manage Quotes
-              </Link>
-            </Button>
-            <Button asChild variant="outline">
-              <Link href="/aircraft">
-                <Plus className="mr-2 h-4 w-4" />
-                Add Aircraft
-              </Link>
-            </Button>
+          <div className="flex flex-col sm:flex-row flex-wrap gap-2">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button asChild variant="outline" className="justify-start bg-transparent">
+                    <Link href="/leads">
+                      <Users className="mr-2 h-4 w-4" />
+                      View All Leads
+                    </Link>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Manage all customer inquiries and lead pipeline</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button asChild variant="outline" className="justify-start bg-transparent">
+                    <Link href="/quotes">
+                      <FileText className="mr-2 h-4 w-4" />
+                      Manage Quotes
+                    </Link>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>View and manage all customer quotes and proposals</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button asChild variant="outline" className="justify-start bg-transparent">
+                    <Link href="/aircraft">
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add Aircraft
+                    </Link>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Add new aircraft to your fleet inventory</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
         </CardContent>
       </Card>
