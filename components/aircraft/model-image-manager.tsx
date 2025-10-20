@@ -142,20 +142,6 @@ export default function ModelImageManager({ modelId, tenantId, onImagesUpdated }
     setCroppedAreaPixels(null)
   }
 
-  const testStorage = async () => {
-    try {
-      const response = await fetch('/api/test-storage')
-      const data = await response.json()
-      console.log("Storage test result:", data)
-      toast({ 
-        title: "Storage Test", 
-        description: data.success ? `Found ${data.buckets?.length || 0} buckets` : data.error 
-      })
-    } catch (error) {
-      console.error("Storage test failed:", error)
-      toast({ title: "Storage test failed", variant: "destructive" })
-    }
-  }
 
   const handleUpload = async () => {
     if (imageFiles.length === 0) {
@@ -176,14 +162,6 @@ export default function ModelImageManager({ modelId, tenantId, onImagesUpdated }
       
       console.log("User authenticated:", user.id)
 
-      // Check available buckets first
-      const { data: buckets, error: bucketError } = await supabase.storage.listBuckets()
-      if (bucketError) {
-        console.error("Error listing buckets:", bucketError)
-      } else {
-        console.log("Available buckets:", buckets?.map(b => ({ name: b.name, public: b.public })))
-      }
-
       for (let i = 0; i < imageFiles.length; i++) {
         const file = imageFiles[i]
         const fileName = `${Date.now()}_${i}_${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`
@@ -196,33 +174,17 @@ export default function ModelImageManager({ modelId, tenantId, onImagesUpdated }
           contentType: file.type
         })
 
-        // Try different bucket names
-        let uploadError = null
-        let bucketName = "aircraft"
+        // Use the correct bucket name based on your Supabase logs
+        const bucketName = "aircraft-media"
         
-        // Try aircraft bucket first
-        const { error: aircraftError } = await supabase.storage
-          .from("aircraft")
+        // Upload to storage
+        const { error: uploadError } = await supabase.storage
+          .from(bucketName)
           .upload(storagePath, file, {
             cacheControl: "3600",
             upsert: true,
             contentType: file.type || "image/jpeg",
           })
-        
-        if (aircraftError) {
-          console.warn("Aircraft bucket failed, trying aircraft-images:", aircraftError)
-          bucketName = "aircraft-images"
-          const { error: aircraftImagesError } = await supabase.storage
-            .from("aircraft-images")
-            .upload(storagePath, file, {
-              cacheControl: "3600",
-              upsert: true,
-              contentType: file.type || "image/jpeg",
-            })
-          uploadError = aircraftImagesError
-        } else {
-          uploadError = null
-        }
 
         if (uploadError) {
           console.error("Storage upload error:", uploadError)
@@ -301,7 +263,7 @@ export default function ModelImageManager({ modelId, tenantId, onImagesUpdated }
       const path = urlParts.length > 1 ? urlParts[1] : null
       
       if (path) {
-        await supabase.storage.from("aircraft").remove([path])
+        await supabase.storage.from("aircraft-media").remove([path])
       }
       
       if (id) {
@@ -390,13 +352,6 @@ export default function ModelImageManager({ modelId, tenantId, onImagesUpdated }
               )}
             </Button>
           )}
-          <Button
-            variant="outline"
-            onClick={testStorage}
-            size="sm"
-          >
-            Test Storage
-          </Button>
         </div>
         <p className="text-xs text-muted-foreground">
           Select single image to crop, or multiple images to upload directly. Max 5MB per image.
