@@ -142,6 +142,21 @@ export default function ModelImageManager({ modelId, tenantId, onImagesUpdated }
     setCroppedAreaPixels(null)
   }
 
+  const testStorage = async () => {
+    try {
+      const response = await fetch('/api/test-storage')
+      const data = await response.json()
+      console.log("Storage test result:", data)
+      toast({ 
+        title: "Storage Test", 
+        description: data.success ? `Found ${data.buckets?.length || 0} buckets` : data.error 
+      })
+    } catch (error) {
+      console.error("Storage test failed:", error)
+      toast({ title: "Storage test failed", variant: "destructive" })
+    }
+  }
+
   const handleUpload = async () => {
     if (imageFiles.length === 0) {
       toast({ title: "No images selected", variant: "destructive" })
@@ -214,9 +229,11 @@ export default function ModelImageManager({ modelId, tenantId, onImagesUpdated }
           throw new Error(`Storage upload failed: ${uploadError.message}`)
         }
 
-        // Get public URL
-        const { data: publicData } = supabase.storage.from("aircraft").getPublicUrl(storagePath)
+        // Get public URL using the correct bucket
+        const { data: publicData } = supabase.storage.from(bucketName).getPublicUrl(storagePath)
         const publicUrl = publicData.publicUrl
+        
+        console.log("Generated public URL:", publicUrl)
 
         console.log("Saving to database:", {
           tenant_id: tenantId,
@@ -373,6 +390,13 @@ export default function ModelImageManager({ modelId, tenantId, onImagesUpdated }
               )}
             </Button>
           )}
+          <Button
+            variant="outline"
+            onClick={testStorage}
+            size="sm"
+          >
+            Test Storage
+          </Button>
         </div>
         <p className="text-xs text-muted-foreground">
           Select single image to crop, or multiple images to upload directly. Max 5MB per image.
