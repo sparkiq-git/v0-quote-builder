@@ -184,7 +184,7 @@ export function ModelsGrid({ models, onRefresh }: ModelsGridProps) {
                     {m.name}
                   </h3>
                   {m.manufacturer && (
-                    <p className="text-sm text-muted-foreground">{m.manufacturer}</p>
+                    <p className="text-sm text-muted-foreground">{m.manufacturer.name}</p>
                   )}
                   <Badge variant={m.isArchived ? "secondary" : "default"}>
                     {m.isArchived ? "Archived" : "Active"}

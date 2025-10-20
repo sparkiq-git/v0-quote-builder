@@ -96,6 +96,14 @@ export default function ModelImageManager({ modelId, tenantId, onImagesUpdated }
       }
       
       // Since RLS is disabled, we can insert directly
+      console.log("Inserting image with data:", {
+        tenant_id: tenantId,
+        aircraft_model_id: modelId,
+        storage_path: storagePath,
+        public_url: publicUrl,
+        uploaded_by: user?.id || null,
+      })
+      
       const { error: dbError, data: inserted } = await supabase
         .from("aircraft_model_image")
         .insert({

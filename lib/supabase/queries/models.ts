@@ -3,12 +3,16 @@
 import { supabase } from "@/lib/supabase/client"
 import type { AircraftModelRecord } from "@/lib/types"
 
-/** 🔹 Get all aircraft models with images */
+/** 🔹 Get all aircraft models with images and manufacturer info */
 export async function getModels(): Promise<AircraftModelRecord[]> {
   const { data, error } = await supabase
     .from("aircraft_model")
     .select(`
       *,
+      aircraft_manufacturer!manufacturer_id (
+        id,
+        name
+      ),
       aircraft_model_image (
         id,
         public_url,
@@ -20,9 +24,10 @@ export async function getModels(): Promise<AircraftModelRecord[]> {
   
   if (error) throw error
   
-  // Transform the data to include images array
+  // Transform the data to include images array and manufacturer info
   return (data ?? []).map(model => ({
     ...model,
+    manufacturer: model.aircraft_manufacturer,
     images: model.aircraft_model_image
       ?.sort((a: any, b: any) => {
         // Sort by primary first, then by display_order

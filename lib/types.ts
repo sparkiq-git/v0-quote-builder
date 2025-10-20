@@ -431,8 +431,14 @@ export interface AircraftModelRecord {
   icao_type_designator?: string | null
   tenant_id?: string | null
   size_code?: string | null
+  created_by?: string | null
   created_at?: string | null
   images?: string[] // Add images field for compatibility
+  // Include manufacturer info for display
+  manufacturer?: {
+    id: string
+    name: string
+  }
 }
 
 export interface AircraftRecord {

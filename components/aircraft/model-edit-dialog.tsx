@@ -86,7 +86,8 @@ export function ModelEditDialog({
       setSaving(true)
       await updateModel(model.id, {
         name: model.name,
-        manufacturer: model.manufacturer,
+        // Note: manufacturer_id is not editable in this dialog
+        // It would require a separate manufacturer selection interface
       })
       toast({ title: "Model updated", description: "Changes saved successfully." })
       await onUpdated?.()
@@ -136,9 +137,13 @@ export function ModelEditDialog({
                 <Label htmlFor="manufacturer">Manufacturer</Label>
                 <Input
                   id="manufacturer"
-                  value={model.manufacturer || ""}
-                  onChange={(e) => setModel({ ...model, manufacturer: e.target.value })}
+                  value={model.manufacturer?.name || ""}
+                  disabled
+                  className="bg-muted"
                 />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Manufacturer cannot be changed here. Contact admin to modify.
+                </p>
               </div>
             </div>
 
