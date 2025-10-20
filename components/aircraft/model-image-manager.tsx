@@ -95,28 +95,33 @@ export default function ModelImageManager({ modelId, tenantId, onImagesUpdated }
         throw new Error("Tenant ID mismatch")
       }
       
-      // Use API route to handle RLS properly
-      const response = await fetch("/api/aircraft-model-images", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          modelId,
-          storagePath,
-          publicUrl,
+      // Since RLS is disabled, we can insert directly
+      const { error: dbError, data: inserted } = await supabase
+        .from("aircraft_model_image")
+        .insert({
+          tenant_id: tenantId,
+          aircraft_model_id: modelId,
+          storage_path: storagePath,
+          public_url: publicUrl,
+          uploaded_by: user?.id || null,
           caption: null,
-          isPrimary: false,
-          displayOrder: 0,
-        }),
-      })
+          is_primary: false,
+          display_order: 0,
+        })
+        .select("*")
+        .single()
 
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || "Failed to save image record")
+      if (dbError) {
+        console.error("Database insert error:", dbError)
+        console.error("Insert data:", {
+          tenant_id: tenantId,
+          aircraft_model_id: modelId,
+          storage_path: storagePath,
+          public_url: publicUrl,
+          uploaded_by: user?.id || null,
+        })
+        throw new Error(`Database error: ${dbError.message}`)
       }
-
-      const { data: inserted } = await response.json()
 
       setImages((prev) => [...prev, { url: publicUrl, id: inserted.id }])
       toast({ title: "Image uploaded successfully" })
