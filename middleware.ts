@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr"
 import { NextResponse, type NextRequest } from "next/server"
 
-const PROTECTED_PREFIXES = ["/dashboard", "/admin", "/management", "/schedule"]
+const PROTECTED_PREFIXES = ["/dashboard", "/admin", "/management", "/schedule", "/operations"]
 const PUBLIC_PATHS = ["/sign-in", "/auth/callback"]
 
 export async function middleware(request: NextRequest) {
@@ -63,11 +63,12 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  // Don’t run on static assets or Next internals
+  // Don't run on static assets or Next internals
   matcher: [
     "/dashboard/:path*",
     "/admin/:path*",
     "/management/:path*",
     "/schedule/:path*",
+    "/operations/:path*",
   ],
 }

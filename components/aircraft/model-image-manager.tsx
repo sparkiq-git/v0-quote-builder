@@ -152,19 +152,62 @@ export default function ModelImageManager({ modelId, tenantId, onImagesUpdated }
       setUploading(true)
       toast({ title: "Uploading images..." })
 
+      // Check authentication first
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      if (authError || !user) {
+        console.error("Auth error:", authError)
+        throw new Error("Please sign in to upload images")
+      }
+      
+      console.log("User authenticated:", user.id)
+
+      // Check available buckets first
+      const { data: buckets, error: bucketError } = await supabase.storage.listBuckets()
+      if (bucketError) {
+        console.error("Error listing buckets:", bucketError)
+      } else {
+        console.log("Available buckets:", buckets?.map(b => ({ name: b.name, public: b.public })))
+      }
+
       for (let i = 0; i < imageFiles.length; i++) {
         const file = imageFiles[i]
         const fileName = `${Date.now()}_${i}_${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`
         const storagePath = `tenant/${tenantId}/models/${modelId}/${fileName}`
 
-        // Upload to storage
-        const { error: uploadError } = await supabase.storage
+        console.log("Uploading file:", {
+          fileName,
+          storagePath,
+          fileSize: file.size,
+          contentType: file.type
+        })
+
+        // Try different bucket names
+        let uploadError = null
+        let bucketName = "aircraft"
+        
+        // Try aircraft bucket first
+        const { error: aircraftError } = await supabase.storage
           .from("aircraft")
           .upload(storagePath, file, {
             cacheControl: "3600",
             upsert: true,
             contentType: file.type || "image/jpeg",
           })
+        
+        if (aircraftError) {
+          console.warn("Aircraft bucket failed, trying aircraft-images:", aircraftError)
+          bucketName = "aircraft-images"
+          const { error: aircraftImagesError } = await supabase.storage
+            .from("aircraft-images")
+            .upload(storagePath, file, {
+              cacheControl: "3600",
+              upsert: true,
+              contentType: file.type || "image/jpeg",
+            })
+          uploadError = aircraftImagesError
+        } else {
+          uploadError = null
+        }
 
         if (uploadError) {
           console.error("Storage upload error:", uploadError)
@@ -175,6 +218,13 @@ export default function ModelImageManager({ modelId, tenantId, onImagesUpdated }
         const { data: publicData } = supabase.storage.from("aircraft").getPublicUrl(storagePath)
         const publicUrl = publicData.publicUrl
 
+        console.log("Saving to database:", {
+          tenant_id: tenantId,
+          aircraft_model_id: modelId,
+          storage_path: storagePath,
+          public_url: publicUrl
+        })
+
         // Save to database
         const { error: dbError, data: inserted } = await supabase
           .from("aircraft_model_image")
@@ -183,7 +233,7 @@ export default function ModelImageManager({ modelId, tenantId, onImagesUpdated }
             aircraft_model_id: modelId,
             storage_path: storagePath,
             public_url: publicUrl,
-            uploaded_by: null,
+            uploaded_by: user.id,
             caption: null,
             is_primary: false,
             display_order: i,
@@ -205,9 +255,21 @@ export default function ModelImageManager({ modelId, tenantId, onImagesUpdated }
       setImagePreviews([])
     } catch (error: any) {
       console.error("Upload failed", error)
+      
+      let errorMessage = error.message || String(error)
+      
+      // Handle specific error cases
+      if (errorMessage.includes("Please sign in")) {
+        errorMessage = "Please refresh the page and sign in again"
+      } else if (errorMessage.includes("row-level security policy")) {
+        errorMessage = "Permission denied. Please check your access rights."
+      } else if (errorMessage.includes("Connection closed")) {
+        errorMessage = "Connection lost. Please refresh the page and try again."
+      }
+      
       toast({
         title: "Upload error",
-        description: error.message || String(error),
+        description: errorMessage,
         variant: "destructive",
       })
     } finally {
