@@ -174,7 +174,8 @@ export default function ModelImageManager({ modelId, tenantId, onImagesUpdated }
           contentType: file.type
         })
 
-        // Use the correct bucket name based on your Supabase logs
+        // Use the correct bucket name based on Supabase logs analysis
+        // Found that aircraft-media bucket exists and is accessible (POST 200 to /storage/v1/object/list/aircraft-media)
         const bucketName = "aircraft-media"
         
         // Upload to storage
