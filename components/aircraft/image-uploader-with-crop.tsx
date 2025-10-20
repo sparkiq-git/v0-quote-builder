@@ -21,7 +21,7 @@ export default function ImageUploaderWithCrop({
   tenantId,
   aircraftId,
   aspect = 16 / 9,
-  bucket = "aircraft-images",
+  bucket = "aircraft",
   onUploaded,
 }: ImageUploaderWithCropProps) {
   const { toast } = useToast()

@@ -3,11 +3,36 @@
 import { supabase } from "@/lib/supabase/client"
 import type { AircraftModelRecord } from "@/lib/types"
 
-/** 🔹 Get all aircraft models */
+/** 🔹 Get all aircraft models with images */
 export async function getModels(): Promise<AircraftModelRecord[]> {
-  const { data, error } = await supabase.from("aircraft_model").select("*").order("name")
+  const { data, error } = await supabase
+    .from("aircraft_model")
+    .select(`
+      *,
+      aircraft_model_image (
+        id,
+        public_url,
+        is_primary,
+        display_order
+      )
+    `)
+    .order("name")
+  
   if (error) throw error
-  return data ?? []
+  
+  // Transform the data to include images array
+  return (data ?? []).map(model => ({
+    ...model,
+    images: model.aircraft_model_image
+      ?.sort((a: any, b: any) => {
+        // Sort by primary first, then by display_order
+        if (a.is_primary && !b.is_primary) return -1
+        if (!a.is_primary && b.is_primary) return 1
+        return a.display_order - b.display_order
+      })
+      .map((img: any) => img.public_url)
+      .filter(Boolean) || []
+  }))
 }
 
 /** 🔹 Insert new model */

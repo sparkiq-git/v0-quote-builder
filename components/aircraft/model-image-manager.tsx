@@ -13,9 +13,10 @@ import { getCroppedImg } from "@/lib/utils/crop"
 interface ModelImageManagerProps {
   modelId: string
   tenantId: string
+  onImagesUpdated?: () => void
 }
 
-export default function ModelImageManager({ modelId, tenantId }: ModelImageManagerProps) {
+export default function ModelImageManager({ modelId, tenantId, onImagesUpdated }: ModelImageManagerProps) {
   const { toast } = useToast()
   const [images, setImages] = useState<{ url: string; id?: string }[]>([])
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -102,6 +103,7 @@ export default function ModelImageManager({ modelId, tenantId }: ModelImageManag
 
       setImages((prev) => [...prev, { url: publicUrl, id: inserted.id }])
       toast({ title: "Image uploaded successfully" })
+      onImagesUpdated?.() // Notify parent component to refresh
       resetState()
     } catch (error: any) {
       console.error("Upload failed", error)
@@ -117,11 +119,21 @@ export default function ModelImageManager({ modelId, tenantId }: ModelImageManag
 
   const handleDelete = async (url: string, id?: string) => {
     try {
-      const path = url.split("/aircraft/")[1]
-      if (path) await supabase.storage.from("aircraft").remove([path])
-      if (id) await supabase.from("aircraft_model_image").delete().eq("id", id)
+      // Extract storage path from URL more reliably
+      const urlParts = url.split("/storage/v1/object/public/")
+      const path = urlParts.length > 1 ? urlParts[1] : null
+      
+      if (path) {
+        await supabase.storage.from("aircraft").remove([path])
+      }
+      
+      if (id) {
+        await supabase.from("aircraft_model_image").delete().eq("id", id)
+      }
+      
       setImages((prev) => prev.filter((img) => img.url !== url))
       toast({ title: "Image deleted" })
+      onImagesUpdated?.() // Notify parent component to refresh
     } catch (error: any) {
       toast({
         title: "Delete error",

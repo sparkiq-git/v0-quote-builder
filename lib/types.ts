@@ -432,6 +432,7 @@ export interface AircraftModelRecord {
   tenant_id?: string | null
   size_code?: string | null
   created_at?: string | null
+  images?: string[] // Add images field for compatibility
 }
 
 export interface AircraftRecord {

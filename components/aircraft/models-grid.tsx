@@ -49,7 +49,19 @@ function ImageCarousel({ images, alt }: { images: string[]; alt: string }) {
 
   return (
     <div className="relative aspect-video bg-muted rounded-lg overflow-hidden group">
-      <img src={images[currentIndex]} alt={alt} className="w-full h-full object-cover" />
+      <img 
+        src={images[currentIndex]} 
+        alt={alt} 
+        className="w-full h-full object-cover"
+        onError={(e) => {
+          const target = e.target as HTMLImageElement
+          target.style.display = "none"
+          target.parentElement?.querySelector(".fallback")?.classList.remove("hidden")
+        }}
+      />
+      <div className="fallback hidden absolute inset-0 flex items-center justify-center bg-muted">
+        <ImageIcon className="h-12 w-12 text-muted-foreground" />
+      </div>
       {images.length > 1 && (
         <>
           <Button

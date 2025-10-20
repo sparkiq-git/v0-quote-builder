@@ -154,7 +154,11 @@ export function ModelEditDialog({
             {tenantId && (
               <div className="mt-8 border-t pt-6">
                 <h3 className="text-lg font-semibold mb-2">Model Images</h3>
-                <ModelImageManager modelId={model.id} tenantId={tenantId} />
+                <ModelImageManager 
+                  modelId={model.id} 
+                  tenantId={tenantId} 
+                  onImagesUpdated={onUpdated}
+                />
               </div>
             )}
           </>
