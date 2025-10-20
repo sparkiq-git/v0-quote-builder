@@ -33,18 +33,23 @@ import type { AircraftTail } from "@/lib/types"
 interface TailCreateDialogProps {
   children: React.ReactNode
   tailId?: string
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
-export function TailCreateDialog({ children, tailId }: TailCreateDialogProps) {
+export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpenChange }: TailCreateDialogProps) {
   const { state, dispatch, getTailById, getModelById, validateTailNumber } = useMockStore()
   const { toast } = useToast()
-  const [open, setOpen] = useState(false)
+  const [internalOpen, setInternalOpen] = useState(false)
   const [modelComboOpen, setModelComboOpen] = useState(false)
   const [useDefaultCapacity, setUseDefaultCapacity] = useState(true)
   const [useDefaultRange, setUseDefaultRange] = useState(true)
   const [useDefaultSpeed, setUseDefaultSpeed] = useState(true)
   const [images, setImages] = useState<string[]>([])
   const [newImageUrl, setNewImageUrl] = useState("")
+
+  const open = controlledOpen !== undefined ? controlledOpen : internalOpen
+  const setOpen = onOpenChange || setInternalOpen
 
   const isEditing = !!tailId
   const existingTail = tailId ? getTailById(tailId) : null
@@ -65,6 +70,7 @@ export function TailCreateDialog({ children, tailId }: TailCreateDialogProps) {
       operator: "",
       amenities: "",
       year: undefined,
+      yearOfRefurbishment: undefined,
       status: "active",
       capacityOverride: undefined,
       rangeNmOverride: undefined,
@@ -87,6 +93,7 @@ export function TailCreateDialog({ children, tailId }: TailCreateDialogProps) {
         operator: existingTail.operator || "",
         amenities: existingTail.amenities || "",
         year: existingTail.year,
+        yearOfRefurbishment: existingTail.yearOfRefurbishment,
         status: existingTail.status,
         capacityOverride: existingTail.capacityOverride,
         rangeNmOverride: existingTail.rangeNmOverride,
@@ -105,6 +112,7 @@ export function TailCreateDialog({ children, tailId }: TailCreateDialogProps) {
         operator: "",
         amenities: "",
         year: undefined,
+        yearOfRefurbishment: undefined,
         status: "active",
         capacityOverride: undefined,
         rangeNmOverride: undefined,
@@ -371,6 +379,20 @@ export function TailCreateDialog({ children, tailId }: TailCreateDialogProps) {
                   placeholder="2020"
                 />
                 {errors.year && <p className="text-sm text-destructive">{errors.year.message}</p>}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="yearOfRefurbishment">Year of Refurbishment</Label>
+                <Input
+                  id="yearOfRefurbishment"
+                  type="number"
+                  min="1900"
+                  max={new Date().getFullYear() + 5}
+                  {...register("yearOfRefurbishment", { valueAsNumber: true })}
+                  placeholder="2022"
+                />
+                {errors.yearOfRefurbishment && (
+                  <p className="text-sm text-destructive">{errors.yearOfRefurbishment.message}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="status">Status</Label>

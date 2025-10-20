@@ -14,7 +14,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
-import { Plane, Info, Mail, Phone } from "lucide-react"
+import { Plane, Info, Mail, Phone, CheckCircle, Clock, CreditCard, FileText } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Badge } from "@/components/ui/badge"
 
@@ -250,7 +250,10 @@ export default function PublicQuotePage({ params }: PublicQuotePageProps) {
 
   useEffect(() => {
     const isSubmitted =
-      quote?.status === "prepare_payment" || quote?.status === "awaiting_payment" || quote?.status === "paid"
+      quote?.status === "client_accepted" ||
+      quote?.status === "availability_confirmed" ||
+      quote?.status === "payment_received" ||
+      quote?.status === "itinerary_created"
     const isDeclined = quote?.status === "declined"
     const locked = Boolean(isSubmitted || isDeclined)
     setIsLocked(locked)
@@ -259,7 +262,7 @@ export default function PublicQuotePage({ params }: PublicQuotePageProps) {
       handleSelectOption(quote.options[0].id)
     }
 
-    if (quote?.status === "paid" && !existingItinerary) {
+    if (quote?.status === "itinerary_created" && !existingItinerary) {
       try {
         const itinerary = createItineraryFromQuote(quote.id)
         toast({
@@ -305,7 +308,7 @@ export default function PublicQuotePage({ params }: PublicQuotePageProps) {
       setTimeout(() => setShowValidationAlert(false), 5000)
       return
     }
-    dispatch({ type: "UPDATE_QUOTE", payload: { id: quote.id, updates: { status: "prepare_payment" } } })
+    dispatch({ type: "UPDATE_QUOTE", payload: { id: quote.id, updates: { status: "client_accepted" } } })
     dispatch({
       type: "ADD_EVENT",
       payload: {
@@ -317,9 +320,9 @@ export default function PublicQuotePage({ params }: PublicQuotePageProps) {
       },
     })
     toast({
-      title: "Quote submitted successfully!",
+      title: "Quote accepted successfully!",
       description:
-        "We've received your quote submission. The contract and payment details will be sent to your email shortly.",
+        "We've received your acceptance. We'll now check availability and send you the contract and payment details shortly.",
     })
   }
 
@@ -355,12 +358,16 @@ export default function PublicQuotePage({ params }: PublicQuotePageProps) {
   // REAL DATA (from store) wired into props/sections
   const servicesTotal = quote.services.reduce((sum, s) => sum + s.amount, 0)
   const selectedOptionTotal = selectedOption
-    ? selectedOption.operatorCost + selectedOption.commission + selectedOption.tax
+    ? selectedOption.operatorCost +
+      selectedOption.commission +
+      (selectedOption.feesEnabled ? selectedOption.fees.reduce((sum, fee) => sum + fee.amount, 0) : 0)
     : 0
   const grandTotal = selectedOptionTotal + servicesTotal
 
   const displayOptions =
-    (["prepare_payment", "awaiting_payment", "paid"] as const).includes(quote.status) && quote.selectedOptionId
+    (["client_accepted", "availability_confirmed", "payment_received", "itinerary_created"] as const).includes(
+      quote.status,
+    ) && quote.selectedOptionId
       ? [
           ...quote.options.filter((o) => o.id === quote.selectedOptionId),
           ...quote.options.filter((o) => o.id !== quote.selectedOptionId),
@@ -369,42 +376,47 @@ export default function PublicQuotePage({ params }: PublicQuotePageProps) {
 
   const getStatusDisplay = (status: string) => {
     switch (status) {
-      case "pending_acceptance":
-        return { text: "Pending Your Response", variant: "outline" as const }
-      case "prepare_payment":
-        return { text: "Contract Being Sent", variant: "default" as const }
-      case "awaiting_payment":
-        return { text: "Contract Sent - Awaiting Payment", variant: "secondary" as const }
-      case "paid":
-        return { text: "Paid & Confirmed", variant: "default" as const }
+      case "pending_response":
+        return { text: "Pending Your Response", variant: "outline" as const, icon: Clock }
+      case "client_accepted":
+        return { text: "Checking Availability", variant: "default" as const, icon: CheckCircle }
+      case "availability_confirmed":
+        return { text: "Contract Being Prepared", variant: "default" as const, icon: FileText }
+      case "payment_received":
+        return { text: "Preparing Itinerary", variant: "default" as const, icon: CreditCard }
+      case "itinerary_created":
+        return { text: "Confirmed & Itinerary Ready", variant: "default" as const, icon: CheckCircle }
       case "declined":
-        return { text: "Declined", variant: "destructive" as const }
+        return { text: "Declined", variant: "destructive" as const, icon: Clock }
       case "expired":
-        return { text: "Expired", variant: "secondary" as const }
+        return { text: "Expired", variant: "secondary" as const, icon: Clock }
       default:
-        return { text: status.replace("_", " "), variant: "outline" as const }
+        return { text: status.replace("_", " "), variant: "outline" as const, icon: Clock }
     }
   }
 
   const statusDisplay = getStatusDisplay(quote.status)
+  const StatusIcon = statusDisplay.icon
 
   const getButtonText = () => {
     if (!isLocked) {
-      return quote.selectedOptionId ? "Request to Book" : "Select an aircraft to book"
+      return quote.selectedOptionId ? "Confirm availability" : "Select an aircraft to accept"
     }
     switch (quote.status) {
-      case "prepare_payment":
-        return "Contract Being Sent"
-      case "awaiting_payment":
-        return "Contract Sent – Awaiting Payment"
-      case "paid":
-        return "Paid & Confirmed"
+      case "client_accepted":
+        return "Checking Availability"
+      case "availability_confirmed":
+        return "Contract Being Prepared"
+      case "payment_received":
+        return "Preparing Itinerary"
+      case "itinerary_created":
+        return "Confirmed & Itinerary Ready"
       case "declined":
         return "Quote Declined"
       case "expired":
         return "Quote Expired"
       default:
-        return "Contract sent - awaiting payment"
+        return "Processing..."
     }
   }
 
@@ -415,7 +427,7 @@ export default function PublicQuotePage({ params }: PublicQuotePageProps) {
         : { background: "#e5e7eb !important", color: "#4b5563 !important" }
     }
     switch (quote.status) {
-      case "paid":
+      case "itinerary_created":
         return { background: "#059669 !important", color: "#ffffff !important" }
       case "declined":
       case "expired":
@@ -508,7 +520,8 @@ export default function PublicQuotePage({ params }: PublicQuotePageProps) {
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <p className="text-gray-600 text-xs">Aircraft Options</p>
-              <Badge variant={statusDisplay.variant} className="text-xs">
+              <Badge variant={statusDisplay.variant} className="text-xs flex items-center gap-1">
+                <StatusIcon className="h-3 w-3" />
                 {statusDisplay.text}
               </Badge>
             </div>
@@ -547,7 +560,7 @@ export default function PublicQuotePage({ params }: PublicQuotePageProps) {
             "
           >
             <div className="space-y-3 pb-6">
-              {quote.status === "paid" && existingItinerary && (
+              {quote.status === "itinerary_created" && existingItinerary && (
                 <Button asChild className="w-full !bg-blue-600 hover:!bg-blue-700 !text-white !font-semibold">
                   <a href={`/itineraries/${existingItinerary.publicHash}`} target="_blank" rel="noopener noreferrer">
                     View Your Itinerary
@@ -570,66 +583,68 @@ export default function PublicQuotePage({ params }: PublicQuotePageProps) {
               </Button>
 
               {/* Decline dialog (mobile) */}
-              <Dialog open={isDeclineModalOpen} onOpenChange={setIsDeclineModalOpen}>
-                <DialogTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-full border-red-400 text-red-600 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950 bg-transparent"
-                  >
-                    Decline Quote
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[425px] mx-4">
-                  <DialogHeader>
-                    <DialogTitle>Decline Quote</DialogTitle>
-                    <DialogDescription>
-                      Please let us know why you're declining this quote. This helps us improve our service.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="grid gap-4 py-4">
-                    <div className="grid gap-2">
-                      <Label htmlFor="reason">Reason for declining *</Label>
-                      <Select value={declineReason} onValueChange={setDeclineReason}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a reason" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="too_expensive">Too expensive</SelectItem>
-                          <SelectItem value="wrong_dates">Wrong dates or timing</SelectItem>
-                          <SelectItem value="wrong_info">Incorrect information</SelectItem>
-                          <SelectItem value="found_alternative">Found alternative option</SelectItem>
-                          <SelectItem value="trip_cancelled">Trip cancelled</SelectItem>
-                          <SelectItem value="other">Other</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="notes">Special notes (optional)</Label>
-                      <Textarea
-                        id="notes"
-                        placeholder="Any additional feedback..."
-                        value={declineNotes}
-                        onChange={(e) => setDeclineNotes(e.target.value)}
-                        rows={3}
-                      />
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setIsDeclineModalOpen(false)}>
-                      Cancel
-                    </Button>
+              {quote.status === "pending_response" && (
+                <Dialog open={isDeclineModalOpen} onOpenChange={setIsDeclineModalOpen}>
+                  <DialogTrigger asChild>
                     <Button
-                      variant="destructive"
-                      onClick={() => {
-                        if (!declineReason) return
-                        setIsDeclineModalOpen(false)
-                      }}
+                      variant="outline"
+                      className="w-full border-red-400 text-red-600 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950 bg-transparent"
                     >
                       Decline Quote
                     </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[425px] mx-4">
+                    <DialogHeader>
+                      <DialogTitle>Decline Quote</DialogTitle>
+                      <DialogDescription>
+                        Please let us know why you're declining this quote. This helps us improve our service.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                      <div className="grid gap-2">
+                        <Label htmlFor="reason">Reason for declining *</Label>
+                        <Select value={declineReason} onValueChange={setDeclineReason}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a reason" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="too_expensive">Too expensive</SelectItem>
+                            <SelectItem value="wrong_dates">Wrong dates or timing</SelectItem>
+                            <SelectItem value="wrong_info">Incorrect information</SelectItem>
+                            <SelectItem value="found_alternative">Found alternative option</SelectItem>
+                            <SelectItem value="trip_cancelled">Trip cancelled</SelectItem>
+                            <SelectItem value="other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="notes">Special notes (optional)</Label>
+                        <Textarea
+                          id="notes"
+                          placeholder="Any additional feedback..."
+                          value={declineNotes}
+                          onChange={(e) => setDeclineNotes(e.target.value)}
+                          rows={3}
+                        />
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setIsDeclineModalOpen(false)}>
+                        Cancel
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        onClick={() => {
+                          if (!declineReason) return
+                          setIsDeclineModalOpen(false)
+                        }}
+                      >
+                        Decline Quote
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              )}
             </div>
           </div>
         </div>
@@ -729,7 +744,7 @@ export default function PublicQuotePage({ params }: PublicQuotePageProps) {
                   "
                 >
                   <div className="space-y-3">
-                    {quote.status === "paid" && existingItinerary && (
+                    {quote.status === "itinerary_created" && existingItinerary && (
                       <Button asChild className="w-full !bg-blue-600 hover:!bg-blue-700 !text-white !font-semibold">
                         <a
                           href={`/itineraries/${existingItinerary.publicHash}`}
@@ -756,60 +771,62 @@ export default function PublicQuotePage({ params }: PublicQuotePageProps) {
                     </Button>
 
                     {/* Desktop Decline Quote */}
-                    <Dialog open={isDeclineModalOpen} onOpenChange={setIsDeclineModalOpen}>
-                      <DialogTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className="w-full border-red-400 text-red-600 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950 bg-transparent"
-                        >
-                          Decline Quote
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="sm:max-w-[425px] mx-4">
-                        <DialogHeader>
-                          <DialogTitle>Decline Quote</DialogTitle>
-                          <DialogDescription>
-                            Please let us know why you're declining this quote. This helps us improve our service.
-                          </DialogDescription>
-                        </DialogHeader>
-                        <div className="grid gap-4 py-4">
-                          <div className="grid gap-2">
-                            <Label htmlFor="reason">Reason for declining *</Label>
-                            <Select value={declineReason} onValueChange={setDeclineReason}>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select a reason" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="too_expensive">Too expensive</SelectItem>
-                                <SelectItem value="wrong_dates">Wrong dates or timing</SelectItem>
-                                <SelectItem value="wrong_info">Incorrect information</SelectItem>
-                                <SelectItem value="found_alternative">Found alternative option</SelectItem>
-                                <SelectItem value="trip_cancelled">Trip cancelled</SelectItem>
-                                <SelectItem value="other">Other</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="grid gap-2">
-                            <Label htmlFor="notes">Special notes (optional)</Label>
-                            <Textarea
-                              id="notes"
-                              placeholder="Any additional feedback..."
-                              value={declineNotes}
-                              onChange={(e) => setDeclineNotes(e.target.value)}
-                              rows={3}
-                            />
-                          </div>
-                        </div>
-                        <DialogFooter>
-                          <Button variant="outline" onClick={() => setIsDeclineModalOpen(false)}>
-                            Cancel
-                          </Button>
-                          <Button variant="destructive" onClick={handleDeclineQuote}>
+                    {quote.status === "pending_response" && (
+                      <Dialog open={isDeclineModalOpen} onOpenChange={setIsDeclineModalOpen}>
+                        <DialogTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className="w-full border-red-400 text-red-600 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950 bg-transparent"
+                          >
                             Decline Quote
                           </Button>
-                        </DialogFooter>
-                      </DialogContent>
-                    </Dialog>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-[425px] mx-4">
+                          <DialogHeader>
+                            <DialogTitle>Decline Quote</DialogTitle>
+                            <DialogDescription>
+                              Please let us know why you're declining this quote. This helps us improve our service.
+                            </DialogDescription>
+                          </DialogHeader>
+                          <div className="grid gap-4 py-4">
+                            <div className="grid gap-2">
+                              <Label htmlFor="reason">Reason for declining *</Label>
+                              <Select value={declineReason} onValueChange={setDeclineReason}>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select a reason" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="too_expensive">Too expensive</SelectItem>
+                                  <SelectItem value="wrong_dates">Wrong dates or timing</SelectItem>
+                                  <SelectItem value="wrong_info">Incorrect information</SelectItem>
+                                  <SelectItem value="found_alternative">Found alternative option</SelectItem>
+                                  <SelectItem value="trip_cancelled">Trip cancelled</SelectItem>
+                                  <SelectItem value="other">Other</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="grid gap-2">
+                              <Label htmlFor="notes">Special notes (optional)</Label>
+                              <Textarea
+                                id="notes"
+                                placeholder="Any additional feedback..."
+                                value={declineNotes}
+                                onChange={(e) => setDeclineNotes(e.target.value)}
+                                rows={3}
+                              />
+                            </div>
+                          </div>
+                          <DialogFooter>
+                            <Button variant="outline" onClick={() => setIsDeclineModalOpen(false)}>
+                              Cancel
+                            </Button>
+                            <Button variant="destructive" onClick={handleDeclineQuote}>
+                              Decline Quote
+                            </Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+                    )}
                   </div>
                 </div>
               </div>
@@ -828,7 +845,8 @@ export default function PublicQuotePage({ params }: PublicQuotePageProps) {
                 <div className="px-4 py-3 border-b border-gray-200 bg-white/80 mb-3">
                   <div className="flex items-center justify-between">
                     <h3 className="text-sm font-medium text-gray-900">Aircraft Options</h3>
-                    <Badge variant={statusDisplay.variant} className="text-xs">
+                    <Badge variant={statusDisplay.variant} className="text-xs flex items-center gap-1">
+                      <StatusIcon className="h-3 w-3" />
                       {statusDisplay.text}
                     </Badge>
                   </div>
@@ -850,19 +868,15 @@ export default function PublicQuotePage({ params }: PublicQuotePageProps) {
                 </div>
 
                 {/* Desktop Terms (same width as cards) */}
-                
-{quote.options.length >= 1 && quote.terms && (
-  <div className="flex justify-center pl-6 pr-6">
-    <Card className="mt-3 mb-3 w-full">
-      <CardContent className="pl-1">
-        <p className="text-xs text-muted-foreground whitespace-pre-wrap">
-          {quote.terms}
-        </p>
-      </CardContent>
-    </Card>
-  </div>
-)}
-
+                {quote.options.length >= 1 && quote.terms && (
+                  <div className="flex justify-center pl-6 pr-6">
+                    <Card className="mt-3 mb-3 w-full">
+                      <CardContent className="pl-1">
+                        <p className="text-xs text-muted-foreground whitespace-pre-wrap">{quote.terms}</p>
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
 
                 {quote.options.length === 0 && (
                   <Card className="mx-2">

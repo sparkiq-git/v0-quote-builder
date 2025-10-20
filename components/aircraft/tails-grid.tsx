@@ -119,6 +119,8 @@ export function TailsGrid() {
   const [modelFilter, setModelFilter] = useState("all")
   const [archiveFilter, setArchiveFilter] = useState<"active" | "all">("active")
   const [deleteTailId, setDeleteTailId] = useState<string | null>(null)
+  const [editTailId, setEditTailId] = useState<string | null>(null)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
 
   const filteredTails = (state.aircraftTails || []).filter((tail) => {
     const model = getModelById(tail.modelId)
@@ -244,7 +246,11 @@ export function TailsGrid() {
             return (
               <Card
                 key={tail.id}
-                className={`${tail.isArchived ? "opacity-60" : ""} hover:shadow-lg transition-shadow`}
+                onClick={() => {
+                  setEditTailId(tail.id)
+                  setIsEditDialogOpen(true)
+                }}
+                className={`${tail.isArchived ? "opacity-60" : ""} hover:shadow-lg transition-shadow cursor-pointer`}
               >
                 <CardHeader className="p-4">
                   <ImageCarousel images={tail.images || []} alt={tail.tailNumber} />
@@ -330,7 +336,12 @@ export function TailsGrid() {
                 <CardFooter className="p-4 pt-0">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="sm" className="w-full bg-transparent">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full bg-transparent"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <MoreHorizontal className="h-4 w-4 mr-2" />
                         Actions
                       </Button>
@@ -386,6 +397,9 @@ export function TailsGrid() {
           )}
         </div>
       )}
+
+      {/* Edit Dialog */}
+      <TailCreateDialog tailId={editTailId || undefined} open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen} />
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!deleteTailId} onOpenChange={() => setDeleteTailId(null)}>

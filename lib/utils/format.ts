@@ -10,18 +10,21 @@ export function formatCurrency(amount: number): string {
 }
 
 export function formatDate(dateString: string): string {
+  if (!dateString) return "Date TBD"
   const date = parseISO(dateString)
   if (!isValid(date)) return "Invalid date"
   return format(date, "MMM d, yyyy")
 }
 
 export function formatDateTime(dateString: string): string {
+  if (!dateString) return "Date TBD"
   const date = parseISO(dateString)
   if (!isValid(date)) return "Invalid date"
   return format(date, "MMM d, yyyy h:mm a")
 }
 
 export function formatTimeAgo(dateString: string): string {
+  if (!dateString) return "Date TBD"
   const date = parseISO(dateString)
   if (!isValid(date)) return "Invalid date"
   return formatDistanceToNow(date, { addSuffix: true })

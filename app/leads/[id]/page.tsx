@@ -6,7 +6,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
-import { ArrowLeft, FileText, Mail, Phone, Building2, Calendar, User } from "lucide-react"
+import { ArrowLeft, FileText, Mail, Phone, Building2, Calendar, User, Trash2 } from "lucide-react"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { LeadLegsTimeline } from "@/components/leads/lead-legs-timeline"
 import { useMockStore } from "@/lib/mock/store"
 import { formatDate, formatTimeAgo } from "@/lib/utils/format"
@@ -19,7 +30,7 @@ interface LeadDetailPageProps {
 }
 
 export default function LeadDetailPage({ params }: LeadDetailPageProps) {
-  const { getLeadById, convertLeadToQuote } = useMockStore()
+  const { getLeadById, convertLeadToQuote, dispatch } = useMockStore()
   const router = useRouter()
   const { toast } = useToast()
 
@@ -44,6 +55,15 @@ export default function LeadDetailPage({ params }: LeadDetailPageProps) {
         variant: "destructive",
       })
     }
+  }
+
+  const handleDeleteLead = () => {
+    dispatch({ type: "DELETE_LEAD", payload: lead.id })
+    toast({
+      title: "Lead deleted",
+      description: "The lead has been moved to deleted status.",
+    })
+    router.push("/leads")
   }
 
   const getStatusBadgeVariant = (status: string) => {
@@ -71,12 +91,37 @@ export default function LeadDetailPage({ params }: LeadDetailPageProps) {
             <p className="text-muted-foreground">Manage lead information and convert to quote</p>
           </div>
         </div>
-        {lead.status === "new" && (
-          <Button onClick={handleConvertToQuote}>
-            <FileText className="mr-2 h-4 w-4" />
-            Convert to Quote
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="outline" className="text-destructive hover:text-destructive bg-transparent">
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete Lead
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will mark the lead as deleted. You can still view deleted leads in the leads list by filtering
+                  for deleted status.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDeleteLead} className="bg-destructive hover:bg-destructive/90">
+                  Delete Lead
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+          {lead.status === "new" && (
+            <Button onClick={handleConvertToQuote}>
+              <FileText className="mr-2 h-4 w-4" />
+              Convert to Quote
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">

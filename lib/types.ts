@@ -11,6 +11,7 @@ export interface Customer {
   email: string
   phone: string
   company?: string
+  vesselType?: "Sailing Yacht" | "Motor Yacht" | "Catamaran" | "Gulet"
 }
 
 export interface Leg {
@@ -21,6 +22,35 @@ export interface Leg {
   departureTime: string
   passengers: number
   notes?: string
+  fboOriginId?: string
+  fboDestinationId?: string
+  passengerDetails?: PassengerWithLegs[] // Added passengerDetails field to store detailed passenger information per leg
+}
+
+export interface PassengerWithLegs {
+  name: string
+  assignedLegIds: string[]
+  hasSpecialRequests?: boolean
+  specialRequests?: string
+  hasDietaryRestrictions?: boolean
+  dietaryRestrictions?: string
+  hasAccessibilityNeeds?: boolean
+  accessibilityNeeds?: string
+}
+
+export interface CrewMemberWithLegs extends CrewMember {
+  assignedLegIds?: string[]
+}
+
+export interface WeatherForecast {
+  airportCode: string
+  temperature: number
+  conditions: string
+  windSpeed: number
+  windDirection: string
+  visibility: number
+  precipitation: number
+  forecast: string
 }
 
 export interface Lead {
@@ -51,6 +81,14 @@ export interface Service {
   amount: number
 }
 
+export interface QuoteFee {
+  id: string
+  name: string
+  amount: number
+  isAutoCalculated: boolean
+  description?: string
+}
+
 export interface QuoteOption {
   id: string
   aircraftModelId: string
@@ -58,7 +96,8 @@ export interface QuoteOption {
   totalHours: number
   operatorCost: number
   commission: number
-  tax: number
+  fees: QuoteFee[]
+  feesEnabled: boolean // Toggle for fees display/calculation
   selectedAmenities: string[] // Array of amenity strings from the tail
   overrideImages?: string[]
   notes?: string
@@ -74,7 +113,15 @@ export interface Quote {
   legs: Leg[]
   options: QuoteOption[]
   services: Service[]
-  status: "pending_acceptance" | "prepare_payment" | "awaiting_payment" | "paid" | "declined" | "expired"
+  status:
+    | "pending_response"
+    | "client_accepted"
+    | "availability_confirmed"
+    | "pending_payment"
+    | "payment_received"
+    | "itinerary_created"
+    | "declined"
+    | "expired"
   expiresAt: string
   createdAt: string
   publishedAt?: string
@@ -86,23 +133,81 @@ export interface Quote {
     primaryColor: string
   }
   itineraryId?: string
+  workflowData?: {
+    availabilityCheck?: {
+      status: "pending" | "confirmed" | "unavailable"
+      checkedAt?: string
+      checkedBy?: string
+      notes?: string
+      resourcesChecked?: {
+        crew: boolean
+        aircraft: boolean
+        permits: boolean
+        other?: string[]
+      }
+    }
+    contractAndPayment?: {
+      contractSentAt?: string
+      paymentMethod?: "payment_link" | "manual" // Added payment method tracking
+      paymentLinkSent?: string
+      paymentReceivedAt?: string
+      paymentReference?: string
+    }
+    preItineraryData?: {
+      completedAt?: string
+      completedBy?: string
+      crewAssigned?: boolean
+      fboConfirmed?: boolean
+      specialRequirements?: string[]
+    }
+  }
 }
 
-export interface Event {
+export interface AvailabilityCheck {
   id: string
-  type: "quote_viewed" | "option_selected" | "lead_created" | "quote_submitted" | "quote_declined"
-  quoteId?: string
-  leadId?: string
-  timestamp: string
-  metadata?: Record<string, any>
+  quoteId: string
+  status: "pending" | "confirmed" | "unavailable"
+  checkedAt: string
+  checkedBy: string
+  notes?: string
+  resourcesChecked: {
+    crew: boolean
+    aircraft: boolean
+    permits: boolean
+    other?: string[]
+  }
 }
 
-export type TailStatus = "active" | "mx" | "inactive" | "sold"
-
-export interface Category {
+export interface PreItineraryData {
   id: string
-  name: string
-  description?: string
+  quoteId: string
+  crewInformation: {
+    assigned: boolean
+    members: CrewMember[]
+    specialRequirements?: string
+  }
+  fboInformation: {
+    confirmed: boolean
+    legFbos?: Record<string, { originFboId?: string; destinationFboId?: string }>
+    originFbo?: FBO
+    destinationFbo?: FBO
+    specialServices?: string[]
+    originFboPhone?: string
+    originFboAddress?: string
+    destinationFboPhone?: string
+    destinationFboAddress?: string
+  }
+  passengerDetails: {
+    manifestComplete: boolean
+    passengers?: PassengerWithLegs[]
+    specialRequests?: string[]
+    dietaryRestrictions?: string[]
+    accessibilityNeeds?: string[]
+  }
+  operationalNotes: string
+  weatherForecasts?: WeatherForecast[]
+  completedAt?: string
+  completedBy?: string
 }
 
 export interface AircraftModel {
@@ -125,6 +230,7 @@ export interface AircraftTail {
   tailNumber: string
   operator?: string
   year?: number
+  yearOfRefurbishment?: number
   status: TailStatus
   amenities?: string
   images?: string[]
@@ -160,8 +266,10 @@ export interface FBO {
 export interface CrewMember {
   id: string
   name: string
-  role: "PIC" | "SIC" | "FA" | "Ground"
-  experience: string
+  role: "PIC" | "SIC" | "FA" | "Ground" | string // Allow custom string roles
+  yearsOfExperience: number
+  totalFlightHours: number
+  status: "active" | "inactive"
   phone?: string
   email?: string
   avatar?: string
@@ -179,10 +287,12 @@ export interface ItinerarySegment {
   blockTime: string
   passengers: number
   passengerList: string[]
+  passengerDetails?: PassengerWithLegs[]
   notes?: string
   fboOrigin?: FBO
   fboDestination?: FBO
   assignedCrew: CrewMember[]
+  weatherForecast?: WeatherForecast
   geometry?: string // Encoded polyline for map display
 }
 
@@ -219,6 +329,30 @@ export interface Itinerary {
     type: "interior" | "exterior"
   }[]
   crew: CrewMember[]
+  crewWithLegs?: CrewMemberWithLegs[]
+  allPassengers?: PassengerWithLegs[]
+  workflowData?: {
+    availabilityCheck?: {
+      status: "pending" | "confirmed" | "unavailable"
+      checkedAt?: string
+      checkedBy?: string
+      notes?: string
+      resourcesChecked?: {
+        crew: boolean
+        aircraft: boolean
+        permits: boolean
+        other?: string[]
+      }
+    }
+    contractAndPayment?: {
+      contractSentAt?: string
+      paymentMethod?: "payment_link" | "manual"
+      paymentLinkSent?: string
+      paymentReceivedAt?: string
+      paymentReference?: string
+    }
+    preItineraryData?: any
+  }
   status: "confirmed" | "draft" | "updated" | "requires_action"
   visibility: {
     showCrewContacts: boolean
@@ -243,4 +377,79 @@ export interface MockDatabase {
   itineraries: Itinerary[]
   fbos: FBO[]
   crewMembers: CrewMember[]
+  preItineraryData: PreItineraryData[]
+  customCrewRoles: string[] // Add custom crew roles array
+  passengers: Passenger[] // Add passengers array
+}
+
+export type TailStatus = "active" | "mx" | "inactive" | "sold"
+
+export interface Category {
+  id: string
+  name: string
+  description?: string
+}
+
+export interface Event {
+  id: string
+  type: "quote_viewed" | "option_selected" | "lead_created" | "quote_submitted" | "quote_declined"
+  quoteId?: string
+  leadId?: string
+  timestamp: string
+  metadata?: Record<string, any>
+}
+
+export interface Passenger {
+  id: string
+  name: string
+  email: string
+  phone: string
+  company?: string
+  quotesReceived: string[] // Array of quote IDs
+  flightsCompleted: number
+  pastCoPassengers: string[] // Array of passenger IDs
+  specialRequests?: string
+  dietaryRestrictions?: string
+  accessibilityNeeds?: string
+  createdAt: string
+  updatedAt: string
+}
+// lib/types.ts
+
+export interface AircraftManufacturer {
+  id: string
+  name: string
+  tenant_id: string | null
+  created_by?: string | null
+  created_at?: string | null
+}
+
+export interface AircraftModelRecord {
+  id: string
+  manufacturer_id: string
+  name: string
+  icao_type_designator?: string | null
+  tenant_id?: string | null
+  size_code?: string | null
+  created_at?: string | null
+}
+
+export interface AircraftRecord {
+  id: string
+  tenant_id: string
+  tail_number: string
+  model_id?: string | null
+  manufacturer_id?: string | null
+  operator_id?: string | null
+  type_rating_id: string
+  status: string
+  home_base?: string | null
+  capacity_pax?: number | null
+  year_of_manufacture?: number | null
+  serial_number?: string | null
+  range_nm?: number | null
+  mtow_kg?: number | null
+  notes?: string | null
+  created_at?: string
+  updated_at?: string
 }

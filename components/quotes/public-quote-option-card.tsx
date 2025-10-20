@@ -114,11 +114,11 @@ export function PublicQuoteOptionCard({
                     <CarouselContent className="h-full">
                       {images.map((img, i) => (
                         <CarouselItem key={i} className="basis-full h-full">
-                          <div className="h-full w-full grid place-items-center">
+                          <div className="h-28 sm:h-32 w-full grid place-items-center">
                             <img
                               src={getImageSrc(img) || "/placeholder.svg"}
                               alt={`${aircraftModel.name} - Image ${i + 1}`}
-                              className="max-w-full max-h-full place-items-center object-cover md:object-contain w-full h-full"
+                              className="max-w-full max-h-full place-items-center object-cover md:object-contain w-full h-28 sm:h-32"
                               loading={i === 0 ? "eager" : "lazy"}
                               decoding="async"
                               onError={() => setFailedImages((p) => (p.includes(img) ? p : [...p, img]))}
