@@ -84,22 +84,39 @@ export default function ModelImageManager({ modelId, tenantId, onImagesUpdated }
         error: userError,
       } = await supabase.auth.getUser()
       if (userError) throw userError
+      
+      if (!user) {
+        throw new Error("User not authenticated")
+      }
+      
+      // Verify tenant_id matches user's tenant
+      const userTenantId = user.app_metadata?.tenant_id
+      if (userTenantId && userTenantId !== tenantId) {
+        throw new Error("Tenant ID mismatch")
+      }
+      
+      // Use API route to handle RLS properly
+      const response = await fetch("/api/aircraft-model-images", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          modelId,
+          storagePath,
+          publicUrl,
+          caption: null,
+          isPrimary: false,
+          displayOrder: 0,
+        }),
+      })
 
-      const { error: dbError, data: inserted } = await supabase
-        .from("aircraft_model_image")
-        .insert([
-          {
-            tenant_id: tenantId,
-            aircraft_model_id: modelId,
-            storage_path: storagePath,
-            public_url: publicUrl,
-            uploaded_by: user?.id || null,
-          },
-        ])
-        .select("*")
-        .single()
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to save image record")
+      }
 
-      if (dbError) throw dbError
+      const { data: inserted } = await response.json()
 
       setImages((prev) => [...prev, { url: publicUrl, id: inserted.id }])
       toast({ title: "Image uploaded successfully" })
@@ -107,9 +124,21 @@ export default function ModelImageManager({ modelId, tenantId, onImagesUpdated }
       resetState()
     } catch (error: any) {
       console.error("Upload failed", error)
+      
+      let errorMessage = error.message || String(error)
+      
+      // Provide more specific error messages for common RLS issues
+      if (errorMessage.includes("row-level security policy")) {
+        errorMessage = "Permission denied. Please check that you have the correct permissions to upload images for this model."
+      } else if (errorMessage.includes("Tenant ID mismatch")) {
+        errorMessage = "Tenant ID mismatch. Please refresh the page and try again."
+      } else if (errorMessage.includes("User not authenticated")) {
+        errorMessage = "Please sign in again to continue."
+      }
+      
       toast({
         title: "Upload error",
-        description: error.message || String(error),
+        description: errorMessage,
         variant: "destructive",
       })
     } finally {
