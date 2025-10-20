@@ -64,19 +64,57 @@ export default function ModelImageManager({ modelId, tenantId, onImagesUpdated }
       const croppedBlob = await getCroppedImg(previewUrl!, croppedAreaPixels)
       if (!croppedBlob) throw new Error("Failed to crop image")
 
-      const fileName = `${Date.now()}_${selectedFile.name}`
+      const fileName = `${Date.now()}_${selectedFile.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`
       const storagePath = `tenant/${tenantId}/models/${modelId}/${fileName}`
 
-      const { error: uploadError } = await supabase.storage
+      console.log("Uploading to storage:", {
+        bucket: "aircraft",
+        path: storagePath,
+        fileSize: croppedBlob.size,
+        contentType: selectedFile.type || "image/jpeg"
+      })
+
+      // Check if bucket exists and is accessible
+      const { data: buckets, error: bucketError } = await supabase.storage.listBuckets()
+      if (bucketError) {
+        console.error("Error listing buckets:", bucketError)
+      } else {
+        console.log("Available buckets:", buckets?.map(b => b.name))
+      }
+
+      // Try uploading to aircraft bucket first
+      let uploadError = null
+      let bucketName = "aircraft"
+      
+      const { error: aircraftError } = await supabase.storage
         .from("aircraft")
         .upload(storagePath, croppedBlob, {
           cacheControl: "3600",
-          upsert: false,
+          upsert: true,
           contentType: selectedFile.type || "image/jpeg",
         })
-      if (uploadError) throw uploadError
+      
+      if (aircraftError) {
+        console.warn("Aircraft bucket failed, trying aircraft-images:", aircraftError)
+        bucketName = "aircraft-images"
+        const { error: aircraftImagesError } = await supabase.storage
+          .from("aircraft-images")
+          .upload(storagePath, croppedBlob, {
+            cacheControl: "3600",
+            upsert: true,
+            contentType: selectedFile.type || "image/jpeg",
+          })
+        uploadError = aircraftImagesError
+      } else {
+        uploadError = null
+      }
+      
+      if (uploadError) {
+        console.error("Storage upload error:", uploadError)
+        throw new Error(`Storage upload failed: ${uploadError.message}`)
+      }
 
-      const { data: publicData } = supabase.storage.from("aircraft").getPublicUrl(storagePath)
+      const { data: publicData } = supabase.storage.from(bucketName).getPublicUrl(storagePath)
       const publicUrl = publicData.publicUrl
 
       const {
@@ -95,41 +133,34 @@ export default function ModelImageManager({ modelId, tenantId, onImagesUpdated }
         throw new Error("Tenant ID mismatch")
       }
       
-      // Since RLS is disabled, we can insert directly
-      console.log("Inserting image with data:", {
-        tenant_id: tenantId,
-        aircraft_model_id: modelId,
-        storage_path: storagePath,
-        public_url: publicUrl,
-        uploaded_by: user?.id || null,
+      // Use API route to bypass RLS issues
+      console.log("Uploading image via API route:", {
+        modelId,
+        storagePath,
+        publicUrl,
+        tenantId,
       })
       
-      const { error: dbError, data: inserted } = await supabase
-        .from("aircraft_model_image")
-        .insert({
-          tenant_id: tenantId,
-          aircraft_model_id: modelId,
-          storage_path: storagePath,
-          public_url: publicUrl,
-          uploaded_by: user?.id || null,
-          caption: null,
-          is_primary: false,
-          display_order: 0,
-        })
-        .select("*")
-        .single()
+      const response = await fetch("/api/aircraft-model-images", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          modelId,
+          storagePath,
+          publicUrl,
+          tenantId,
+        }),
+      })
 
-      if (dbError) {
-        console.error("Database insert error:", dbError)
-        console.error("Insert data:", {
-          tenant_id: tenantId,
-          aircraft_model_id: modelId,
-          storage_path: storagePath,
-          public_url: publicUrl,
-          uploaded_by: user?.id || null,
-        })
-        throw new Error(`Database error: ${dbError.message}`)
+      if (!response.ok) {
+        const errorData = await response.json()
+        console.error("API route error:", errorData)
+        throw new Error(errorData.error || "Failed to save image record")
       }
+
+      const { data: inserted } = await response.json()
 
       setImages((prev) => [...prev, { url: publicUrl, id: inserted.id }])
       toast({ title: "Image uploaded successfully" })
@@ -166,7 +197,9 @@ export default function ModelImageManager({ modelId, tenantId, onImagesUpdated }
       const path = urlParts.length > 1 ? urlParts[1] : null
       
       if (path) {
-        await supabase.storage.from("aircraft").remove([path])
+        // Try both buckets for deletion
+        const bucketName = path.startsWith("aircraft/") ? "aircraft" : "aircraft-images"
+        await supabase.storage.from(bucketName).remove([path])
       }
       
       if (id) {

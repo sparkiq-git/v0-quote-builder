@@ -50,7 +50,9 @@ export function ModelEditDialog({
     async function loadTenant() {
       try {
         const { data } = await supabase.auth.getUser()
-        setTenantId(data?.user?.app_metadata?.tenant_id ?? null)
+        const tenantId = data?.user?.app_metadata?.tenant_id ?? null
+        console.log("Loaded tenant ID:", tenantId)
+        setTenantId(tenantId)
       } catch (err) {
         console.error("Error loading tenant ID:", err)
       }
@@ -123,6 +125,10 @@ export function ModelEditDialog({
 
         {model && (
           <>
+            {/* Debug info */}
+            <div className="text-xs text-muted-foreground mb-2">
+              Debug: tenantId={tenantId}, model.tenant_id={model.tenant_id}
+            </div>
             <div className="space-y-4">
               <div>
                 <Label htmlFor="name">Model Name</Label>
@@ -156,12 +162,12 @@ export function ModelEditDialog({
               </Button>
             </DialogFooter>
 
-            {tenantId && (
+            {(tenantId || model?.tenant_id) && (
               <div className="mt-8 border-t pt-6">
                 <h3 className="text-lg font-semibold mb-2">Model Images</h3>
                 <ModelImageManager 
                   modelId={model.id} 
-                  tenantId={tenantId} 
+                  tenantId={tenantId || model?.tenant_id || ""} 
                   onImagesUpdated={onUpdated}
                 />
               </div>
