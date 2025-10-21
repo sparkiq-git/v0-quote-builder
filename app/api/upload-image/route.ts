@@ -28,11 +28,36 @@ export async function POST(req: NextRequest) {
       }, { status: 400 })
     }
 
-    // Use service role client to bypass RLS
-    const supabase = createClient({
-      supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      supabaseKey: process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    // Validate environment variables
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+    console.log("🔑 Environment check:", {
+      hasSupabaseUrl: !!supabaseUrl,
+      hasServiceRoleKey: !!serviceRoleKey,
+      supabaseUrlLength: supabaseUrl?.length,
+      serviceRoleKeyLength: serviceRoleKey?.length
     })
+
+    if (!supabaseUrl) {
+      console.error("❌ Missing Supabase URL")
+      return NextResponse.json({ 
+        success: false, 
+        error: "Server configuration error: Missing Supabase URL" 
+      }, { status: 500 })
+    }
+
+    let supabase
+    if (serviceRoleKey) {
+      console.log("🔑 Using service role client")
+      // Use service role client to bypass RLS
+      supabase = createClient(supabaseUrl, serviceRoleKey)
+    } else {
+      console.log("⚠️ Service role key not found, using regular server client")
+      // Fallback to regular server client (may still have RLS issues)
+      const { createClient: createServerClient } = await import("@/lib/supabase/server")
+      supabase = await createServerClient()
+    }
     
     // Generate file name and path
     const fileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`
