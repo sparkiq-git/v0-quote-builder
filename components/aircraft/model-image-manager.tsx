@@ -29,7 +29,6 @@ export default function ModelImageManager({ modelId, tenantId, onImagesUpdated }
   const [zoom, setZoom] = useState(1)
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null)
   const [imageLoaded, setImageLoaded] = useState(false)
-  const [workingBucket, setWorkingBucket] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement | null>(null)
 
   // Load existing images
@@ -163,132 +162,38 @@ export default function ModelImageManager({ modelId, tenantId, onImagesUpdated }
       
       console.log("User authenticated:", user.id)
 
-      // Try different bucket names since user might not have access to aircraft-media
-      const possibleBuckets = ["aircraft-media", "aircraft", "aircraft-images", "images", "uploads"]
-      let workingBucket = null
-      
-      for (const bucketName of possibleBuckets) {
-        try {
-          console.log(`Testing bucket: ${bucketName}`)
-          const { data: files, error: listError } = await supabase.storage
-            .from(bucketName)
-            .list("", { limit: 1 })
-          
-          if (!listError) {
-            workingBucket = bucketName
-            console.log(`✅ Found working bucket: ${bucketName}`)
-            break
-          } else {
-            console.log(`❌ Bucket ${bucketName} not accessible:`, listError.message)
-          }
-        } catch (error) {
-          console.log(`❌ Bucket ${bucketName} error:`, error)
-        }
-      }
-      
-      if (!workingBucket) {
-        throw new Error("No accessible storage buckets found. Please contact your administrator to set up storage permissions.")
-      }
-      
-      // Store the working bucket for use in delete operations
-      setWorkingBucket(workingBucket)
-
+      // Use server-side API to bypass RLS restrictions
       for (let i = 0; i < imageFiles.length; i++) {
         const file = imageFiles[i]
-        const fileName = `${Date.now()}_${i}_${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`
-        // Try a simpler path structure that might bypass RLS
-        let storagePath = `models/${modelId}/${fileName}`
-
-        console.log("Uploading file:", {
-          fileName,
-          storagePath,
+        
+        console.log("Uploading file via server API:", {
+          fileName: file.name,
           fileSize: file.size,
           contentType: file.type
         })
 
-        // Use the working bucket we found
-        console.log(`Uploading to bucket: ${workingBucket}`)
-        
-        // Upload to storage with minimal options to avoid RLS issues
-        let { error: uploadError } = await supabase.storage
-          .from(workingBucket)
-          .upload(storagePath, file)
+        // Create FormData for server upload
+        const formData = new FormData()
+        formData.append("file", file)
+        formData.append("modelId", modelId)
+        formData.append("tenantId", tenantId)
+        formData.append("userId", user.id)
 
-        // If upload fails with RLS, try a different path structure
-        if (uploadError && uploadError.message.includes("row-level security policy")) {
-          console.log("RLS error detected, trying alternative path...")
-          storagePath = `uploads/${fileName}`
-          const { error: altUploadError } = await supabase.storage
-            .from(workingBucket)
-            .upload(storagePath, file)
-          
-          if (altUploadError) {
-            console.error("Alternative upload also failed:", altUploadError)
-            uploadError = altUploadError
-          } else {
-            console.log("✅ Alternative upload succeeded")
-            uploadError = null
-          }
-        }
-
-        if (uploadError) {
-          console.error("Storage upload error:", uploadError)
-          console.error("Upload details:", {
-            bucketName: workingBucket,
-            storagePath,
-            fileSize: file.size,
-            fileName: file.name,
-            contentType: file.type
-          })
-          throw new Error(`Storage upload failed: ${uploadError.message}`)
-        }
-
-        console.log("✅ File uploaded successfully to storage")
-
-        // Get public URL using the working bucket
-        const { data: publicData } = supabase.storage.from(workingBucket).getPublicUrl(storagePath)
-        const publicUrl = publicData.publicUrl
-        
-        console.log("Generated public URL:", publicUrl)
-
-        console.log("Saving to database:", {
-          tenant_id: tenantId,
-          aircraft_model_id: modelId,
-          storage_path: storagePath,
-          public_url: publicUrl
+        // Upload via server-side API
+        const response = await fetch("/api/upload-image", {
+          method: "POST",
+          body: formData,
         })
 
-        // Save to database
-        console.log("💾 Saving to database...")
-        const { error: dbError, data: inserted } = await supabase
-          .from("aircraft_model_image")
-          .insert({
-            tenant_id: tenantId,
-            aircraft_model_id: modelId,
-            storage_path: storagePath,
-            public_url: publicUrl,
-            uploaded_by: user.id,
-            caption: null,
-            is_primary: false,
-            display_order: i,
-          })
-          .select("*")
-          .single()
+        const result = await response.json()
 
-        if (dbError) {
-          console.error("❌ Database insert error:", dbError)
-          console.error("Insert data:", {
-            tenant_id: tenantId,
-            aircraft_model_id: modelId,
-            storage_path: storagePath,
-            public_url: publicUrl,
-            uploaded_by: user?.id || null,
-          })
-          throw new Error(`Database error: ${dbError.message}`)
+        if (!result.success) {
+          console.error("Server upload error:", result.error)
+          throw new Error(`Server upload failed: ${result.error}`)
         }
 
-        console.log("✅ Database record created:", inserted)
-        setImages((prev) => [...prev, { url: publicUrl, id: inserted.id }])
+        console.log("✅ Server upload successful:", result.data)
+        setImages((prev) => [...prev, { url: result.data.url, id: result.data.id }])
       }
 
       toast({ title: "Images uploaded successfully" })
@@ -325,8 +230,9 @@ export default function ModelImageManager({ modelId, tenantId, onImagesUpdated }
       const urlParts = url.split("/storage/v1/object/public/")
       const path = urlParts.length > 1 ? urlParts[1] : null
       
-      if (path && workingBucket) {
-        await supabase.storage.from(workingBucket).remove([path])
+      if (path) {
+        // Use server-side client for delete operations as well
+        await supabase.storage.from("aircraft-media").remove([path])
       }
       
       if (id) {
