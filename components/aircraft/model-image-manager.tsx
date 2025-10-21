@@ -29,6 +29,7 @@ export default function ModelImageManager({ modelId, tenantId, onImagesUpdated }
   const [zoom, setZoom] = useState(1)
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null)
   const [imageLoaded, setImageLoaded] = useState(false)
+  const [workingBucket, setWorkingBucket] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement | null>(null)
 
   // Load existing images
@@ -162,6 +163,36 @@ export default function ModelImageManager({ modelId, tenantId, onImagesUpdated }
       
       console.log("User authenticated:", user.id)
 
+      // Try different bucket names since user might not have access to aircraft-media
+      const possibleBuckets = ["aircraft-media", "aircraft", "aircraft-images", "images", "uploads"]
+      let workingBucket = null
+      
+      for (const bucketName of possibleBuckets) {
+        try {
+          console.log(`Testing bucket: ${bucketName}`)
+          const { data: files, error: listError } = await supabase.storage
+            .from(bucketName)
+            .list("", { limit: 1 })
+          
+          if (!listError) {
+            workingBucket = bucketName
+            console.log(`✅ Found working bucket: ${bucketName}`)
+            break
+          } else {
+            console.log(`❌ Bucket ${bucketName} not accessible:`, listError.message)
+          }
+        } catch (error) {
+          console.log(`❌ Bucket ${bucketName} error:`, error)
+        }
+      }
+      
+      if (!workingBucket) {
+        throw new Error("No accessible storage buckets found. Please contact your administrator to set up storage permissions.")
+      }
+      
+      // Store the working bucket for use in delete operations
+      setWorkingBucket(workingBucket)
+
       for (let i = 0; i < imageFiles.length; i++) {
         const file = imageFiles[i]
         const fileName = `${Date.now()}_${i}_${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`
@@ -174,13 +205,12 @@ export default function ModelImageManager({ modelId, tenantId, onImagesUpdated }
           contentType: file.type
         })
 
-        // Use the correct bucket name based on Supabase logs analysis
-        // Found that aircraft-media bucket exists and is accessible (POST 200 to /storage/v1/object/list/aircraft-media)
-        const bucketName = "aircraft-media"
+        // Use the working bucket we found
+        console.log(`Uploading to bucket: ${workingBucket}`)
         
         // Upload to storage
         const { error: uploadError } = await supabase.storage
-          .from(bucketName)
+          .from(workingBucket)
           .upload(storagePath, file, {
             cacheControl: "3600",
             upsert: true,
@@ -201,8 +231,8 @@ export default function ModelImageManager({ modelId, tenantId, onImagesUpdated }
 
         console.log("✅ File uploaded successfully to storage")
 
-        // Get public URL using the correct bucket
-        const { data: publicData } = supabase.storage.from(bucketName).getPublicUrl(storagePath)
+        // Get public URL using the working bucket
+        const { data: publicData } = supabase.storage.from(workingBucket).getPublicUrl(storagePath)
         const publicUrl = publicData.publicUrl
         
         console.log("Generated public URL:", publicUrl)
@@ -281,8 +311,8 @@ export default function ModelImageManager({ modelId, tenantId, onImagesUpdated }
       const urlParts = url.split("/storage/v1/object/public/")
       const path = urlParts.length > 1 ? urlParts[1] : null
       
-      if (path) {
-        await supabase.storage.from("aircraft-media").remove([path])
+      if (path && workingBucket) {
+        await supabase.storage.from(workingBucket).remove([path])
       }
       
       if (id) {
@@ -355,7 +385,20 @@ export default function ModelImageManager({ modelId, tenantId, onImagesUpdated }
               const { data: { user } } = await supabase.auth.getUser()
               console.log("User:", user?.id)
               const { data: buckets } = await supabase.storage.listBuckets()
-              console.log("Buckets:", buckets?.map(b => b.name))
+              console.log("Available buckets:", buckets?.map(b => b.name))
+              
+              // Test bucket access
+              const possibleBuckets = ["aircraft-media", "aircraft", "aircraft-images", "images", "uploads"]
+              for (const bucketName of possibleBuckets) {
+                try {
+                  const { data: files, error } = await supabase.storage
+                    .from(bucketName)
+                    .list("", { limit: 1 })
+                  console.log(`Bucket ${bucketName}:`, error ? `❌ ${error.message}` : "✅ Accessible")
+                } catch (error) {
+                  console.log(`Bucket ${bucketName}: ❌ Error`)
+                }
+              }
             }}
           >
             Debug
