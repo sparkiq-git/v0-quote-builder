@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { ImagePlus, Trash2, UploadCloud, X, Crop } from "lucide-react"
 import Cropper from "react-easy-crop"
 import Slider from "@mui/material/Slider"
@@ -189,8 +189,17 @@ export default function ModelImageManager({ modelId, tenantId, onImagesUpdated }
 
         if (uploadError) {
           console.error("Storage upload error:", uploadError)
+          console.error("Upload details:", {
+            bucketName,
+            storagePath,
+            fileSize: file.size,
+            fileName: file.name,
+            contentType: file.type
+          })
           throw new Error(`Storage upload failed: ${uploadError.message}`)
         }
+
+        console.log("✅ File uploaded successfully to storage")
 
         // Get public URL using the correct bucket
         const { data: publicData } = supabase.storage.from(bucketName).getPublicUrl(storagePath)
@@ -206,6 +215,7 @@ export default function ModelImageManager({ modelId, tenantId, onImagesUpdated }
         })
 
         // Save to database
+        console.log("💾 Saving to database...")
         const { error: dbError, data: inserted } = await supabase
           .from("aircraft_model_image")
           .insert({
@@ -222,10 +232,18 @@ export default function ModelImageManager({ modelId, tenantId, onImagesUpdated }
           .single()
 
         if (dbError) {
-          console.error("Database insert error:", dbError)
+          console.error("❌ Database insert error:", dbError)
+          console.error("Insert data:", {
+            tenant_id: tenantId,
+            aircraft_model_id: modelId,
+            storage_path: storagePath,
+            public_url: publicUrl,
+            uploaded_by: user?.id || null,
+          })
           throw new Error(`Database error: ${dbError.message}`)
         }
 
+        console.log("✅ Database record created:", inserted)
         setImages((prev) => [...prev, { url: publicUrl, id: inserted.id }])
       }
 
@@ -326,6 +344,22 @@ export default function ModelImageManager({ modelId, tenantId, onImagesUpdated }
             <ImagePlus className="h-4 w-4 mr-2" />
             Select Images
           </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={async () => {
+              console.log("🧪 Debug Info:")
+              console.log("Tenant ID:", tenantId)
+              console.log("Model ID:", modelId)
+              const { data: { user } } = await supabase.auth.getUser()
+              console.log("User:", user?.id)
+              const { data: buckets } = await supabase.storage.listBuckets()
+              console.log("Buckets:", buckets?.map(b => b.name))
+            }}
+          >
+            Debug
+          </Button>
           <input
             ref={inputRef}
             type="file"
@@ -394,6 +428,9 @@ export default function ModelImageManager({ modelId, tenantId, onImagesUpdated }
               <Crop className="h-5 w-5" />
               Crop Image
             </DialogTitle>
+            <DialogDescription>
+              Adjust the crop area and zoom to select the best part of your image.
+            </DialogDescription>
           </DialogHeader>
 
           {cropPreview && (
