@@ -26,13 +26,11 @@ interface Props {
 export function QuoteOptionsTab({ quote, onUpdate, onNext, onBack }: Props) {
   const { toast } = useToast()
 
-  // State
   const options = Array.isArray(quote?.options) ? quote.options : []
   const [createOpen, setCreateOpen] = useState(false)
   const [editOpenFor, setEditOpenFor] = useState<string | null>(null)
   const [aircraftCache, setAircraftCache] = useState<Record<string, AircraftFull>>({})
 
-  // Handlers
   const handleAddOption = () => {
     const newOption: QuoteOption = {
       id: crypto.randomUUID(),
@@ -100,184 +98,210 @@ export function QuoteOptionsTab({ quote, onUpdate, onNext, onBack }: Props) {
           </div>
         )}
 
-        {options.map((option) => (
-          <div key={option.id} className="p-4 border rounded-lg space-y-4">
-            <div className="flex justify-between items-center">
-              <h4 className="font-medium">Aircraft Option</h4>
-              <Button variant="outline" size="sm" onClick={() => handleRemoveOption(option.id)}>
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
-
-            {/* Aircraft selection */}
-            <div className="grid gap-2">
-              <Label>Aircraft Selection</Label>
-              <AircraftCombobox
-                value={option.aircraftModelId || null}
-                onSelect={(a) => {
-                  setAircraftCache((prev) => ({ ...prev, [a.aircraft_id]: a }))
-                  handleUpdateOption(option.id, {
-                    aircraftModelId: a.aircraft_id,
-                    aircraftTailId: a.aircraft_id,
-                    aircraft_tail_number: a.tail_number,
-                    aircraft_model: a.model_name,
-                    aircraft_manufacturer: a.manufacturer_name,
-                    aircraft_capacity: a.capacity_pax,
-                    aircraft_range: a.range_nm,
-                    selectedAmenities: a.amenities || [],
-                  })
-                  toast({
-                    title: "Aircraft Selected",
-                    description: `${a.model_name || ""} (${a.tail_number || ""}) selected.`,
-                  })
-                }}
-                onClickAdd={() => setCreateOpen(true)}
-              />
-            </div>
-
-            {/* Summary */}
-            {(option.aircraftTailId || option.aircraftModelId) && (
-              <div className="mt-2">
-                <AircraftSummaryCard
-                  aircraft={aircraftCache[option.aircraftTailId || option.aircraftModelId!]}
-                  onEdit={() => setEditOpenFor((option.aircraftTailId || option.aircraftModelId)!)}
-                />
-              </div>
-            )}
-
-            {/* Option cost inputs */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="grid gap-2">
-                <Label>Total Hours</Label>
-                <Input
-                  type="number"
-                  step="0.1"
-                  value={option.totalHours}
-                  onChange={(e) =>
-                    handleUpdateOption(option.id, { totalHours: parseFloat(e.target.value) || 0 })
-                  }
-                />
-              </div>
-
-              <div className="grid gap-2">
-                <Label>Operator Cost</Label>
-                <Input
-                  type="number"
-                  value={option.operatorCost}
-                  onChange={(e) =>
-                    handleUpdateOption(option.id, { operatorCost: parseFloat(e.target.value) || 0 })
-                  }
-                />
-              </div>
-
-              <div className="grid gap-2">
-                <Label>Commission</Label>
-                <Input
-                  type="number"
-                  value={option.commission}
-                  onChange={(e) =>
-                    handleUpdateOption(option.id, { commission: parseFloat(e.target.value) || 0 })
-                  }
-                />
-              </div>
-            </div>
-
-            {/* Notes Field */}
-            <div className="grid gap-2">
-              <Label>Option Notes</Label>
-              <Textarea
-                placeholder="Enter notes about this aircraft option (e.g. special terms, conditions, or comments)"
-                value={option.notes || ""}
-                onChange={(e) => handleUpdateOption(option.id, { notes: e.target.value })}
-                className="min-h-[80px]"
-              />
-            </div>
-
-            {/* Fees toggle */}
-            <div className="flex items-center justify-between pt-2 border-t">
-              <div>
-                <Label className="font-medium">Aircraft Fees & Taxes</Label>
-                <p className="text-sm text-muted-foreground">
-                  Enable to apply applicable fees and taxes.
-                </p>
-              </div>
-              <Switch
-                checked={option.feesEnabled}
-                onCheckedChange={(enabled) => {
-                  handleUpdateOption(option.id, { feesEnabled: enabled })
-                }}
-              />
-            </div>
-
-            {option.feesEnabled && (
-              <div className="space-y-3 pt-2">
-                {option.fees.map((fee) => (
-                  <div key={fee.id} className="flex items-center gap-3 p-3 bg-muted/40 rounded-lg">
-                    <Input
-                      value={fee.name}
-                      onChange={(e) =>
-                        handleUpdateOption(option.id, {
-                          fees: option.fees.map((f) =>
-                            f.id === fee.id ? { ...f, name: e.target.value } : f
-                          ),
-                        })
-                      }
-                      className="flex-1"
-                    />
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={fee.amount}
-                      onChange={(e) =>
-                        handleUpdateOption(option.id, {
-                          fees: option.fees.map((f) =>
-                            f.id === fee.id
-                              ? { ...f, amount: parseFloat(e.target.value) || 0 }
-                              : f
-                          ),
-                        })
-                      }
-                      className="w-24"
-                    />
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        handleUpdateOption(option.id, {
-                          fees: option.fees.filter((f) => f.id !== fee.id),
-                        })
-                      }
-                    >
+        <div className="space-y-4 max-h-[80vh] overflow-y-auto pr-1">
+          {options.map((option, idx) => {
+            const optionTotal = calculateOptionTotal(option)
+            return (
+              <div key={option.id} className="p-4 border rounded-lg bg-card/50">
+                {/* Header */}
+                <div className="flex justify-between items-center mb-3">
+                  <h4 className="font-medium text-base flex items-center gap-2">
+                    <Plane className="h-4 w-4" />
+                    Aircraft Option #{idx + 1}
+                  </h4>
+                  <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                    <span className="font-medium">{formatCurrency(optionTotal)}</span>
+                    <Button variant="outline" size="sm" onClick={() => handleRemoveOption(option.id)}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
-                ))}
+                </div>
 
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    const newFee: QuoteFee = {
-                      id: crypto.randomUUID(),
-                      name: "Custom Fee",
-                      amount: 0,
-                    }
-                    handleUpdateOption(option.id, { fees: [...option.fees, newFee] })
-                  }}
-                >
-                  <Plus className="mr-2 h-4 w-4" /> Add Fee
-                </Button>
+                {/* Two-column grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Left column: Aircraft */}
+                  <div className="space-y-3">
+                    <Label>Aircraft Selection</Label>
+                    <AircraftCombobox
+                      value={option.aircraftModelId || null}
+                      onSelect={(a) => {
+                        setAircraftCache((prev) => ({ ...prev, [a.aircraft_id]: a }))
+                        handleUpdateOption(option.id, {
+                          aircraftModelId: a.aircraft_id,
+                          aircraftTailId: a.aircraft_id,
+                          aircraft_tail_number: a.tail_number,
+                          aircraft_model: a.model_name,
+                          aircraft_manufacturer: a.manufacturer_name,
+                          aircraft_capacity: a.capacity_pax,
+                          aircraft_range: a.range_nm,
+                          selectedAmenities: a.amenities || [],
+                        })
+                        toast({
+                          title: "Aircraft Selected",
+                          description: `${a.model_name || ""} (${a.tail_number || ""}) selected.`,
+                        })
+                      }}
+                      onClickAdd={() => setCreateOpen(true)}
+                    />
+
+                    {(option.aircraftTailId || option.aircraftModelId) && (
+                      <AircraftSummaryCard
+                        aircraft={aircraftCache[option.aircraftTailId || option.aircraftModelId!]}
+                        onEdit={() =>
+                          setEditOpenFor((option.aircraftTailId || option.aircraftModelId)!)
+                        }
+                      />
+                    )}
+                  </div>
+
+                  {/* Right column: Pricing */}
+                  <div className="space-y-3">
+                    {/* Hours / Costs */}
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="grid gap-1.5">
+                        <Label>Total Hours</Label>
+                        <Input
+                          type="number"
+                          step="0.1"
+                          value={option.totalHours}
+                          onChange={(e) =>
+                            handleUpdateOption(option.id, {
+                              totalHours: parseFloat(e.target.value) || 0,
+                            })
+                          }
+                        />
+                      </div>
+                      <div className="grid gap-1.5">
+                        <Label>Operator Cost</Label>
+                        <Input
+                          type="number"
+                          value={option.operatorCost}
+                          onChange={(e) =>
+                            handleUpdateOption(option.id, {
+                              operatorCost: parseFloat(e.target.value) || 0,
+                            })
+                          }
+                        />
+                      </div>
+                      <div className="grid gap-1.5">
+                        <Label>Commission</Label>
+                        <Input
+                          type="number"
+                          value={option.commission}
+                          onChange={(e) =>
+                            handleUpdateOption(option.id, {
+                              commission: parseFloat(e.target.value) || 0,
+                            })
+                          }
+                        />
+                      </div>
+                    </div>
+
+                    {/* Notes */}
+                    <div className="grid gap-1.5">
+                      <Label>Option Notes</Label>
+                      <Textarea
+                        placeholder="Special terms, conditions, or comments"
+                        value={option.notes || ""}
+                        onChange={(e) =>
+                          handleUpdateOption(option.id, { notes: e.target.value })
+                        }
+                        className="min-h-[70px]"
+                      />
+                    </div>
+
+                    {/* Fees */}
+                    <div className="pt-2 border-t">
+                      <div className="flex items-center justify-between mb-2">
+                        <div>
+                          <Label className="font-medium">Fees & Taxes</Label>
+                          <p className="text-xs text-muted-foreground">
+                            Enable to apply applicable fees and taxes.
+                          </p>
+                        </div>
+                        <Switch
+                          checked={option.feesEnabled}
+                          onCheckedChange={(enabled) =>
+                            handleUpdateOption(option.id, { feesEnabled: enabled })
+                          }
+                        />
+                      </div>
+
+                      {option.feesEnabled && (
+                        <div className="space-y-2">
+                          {option.fees.map((fee) => (
+                            <div
+                              key={fee.id}
+                              className="flex items-center gap-3 p-2 bg-muted/40 rounded-lg"
+                            >
+                              <Input
+                                value={fee.name}
+                                onChange={(e) =>
+                                  handleUpdateOption(option.id, {
+                                    fees: option.fees.map((f) =>
+                                      f.id === fee.id ? { ...f, name: e.target.value } : f
+                                    ),
+                                  })
+                                }
+                                className="flex-1"
+                              />
+                              <Input
+                                type="number"
+                                step="0.01"
+                                value={fee.amount}
+                                onChange={(e) =>
+                                  handleUpdateOption(option.id, {
+                                    fees: option.fees.map((f) =>
+                                      f.id === fee.id
+                                        ? {
+                                            ...f,
+                                            amount: parseFloat(e.target.value) || 0,
+                                          }
+                                        : f
+                                    ),
+                                  })
+                                }
+                                className="w-24"
+                              />
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() =>
+                                  handleUpdateOption(option.id, {
+                                    fees: option.fees.filter((f) => f.id !== fee.id),
+                                  })
+                                }
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          ))}
+
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              const newFee: QuoteFee = {
+                                id: crypto.randomUUID(),
+                                name: "Custom Fee",
+                                amount: 0,
+                              }
+                              handleUpdateOption(option.id, { fees: [...option.fees, newFee] })
+                            }}
+                          >
+                            <Plus className="mr-2 h-4 w-4" /> Add Fee
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
-            )}
+            )
+          })}
+        </div>
 
-            {/* Total */}
-            <div className="flex justify-between items-center pt-4 border-t font-medium">
-              <span>Option Total:</span>
-              <span>{formatCurrency(calculateOptionTotal(option))}</span>
-            </div>
-          </div>
-        ))}
-
+        {/* Totals */}
         {options.length > 0 && (
           <div className="flex justify-between items-center pt-4 border-t font-medium">
             <span>Total Quote:</span>
