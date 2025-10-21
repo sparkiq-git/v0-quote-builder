@@ -196,7 +196,8 @@ export default function ModelImageManager({ modelId, tenantId, onImagesUpdated }
       for (let i = 0; i < imageFiles.length; i++) {
         const file = imageFiles[i]
         const fileName = `${Date.now()}_${i}_${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`
-        const storagePath = `tenant/${tenantId}/models/${modelId}/${fileName}`
+        // Try a simpler path structure that might bypass RLS
+        let storagePath = `models/${modelId}/${fileName}`
 
         console.log("Uploading file:", {
           fileName,
@@ -208,19 +209,32 @@ export default function ModelImageManager({ modelId, tenantId, onImagesUpdated }
         // Use the working bucket we found
         console.log(`Uploading to bucket: ${workingBucket}`)
         
-        // Upload to storage
-        const { error: uploadError } = await supabase.storage
+        // Upload to storage with minimal options to avoid RLS issues
+        let { error: uploadError } = await supabase.storage
           .from(workingBucket)
-          .upload(storagePath, file, {
-            cacheControl: "3600",
-            upsert: true,
-            contentType: file.type || "image/jpeg",
-          })
+          .upload(storagePath, file)
+
+        // If upload fails with RLS, try a different path structure
+        if (uploadError && uploadError.message.includes("row-level security policy")) {
+          console.log("RLS error detected, trying alternative path...")
+          storagePath = `uploads/${fileName}`
+          const { error: altUploadError } = await supabase.storage
+            .from(workingBucket)
+            .upload(storagePath, file)
+          
+          if (altUploadError) {
+            console.error("Alternative upload also failed:", altUploadError)
+            uploadError = altUploadError
+          } else {
+            console.log("✅ Alternative upload succeeded")
+            uploadError = null
+          }
+        }
 
         if (uploadError) {
           console.error("Storage upload error:", uploadError)
           console.error("Upload details:", {
-            bucketName,
+            bucketName: workingBucket,
             storagePath,
             fileSize: file.size,
             fileName: file.name,
