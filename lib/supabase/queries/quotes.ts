@@ -160,6 +160,27 @@ const legsForSave = (quote.legs || []).map((l: any) => ({
   departureDate: l.departureDate ?? l.depart_dt ?? null,
   departureTime: l.departureTime ?? l.depart_time ?? null,
   passengers: typeof l.passengers === "number" ? l.passengers : l.pax_count ?? null,
+    origin_lat:
+    l.origin_lat ??
+    l.origin?.latitude ??
+    l.origin?.lat ??
+    null,
+  origin_long:
+    l.origin_long ??
+    l.origin?.longitude ??
+    l.origin?.lon ??
+    null,
+  destination_lat:
+    l.destination_lat ??
+    l.destination?.latitude ??
+    l.destination?.lat ??
+    null,
+  destination_long:
+    l.destination_long ??
+    l.destination?.longitude ??
+    l.destination?.lon ??
+    null,
+  distance_nm: l.distance_nm ?? null,
 }))
 
 
