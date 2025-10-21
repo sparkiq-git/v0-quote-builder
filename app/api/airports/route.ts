@@ -218,7 +218,7 @@ const items = sliced.map((a) => ({
     `${a.airport} (${a.iata_code || a.airport_code_adjusted || a.airport_code || "-"})${
       a.municipality ? `, ${a.municipality}` : ""
     }, ${a.country_code}`,
-  airport: a.airport, // ✅ readable name
+  airport: a.airport,
   airport_code:
     a.airport_code ||
     null, // ✅ standardized code
