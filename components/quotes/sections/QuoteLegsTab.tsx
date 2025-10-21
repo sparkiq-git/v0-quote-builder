@@ -44,8 +44,7 @@ export function QuoteLegsTab({ quote, onUpdate, onLegsChange, onNext, onBack }: 
     origin_long: legs[0]?.origin_long ?? null,
     destination_lat: legs[0]?.destination_lat ?? null,
     destination_long: legs[0]?.destination_long ?? null,
-    distance_nm: legs[0]?.l.distance_nm ?? null,
-  })
+    })
 
   // Multi-city
   const [multiLegs, setMultiLegs] = useState<Leg[]>(
