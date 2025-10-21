@@ -2,6 +2,24 @@
 
 import { supabase } from "@/lib/supabase/client"
 
+// 🌍 distance in nautical miles (1 NM ≈ 1852 m)
+function haversineDistanceNM(lat1: number, lon1: number, lat2: number, lon2: number): number | null {
+  const anyMissing =
+    lat1 == null || lon1 == null || lat2 == null || lon2 == null ||
+    [lat1, lon1, lat2, lon2].some((v) => Number.isNaN(Number(v)))
+  if (anyMissing) return null
+
+  const toRad = (deg: number) => (deg * Math.PI) / 180
+  const R = 3440.065 // Earth radius in nautical miles
+  const dLat = toRad(lat2 - lat1)
+  const dLon = toRad(lon2 - lon1)
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+  return +(R * c).toFixed(1)
+}
+
 export async function upsertQuoteDetails(quoteId: string, legs: any[] = [], tripType?: string) {
   if (!quoteId) throw new Error("Missing quoteId")
 
