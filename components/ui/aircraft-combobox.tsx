@@ -89,7 +89,7 @@ export function AircraftCombobox({ value, onSelect, onClickAdd }: Props) {
                       {a.tail_number} • {a.manufacturer_name ? `${a.manufacturer_name}` : ""} {a.model_name || "Model"}
                     </div>
                     <div className="text-xs text-muted-foreground truncate">
-                      {a.operator_name || "No Operator"}
+                      <span>Operated by </span>{a.operator_name || "No Operator"}
                     </div>
                     <div className="text-[10px] text-muted-foreground mt-0.5 flex gap-2">
                       {typeof a.capacity_pax === "number" && <span>🪑 {a.capacity_pax} pax</span>}
