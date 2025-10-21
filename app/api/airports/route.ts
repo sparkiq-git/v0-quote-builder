@@ -221,7 +221,7 @@ const items = sliced.map((a) => ({
   airport: a.airport,
   airport_code:
     a.airport_code ||
-    null, // ✅ standardized code
+    null, 
   iata: a.iata_code,
   icao: a.gps_code,
   municipality: a.municipality,
