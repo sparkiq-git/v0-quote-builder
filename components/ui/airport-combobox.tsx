@@ -230,7 +230,7 @@ export function AirportCombobox({
                         <div className="min-w-0 flex-1">
                           <div className="truncate font-medium">{airport.label}</div>
                           <div className="text-xs text-muted-foreground truncate">
-                            {airport.municipality || airport.name || "—"}
+                            {airport.municipality || "—"}
                             {airport.country_code ? ` · ${airport.country_code}` : ""}
                           </div>
                         </div>
