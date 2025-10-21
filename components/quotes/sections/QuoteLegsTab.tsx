@@ -408,6 +408,8 @@ const handleUpdateMultiLeg = (id: string, updates: Partial<Leg>) => {
                         handleUpdateMultiLeg(leg.id, {
                           origin: a.airport,
                           origin_code: a.airport_code,
+                          origin_lat: a.lat ?? null,
+                          origin_long: a.lon ?? null,
                         })
                       }
                     />
