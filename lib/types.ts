@@ -460,3 +460,24 @@ export interface AircraftRecord {
   created_at?: string
   updated_at?: string
 }
+
+export type AircraftFull = {
+  aircraft_id: string
+  tenant_id: string
+  tail_number: string
+  operator_name?: string | null
+  manufacturer_name?: string | null
+  model_name?: string | null
+  primary_image_url?: string | null
+  amenities?: string[]
+  capacity_pax?: number | null
+  range_nm?: number | null
+  status?: string | null
+  home_base?: string | null
+  year_of_manufacture?: number | null
+  year_of_refurbish?: number | null
+  serial_number?: string | null
+  mtow_kg?: number | null
+  notes?: string | null
+  meta?: any
+}
