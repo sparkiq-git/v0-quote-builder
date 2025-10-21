@@ -280,7 +280,7 @@ const handleUpdateMultiLeg = (id: string, updates: Partial<Leg>) => {
                 <AirportCombobox
                   value={formState.origin_code}
                   onSelect={(a) => {
-                    const update = { origin: a.airport, origin_code: a.airport_code }
+                    const update = { origin: a.airport, origin_code: a.airport_code, origin_lat: a.lat ?? null, origin_long: a.lon ?? null,}
                     setFormState((prev) => ({ ...prev, ...update }))
                     syncQuote(update)
                   }}
