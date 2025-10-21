@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
@@ -9,11 +10,11 @@ import { Switch } from "@/components/ui/switch"
 import { Plane, Plus, Trash2, ChevronRight } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { AircraftCombobox } from "@/components/ui/aircraft-combobox"
-import { formatCurrency } from "@/lib/utils/format"
-import type { Quote, QuoteOption, QuoteFee, AircraftFull } from "@/lib/types"
 import { AircraftCreateModal } from "@/components/aircraft/AircraftCreateModal"
 import { AircraftEditDrawer } from "@/components/aircraft/AircraftEditDrawer"
 import { AircraftSummaryCard } from "@/components/aircraft/AircraftSummaryCard"
+import { formatCurrency } from "@/lib/utils/format"
+import type { Quote, QuoteOption, QuoteFee, AircraftFull } from "@/lib/types"
 
 interface Props {
   quote: Quote
@@ -25,9 +26,13 @@ interface Props {
 export function QuoteOptionsTab({ quote, onUpdate, onNext, onBack }: Props) {
   const { toast } = useToast()
 
-  // ✅ Defensive default: always use array
+  // State
   const options = Array.isArray(quote?.options) ? quote.options : []
+  const [createOpen, setCreateOpen] = useState(false)
+  const [editOpenFor, setEditOpenFor] = useState<string | null>(null)
+  const [aircraftCache, setAircraftCache] = useState<Record<string, AircraftFull>>({})
 
+  // Handlers
   const handleAddOption = () => {
     const newOption: QuoteOption = {
       id: crypto.randomUUID(),
@@ -35,7 +40,7 @@ export function QuoteOptionsTab({ quote, onUpdate, onNext, onBack }: Props) {
       totalHours: 0,
       operatorCost: 0,
       commission: 0,
-      notes: "", // ✅ default empty notes
+      notes: "",
       fees: [
         { id: crypto.randomUUID(), name: "US Domestic Segment Fee", amount: 4.3 },
         { id: crypto.randomUUID(), name: "US International Head Tax", amount: 19.1 },
@@ -44,7 +49,6 @@ export function QuoteOptionsTab({ quote, onUpdate, onNext, onBack }: Props) {
       feesEnabled: false,
       selectedAmenities: [],
     }
-
     onUpdate({ options: [...options, newOption] })
   }
 
@@ -111,6 +115,7 @@ export function QuoteOptionsTab({ quote, onUpdate, onNext, onBack }: Props) {
               <AircraftCombobox
                 value={option.aircraftModelId || null}
                 onSelect={(a) => {
+                  setAircraftCache((prev) => ({ ...prev, [a.aircraft_id]: a }))
                   handleUpdateOption(option.id, {
                     aircraftModelId: a.aircraft_id,
                     aircraftTailId: a.aircraft_id,
@@ -126,8 +131,19 @@ export function QuoteOptionsTab({ quote, onUpdate, onNext, onBack }: Props) {
                     description: `${a.model_name || ""} (${a.tail_number || ""}) selected.`,
                   })
                 }}
+                onClickAdd={() => setCreateOpen(true)}
               />
             </div>
+
+            {/* Summary */}
+            {(option.aircraftTailId || option.aircraftModelId) && (
+              <div className="mt-2">
+                <AircraftSummaryCard
+                  aircraft={aircraftCache[option.aircraftTailId || option.aircraftModelId!]}
+                  onEdit={() => setEditOpenFor((option.aircraftTailId || option.aircraftModelId)!)}
+                />
+              </div>
+            )}
 
             {/* Option cost inputs */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -166,7 +182,7 @@ export function QuoteOptionsTab({ quote, onUpdate, onNext, onBack }: Props) {
               </div>
             </div>
 
-            {/* ✅ Notes Field */}
+            {/* Notes Field */}
             <div className="grid gap-2">
               <Label>Option Notes</Label>
               <Textarea
@@ -279,6 +295,77 @@ export function QuoteOptionsTab({ quote, onUpdate, onNext, onBack }: Props) {
           </Button>
         </div>
       </CardContent>
+
+      {/* Modals and Drawers */}
+      <AircraftCreateModal
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        onCreated={(created) => {
+          const normalized: AircraftFull = {
+            aircraft_id: created.id,
+            tenant_id: created.tenant_id,
+            tail_number: created.tail_number,
+            manufacturer_name: null,
+            model_name: null,
+            operator_name: null,
+            primary_image_url: null,
+            amenities: [],
+            capacity_pax: created.capacity_pax,
+            range_nm: created.range_nm,
+            status: created.status,
+            home_base: created.home_base,
+            year_of_manufacture: created.year_of_manufacture,
+            year_of_refurbish: created.year_of_refurbish,
+            serial_number: created.serial_number,
+            mtow_kg: created.mtow_kg,
+            notes: created.notes,
+            meta: created.meta,
+          }
+          setAircraftCache((prev) => ({ ...prev, [normalized.aircraft_id]: normalized }))
+        }}
+      />
+
+      <AircraftEditDrawer
+        aircraftId={editOpenFor ?? ""}
+        open={!!editOpenFor}
+        onOpenChange={(v) => !v && setEditOpenFor(null)}
+        initial={(() => {
+          const a = editOpenFor ? aircraftCache[editOpenFor] : undefined
+          if (!a) return undefined
+          return {
+            tail_number: a.tail_number,
+            home_base: a.home_base ?? null,
+            capacity_pax: a.capacity_pax ?? null,
+            range_nm: a.range_nm ?? null,
+            notes: a.notes ?? null,
+          }
+        })()}
+        onUpdated={(updated) => {
+          setAircraftCache((prev) => ({
+            ...prev,
+            [updated.id]: {
+              ...(prev[updated.id] || {}),
+              aircraft_id: updated.id,
+              tenant_id: updated.tenant_id,
+              tail_number: updated.tail_number,
+              capacity_pax: updated.capacity_pax,
+              range_nm: updated.range_nm,
+              status: updated.status,
+              home_base: updated.home_base,
+              notes: updated.notes,
+            },
+          }))
+        }}
+        onDeleted={() => {
+          if (!editOpenFor) return
+          setAircraftCache((prev) => {
+            const copy = { ...prev }
+            delete copy[editOpenFor]
+            return copy
+          })
+          setEditOpenFor(null)
+        }}
+      />
     </Card>
   )
 }
