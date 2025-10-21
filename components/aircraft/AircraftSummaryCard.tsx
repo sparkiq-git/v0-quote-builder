@@ -7,40 +7,61 @@ export function AircraftSummaryCard({
   onEdit,
 }: {
   aircraft?: {
-    primary_image_url?: string | null
     tail_number?: string | null
-    model_name?: string | null
     manufacturer_name?: string | null
+    model_name?: string | null
     operator_name?: string | null
+    primary_image_url?: string | null
     capacity_pax?: number | null
-    range_nm?: number | null
+    cruising_speed?: number | null // add this if you have it in your view
     amenities?: string[]
   }
   onEdit?: () => void
 }) {
   if (!aircraft) return null
+
   return (
-    <div className="flex items-start gap-3 p-3 border rounded-lg">
+    <div className="flex items-start gap-3 p-3 border rounded-lg bg-muted/30">
+      {/* Image */}
       {aircraft.primary_image_url ? (
-        <img src={aircraft.primary_image_url} className="w-24 h-16 rounded object-cover" alt="" />
+        <img
+          src={aircraft.primary_image_url}
+          alt={aircraft.tail_number || ""}
+          className="w-20 h-16 rounded-md object-cover"
+        />
       ) : (
-        <div className="w-24 h-16 rounded bg-muted flex items-center justify-center text-xs">No Img</div>
+        <div className="w-20 h-16 rounded-md bg-muted flex items-center justify-center text-xs text-muted-foreground">
+          No Img
+        </div>
       )}
+
+      {/* Info */}
       <div className="flex-1 min-w-0">
-        <div className="font-semibold truncate">{aircraft.model_name}</div>
-        <div className="text-sm text-muted-foreground truncate">
-          {aircraft.manufacturer_name} · {aircraft.operator_name || "No Operator"}
+        <div className="font-semibold truncate">
+          {aircraft.tail_number
+            ? `${aircraft.tail_number} – ${aircraft.manufacturer_name || ""} ${aircraft.model_name || ""}`
+            : `${aircraft.manufacturer_name || ""} ${aircraft.model_name || ""}`}
         </div>
-        <div className="text-xs text-muted-foreground mt-1 flex gap-3">
-          {typeof aircraft.capacity_pax === "number" && <span>🪑 {aircraft.capacity_pax} pax</span>}
-          {typeof aircraft.range_nm === "number" && <span>🛫 {aircraft.range_nm} nm</span>}
-        </div>
-        {aircraft.amenities?.length ? (
-          <div className="text-[10px] text-muted-foreground mt-1 line-clamp-1">
-            {aircraft.amenities.join(", ")}
+
+        {aircraft.operator_name && (
+          <div className="text-sm text-muted-foreground truncate">
+            Operated by <span className="text-foreground font-medium">{aircraft.operator_name}</span>
           </div>
-        ) : null}
+        )}
+
+        <div className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-x-3">
+          {typeof aircraft.capacity_pax === "number" && <span>🪑 {aircraft.capacity_pax} pax</span>}
+          {typeof aircraft.cruising_speed === "number" && <span>✈️ {aircraft.cruising_speed} kt</span>}
+          {aircraft.amenities?.length ? (
+            <span className="truncate">
+              🧳 {aircraft.amenities.slice(0, 3).join(", ")}
+              {aircraft.amenities.length > 3 ? "…" : ""}
+            </span>
+          ) : null}
+        </div>
       </div>
+
+      {/* Edit */}
       {onEdit && (
         <Button variant="ghost" size="sm" onClick={onEdit}>
           Edit
