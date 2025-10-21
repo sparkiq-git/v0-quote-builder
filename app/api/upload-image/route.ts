@@ -3,13 +3,25 @@ import { createClient } from "@/lib/supabase/server"
 
 export async function POST(req: NextRequest) {
   try {
+    console.log("🔧 Server API called - upload-image")
+    
     const formData = await req.formData()
     const file = formData.get("file") as File
     const modelId = formData.get("modelId") as string
     const tenantId = formData.get("tenantId") as string
     const userId = formData.get("userId") as string
 
+    console.log("📋 Form data received:", {
+      hasFile: !!file,
+      fileName: file?.name,
+      fileSize: file?.size,
+      modelId,
+      tenantId,
+      userId
+    })
+
     if (!file || !modelId || !tenantId || !userId) {
+      console.error("❌ Missing required fields")
       return NextResponse.json({ 
         success: false, 
         error: "Missing required fields" 
@@ -22,7 +34,7 @@ export async function POST(req: NextRequest) {
     const fileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`
     const storagePath = `models/${modelId}/${fileName}`
 
-    console.log("Server-side upload:", {
+    console.log("🚀 Server-side upload starting:", {
       fileName,
       storagePath,
       fileSize: file.size,
@@ -31,6 +43,7 @@ export async function POST(req: NextRequest) {
     })
 
     // Upload to storage using server-side client (bypasses RLS)
+    console.log("📤 Uploading to Supabase storage...")
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from("aircraft-media")
       .upload(storagePath, file, {
@@ -40,12 +53,14 @@ export async function POST(req: NextRequest) {
       })
 
     if (uploadError) {
-      console.error("Server upload error:", uploadError)
+      console.error("❌ Server upload error:", uploadError)
       return NextResponse.json({ 
         success: false, 
         error: `Upload failed: ${uploadError.message}` 
       }, { status: 500 })
     }
+
+    console.log("✅ Storage upload successful:", uploadData)
 
     // Get public URL
     const { data: publicData } = supabase.storage

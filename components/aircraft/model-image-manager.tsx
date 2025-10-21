@@ -180,12 +180,22 @@ export default function ModelImageManager({ modelId, tenantId, onImagesUpdated }
         formData.append("userId", user.id)
 
         // Upload via server-side API
+        console.log("🚀 Calling server API...")
         const response = await fetch("/api/upload-image", {
           method: "POST",
           body: formData,
         })
 
+        console.log("📡 Server response status:", response.status)
+        
+        if (!response.ok) {
+          const errorText = await response.text()
+          console.error("❌ Server response error:", errorText)
+          throw new Error(`Server upload failed: ${response.status} ${errorText}`)
+        }
+
         const result = await response.json()
+        console.log("📦 Server response data:", result)
 
         if (!result.success) {
           console.error("Server upload error:", result.error)
