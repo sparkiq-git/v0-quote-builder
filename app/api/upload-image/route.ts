@@ -59,9 +59,9 @@ export async function POST(req: NextRequest) {
       supabase = await createServerClient()
     }
     
-    // Generate file name and path
+    // Generate file name and path that matches the database constraint
     const fileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`
-    const storagePath = `models/${modelId}/${fileName}`
+    const storagePath = `tenant/${tenantId}/models/${modelId}/${fileName}`
 
     console.log("🚀 Server-side upload starting:", {
       fileName,
