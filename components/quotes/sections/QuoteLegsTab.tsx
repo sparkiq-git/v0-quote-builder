@@ -116,6 +116,10 @@ export function QuoteLegsTab({ quote, onUpdate, onLegsChange, onNext, onBack }: 
           departureDate: f.departureDate,
           departureTime: f.departureTime, // ✅ include time
           passengers: f.passengers,
+      origin_lat: f.origin_lat ?? null,
+      origin_long: f.origin_long ?? null,
+      destination_lat: f.destination_lat ?? null,
+      destination_long: f.destination_long ?? null,
         },
         {
           id: legs[1]?.id || crypto.randomUUID(),
@@ -126,6 +130,10 @@ export function QuoteLegsTab({ quote, onUpdate, onLegsChange, onNext, onBack }: 
           departureDate: f.returnDate,
           departureTime: f.returnTime, // ✅ include time
           passengers: f.passengers,
+      origin_lat: f.origin_lat ?? null,
+      origin_long: f.origin_long ?? null,
+      destination_lat: f.destination_lat ?? null,
+      destination_long: f.destination_long ?? null,
         },
       ]
     }
