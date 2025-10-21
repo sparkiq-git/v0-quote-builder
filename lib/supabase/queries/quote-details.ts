@@ -79,25 +79,57 @@ const normalizeAirport = (airport: any) => {
 
 // ✈️ Normalize incoming legs
 const validLegs = (legs || [])
-  .filter((l) => l && l.origin && l.destination) // ✅ ignore null/empty legs
+  .filter((l) => l && l.origin && l.destination) // ignore empty legs
   .map((l, i) => {
     const origin = normalizeAirport(l.origin)
     const destination = normalizeAirport(l.destination)
+
+    // pull coords from UI payload (they’re set in QuoteLegsTab onSelect)
+    const origin_lat = l.origin_lat ?? null
+    const origin_long = l.origin_long ?? null
+    const destination_lat = l.destination_lat ?? null
+    const destination_long = l.destination_long ?? null
+
+    // compute distance if all coords present
+    const distance_nm =
+      origin_lat != null &&
+      origin_long != null &&
+      destination_lat != null &&
+      destination_long != null
+        ? haversineDistanceNM(
+            Number(origin_lat),
+            Number(origin_long),
+            Number(destination_lat),
+            Number(destination_long),
+          )
+        : null
+
     return {
       quote_id: quoteId,
       seq: i + 1,
+
       origin: origin.name || l.origin,
       origin_code: origin.code || l.origin_code,
       destination: destination.name || l.destination,
       destination_code: destination.code || l.destination_code,
+
       depart_dt: normalize(l.departureDate || l.depart_dt),
       depart_time: normalize(l.departureTime || l.depart_time),
       pax_count: l.passengers ?? l.pax_count ?? null,
+
+      // NEW: geo + distance
+      origin_lat,
+      origin_long,
+      destination_lat,
+      destination_long,
+      distance_nm,
+
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }
   })
   .filter((l) => l.origin_code && l.destination_code)
+
 
 
 
