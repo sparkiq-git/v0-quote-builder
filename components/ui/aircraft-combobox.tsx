@@ -86,7 +86,7 @@ export function AircraftCombobox({ value, onSelect, onClickAdd }: Props) {
                   )}
                   <div className="min-w-0">
                     <div className="font-medium truncate">
-                      {a.tail_number} • {a.model_name || "Model"} {a.manufacturer_name ? `(${a.manufacturer_name})` : ""}
+                      {a.tail_number} • {a.manufacturer_name ? `${a.manufacturer_name}` : ""} {a.model_name || "Model"}
                     </div>
                     <div className="text-xs text-muted-foreground truncate">
                       {a.operator_name || "No Operator"}
