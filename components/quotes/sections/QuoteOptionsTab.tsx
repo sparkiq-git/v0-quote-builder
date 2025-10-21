@@ -10,7 +10,10 @@ import { Plane, Plus, Trash2, ChevronRight } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { AircraftCombobox } from "@/components/ui/aircraft-combobox"
 import { formatCurrency } from "@/lib/utils/format"
-import type { Quote, QuoteOption, QuoteFee } from "@/lib/types"
+import type { Quote, QuoteOption, QuoteFee, AircraftFull } from "@/lib/types"
+import { AircraftCreateModal } from "@/components/aircraft/AircraftCreateModal"
+import { AircraftEditDrawer } from "@/components/aircraft/AircraftEditDrawer"
+import { AircraftSummaryCard } from "@/components/aircraft/AircraftSummaryCard"
 
 interface Props {
   quote: Quote
