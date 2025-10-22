@@ -163,6 +163,48 @@ export function AirportCombobox({
     }
   }, [debounced])
 
+// 🔎 Resolve preset value (autoresolve) when value is pre-filled (e.g., editing an existing quote)
+const hasResolvedRef = React.useRef<string | null>(null)
+React.useEffect(() => {
+  if (!autoresolve || !value) return
+  if (hasResolvedRef.current === value) return
+
+  const existing = items.find((i) => i.id === value)
+  if (existing) {
+    hasResolvedRef.current = value
+    onResolved?.(existing)
+    return
+  }
+
+  let cancelled = false
+  ;(async () => {
+    try {
+      const r = await fetch(`/api/airports?id=${encodeURIComponent(value)}`, { cache: "no-store" })
+      const data = await r.json()
+      const airport: AirportOption | null =
+        (Array.isArray(data?.items) && data.items[0]) || data?.item || null
+
+      if (!cancelled && airport) {
+        setItems((prev) => {
+          const found = prev.some((p) => p.id === airport.id)
+          return found ? prev : [airport, ...prev]
+        })
+        hasResolvedRef.current = value
+        onResolved?.(airport)
+      }
+    } catch {
+      // ignore — no crash on failure
+    }
+  })()
+
+  return () => {
+    cancelled = true
+  }
+}, [autoresolve, value, items, onResolved])
+
+
+
+
   const selected = value ? items.find((i) => i.id === value) : undefined
   const selectedLabel = selected?.label || (value ? value : "")
   const selectedCode = (selected?.country_code || "").toUpperCase()
