@@ -193,7 +193,7 @@ if (existingIds.length > 0) {
 if (services && Array.isArray(services)) {
   const validServices = services.map((s) => ({
     id: s.id,
-    quote_id: id,
+    quote_id: s.quote_id,
     item_id: s.item_id,
     description: s.description || null,
     amount: Number(s.amount) || 0,
