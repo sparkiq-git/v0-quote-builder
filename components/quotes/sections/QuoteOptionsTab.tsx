@@ -24,6 +24,8 @@ interface Props {
   onBack: () => void
 }
 
+
+
 export function QuoteOptionsTab({ quote, onUpdate, onNext, onBack }: Props) {
   const { toast } = useToast()
   const options = Array.isArray(quote?.options) ? quote.options : []
@@ -32,6 +34,15 @@ export function QuoteOptionsTab({ quote, onUpdate, onNext, onBack }: Props) {
   const [aircraftCache, setAircraftCache] = useState<Record<string, AircraftFull>>({})
   const [saving, setSaving] = useState(false)
   const [initialized, setInitialized] = useState(false)
+
+  // 🧮 Helper: renumber all options (Option 1, Option 2, etc.)
+const renumberOptions = (options: QuoteOption[]): QuoteOption[] => {
+  return options.map((opt, index) => ({
+    ...opt,
+    label: `Option ${index + 1}`,
+  }))
+}
+
 
 // 🧠 Mark as initialized once quote options are loaded from DB
 useEffect(() => {
