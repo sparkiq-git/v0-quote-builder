@@ -20,6 +20,7 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
   const [publishing, setPublishing] = useState(false)
   const [publishedUrl, setPublishedUrl] = useState<string | null>(null)
 
+  // ✅ Fallback to static slug until published link returned
   const quoteUrl = publishedUrl ?? `${process.env.NEXT_PUBLIC_APP_URL}/q/${quote.magic_link_slug}`
 
   // --- COMPUTE TOTALS ---
@@ -28,9 +29,7 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
         const base =
           (o.operatorCost || 0) +
           (o.commission || 0) +
-          (o.feesEnabled
-            ? o.fees?.reduce((s, f) => s + (f.amount || 0), 0)
-            : 0)
+          (o.feesEnabled ? o.fees?.reduce((s, f) => s + (f.amount || 0), 0) : 0)
         return sum + base
       }, 0)
     : 0
@@ -38,6 +37,7 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
   const totalServices = quote.services?.reduce((s, v) => s + (v.amount || 0), 0) || 0
   const grandTotal = totalOptions + totalServices
 
+  // --- COPY LINK ---
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(quoteUrl)
@@ -53,32 +53,43 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
     }
   }
 
+  // --- OPEN QUOTE ---
   const handleOpen = () => {
-    window.open(quoteUrl, "_blank")
+    window.open(quoteUrl, "_blank", "noopener,noreferrer")
   }
 
-  // --- PUBLISH QUOTE: calls Edge Function ---
+  // --- PUBLISH QUOTE (calls Edge Function) ---
   const handlePublish = async () => {
     setPublishing(true)
     try {
-const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/create-action-link`, {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  },
-  body: JSON.stringify({
-    action_type: "quote",
-    email: quote.contact_email,
-    tenant_id: quote.tenant_id,
-    metadata: { quote_id: quote.id, quote_ref: quote.reference_code },
-  }),
-})
+      const fnUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/create-action-link`
+      const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-      const json = await res.json()
-      if (!res.ok || !json.ok) throw new Error(json.error || "Failed to publish")
+      if (!anonKey) throw new Error("Missing NEXT_PUBLIC_SUPABASE_ANON_KEY")
+      if (!process.env.NEXT_PUBLIC_SUPABASE_URL) throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL")
 
-      setPublishedUrl(json.link_url)
+      const res = await fetch(fnUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: anonKey,
+          Authorization: `Bearer ${anonKey}`, // 🔐 required for Supabase Edge Functions
+        },
+        body: JSON.stringify({
+          action_type: "quote",
+          email: quote.contact_email,
+          tenant_id: quote.tenant_id,
+          metadata: { quote_id: quote.id, quote_ref: quote.reference_code },
+        }),
+      })
+
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || !json.ok) {
+        console.error("Publish failed response:", json)
+        throw new Error(json.error || `Failed (${res.status})`)
+      }
+
+      setPublishedUrl(json.link || json.link_url || null)
       toast({
         title: "Quote Published!",
         description: "Your client has been emailed a secure link to view and confirm the quote.",
@@ -179,6 +190,7 @@ const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/cr
           </Button>
 
           <div className="flex items-center gap-3">
+            {/* Copy Link */}
             <Button variant="outline" onClick={handleCopy}>
               {copied ? (
                 <>
@@ -191,10 +203,12 @@ const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/cr
               )}
             </Button>
 
+            {/* Open Quote */}
             <Button onClick={handleOpen}>
               <ExternalLink className="mr-2 h-4 w-4" /> Open Quote
             </Button>
 
+            {/* Publish Quote */}
             <Button onClick={handlePublish} disabled={publishing}>
               <Send className="mr-2 h-4 w-4" />
               {publishing ? "Publishing..." : "Publish Quote"}
