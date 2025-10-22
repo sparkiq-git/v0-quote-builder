@@ -189,19 +189,35 @@ if (existingIds.length > 0) {
   return NextResponse.json({ success: true })
 }
 
-/* ---------------- 🧩 Upsert quote services ---------------- */
-if (body.services && Array.isArray(body.services)) {
-  const services = body.services.map((s: any, index: number) => ({
+/* ---------------- 🧾 Upsert quote services ---------------- */
+if (services && Array.isArray(services)) {
+  const validServices = services.map((s) => ({
     id: s.id,
     quote_id: id,
     item_id: s.item_id,
-    qty: s.qty ?? 1,
-    unit_price: s.unit_price ?? 0,
-    taxable: s.taxable ?? true,
+    description: s.description || null,
+    amount: Number(s.amount) || 0,
+    taxable: s.taxable ?? false,
     updated_at: new Date().toISOString(),
+    created_at: s.created_at || new Date().toISOString(),
   }))
 
-  const { error: serviceError } = await supabase.from("quote_item").upsert(services, { onConflict: "id" })
-  if (serviceError)
-    return NextResponse.json({ error: serviceError.message }, { status: 500 })
+  // 🧩 Step 1: Upsert
+  const { error: upsertError } = await supabase
+    .from("quote_item")
+    .upsert(validServices, { onConflict: "id" })
+
+  if (upsertError)
+    return NextResponse.json({ error: upsertError.message }, { status: 500 })
+
+  // 🧹 Step 2: Delete removed ones
+  const existingIds = validServices.map((s) => s.id)
+  const { error: deleteError } = await supabase
+    .from("quote_item")
+    .delete()
+    .eq("quote_id", id)
+    .not("id", "in", `(${existingIds.map((x) => `'${x}'`).join(",")})`))
+
+  if (deleteError)
+    return NextResponse.json({ error: deleteError.message }, { status: 500 })
 }
