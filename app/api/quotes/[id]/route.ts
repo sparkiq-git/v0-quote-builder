@@ -16,7 +16,7 @@ if (quote) {
     .from("quote")
     .update({
       contact_id: quote.contact_id,
-      quote_id: quote.quote_id,
+      quote_id: quote.id,
       contact_name: quote.contact_name,
       contact_email: quote.contact_email,
       contact_phone: quote.contact_phone,
