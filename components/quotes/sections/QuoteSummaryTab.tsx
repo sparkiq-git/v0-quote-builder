@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
-import { Clipboard, ExternalLink, Check, FileText, ChevronRight } from "lucide-react"
+import { Clipboard, ExternalLink, Check, FileText, ChevronRight, Send } from "lucide-react"
 import { formatCurrency } from "@/lib/utils/format"
 import { useToast } from "@/hooks/use-toast"
 import type { Quote } from "@/lib/types"
@@ -17,7 +17,10 @@ interface Props {
 export function QuoteSummaryTab({ quote, onBack }: Props) {
   const { toast } = useToast()
   const [copied, setCopied] = useState(false)
-  const quoteUrl = `${process.env.NEXT_PUBLIC_APP_URL}/q/${quote.magic_link_slug}`
+  const [publishing, setPublishing] = useState(false)
+  const [publishedUrl, setPublishedUrl] = useState<string | null>(null)
+
+  const quoteUrl = publishedUrl ?? `${process.env.NEXT_PUBLIC_APP_URL}/q/${quote.magic_link_slug}`
 
   // --- COMPUTE TOTALS ---
   const totalOptions = quote.options?.length
@@ -52,6 +55,44 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
 
   const handleOpen = () => {
     window.open(quoteUrl, "_blank")
+  }
+
+  // --- PUBLISH QUOTE: calls Edge Function ---
+  const handlePublish = async () => {
+    setPublishing(true)
+    try {
+      const res = await fetch("/api/action-links/create", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          action_type: "quote",
+          email: quote.contact_email,
+          tenant_id: quote.tenant_id,
+          metadata: {
+            quote_id: quote.id,
+            quote_ref: quote.reference_code || quote.magic_link_slug,
+          },
+        }),
+      })
+
+      const json = await res.json()
+      if (!res.ok || !json.ok) throw new Error(json.error || "Failed to publish")
+
+      setPublishedUrl(json.link_url)
+      toast({
+        title: "Quote Published!",
+        description: "Your client has been emailed a secure link to view and confirm the quote.",
+      })
+    } catch (err: any) {
+      console.error("Publish error:", err)
+      toast({
+        title: "Failed to publish quote",
+        description: err.message || "Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setPublishing(false)
+    }
   }
 
   return (
@@ -116,67 +157,6 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
 
         <Separator />
 
-        {/* Options */}
-        <div>
-          <h3 className="text-lg font-semibold mb-2">Aircraft Options</h3>
-          {quote.options?.length ? (
-            <ul className="space-y-4">
-              {quote.options.map((opt, i) => {
-                const total =
-                  (opt.operatorCost || 0) +
-                  (opt.commission || 0) +
-                  (opt.feesEnabled
-                    ? opt.fees?.reduce((s, f) => s + (f.amount || 0), 0)
-                    : 0)
-                return (
-                  <li key={i} className="p-4 border rounded-md bg-muted/20">
-                    <p className="font-medium mb-1">
-                      {opt.aircraft_manufacturer || ""} {opt.aircraft_model || ""}
-                    </p>
-                    <p className="text-muted-foreground text-xs mb-1">
-                      {opt.aircraft_tail_number
-                        ? `Tail ${opt.aircraft_tail_number}`
-                        : "No tail assigned"}
-                    </p>
-                    <p className="text-sm font-semibold">
-                      {formatCurrency(total)}
-                    </p>
-                  </li>
-                )
-              })}
-            </ul>
-          ) : (
-            <p className="text-muted-foreground text-sm">No aircraft options selected.</p>
-          )}
-        </div>
-
-        <Separator />
-
-        {/* Services */}
-        <div>
-          <h3 className="text-lg font-semibold mb-2">Additional Services</h3>
-          {quote.services?.length ? (
-            <ul className="space-y-3">
-              {quote.services.map((s, i) => (
-                <li
-                  key={i}
-                  className="flex justify-between items-center p-3 border rounded-md bg-muted/20 text-sm"
-                >
-                  <div>
-                    <p className="font-medium">{s.name}</p>
-                    <p className="text-muted-foreground">{s.description}</p>
-                  </div>
-                  <p>{formatCurrency(s.amount || 0)}</p>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-muted-foreground text-sm">No additional services added.</p>
-          )}
-        </div>
-
-        <Separator />
-
         {/* Totals */}
         <div className="text-right space-y-1">
           <p className="text-sm text-muted-foreground">
@@ -192,7 +172,7 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
 
         <Separator />
 
-        {/* Publish / Copy */}
+        {/* Actions */}
         <div className="flex justify-between items-center pt-4">
           <Button variant="outline" onClick={onBack}>
             <ChevronRight className="mr-2 h-4 w-4 rotate-180" /> Back: Services
@@ -210,8 +190,14 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
                 </>
               )}
             </Button>
+
             <Button onClick={handleOpen}>
               <ExternalLink className="mr-2 h-4 w-4" /> Open Quote
+            </Button>
+
+            <Button onClick={handlePublish} disabled={publishing}>
+              <Send className="mr-2 h-4 w-4" />
+              {publishing ? "Publishing..." : "Publish Quote"}
             </Button>
           </div>
         </div>
