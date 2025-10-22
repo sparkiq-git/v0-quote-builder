@@ -386,13 +386,10 @@ const handleNext = async () => {
                             variant="outline"
                             size="sm"
                             onClick={() => {
-                              const newFee: QuoteFee = {
-                                id: crypto.randomUUID(),
-                                name: "Custom Fee",
-                                amount: 0,
-                              }
-                              handleUpdateOption(option.id, { fees: [...option.fees, newFee] })
-                            }}
+  const newFee: QuoteFee = { id: crypto.randomUUID(), name: "Custom Fee", amount: 0 }
+  handleUpdateOption(option.id, { fees: [...(option.fees ?? []), newFee] })
+}}
+
                           >
                             <Plus className="mr-2 h-4 w-4" /> Add Fee
                           </Button>
