@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 
+/* ---------------- Utility helpers ---------------- */
 function toDateTime(date?: string | null, time?: string | null): string | null {
   if (!date) return null
   try {
@@ -15,7 +16,7 @@ function toDateTime(date?: string | null, time?: string | null): string | null {
 function haversineDistanceNM(lat1: number, lon1: number, lat2: number, lon2: number): number | null {
   const toRad = (deg: number) => (deg * Math.PI) / 180
   if ([lat1, lon1, lat2, lon2].some((v) => v == null || isNaN(Number(v)))) return null
-  const R = 3440.065 // Earth radius in NM
+  const R = 3440.065 // Earth radius in nautical miles
   const dLat = toRad(lat2 - lat1)
   const dLon = toRad(lon2 - lon1)
   const a =
@@ -25,6 +26,7 @@ function haversineDistanceNM(lat1: number, lon1: number, lat2: number, lon2: num
   return Math.round(R * c)
 }
 
+/* ---------------- PATCH handler ---------------- */
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -63,18 +65,29 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     const validLegs = legs
       .filter((l) => l.origin_code && l.destination_code)
       .map((l, i) => {
+        /* 🔹 CHANGES START HERE
+           Allow both field name formats:
+           - l.origin_lat / l.origin_long
+           - l.latitude / l.longitude  (from AirportCombobox)
+        */
+        const origin_lat = l.origin_lat ?? l.latitude ?? null
+        const origin_long = l.origin_long ?? l.longitude ?? null
+        const destination_lat = l.destination_lat ?? l.latitude ?? null
+        const destination_long = l.destination_long ?? l.longitude ?? null
+
         const distance_nm =
-          l.origin_lat != null &&
-          l.origin_long != null &&
-          l.destination_lat != null &&
-          l.destination_long != null
+          origin_lat != null &&
+          origin_long != null &&
+          destination_lat != null &&
+          destination_long != null
             ? haversineDistanceNM(
-                Number(l.origin_lat),
-                Number(l.origin_long),
-                Number(l.destination_lat),
-                Number(l.destination_long)
+                Number(origin_lat),
+                Number(origin_long),
+                Number(destination_lat),
+                Number(destination_long)
               )
             : null
+        /* 🔹 CHANGES END HERE */
 
         return {
           quote_id: id,
@@ -86,23 +99,23 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
           depart_dt: l.departureDate,
           depart_time: l.departureTime,
           pax_count: l.passengers ?? l.pax_count ?? 1,
-          origin_lat: l.origin_lat ?? null,
-          origin_long: l.origin_long ?? null,
-          destination_lat: l.destination_lat ?? null,
-          destination_long: l.destination_long ?? null,
+          origin_lat,
+          origin_long,
+          destination_lat,
+          destination_long,
           distance_nm,
           updated_at: new Date().toISOString(),
           created_at: l.created_at || new Date().toISOString(),
         }
       })
 
+    console.log("🛫 Prepared legs to insert:", JSON.stringify(validLegs, null, 2))
+
     // 🚮 Replace all legs for this quote_id
     await supabase.from("quote_detail").delete().eq("quote_id", id)
 
     if (validLegs.length > 0) {
-      const { error: legsError } = await supabase
-        .from("quote_detail")
-        .insert(validLegs)
+      const { error: legsError } = await supabase.from("quote_detail").insert(validLegs)
       if (legsError)
         return NextResponse.json({ error: legsError.message }, { status: 500 })
 
