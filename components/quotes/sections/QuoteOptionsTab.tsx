@@ -157,6 +157,38 @@ const handleUpdateOption = (id: string, updates: Partial<QuoteOption>) => {
   const total = options.reduce((sum, o) => sum + calculateOptionTotal(o), 0)
   const isOptionsValid = options.length > 0
 
+// 🧩 Save quote options before moving to next tab
+const handleNext = async () => {
+  try {
+    const res = await fetch(`/api/quotes/${quote.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        quote,
+        options, // 👈 send current options state
+      }),
+    })
+
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error || "Failed to save quote options")
+
+    toast({
+      title: "Quote Saved",
+      description: "Aircraft options were successfully saved.",
+    })
+
+    onNext() // ✅ continue navigation after saving
+  } catch (err: any) {
+    console.error("❌ Error saving quote:", err)
+    toast({
+      title: "Error saving",
+      description: err.message,
+      variant: "destructive",
+    })
+  }
+}
+
+
   return (
     <Card>
       <CardHeader>
