@@ -51,6 +51,11 @@ interface AirportComboboxProps {
   placeholder?: string
   label?: string
   required?: boolean
+
+    /** 👇 NEW: if true, fetch the full airport by id on mount (or when value changes) and emit it */
+  autoresolve?: boolean
+  /** 👇 NEW: emitted when autoresolve fetches a full airport for the current value */
+  onResolved?: (airport: AirportOption) => void
 }
 
 const CountryFlag = ({ code, className }: { code: string; className?: string }) => {
