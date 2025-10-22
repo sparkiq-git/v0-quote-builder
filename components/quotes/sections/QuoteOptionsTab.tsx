@@ -247,16 +247,16 @@ const handleUpdateOption = (id: string, updates: Partial<QuoteOption>) => {
                     <div className="grid grid-cols-3 gap-3">
                       <div className="grid gap-1.5">
                         <Label>Total Hours</Label>
-                        <Input
-                          type="number"
-                          step="0.1"
-                          value={option.totalHours ?? 0}
-                          onChange={(e) =>
-                            handleUpdateOption(option.id, {
-                              totalHours: parseFloat(e.target.value) || 0,
-                            })
-                          }
-                        />
+<Input
+  type="number"
+  step="0.1"
+  value={option.flight_hours ?? 0}
+  onChange={(e) =>
+    handleUpdateOption(option.id, {
+      flight_hours: parseFloat(e.target.value) || 0,
+    })
+  }
+/>
                       </div>
                       <div className="grid gap-1.5">
                         <Label>Operator Cost</Label>
