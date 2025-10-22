@@ -278,7 +278,7 @@ export function QuoteOptionsTab({ quote, onUpdate, onNext, onBack }: Props) {
                               <Input
                                 type="number"
                                 step="0.01"
-                                value={fee.amount}
+                                value={fee.amount ?? 0}
                                 onChange={(e) =>
                                   handleUpdateOption(option.id, {
                                     fees: option.fees.map((f) =>
