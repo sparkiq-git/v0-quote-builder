@@ -20,25 +20,28 @@ export default function ActionPage({ params }: { params: { token: string } }) {
   const [error, setError] = useState<string | null>(null)
   const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!
 
-  // --- Unified safe fetch helper ---
+  // --- Safe fetch with clone for dual parsing ---
   async function safeFetchJSON(url: string, options: RequestInit) {
     const res = await fetch(url, options)
-    let json: any = null
+    const cloned = res.clone()
 
     try {
-      json = await res.json()
-    } catch {
-      const text = await res.text()
-      console.error(`Non-JSON response from ${url}:`, text)
-      throw new Error(`Unexpected ${res.status} response: ${text.slice(0, 120)}`)
+      const json = await res.json()
+      if (!res.ok || json?.ok === false) {
+        console.error(`Request to ${url} failed:`, json)
+        throw new Error(json?.error || `Request failed (${res.status})`)
+      }
+      return json
+    } catch (jsonErr) {
+      try {
+        const text = await cloned.text()
+        console.error(`Non-JSON response from ${url}:`, text)
+        throw new Error(`Unexpected ${res.status} response: ${text.slice(0, 120)}`)
+      } catch (textErr) {
+        console.error(`Failed to parse response from ${url}:`, textErr)
+        throw new Error(`Failed to parse response (${res.status})`)
+      }
     }
-
-    if (!res.ok || json?.ok === false) {
-      console.error(`Request to ${url} failed:`, json)
-      throw new Error(json?.error || `Request failed (${res.status})`)
-    }
-
-    return json
   }
 
   async function handleVerify() {
@@ -56,7 +59,6 @@ export default function ActionPage({ params }: { params: { token: string } }) {
       })
 
       console.log("Verification response:", json)
-
       setVerified(json.data)
       toast({
         title: "Verified successfully",
