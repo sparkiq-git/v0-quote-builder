@@ -251,8 +251,7 @@ const handleNext = async () => {
                       onSelect={(a) => {
                         setAircraftCache((prev) => ({ ...prev, [a.aircraft_id]: a }))
                         handleUpdateOption(option.id, {
-                          aircraftModelId: a.aircraft_id,
-                          aircraftTailId: a.aircraft_id,
+                          aircraft_id: a.aircraft_id,
                           aircraft_tail_number: a.tail_number,
                           aircraft_model: a.model_name,
                           aircraft_manufacturer: a.manufacturer_name,
