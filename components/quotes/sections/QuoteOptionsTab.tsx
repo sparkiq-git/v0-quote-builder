@@ -267,14 +267,13 @@ const handleNext = async () => {
                       onClickAdd={() => setCreateOpen(true)}
                     />
 
-                    {(option.aircraft_id || option.aircraft_id) && (
-                      <AircraftSummaryCard
-                        aircraft={aircraftCache[option.aircraft_id || option.aircraft_id!]}
-                        onEdit={() =>
-                          setEditOpenFor((option.aircraft_id || option.aircraft_id)!)
-                        }
-                      />
-                    )}
+                 {option.aircraft_id && aircraftCache[option.aircraft_id] && (
+  <AircraftSummaryCard
+    aircraft={aircraftCache[option.aircraft_id]}
+    onEdit={() => setEditOpenFor(option.aircraft_id!)}
+  />
+)}
+
                   </div>
 
                   {/* Right column: Pricing */}
