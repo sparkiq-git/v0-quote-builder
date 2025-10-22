@@ -240,8 +240,8 @@ export function QuoteLegsTab({ quote, onUpdate, onLegsChange, onNext, onBack }: 
                       ...prev,
                       origin: a.airport,
                       origin_code: a.airport_code,
-                      origin_lat: a.latitude ?? null,
-                      origin_long: a.longitude ?? null,
+                      origin_lat: a.lat ?? null,
+                      origin_long: a.long ?? null,
                     }))
                   }
                 />
@@ -257,8 +257,8 @@ export function QuoteLegsTab({ quote, onUpdate, onLegsChange, onNext, onBack }: 
                       ...prev,
                       destination: a.airport,
                       destination_code: a.airport_code,
-                      destination_lat: a.latitude ?? null,
-                      destination_long: a.longitude ?? null,
+                      destination_lat: a.lat ?? null,
+                      destination_long: a.long ?? null,
                     }))
                   }
                 />
@@ -353,7 +353,7 @@ export function QuoteLegsTab({ quote, onUpdate, onLegsChange, onNext, onBack }: 
                         setMultiLegs((prev) =>
                           prev.map((l) =>
                             l.id === leg.id
-                              ? { ...l, origin: a.airport, origin_code: a.airport_code, origin_lat: a.latitude ?? null, origin_long: a.longitude ?? null, }
+                              ? { ...l, origin: a.airport, origin_code: a.airport_code, origin_lat: a.lat ?? null, origin_long: a.long ?? null, }
                               : l
                           )
                         )
@@ -373,8 +373,8 @@ export function QuoteLegsTab({ quote, onUpdate, onLegsChange, onNext, onBack }: 
                                   ...l,
                                   destination: a.airport,
                                   destination_code: a.airport_code,
-                                  destination_lat: a.latitude ?? null,
-                                  destination_long: a.longitude ?? null,
+                                  destination_lat: a.lat ?? null,
+                                  destination_long: a.long ?? null,
                                 }
                               : l
                           )
