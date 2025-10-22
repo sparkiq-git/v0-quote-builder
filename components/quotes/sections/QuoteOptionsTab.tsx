@@ -35,6 +35,23 @@ export function QuoteOptionsTab({ quote, onUpdate, onNext, onBack }: Props) {
   const [saving, setSaving] = useState(false)
   const [initialized, setInitialized] = useState(false)
 
+  // 🧩 Normalize options after quote is loaded (ensures no undefined fees)
+useEffect(() => {
+  if (!quote?.options) return
+
+  const normalized = quote.options.map((o) => ({
+    ...o,
+    fees: Array.isArray(o.fees) ? o.fees : [],
+    feesEnabled: o.feesEnabled ?? false,
+  }))
+
+  // Only update if something changed (avoid re-renders)
+  if (JSON.stringify(normalized) !== JSON.stringify(quote.options)) {
+    onUpdate({ options: normalized })
+  }
+}, [quote])
+
+
   // 🧮 Helper: renumber all options (Option 1, Option 2, etc.)
 const renumberOptions = (options: QuoteOption[]): QuoteOption[] => {
   return options.map((opt, index) => ({
