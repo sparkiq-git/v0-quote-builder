@@ -188,3 +188,20 @@ if (existingIds.length > 0) {
 
   return NextResponse.json({ success: true })
 }
+
+/* ---------------- 🧩 Upsert quote services ---------------- */
+if (body.services && Array.isArray(body.services)) {
+  const services = body.services.map((s: any, index: number) => ({
+    id: s.id,
+    quote_id: id,
+    item_id: s.item_id,
+    qty: s.qty ?? 1,
+    unit_price: s.unit_price ?? 0,
+    taxable: s.taxable ?? true,
+    updated_at: new Date().toISOString(),
+  }))
+
+  const { error: serviceError } = await supabase.from("quote_item").upsert(services, { onConflict: "id" })
+  if (serviceError)
+    return NextResponse.json({ error: serviceError.message }, { status: 500 })
+}
