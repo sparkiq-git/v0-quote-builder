@@ -189,20 +189,24 @@ if (existingIds.length > 0) {
   return NextResponse.json({ success: true })
 }
 
-/* ---------------- 🧾 Upsert quote services ---------------- */
+/* ---------------- 💼 Upsert quote services (quote_item) ---------------- */
 if (services && Array.isArray(services)) {
   const validServices = services.map((s) => ({
-    id: s.id,
-    quote_id: s.quote_id,
-    item_id: s.item_id,
-    description: s.description || null,
-    amount: Number(s.unit_cost) || 0,
-    taxable: s.taxable ?? false,
+    id: s.id || crypto.randomUUID(),
+    quote_id: id,
+    item_id: s.item_id || null,
+    name: s.description?.trim() || "Service Item", // ✅ required field
+    description: s.description?.trim() || "Service item",
+    qty: s.qty ?? 1,
+    unit_price: Number(s.amount) || 0,
+    unit_cost: s.unit_cost ?? null,
+    taxable: s.taxable ?? true,
+    notes: s.notes ?? null,
     updated_at: new Date().toISOString(),
     created_at: s.created_at || new Date().toISOString(),
   }))
 
-  // 🧩 Step 1: Upsert
+  // Step 1: Upsert (replace or insert)
   const { error: upsertError } = await supabase
     .from("quote_item")
     .upsert(validServices, { onConflict: "id" })
@@ -210,7 +214,7 @@ if (services && Array.isArray(services)) {
   if (upsertError)
     return NextResponse.json({ error: upsertError.message }, { status: 500 })
 
-  // 🧹 Step 2: Delete removed ones
+  // Step 2: Delete removed rows
   const existingIds = validServices.map((s) => s.id)
   const { error: deleteError } = await supabase
     .from("quote_item")
