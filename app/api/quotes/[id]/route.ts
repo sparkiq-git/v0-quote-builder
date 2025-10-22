@@ -3,6 +3,9 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 
+
+console.log("🛰️ Incoming save payload:", JSON.stringify({ quote, options }, null, 2))
+
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
