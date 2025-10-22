@@ -196,7 +196,7 @@ if (services && Array.isArray(services)) {
     quote_id: s.quote_id,
     item_id: s.item_id,
     description: s.description || null,
-    amount: Number(s.amount) || 0,
+    amount: Number(s.unit_cost) || 0,
     taxable: s.taxable ?? false,
     updated_at: new Date().toISOString(),
     created_at: s.created_at || new Date().toISOString(),
