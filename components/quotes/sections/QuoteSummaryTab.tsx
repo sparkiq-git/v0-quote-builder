@@ -61,19 +61,19 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
   const handlePublish = async () => {
     setPublishing(true)
     try {
-      const res = await fetch("/api/action-links/create", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          action_type: "quote",
-          email: quote.contact_email,
-          tenant_id: quote.tenant_id,
-          metadata: {
-            quote_id: quote.id,
-            quote_ref: quote.reference_code || quote.magic_link_slug,
-          },
-        }),
-      })
+const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/create-action-link`, {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  },
+  body: JSON.stringify({
+    action_type: "quote",
+    email: quote.contact_email,
+    tenant_id: quote.tenant_id,
+    metadata: { quote_id: quote.id, quote_ref: quote.reference_code },
+  }),
+})
 
       const json = await res.json()
       if (!res.ok || !json.ok) throw new Error(json.error || "Failed to publish")
