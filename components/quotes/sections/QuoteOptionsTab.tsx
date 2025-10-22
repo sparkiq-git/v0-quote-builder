@@ -104,26 +104,22 @@ useEffect(() => {
     }
 
 const handleUpdateOption = (id: string, updates: Partial<QuoteOption>) => {
-  if (!initialized) return // 🧱 Skip updates during initial load
+  // Block only if we're hydrating pre-existing options from DB.
+  if (!initialized && options.length > 0) return;
 
-  // Skip empty updates (no values or all null/undefined)
   if (
     !updates ||
     Object.keys(updates).length === 0 ||
-    Object.values(updates).every(
-      (v) => v === undefined || v === null || v === ""
-    )
+    Object.values(updates).every((v) => v === undefined || v === null || v === "")
   ) {
-    return
+    return;
   }
 
-  // Apply valid update
   onUpdate({
-    options: options.map((o) =>
-      o.id === id ? { ...o, ...updates } : o
-    ),
-  })
-}
+    options: options.map((o) => (o.id === id ? { ...o, ...updates } : o)),
+  });
+};
+
 
 
   const handleRemoveOption = (id: string) => {
