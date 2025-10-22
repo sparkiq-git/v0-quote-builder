@@ -123,49 +123,6 @@ const normalizeLegs = useCallback((legs: any[]) => {
 }, [])
 
 
-  /* -------------------- AUTO SAVE -------------------- */
-  useEffect(() => {
-    if (!pendingChanges || !quote?.id) return
-
-    const handler = setTimeout(async () => {
-      try {
-        setSaving(true)
-
-        const normalizedLegs = normalizeLegs(quoteDetails)
-
-const updated = await saveQuoteAll({
-  ...quote,
-  legs: normalizedLegs,
-  trip_type: quote.trip_type || (normalizedLegs.length > 1 ? "multi-city" : "one-way"),
-})
-
-// ✅ Keep local buffers stable
-setQuote({
-  ...updated,
-  legs: normalizedLegs,
-  services: quote.services || [], // 👈 ensures they persist
-  options: quote.options || [],
-})
-setQuoteDetails(normalizedLegs)
-
-
-        setSaving(false)
-        setPendingChanges(false)
-        setLastSaved(new Date())
-      } catch (err: any) {
-        console.error("❌ Autosave failed:", err)
-        toast({
-          title: "Autosave failed",
-          description: err.message,
-          variant: "destructive",
-        })
-        setSaving(false)
-      }
-    }, 1000)
-
-    return () => clearTimeout(handler)
-  }, [pendingChanges, quote, quoteDetails, normalizeLegs, toast])
-
   /* -------------------- WARN BEFORE EXIT -------------------- */
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
