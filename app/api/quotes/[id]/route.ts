@@ -60,105 +60,101 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
       return NextResponse.json({ error: quoteError.message }, { status: 500 })
   }
 
-/* ---------------- ✈️ Upsert legs ---------------- */
-if (legs && Array.isArray(legs)) {
-  // 🧠 Build list of valid legs
-  const validLegs = legs
-    .filter((l) => l.origin_code && l.destination_code)
-    .map((l, i) => {
-      const distance_nm =
-        l.origin_lat != null &&
-        l.origin_long != null &&
-        l.destination_lat != null &&
-        l.destination_long != null
-          ? haversineDistanceNM(
-              Number(l.origin_lat),
-              Number(l.origin_long),
-              Number(l.destination_lat),
-              Number(l.destination_long)
-            )
-          : null
+  /* ---------------- ✈️ Upsert legs ---------------- */
+  if (legs && Array.isArray(legs)) {
+    const validLegs = legs
+      .filter((l) => l.origin_code && l.destination_code)
+      .map((l, i) => {
+        const distance_nm =
+          l.origin_lat != null &&
+          l.origin_long != null &&
+          l.destination_lat != null &&
+          l.destination_long != null
+            ? haversineDistanceNM(
+                Number(l.origin_lat),
+                Number(l.origin_long),
+                Number(l.destination_lat),
+                Number(l.destination_long)
+              )
+            : null
 
-      return {
-        id: l.id || crypto.randomUUID(), // ✅ keep or create id
-        quote_id: id,
-        seq: i + 1,
-        origin: l.origin,
-        origin_code: l.origin_code,
-        destination: l.destination,
-        destination_code: l.destination_code,
-        depart_dt: l.departureDate,
-        depart_time: l.departureTime,
-        pax_count: l.passengers ?? l.pax_count ?? 1,
-        origin_lat: l.origin_lat ?? null,
-        origin_long: l.origin_long ?? null,
-        destination_lat: l.destination_lat ?? null,
-        destination_long: l.destination_long ?? null,
-        distance_nm,
+        return {
+          id: l.id || crypto.randomUUID(),
+          quote_id: id,
+          seq: i + 1,
+          origin: l.origin,
+          origin_code: l.origin_code,
+          destination: l.destination,
+          destination_code: l.destination_code,
+          depart_dt: l.departureDate,
+          depart_time: l.departureTime,
+          pax_count: l.passengers ?? l.pax_count ?? 1,
+          origin_lat: l.origin_lat ?? null,
+          origin_long: l.origin_long ?? null,
+          destination_lat: l.destination_lat ?? null,
+          destination_long: l.destination_long ?? null,
+          distance_nm,
+          updated_at: new Date().toISOString(),
+          created_at: l.created_at || new Date().toISOString(),
+        }
+      })
+
+    console.log("🛫 Prepared legs to insert:", JSON.stringify(validLegs, null, 2))
+
+    const { error: upsertError } = await supabase
+      .from("quote_detail")
+      .upsert(validLegs, { onConflict: "id" })
+    if (upsertError)
+      return NextResponse.json({ error: upsertError.message }, { status: 500 })
+
+    const existingIds = validLegs.map((l) => l.id)
+    const { error: deleteError } = await supabase
+      .from("quote_detail")
+      .delete()
+      .eq("quote_id", id)
+      .not("id", "in", `(${existingIds.map((x) => `'${x}'`).join(",")})`)
+    if (deleteError)
+      return NextResponse.json({ error: deleteError.message }, { status: 500 })
+
+    const leg_count = validLegs.length
+    const total_pax = Math.max(...validLegs.map((l) => Number(l.pax_count || 0))) || 1
+    const chain = validLegs.flatMap((l) => [l.origin_code, l.destination_code]).filter(Boolean)
+    const trip_summary = chain.join(" → ")
+
+    const depTimes = validLegs
+      .map((l) => toDateTime(l.depart_dt, l.depart_time))
+      .filter(Boolean)
+      .map((s) => new Date(s as string).getTime())
+
+    const earliest_departure =
+      depTimes.length > 0 ? new Date(Math.min(...depTimes)).toISOString() : null
+    const latest_return =
+      depTimes.length > 0 ? new Date(Math.max(...depTimes)).toISOString() : null
+
+    const trip_type =
+      leg_count === 1
+        ? "one-way"
+        : leg_count === 2 &&
+          validLegs[0].origin_code === validLegs[1].destination_code &&
+          validLegs[0].destination_code === validLegs[1].origin_code
+        ? "round-trip"
+        : "multi-city"
+
+    const { error: metaError } = await supabase
+      .from("quote")
+      .update({
+        trip_summary,
+        trip_type,
+        leg_count,
+        total_pax,
+        earliest_departure,
+        latest_return,
         updated_at: new Date().toISOString(),
-        created_at: l.created_at || new Date().toISOString(),
-      }
-    })
+      })
+      .eq("id", id)
 
-  // 🧩 Step 1: Upsert modified or new legs
-  const { error: upsertError } = await supabase
-    .from("quote_detail")
-    .upsert(validLegs, { onConflict: "id" }) // ✅ keep existing rows
-  if (upsertError)
-    return NextResponse.json({ error: upsertError.message }, { status: 500 })
-
-  // 🧹 Step 2: Delete legs no longer present
-  const existingIds = validLegs.map((l) => l.id)
-  const { error: deleteError } = await supabase
-    .from("quote_detail")
-    .delete()
-    .eq("quote_id", id)
-    .not("id", "in", `(${existingIds.map((x) => `'${x}'`).join(",")})`))
-  if (deleteError)
-    return NextResponse.json({ error: deleteError.message }, { status: 500 })
-
-  // 🧾 Step 3: Update quote metadata
-  const leg_count = validLegs.length
-  const total_pax = Math.max(...validLegs.map((l) => Number(l.pax_count || 0))) || 1
-  const chain = validLegs.flatMap((l) => [l.origin_code, l.destination_code]).filter(Boolean)
-  const trip_summary = chain.join(" → ")
-
-  const depTimes = validLegs
-    .map((l) => toDateTime(l.depart_dt, l.depart_time))
-    .filter(Boolean)
-    .map((s) => new Date(s as string).getTime())
-
-  const earliest_departure =
-    depTimes.length > 0 ? new Date(Math.min(...depTimes)).toISOString() : null
-  const latest_return =
-    depTimes.length > 0 ? new Date(Math.max(...depTimes)).toISOString() : null
-
-  const trip_type =
-    leg_count === 1
-      ? "one-way"
-      : leg_count === 2 &&
-        validLegs[0].origin_code === validLegs[1].destination_code &&
-        validLegs[0].destination_code === validLegs[1].origin_code
-      ? "round-trip"
-      : "multi-city"
-
-  const { error: metaError } = await supabase
-    .from("quote")
-    .update({
-      trip_summary,
-      trip_type,
-      leg_count,
-      total_pax,
-      earliest_departure,
-      latest_return,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", id)
-
-  if (metaError)
-    return NextResponse.json({ error: metaError.message }, { status: 500 })
-}
-
+    if (metaError)
+      return NextResponse.json({ error: metaError.message }, { status: 500 })
   }
 
   /* ---------------- 🛩️ Upsert quote options ---------------- */
@@ -169,7 +165,7 @@ if (legs && Array.isArray(legs)) {
         options.map((o: any, index: number) => ({
           id: o.id,
           label: o.label || `Option ${index + 1}`,
-          quote_id: o.quote_id,
+          quote_id: o.quote_id || id,
           aircraft_id: o.aircraft_id,
           flight_hours: o.flight_hours ?? 0,
           cost_operator: o.cost_operator ?? 0,
