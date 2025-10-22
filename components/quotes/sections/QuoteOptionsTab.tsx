@@ -193,7 +193,7 @@ export function QuoteOptionsTab({ quote, onUpdate, onNext, onBack }: Props) {
                         <Input
                           type="number"
                           step="0.1"
-                          value={option.totalHours}
+                          value={option.totalHours ?? 0}
                           onChange={(e) =>
                             handleUpdateOption(option.id, {
                               totalHours: parseFloat(e.target.value) || 0,
@@ -205,7 +205,7 @@ export function QuoteOptionsTab({ quote, onUpdate, onNext, onBack }: Props) {
                         <Label>Operator Cost</Label>
                         <Input
                           type="number"
-                          value={option.operatorCost}
+                          value={option.operatorCost ?? 0}
                           onChange={(e) =>
                             handleUpdateOption(option.id, {
                               operatorCost: parseFloat(e.target.value) || 0,
@@ -217,7 +217,7 @@ export function QuoteOptionsTab({ quote, onUpdate, onNext, onBack }: Props) {
                         <Label>Commission</Label>
                         <Input
                           type="number"
-                          value={option.commission}
+                          value={option.commission ?? 0}
                           onChange={(e) =>
                             handleUpdateOption(option.id, {
                               commission: parseFloat(e.target.value) || 0,
@@ -232,7 +232,7 @@ export function QuoteOptionsTab({ quote, onUpdate, onNext, onBack }: Props) {
                       <Label>Option Notes</Label>
                       <Textarea
                         placeholder="Special terms, conditions, or comments"
-                        value={option.notes || ""}
+                        value={option.notes ?? ""}
                         onChange={(e) =>
                           handleUpdateOption(option.id, { notes: e.target.value })
                         }
