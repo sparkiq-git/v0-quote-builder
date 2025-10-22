@@ -174,26 +174,25 @@ export function QuoteLegsTab({ quote, onUpdate, onLegsChange, onNext, onBack }: 
 
   /* ------------------ 🧱 Multi-leg Handlers ------------------ */
 const handleAddLeg = () => {
-  const last = multiLegs[multiLegs.length - 1]
+  const last = multiLegs[multiLegs.length - 1];
 
   const newLeg: Leg = {
     id: crypto.randomUUID(),
     origin: last?.destination || "",
     origin_code: last?.destination_code || "",
+    origin_lat: last?.destination_lat ?? null,
+    origin_long: last?.destination_long ?? null,
     destination: "",
     destination_code: "",
+    destination_lat: null,
+    destination_long: null,
     departureDate: "",
     departureTime: "",
     passengers: last?.passengers || 1,
-    // ✅ carry over the destination coords of the last leg
-    origin_lat: last?.destination_lat ?? null,
-    origin_long: last?.destination_long ?? null,
-    destination_lat: null,
-    destination_long: null,
-  }
+  };
 
-  setMultiLegs([...multiLegs, newLeg])
-}
+  setMultiLegs([...multiLegs, newLeg]);
+};
 
 
   const handleRemoveLeg = (id: string) => {
