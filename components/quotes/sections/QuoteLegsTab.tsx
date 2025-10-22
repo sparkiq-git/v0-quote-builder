@@ -88,6 +88,10 @@ export function QuoteLegsTab({ quote, onUpdate, onLegsChange, onNext, onBack }: 
             departureDate: formState.departureDate,
             departureTime: formState.departureTime,
             passengers: formState.passengers,
+            origin_lat: formState.origin_lat,
+            origin_long: formState.origin_long,
+            destination_lat: formState.destination_lat,
+            destination_long: formState.destination_long,
           },
         ]
       } else if (tripType === "round-trip") {
@@ -101,10 +105,10 @@ export function QuoteLegsTab({ quote, onUpdate, onLegsChange, onNext, onBack }: 
             departureDate: formState.departureDate,
             departureTime: formState.departureTime,
             passengers: formState.passengers,
-      origin_lat: formState.origin_lat,
-      origin_long: formState.origin_long,
-      destination_lat: formState.destination_lat,
-      destination_long: formState.destination_long,
+            origin_lat: formState.origin_lat,
+            origin_long: formState.origin_long,
+            destination_lat: formState.destination_lat,
+            destination_long: formState.destination_long,
           },
           {
             id: crypto.randomUUID(),
@@ -115,6 +119,10 @@ export function QuoteLegsTab({ quote, onUpdate, onLegsChange, onNext, onBack }: 
             departureDate: formState.returnDate,
             departureTime: formState.returnTime,
             passengers: formState.passengers,
+            origin_lat: formState.origin_lat,
+            origin_long: formState.origin_long,
+            destination_lat: formState.destination_lat,
+            destination_long: formState.destination_long,
           },
         ]
       } else {
