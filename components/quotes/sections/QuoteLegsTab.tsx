@@ -40,6 +40,10 @@ export function QuoteLegsTab({ quote, onUpdate, onLegsChange, onNext, onBack }: 
     returnDate: legs[1]?.departureDate || legs[1]?.depart_dt || "",
     returnTime: legs[1]?.departureTime || legs[1]?.depart_time || "",
     passengers: legs[0]?.passengers || legs[0]?.pax_count || 1,
+    origin_lat: legs[0]?.origin_lat ?? null,          // ✅ add
+    origin_long: legs[0]?.origin_long ?? null,        // ✅ add
+    destination_lat: legs[0]?.destination_lat ?? null,// ✅ add
+    destination_long: legs[0]?.destination_long ?? null, // ✅ add
   })
 
   // 🧭 Multi-City form state
