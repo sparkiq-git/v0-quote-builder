@@ -66,7 +66,7 @@ export function QuoteOptionsTab({ quote, onUpdate, onNext, onBack }: Props) {
       id: crypto.randomUUID(),
       aircraftModelId: "",
       totalHours: 0,
-      operatorCost: 0,
+      cost_operator: 0,
       commission: 0,
       notes: "",
       fees: [
@@ -94,7 +94,7 @@ export function QuoteOptionsTab({ quote, onUpdate, onNext, onBack }: Props) {
     const feeTotal = option.feesEnabled
       ? (option.fees || []).reduce((sum, f) => sum + (f.amount || 0), 0)
       : 0
-    return option.operatorCost + option.commission + feeTotal
+    return option.cost_operator + option.commission + feeTotal
   }
 
   const total = options.reduce((sum, o) => sum + calculateOptionTotal(o), 0)
@@ -205,10 +205,10 @@ export function QuoteOptionsTab({ quote, onUpdate, onNext, onBack }: Props) {
                         <Label>Operator Cost</Label>
                         <Input
                           type="number"
-                          value={option.operatorCost ?? 0}
+                          value={option.cost_operator ?? 0}
                           onChange={(e) =>
                             handleUpdateOption(option.id, {
-                              operatorCost: parseFloat(e.target.value) || 0,
+                              cost_operator: parseFloat(e.target.value) || 0,
                             })
                           }
                         />
