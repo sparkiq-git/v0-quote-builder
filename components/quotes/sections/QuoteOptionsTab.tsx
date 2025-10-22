@@ -433,9 +433,10 @@ const handleNext = async () => {
           <Button variant="outline" onClick={onBack}>
             <ChevronRight className="mr-2 h-4 w-4 rotate-180" /> Back: Trip Legs
           </Button>
-          <Button onClick={onNext} disabled={!isOptionsValid}>
-            Next: Services <ChevronRight className="ml-2 h-4 w-4" />
-          </Button>
+<Button onClick={handleNext} disabled={!isOptionsValid}>
+  Next: Services <ChevronRight className="ml-2 h-4 w-4" />
+</Button>
+
         </div>
       </CardContent>
 
