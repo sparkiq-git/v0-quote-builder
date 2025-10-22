@@ -108,11 +108,26 @@ useEffect(() => {
     onUpdate({ options: [...options, newOption] })
   }
 
-  const handleUpdateOption = (id: string, updates: Partial<QuoteOption>) => {
-    onUpdate({
-      options: options.map((o) => (o.id === id ? { ...o, ...updates } : o)),
-    })
+// ✅ Only trigger update when there are real, defined changes
+const handleUpdateOption = (id: string, updates: Partial<QuoteOption>) => {
+  // Skip if updates is empty or all values are undefined/null
+  if (
+    !updates ||
+    Object.keys(updates).length === 0 ||
+    Object.values(updates).every(
+      (v) => v === undefined || v === null || v === ""
+    )
+  ) {
+    return
   }
+
+  // Merge and persist
+  onUpdate({
+    options: options.map((o) =>
+      o.id === id ? { ...o, ...updates } : o
+    ),
+  })
+}
 
   const handleRemoveOption = (id: string) => {
     onUpdate({ options: options.filter((o) => o.id !== id) })
