@@ -239,17 +239,6 @@ export function QuoteLegsTab({ quote, onUpdate, onLegsChange, onNext, onBack }: 
                 <Label>Origin *</Label>
 <AirportCombobox
   value={formState.origin_code}
-  autoresolve
-  onResolved={(a) =>
-    setFormState((prev) => ({
-      ...prev,
-      // only set when missing so we don't overwrite manual edits
-      origin: prev.origin || a.airport || prev.origin,
-      origin_code: prev.origin_code || a.airport_code || prev.origin_code,
-      origin_lat: prev.origin_lat ?? (a.latitude ?? null),
-      origin_long: prev.origin_long ?? (a.longitude ?? null),
-    }))
-  }
   onSelect={(a) =>
     setFormState((prev) => ({
       ...prev,
@@ -260,6 +249,7 @@ export function QuoteLegsTab({ quote, onUpdate, onLegsChange, onNext, onBack }: 
     }))
   }
 />
+
               </div>
 
               {/* Destination */}
