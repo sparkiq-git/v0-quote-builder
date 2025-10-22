@@ -101,9 +101,10 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
 
     console.log("🛫 Prepared legs to insert:", JSON.stringify(validLegs, null, 2))
 
-    const { error: upsertError } = await supabase
-      .from("quote_detail")
-      .upsert(validLegs, { onConflict: "id" })
+const { error: upsertError } = await supabase
+  .from("quote_detail")
+  .upsert(validLegs, { onConflict: "quote_id,seq" })
+
     if (upsertError)
       return NextResponse.json({ error: upsertError.message }, { status: 500 })
 
