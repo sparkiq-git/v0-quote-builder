@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState } from "react"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
@@ -9,23 +9,35 @@ import { Separator } from "@/components/ui/separator"
 import { Trash2, Plus, Wrench } from "lucide-react"
 import { ItemCombobox } from "@/components/ui/item-combobox"
 import { useToast } from "@/hooks/use-toast"
+import { Switch } from "@/components/ui/switch"
 
 export function QuoteServicesTab({ quote, onNext, onBack }: any) {
   const { toast } = useToast()
   const [saving, setSaving] = useState(false)
-  const [services, setServices] = useState(quote.services || [])
+  const [services, setServices] = useState(
+    quote.services && quote.services.length
+      ? quote.services
+      : [
+          {
+            id: crypto.randomUUID(),
+            item_id: null,
+            description: "",
+            amount: 0,
+            taxable: false,
+          },
+        ]
+  )
 
+  /* ---------------- Add/Remove/Update ---------------- */
   const handleAddService = () => {
     setServices([
       ...services,
       {
         id: crypto.randomUUID(),
         item_id: null,
-        name: "",
-        qty: 1,
-        unit_price: 0,
-        taxable: true,
-        notes: "",
+        description: "",
+        amount: 0,
+        taxable: false,
       },
     ])
   }
@@ -40,27 +52,28 @@ export function QuoteServicesTab({ quote, onNext, onBack }: any) {
     )
   }
 
-  const subtotal = useMemo(
-    () =>
-      services.reduce((acc, s) => acc + (s.qty || 0) * (s.unit_price || 0), 0),
-    [services]
-  )
-
+  /* ---------------- Save and Navigate ---------------- */
   const handleSaveAndNavigate = async (direction: "next" | "back") => {
     try {
       setSaving(true)
 
+      // validate at least one service
+      if (!services.length || services.some((s) => !s.item_id)) {
+        toast({
+          title: "Missing information",
+          description: "Please select at least one service item before continuing.",
+          variant: "destructive",
+        })
+        setSaving(false)
+        return
+      }
+
       const payload = {
         quote: {
-          contact_id: quote.contact_id,
-          contact_name: quote.contact_name,
-          contact_email: quote.contact_email,
-          contact_phone: quote.contact_phone,
-          contact_company: quote.contact_company,
-          valid_until: quote.valid_until,
-          notes: quote.notes,
           title: quote.title,
           status: quote.status,
+          notes: quote.notes,
+          contact_id: quote.contact_id,
         },
         services,
       }
@@ -74,110 +87,87 @@ export function QuoteServicesTab({ quote, onNext, onBack }: any) {
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || "Failed to save services")
 
-      toast({ title: "Services saved", description: "Quote services updated successfully." })
+      toast({
+        title: "Services saved",
+        description: "Quote services updated successfully.",
+      })
+
       direction === "next" ? onNext() : onBack()
     } catch (err: any) {
-      toast({ title: "Error saving services", description: err.message, variant: "destructive" })
+      toast({
+        title: "Error saving services",
+        description: err.message,
+        variant: "destructive",
+      })
     } finally {
       setSaving(false)
     }
   }
 
+  /* ---------------- UI ---------------- */
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Wrench className="h-5 w-5" />
-          Services
+          Service Items
         </CardTitle>
-        <CardDescription>Add services or products to this quote.</CardDescription>
+        <CardDescription>Select and configure service items for this quote.</CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-6">
         {services.map((s, i) => (
-          <div key={s.id} className="border p-4 rounded-lg space-y-4 bg-background/50">
-            <div className="flex justify-between items-center">
-              <h4 className="text-sm font-medium">Service {i + 1}</h4>
-              <Button variant="outline" size="sm" onClick={() => handleRemoveService(s.id)}>
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
-              <div className="col-span-2">
-                <Label>Item</Label>
-                <ItemCombobox
-                  tenantId={quote.tenant_id}
-                  value={s.item_id}
-                  onSelect={(item) => {
-                    handleUpdate(s.id, "item_id", item.id)
-                    handleUpdate(s.id, "name", item.name)
-                    handleUpdate(s.id, "unit_price", item.default_unit_price || 0)
-                    handleUpdate(s.id, "taxable", item.default_taxable ?? true)
-                    handleUpdate(s.id, "notes", item.default_notes || "")
-                  }}
-                />
-              </div>
-
-              <div>
-                <Label>Qty</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  value={s.qty || 1}
-                  onChange={(e) =>
-                    handleUpdate(s.id, "qty", parseInt(e.target.value) || 1)
-                  }
-                />
-              </div>
-
-              <div>
-                <Label>Unit Price</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={s.unit_price || 0}
-                  onChange={(e) =>
-                    handleUpdate(
-                      s.id,
-                      "unit_price",
-                      parseFloat(e.target.value) || 0
-                    )
-                  }
-                />
-              </div>
-
-              <div>
-                <Label>Subtotal</Label>
-                <Input
-                  readOnly
-                  value={((s.qty || 0) * (s.unit_price || 0)).toFixed(2)}
-                  className="bg-muted"
-                />
-              </div>
-
-              <div className="flex items-end">
-                <Label className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={s.taxable}
-                    onChange={(e) =>
-                      handleUpdate(s.id, "taxable", e.target.checked)
-                    }
-                  />
-                  Taxable
-                </Label>
-              </div>
-            </div>
-
-            <div>
-              <Label>Notes</Label>
-              <Input
-                placeholder="Additional details for this service..."
-                value={s.notes || ""}
-                onChange={(e) => handleUpdate(s.id, "notes", e.target.value)}
+          <div
+            key={s.id}
+            className="flex flex-col md:flex-row items-start md:items-center gap-4 border p-4 rounded-lg bg-background/50"
+          >
+            <div className="flex-1">
+              <Label>Service Name</Label>
+              <ItemCombobox
+                tenantId={quote.tenant_id}
+                value={s.item_id}
+                onSelect={(item) => handleUpdate(s.id, "item_id", item.id)}
               />
             </div>
+
+            <div className="flex-1">
+              <Label>Description</Label>
+              <Input
+                placeholder="Enter service description"
+                value={s.description || ""}
+                onChange={(e) =>
+                  handleUpdate(s.id, "description", e.target.value)
+                }
+              />
+            </div>
+
+            <div className="w-[120px]">
+              <Label>Amount</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={s.amount || 0}
+                onChange={(e) =>
+                  handleUpdate(s.id, "amount", parseFloat(e.target.value) || 0)
+                }
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Switch
+                checked={s.taxable}
+                onCheckedChange={(val) => handleUpdate(s.id, "taxable", val)}
+              />
+              <Label>Taxable</Label>
+            </div>
+
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => handleRemoveService(s.id)}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
           </div>
         ))}
 
@@ -185,22 +175,20 @@ export function QuoteServicesTab({ quote, onNext, onBack }: any) {
           <Plus className="mr-2 h-4 w-4" /> Add Service
         </Button>
 
-        <div className="pt-6 border-t text-right">
-          <p className="text-sm text-muted-foreground">
-            Subtotal:{" "}
-            <span className="font-semibold text-foreground">
-              ${subtotal.toFixed(2)}
-            </span>
-          </p>
-        </div>
-
         <Separator />
 
         <div className="flex justify-between pt-4">
-          <Button variant="outline" onClick={() => handleSaveAndNavigate("back")} disabled={saving}>
+          <Button
+            variant="outline"
+            onClick={() => handleSaveAndNavigate("back")}
+            disabled={saving}
+          >
             Back
           </Button>
-          <Button onClick={() => handleSaveAndNavigate("next")} disabled={saving}>
+          <Button
+            onClick={() => handleSaveAndNavigate("next")}
+            disabled={saving}
+          >
             {saving ? "Saving..." : "Next"} →
           </Button>
         </div>
