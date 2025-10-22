@@ -103,6 +103,7 @@ useEffect(() => {
   const handleAddOption = () => {
     const newOption: QuoteOption = {
   id: crypto.randomUUID(),
+  label: `Option ${options.length + 1}`,
   aircraft_id: "",
   flight_hours: 0,
   cost_operator: 0,
