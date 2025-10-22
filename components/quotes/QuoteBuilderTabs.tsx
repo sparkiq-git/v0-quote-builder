@@ -62,12 +62,12 @@ export function QuoteBuilderTabs({
         </TabsList>
 
         {/* --- 1️⃣ Details --- */}
-        <TabsContent value="details" className="mt-4">
+        <TabsContent value="details" className="mt-4" forceMount>
           <QuoteDetailsTab quote={quote} onUpdate={onUpdate} onNext={() => next("legs")} />
         </TabsContent>
 
         {/* --- 2️⃣ Legs --- */}
-        <TabsContent value="legs" className="mt-4">
+        <TabsContent value="legs" className="mt-4" forceMount>
           <QuoteLegsTab
             quote={quote}
             onUpdate={onUpdate}
@@ -78,7 +78,7 @@ export function QuoteBuilderTabs({
         </TabsContent>
 
         {/* --- 3️⃣ Aircraft Options --- */}
-        <TabsContent value="options" className="mt-4">
+        <TabsContent value="options" className="mt-4" forceMount>
           <QuoteOptionsTab
             quote={quote}
             onUpdate={onUpdate}
@@ -88,7 +88,7 @@ export function QuoteBuilderTabs({
         </TabsContent>
 
         {/* --- 4️⃣ Services --- */}
-        <TabsContent value="services" className="mt-4">
+        <TabsContent value="services" className="mt-4" forceMount>
           <QuoteServicesTab
             quote={quote}
             onUpdate={onUpdate}
@@ -98,7 +98,7 @@ export function QuoteBuilderTabs({
         </TabsContent>
 
         {/* --- 5️⃣ Summary --- */}
-        <TabsContent value="summary" className="mt-4">
+        <TabsContent value="summary" className="mt-4" forceMount>
           <QuoteSummaryTab quote={quote} onBack={() => back("services")} />
         </TabsContent>
       </Tabs>
