@@ -67,7 +67,7 @@ export function QuoteOptionsTab({ quote, onUpdate, onNext, onBack }: Props) {
       aircraftModelId: "",
       totalHours: 0,
       cost_operator: 0,
-      commission: 0,
+      price_commission: 0,
       notes: "",
       fees: [
         { id: crypto.randomUUID(), name: "US Domestic Segment Fee", amount: 4.3 },
