@@ -26,11 +26,21 @@ interface Props {
 
 export function QuoteOptionsTab({ quote, onUpdate, onNext, onBack }: Props) {
   const { toast } = useToast()
-
   const options = Array.isArray(quote?.options) ? quote.options : []
   const [createOpen, setCreateOpen] = useState(false)
   const [editOpenFor, setEditOpenFor] = useState<string | null>(null)
   const [aircraftCache, setAircraftCache] = useState<Record<string, AircraftFull>>({})
+  const [initialized, setInitialized] = useState(false)
+
+// 🧠 Mark as initialized once quote options are loaded from DB
+useEffect(() => {
+  if (quote?.options && quote.options.length > 0 && !initialized) {
+    setInitialized(true)
+  }
+}, [quote])
+
+
+
 
 useEffect(() => {
   const fetchAircraftForOptions = async () => {
