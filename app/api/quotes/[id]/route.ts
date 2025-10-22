@@ -10,10 +10,18 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   const body = await req.json()
   const { quote, options } = body
 
-  // Update main quote
+// 🧱 Update main quote
+if (quote) {
   const { error: quoteError } = await supabase
     .from("quote")
     .update({
+      contact_id: quote.contact_id,
+      contact_name: quote.contact_name,
+      contact_email: quote.contact_email,
+      contact_phone: quote.contact_phone,
+      contact_company: quote.contact_company,
+      valid_until: quote.valid_until,
+      notes: quote.notes,
       title: quote.title,
       status: quote.status,
       updated_at: new Date().toISOString(),
@@ -22,6 +30,8 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
 
   if (quoteError)
     return NextResponse.json({ error: quoteError.message }, { status: 500 })
+}
+
 
   // Upsert quote options
 const { error: optionError } = await supabase
