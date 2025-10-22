@@ -116,7 +116,10 @@ export function AirportCombobox({
   placeholder = "Select airport...",
   label,
   required = false,
+  autoresolve = false, // 👈 NEW
+  onResolved,          // 👈 NEW
 }: AirportComboboxProps) {
+
   const [open, setOpen] = React.useState(false)
   const [query, setQuery] = React.useState("")
   const debounced = useDebounce(query, 150)
