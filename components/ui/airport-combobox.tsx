@@ -167,6 +167,9 @@ export function AirportCombobox({
     if (onSelect) onSelect(airport)
     if (onChange) onChange(airport.id)
     setOpen(false)
+
+    console.log("🌎 Selected airport:", airport)
+
   }
 
   return (
