@@ -191,12 +191,28 @@ if (existingIds.length > 0) {
 
 /* ---------------- 💼 Upsert quote services (quote_item) ---------------- */
 if (services && Array.isArray(services)) {
+  // Fetch item names from item table for each item_id
+  const itemIds = services.map((s) => s.item_id).filter(Boolean)
+
+  let itemMap: Record<string, string> = {}
+  if (itemIds.length > 0) {
+    const { data: itemData, error: itemError } = await supabase
+      .from("item")
+      .select("id, name")
+      .in("id", itemIds)
+
+    if (itemError)
+      return NextResponse.json({ error: itemError.message }, { status: 500 })
+
+    itemMap = Object.fromEntries(itemData.map((i) => [i.id, i.name]))
+  }
+
   const validServices = services.map((s) => ({
     id: s.id || crypto.randomUUID(),
     quote_id: id,
     item_id: s.item_id || null,
-    name: s.description?.trim() || "Service Item", // ✅ required field
-    description: s.description?.trim() || "Service item",
+    name: s.item_id ? itemMap[s.item_id] || "Unnamed item" : s.description || "Custom item",
+    description: s.description || itemMap[s.item_id] || "Service item",
     qty: s.qty ?? 1,
     unit_price: Number(s.amount) || 0,
     unit_cost: s.unit_cost ?? null,
@@ -206,7 +222,6 @@ if (services && Array.isArray(services)) {
     created_at: s.created_at || new Date().toISOString(),
   }))
 
-  // Step 1: Upsert (replace or insert)
   const { error: upsertError } = await supabase
     .from("quote_item")
     .upsert(validServices, { onConflict: "id" })
@@ -214,7 +229,6 @@ if (services && Array.isArray(services)) {
   if (upsertError)
     return NextResponse.json({ error: upsertError.message }, { status: 500 })
 
-  // Step 2: Delete removed rows
   const existingIds = validServices.map((s) => s.id)
   const { error: deleteError } = await supabase
     .from("quote_item")
