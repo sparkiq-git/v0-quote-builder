@@ -1,196 +1,207 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState, useMemo } from "react"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { Switch } from "@/components/ui/switch"
-import { Plus, Trash2, Settings, ChevronRight } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
+import { Separator } from "@/components/ui/separator"
+import { Trash2, Plus, Wrench } from "lucide-react"
 import { ItemCombobox } from "@/components/ui/item-combobox"
-import { formatCurrency } from "@/lib/utils/format"
-import type { Quote, Service } from "@/lib/types"
+import { useToast } from "@/hooks/use-toast"
 
-interface Props {
-  quote: Quote
-  onUpdate: (updates: Partial<Quote>) => void
-  onNext: () => void
-  onBack: () => void
-}
-
-export function QuoteServicesTab({ quote, onUpdate, onNext, onBack }: Props) {
+export function QuoteServicesTab({ quote, onNext, onBack }: any) {
   const { toast } = useToast()
+  const [saving, setSaving] = useState(false)
+  const [services, setServices] = useState(quote.services || [])
 
-  // 🧠 Local buffer for services to prevent re-render overwrites
-  const [localServices, setLocalServices] = useState<Service[]>(quote.services || [])
-
-  // Keep local buffer in sync if quote.services changes externally (e.g. new quote loaded)
-  useEffect(() => {
-    setLocalServices(quote.services || [])
-  }, [quote.id]) // only reset when quote id changes, not on every autosave
-
-  /* -------------------- ADD SERVICE -------------------- */
   const handleAddService = () => {
-    const newService: Service = {
-      id: crypto.randomUUID(),
-      name: "",
-      description: "",
-      amount: 0,
-      qty: 1,
-      taxable: true,
-      item_id: null,
-      notes: "",
-      unit_cost: null,
-    }
-    const updated = [...localServices, newService]
-    setLocalServices(updated)
-    onUpdate({ services: updated }) // ✅ propagate to parent (autosave will handle it)
+    setServices([
+      ...services,
+      {
+        id: crypto.randomUUID(),
+        item_id: null,
+        name: "",
+        qty: 1,
+        unit_price: 0,
+        taxable: true,
+        notes: "",
+      },
+    ])
   }
 
-  /* -------------------- UPDATE SERVICE -------------------- */
-  const handleUpdateService = (id: string, updates: Partial<Service>) => {
-    const updated = localServices.map((s) => (s.id === id ? { ...s, ...updates } : s))
-    setLocalServices(updated)
-    onUpdate({ services: updated }) // ✅ only update parent after state is stable
-  }
-
-  /* -------------------- REMOVE SERVICE -------------------- */
   const handleRemoveService = (id: string) => {
-    const remaining = localServices.filter((s) => s.id !== id)
-    setLocalServices(remaining)
-    onUpdate({ services: remaining })
+    setServices((prev) => prev.filter((s) => s.id !== id))
   }
 
-  /* -------------------- TOTAL -------------------- */
-  const total = localServices.reduce((sum, s) => sum + (s.amount || 0), 0)
+  const handleUpdate = (id: string, key: string, value: any) => {
+    setServices((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, [key]: value } : s))
+    )
+  }
 
-  /* -------------------- VALIDATION -------------------- */
-  const isServicesValid = true
+  const subtotal = useMemo(
+    () =>
+      services.reduce((acc, s) => acc + (s.qty || 0) * (s.unit_price || 0), 0),
+    [services]
+  )
+
+  const handleSaveAndNavigate = async (direction: "next" | "back") => {
+    try {
+      setSaving(true)
+
+      const payload = {
+        quote: {
+          contact_id: quote.contact_id,
+          contact_name: quote.contact_name,
+          contact_email: quote.contact_email,
+          contact_phone: quote.contact_phone,
+          contact_company: quote.contact_company,
+          valid_until: quote.valid_until,
+          notes: quote.notes,
+          title: quote.title,
+          status: quote.status,
+        },
+        services,
+      }
+
+      const res = await fetch(`/api/quotes/${quote.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || "Failed to save services")
+
+      toast({ title: "Services saved", description: "Quote services updated successfully." })
+      direction === "next" ? onNext() : onBack()
+    } catch (err: any) {
+      toast({ title: "Error saving services", description: err.message, variant: "destructive" })
+    } finally {
+      setSaving(false)
+    }
+  }
 
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <Settings className="h-5 w-5" />
-              Additional Services
-            </CardTitle>
-            <CardDescription>Add optional services, extras, or fees to this quote.</CardDescription>
-          </div>
-          <Button type="button" onClick={handleAddService}>
-            <Plus className="mr-2 h-4 w-4" /> Add Service
-          </Button>
-        </div>
+        <CardTitle className="flex items-center gap-2">
+          <Wrench className="h-5 w-5" />
+          Services
+        </CardTitle>
+        <CardDescription>Add services or products to this quote.</CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-6">
-        {/* No services yet */}
-        {localServices.length === 0 && (
-          <div className="text-center py-10 text-muted-foreground">
-            <Settings className="h-10 w-10 mx-auto mb-3" />
-            <p>No services added yet.</p>
-            <Button type="button" className="mt-4" onClick={handleAddService}>
-              <Plus className="mr-2 h-4 w-4" /> Add First Service
-            </Button>
-          </div>
-        )}
-
-        {/* List of services */}
-        {localServices.map((service) => (
-          <div key={service.id} className="p-4 border rounded-lg space-y-4">
+        {services.map((s, i) => (
+          <div key={s.id} className="border p-4 rounded-lg space-y-4 bg-background/50">
             <div className="flex justify-between items-center">
-              <h4 className="font-medium">Service Item</h4>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => handleRemoveService(service.id)}
-              >
+              <h4 className="text-sm font-medium">Service {i + 1}</h4>
+              <Button variant="outline" size="sm" onClick={() => handleRemoveService(s.id)}>
                 <Trash2 className="h-4 w-4" />
               </Button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Service Name (via ItemCombobox) */}
-              <div className="grid gap-2">
-                <Label>Service Name</Label>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+              <div className="col-span-2">
+                <Label>Item</Label>
                 <ItemCombobox
                   tenantId={quote.tenant_id}
-                  value={service.item_id || null}
+                  value={s.item_id}
                   onSelect={(item) => {
-                    handleUpdateService(service.id, {
-                      item_id: item.id,
-                      name: item.name,
-                      description: item.default_notes || "",
-                      amount: item.default_unit_price || 0,
-                      taxable: item.default_taxable ?? true,
-                    })
-                    toast({
-                      title: "Service Added",
-                      description: `${item.name} added to the quote.`,
-                    })
+                    handleUpdate(s.id, "item_id", item.id)
+                    handleUpdate(s.id, "name", item.name)
+                    handleUpdate(s.id, "unit_price", item.default_unit_price || 0)
+                    handleUpdate(s.id, "taxable", item.default_taxable ?? true)
+                    handleUpdate(s.id, "notes", item.default_notes || "")
                   }}
                 />
               </div>
 
-              {/* Description */}
-              <div className="grid gap-2">
-                <Label>Description</Label>
+              <div>
+                <Label>Qty</Label>
                 <Input
-                  value={service.description || ""}
+                  type="number"
+                  min={1}
+                  value={s.qty || 1}
                   onChange={(e) =>
-                    handleUpdateService(service.id, { description: e.target.value })
+                    handleUpdate(s.id, "qty", parseInt(e.target.value) || 1)
                   }
-                  placeholder="Enter service description"
                 />
               </div>
 
-              {/* Amount */}
-              <div className="grid gap-2">
-                <Label>Amount</Label>
+              <div>
+                <Label>Unit Price</Label>
                 <Input
                   type="number"
-                  value={service.amount ?? 0}
+                  step="0.01"
+                  value={s.unit_price || 0}
                   onChange={(e) =>
-                    handleUpdateService(service.id, {
-                      amount: parseFloat(e.target.value) || 0,
-                    })
+                    handleUpdate(
+                      s.id,
+                      "unit_price",
+                      parseFloat(e.target.value) || 0
+                    )
                   }
-                  placeholder="0.00"
                 />
+              </div>
+
+              <div>
+                <Label>Subtotal</Label>
+                <Input
+                  readOnly
+                  value={((s.qty || 0) * (s.unit_price || 0)).toFixed(2)}
+                  className="bg-muted"
+                />
+              </div>
+
+              <div className="flex items-end">
+                <Label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={s.taxable}
+                    onChange={(e) =>
+                      handleUpdate(s.id, "taxable", e.target.checked)
+                    }
+                  />
+                  Taxable
+                </Label>
               </div>
             </div>
 
-            {/* Taxable toggle */}
-            <div className="flex items-center gap-2">
-              <Switch
-                checked={service.taxable ?? true}
-                onCheckedChange={(checked) =>
-                  handleUpdateService(service.id, { taxable: checked })
-                }
+            <div>
+              <Label>Notes</Label>
+              <Input
+                placeholder="Additional details for this service..."
+                value={s.notes || ""}
+                onChange={(e) => handleUpdate(s.id, "notes", e.target.value)}
               />
-              <Label className="text-sm text-muted-foreground">Taxable</Label>
             </div>
           </div>
         ))}
 
-        {/* Total */}
-        {localServices.length > 0 && (
-          <div className="flex justify-between items-center pt-4 border-t font-medium">
-            <span>Total Services:</span>
-            <span>{formatCurrency(total)}</span>
-          </div>
-        )}
+        <Button variant="outline" className="w-full" onClick={handleAddService}>
+          <Plus className="mr-2 h-4 w-4" /> Add Service
+        </Button>
 
-        {/* Navigation */}
-        <div className="flex justify-between pt-6 border-t">
-          <Button type="button" variant="outline" onClick={onBack}>
-            <ChevronRight className="mr-2 h-4 w-4 rotate-180" /> Back: Aircraft
+        <div className="pt-6 border-t text-right">
+          <p className="text-sm text-muted-foreground">
+            Subtotal:{" "}
+            <span className="font-semibold text-foreground">
+              ${subtotal.toFixed(2)}
+            </span>
+          </p>
+        </div>
+
+        <Separator />
+
+        <div className="flex justify-between pt-4">
+          <Button variant="outline" onClick={() => handleSaveAndNavigate("back")} disabled={saving}>
+            Back
           </Button>
-          <Button type="button" onClick={onNext} disabled={!isServicesValid}>
-            Next: Summary <ChevronRight className="ml-2 h-4 w-4" />
+          <Button onClick={() => handleSaveAndNavigate("next")} disabled={saving}>
+            {saving ? "Saving..." : "Next"} →
           </Button>
         </div>
       </CardContent>
