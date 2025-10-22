@@ -14,6 +14,7 @@ import { AircraftCreateModal } from "@/components/aircraft/AircraftCreateModal"
 import { AircraftEditDrawer } from "@/components/aircraft/AircraftEditDrawer"
 import { AircraftSummaryCard } from "@/components/aircraft/AircraftSummaryCard"
 import { formatCurrency } from "@/lib/utils/format"
+import { useEffect } from "react"
 import type { Quote, QuoteOption, QuoteFee, AircraftFull } from "@/lib/types"
 
 interface Props {
