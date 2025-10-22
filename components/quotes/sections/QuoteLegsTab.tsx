@@ -265,18 +265,29 @@ export function QuoteLegsTab({ quote, onUpdate, onLegsChange, onNext, onBack }: 
               {/* Destination */}
               <div className="grid gap-2 lg:col-span-2">
                 <Label>Destination *</Label>
-                <AirportCombobox
-                  value={formState.destination_code}
-                  onSelect={(a) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      destination: a.airport,
-                      destination_code: a.airport_code,
-                      destination_lat: a.lat ?? null,
-                      destination_long: a.lon ?? null,
-                    }))
-                  }
-                />
+<AirportCombobox
+  value={formState.destination_code}
+  autoresolve
+  onResolved={(a) =>
+    setFormState((prev) => ({
+      ...prev,
+      destination: prev.destination || a.airport || prev.destination,
+      destination_code: prev.destination_code || a.airport_code || prev.destination_code,
+      destination_lat: prev.destination_lat ?? (a.latitude ?? null),
+      destination_long: prev.destination_long ?? (a.longitude ?? null),
+    }))
+  }
+  onSelect={(a) =>
+    setFormState((prev) => ({
+      ...prev,
+      destination: a.airport,
+      destination_code: a.airport_code,
+      destination_lat: a.latitude ?? null,
+      destination_long: a.longitude ?? null,
+    }))
+  }
+/>
+
               </div>
 
               {/* Departure Date */}
