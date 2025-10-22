@@ -176,6 +176,10 @@ export function QuoteLegsTab({ quote, onUpdate, onLegsChange, onNext, onBack }: 
       departureDate: "",
       departureTime: "",
       passengers: last?.passengers || 1,
+      origin_lat: formState.origin_lat,
+      origin_long: formState.origin_long,
+      destination_lat: formState.destination_lat,
+      destination_long: formState.destination_long,
     }
     setMultiLegs([...multiLegs, newLeg])
   }
