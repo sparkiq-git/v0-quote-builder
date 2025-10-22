@@ -156,8 +156,9 @@ const handleUpdateOption = (id: string, updates: Partial<QuoteOption>) => {
 
 
   const handleRemoveOption = (id: string) => {
-    onUpdate({ options: options.filter((o) => o.id !== id) })
-  }
+  const remaining = options.filter((o) => o.id !== id)
+  onUpdate({ options: renumberOptions(remaining) })
+}
 
   const calculateOptionTotal = (option: QuoteOption) => {
     const feeTotal = option.feesEnabled
