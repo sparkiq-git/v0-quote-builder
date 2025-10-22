@@ -24,17 +24,7 @@ interface Props {
   onClickAdd?: () => void // open create modal
 }
 
-export function AirportCombobox({
-  value,
-  onChange,
-  onSelect,
-  placeholder = "Select airport...",
-  label,
-  required = false,
-  autoresolve = false, // 👈 NEW
-  onResolved,          // 👈 NEW
-}: AirportComboboxProps) {
-
+export function AircraftCombobox({ value, onSelect, onClickAdd }: Props) {
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState("")
   const [list, setList] = useState<AircraftFull[]>([])
