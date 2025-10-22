@@ -58,6 +58,10 @@ export function QuoteLegsTab({ quote, onUpdate, onLegsChange, onNext, onBack }: 
           departureDate: l.departureDate || l.depart_dt || "",
           departureTime: l.departureTime || l.depart_time || "",
           passengers: l.passengers || l.pax_count || 1,
+      origin_lat: formState.origin_lat ?? legs[0]?.origin_lat ?? null,
+      origin_long: formState.origin_long ?? legs[0]?.origin_long ?? null,
+      destination_lat: formState.destination_lat ?? legs[0]?.destination_lat ?? null,
+      destination_long: formState.destination_long ?? legs[0]?.destination_long ?? null,
         }))
       : [
           {
