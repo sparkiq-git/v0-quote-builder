@@ -27,6 +27,69 @@ export function QuoteLegsTab({ quote, onUpdate, onLegsChange, onNext, onBack }: 
   const [saving, setSaving] = useState(false)
   const [tripType, setTripType] = useState<TripType>(quote.trip_type || "one-way")
 
+  // 🔄 Sync local state when quote changes (e.g. tab navigation or reload)
+useEffect(() => {
+  if (!quote) return;
+
+  // Detect current legs and trip type again
+  const legs = Array.isArray(quote.legs) ? quote.legs : [];
+  setTripType((quote.trip_type as TripType) || "one-way");
+
+  if (quote.trip_type === "multi-city") {
+    setMultiLegs(
+      legs.length
+        ? legs.map((l) => ({
+            id: l.id || crypto.randomUUID(),
+            origin: l.origin || "",
+            origin_code: l.origin_code || "",
+            destination: l.destination || "",
+            destination_code: l.destination_code || "",
+            departureDate: l.departureDate || l.depart_dt || "",
+            departureTime: l.departureTime || l.depart_time || "",
+            passengers: l.passengers || l.pax_count || 1,
+            origin_lat: l.origin_lat ?? null,
+            origin_long: l.origin_long ?? null,
+            destination_lat: l.destination_lat ?? null,
+            destination_long: l.destination_long ?? null,
+          }))
+        : [
+            {
+              id: crypto.randomUUID(),
+              origin: "",
+              origin_code: "",
+              destination: "",
+              destination_code: "",
+              departureDate: "",
+              departureTime: "",
+              passengers: 1,
+              origin_lat: null,
+              origin_long: null,
+              destination_lat: null,
+              destination_long: null,
+            },
+          ]
+    );
+  } else {
+    // Reset form state for one-way or round-trip
+    setFormState({
+      origin: legs[0]?.origin || "",
+      origin_code: legs[0]?.origin_code || "",
+      destination: legs[0]?.destination || "",
+      destination_code: legs[0]?.destination_code || "",
+      departureDate: legs[0]?.departureDate || legs[0]?.depart_dt || "",
+      departureTime: legs[0]?.departureTime || legs[0]?.depart_time || "",
+      returnDate: legs[1]?.departureDate || legs[1]?.depart_dt || "",
+      returnTime: legs[1]?.departureTime || legs[1]?.depart_time || "",
+      passengers: legs[0]?.passengers || legs[0]?.pax_count || 1,
+      origin_lat: legs[0]?.origin_lat ?? null,
+      origin_long: legs[0]?.origin_long ?? null,
+      destination_lat: legs[0]?.destination_lat ?? null,
+      destination_long: legs[0]?.destination_long ?? null,
+    });
+  }
+}, [quote]);
+
+
   const legs = Array.isArray(quote.legs) ? quote.legs : []
 
   // ✈️ One-way / Round-trip form state
