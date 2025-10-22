@@ -1,12 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
-import { Trash2, Plus, Wrench } from "lucide-react"
+import { Trash2, Plus, Cog } from "lucide-react"
 import { ItemCombobox } from "@/components/ui/item-combobox"
 import { useToast } from "@/hooks/use-toast"
 import { Switch } from "@/components/ui/switch"
@@ -15,7 +15,7 @@ export function QuoteServicesTab({ quote, onNext, onBack }: any) {
   const { toast } = useToast()
   const [saving, setSaving] = useState(false)
   const [services, setServices] = useState(
-    quote.services && quote.services.length
+    quote.services?.length
       ? quote.services
       : [
           {
@@ -28,7 +28,7 @@ export function QuoteServicesTab({ quote, onNext, onBack }: any) {
         ]
   )
 
-  /* ---------------- Add/Remove/Update ---------------- */
+  /* ---------------- Handlers ---------------- */
   const handleAddService = () => {
     setServices([
       ...services,
@@ -52,16 +52,19 @@ export function QuoteServicesTab({ quote, onNext, onBack }: any) {
     )
   }
 
-  /* ---------------- Save and Navigate ---------------- */
+  const total = useMemo(
+    () => services.reduce((acc, s) => acc + (Number(s.amount) || 0), 0),
+    [services]
+  )
+
   const handleSaveAndNavigate = async (direction: "next" | "back") => {
     try {
       setSaving(true)
 
-      // validate at least one service
-      if (!services.length || services.some((s) => !s.item_id)) {
+      if (services.some((s) => !s.item_id)) {
         toast({
           title: "Missing information",
-          description: "Please select at least one service item before continuing.",
+          description: "Please select a service item before continuing.",
           variant: "destructive",
         })
         setSaving(false)
@@ -71,9 +74,10 @@ export function QuoteServicesTab({ quote, onNext, onBack }: any) {
       const payload = {
         quote: {
           title: quote.title,
+          contact_id: quote.contact_id,
           status: quote.status,
           notes: quote.notes,
-          contact_id: quote.contact_id,
+          valid_until: quote.valid_until,
         },
         services,
       }
@@ -87,18 +91,10 @@ export function QuoteServicesTab({ quote, onNext, onBack }: any) {
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || "Failed to save services")
 
-      toast({
-        title: "Services saved",
-        description: "Quote services updated successfully.",
-      })
-
+      toast({ title: "Services saved", description: "Quote services updated successfully." })
       direction === "next" ? onNext() : onBack()
     } catch (err: any) {
-      toast({
-        title: "Error saving services",
-        description: err.message,
-        variant: "destructive",
-      })
+      toast({ title: "Error saving services", description: err.message, variant: "destructive" })
     } finally {
       setSaving(false)
     }
@@ -109,71 +105,95 @@ export function QuoteServicesTab({ quote, onNext, onBack }: any) {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Wrench className="h-5 w-5" />
-          Service Items
+          <Cog className="h-5 w-5" />
+          Additional Services
         </CardTitle>
-        <CardDescription>Select and configure service items for this quote.</CardDescription>
+        <CardDescription>
+          Add optional services, extras, or fees to this quote.
+        </CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-6">
-        {services.map((s, i) => (
+        {services.map((s) => (
           <div
             key={s.id}
-            className="flex flex-col md:flex-row items-start md:items-center gap-4 border p-4 rounded-lg bg-background/50"
+            className="border rounded-lg p-4 bg-background/50 relative"
           >
-            <div className="flex-1">
-              <Label>Service Name</Label>
-              <ItemCombobox
-                tenantId={quote.tenant_id}
-                value={s.item_id}
-                onSelect={(item) => handleUpdate(s.id, "item_id", item.id)}
-              />
+            <div className="flex justify-between items-start mb-3">
+              <div className="font-medium text-sm">Service Item</div>
+              {services.length > 1 && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => handleRemoveService(s.id)}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
             </div>
 
-            <div className="flex-1">
-              <Label>Description</Label>
-              <Input
-                placeholder="Enter service description"
-                value={s.description || ""}
-                onChange={(e) =>
-                  handleUpdate(s.id, "description", e.target.value)
-                }
-              />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Service Name */}
+              <div>
+                <Label className="text-sm mb-1 block">Service Name</Label>
+                <ItemCombobox
+                  tenantId={quote.tenant_id}
+                  value={s.item_id}
+                  onSelect={(item) => handleUpdate(s.id, "item_id", item.id)}
+                />
+              </div>
+
+              {/* Description */}
+              <div>
+                <Label className="text-sm mb-1 block">Description</Label>
+                <Input
+                  placeholder="Enter service description"
+                  value={s.description}
+                  onChange={(e) =>
+                    handleUpdate(s.id, "description", e.target.value)
+                  }
+                />
+              </div>
+
+              {/* Amount */}
+              <div>
+                <Label className="text-sm mb-1 block">Amount</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={s.amount}
+                  onChange={(e) =>
+                    handleUpdate(s.id, "amount", parseFloat(e.target.value) || 0)
+                  }
+                />
+              </div>
             </div>
 
-            <div className="w-[120px]">
-              <Label>Amount</Label>
-              <Input
-                type="number"
-                step="0.01"
-                value={s.amount || 0}
-                onChange={(e) =>
-                  handleUpdate(s.id, "amount", parseFloat(e.target.value) || 0)
-                }
-              />
-            </div>
-
-            <div className="flex items-center gap-2">
+            {/* Taxable toggle */}
+            <div className="flex items-center gap-2 mt-4">
               <Switch
                 checked={s.taxable}
                 onCheckedChange={(val) => handleUpdate(s.id, "taxable", val)}
               />
               <Label>Taxable</Label>
             </div>
-
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => handleRemoveService(s.id)}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
           </div>
         ))}
 
-        <Button variant="outline" className="w-full" onClick={handleAddService}>
-          <Plus className="mr-2 h-4 w-4" /> Add Service
+        <Button
+          variant="default"
+          className="w-fit ml-auto flex items-center gap-2"
+          onClick={handleAddService}
+        >
+          <Plus className="h-4 w-4" /> Add Service
         </Button>
+
+        {/* Total Section */}
+        <div className="border-t pt-4 text-right text-sm font-medium">
+          Total Services:{" "}
+          <span className="text-base font-semibold">${total.toFixed(2)}</span>
+        </div>
 
         <Separator />
 
@@ -183,13 +203,13 @@ export function QuoteServicesTab({ quote, onNext, onBack }: any) {
             onClick={() => handleSaveAndNavigate("back")}
             disabled={saving}
           >
-            Back
+            ← Back: Aircraft
           </Button>
           <Button
             onClick={() => handleSaveAndNavigate("next")}
             disabled={saving}
           >
-            {saving ? "Saving..." : "Next"} →
+            {saving ? "Saving..." : "Next: Summary →"}
           </Button>
         </div>
       </CardContent>
