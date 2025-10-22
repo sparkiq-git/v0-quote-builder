@@ -220,6 +220,8 @@ export function QuoteLegsTab({ quote, onUpdate, onLegsChange, onNext, onBack }: 
                       ...prev,
                       origin: a.airport,
                       origin_code: a.airport_code,
+                      origin_lat: a.latitude ?? null,
+                      origin_long: a.longitude ?? null,
                     }))
                   }
                 />
