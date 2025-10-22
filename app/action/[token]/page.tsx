@@ -1,24 +1,16 @@
+// app/action/[token]/page.tsx
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Turnstile from "react-turnstile"
-import { v4 as uuid } from "uuid"
-import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { useToast } from "@/hooks/use-toast"
-import dynamic from "next/dynamic"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { v4 as uuid } from "uuid"
 
-// lazy-load your heavy quote UI to avoid hydration issues
-const PublicQuoteUI = dynamic(() => import("@/app/quotes/public-quote-page"), { ssr: false })
-
-export default function SecureQuotePage({ params }: { params: { token: string } }) {
+export default function ActionPage({ params }: { params: { token: string } }) {
   const router = useRouter()
-  const { toast } = useToast()
-
-  const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!
-
   const [email, setEmail] = useState("")
   const [captcha, setCaptcha] = useState<string | null>(null)
   const [verifying, setVerifying] = useState(false)
@@ -26,7 +18,8 @@ export default function SecureQuotePage({ params }: { params: { token: string } 
   const [consuming, setConsuming] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // 🔹 Step 1: Verify email + token (rate-limited, with CAPTCHA)
+  const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!
+
   async function handleVerify() {
     setError(null)
     try {
@@ -34,28 +27,20 @@ export default function SecureQuotePage({ params }: { params: { token: string } 
       const res = await fetch("/api/action-links/verify", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          token: params.token,
-          email,
-          captchaToken: captcha,
-        }),
+        body: JSON.stringify({ token: params.token, email, captchaToken: captcha }),
       })
       const json = await res.json()
       if (!res.ok || !json.ok) throw new Error(json.error || "Verification failed")
-
       setVerified(json.data)
-      toast({ title: "Verified successfully", description: "Your quote is now unlocked." })
     } catch (e: any) {
       setError(e.message)
-      toast({ title: "Verification failed", description: e.message, variant: "destructive" })
     } finally {
       setVerifying(false)
     }
   }
 
-  // 🔹 Step 2: Consume action safely (idempotent, audited)
-  async function handleConsume(result: "accept" | "decline") {
-    if (!verified) return
+  async function handleConsume() {
+    setError(null)
     try {
       setConsuming(true)
       const res = await fetch("/api/action-links/consume", {
@@ -64,96 +49,60 @@ export default function SecureQuotePage({ params }: { params: { token: string } 
           "content-type": "application/json",
           "idempotency-key": uuid(),
         },
-        body: JSON.stringify({
-          token: params.token,
-          email,
-          result,
-        }),
+        body: JSON.stringify({ token: params.token, email }),
       })
       const json = await res.json()
-      if (!res.ok || !json.ok) throw new Error(json.error || "Request failed")
-
-      toast({
-        title: result === "accept" ? "Quote accepted" : "Quote declined",
-        description: "Your response has been securely recorded.",
-      })
-      router.replace("/thanks")
+      if (!res.ok || !json.ok) throw new Error(json.error || "Consume failed")
+      router.replace("/thanks") // or show a success component
     } catch (e: any) {
-      toast({ title: "Error", description: e.message, variant: "destructive" })
       setError(e.message)
     } finally {
       setConsuming(false)
     }
   }
 
-  // 🔹 Auto-focus
-  useEffect(() => {
-    document.getElementById("email-input")?.focus()
-  }, [])
-
-  // 🔹 Fallback: invalid or expired
-  if (error && !verified) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <Card className="max-w-sm w-full p-6">
-          <CardContent className="text-center space-y-3">
-            <h2 className="text-lg font-semibold">Invalid or Expired Link</h2>
-            <p className="text-sm text-muted-foreground">
-              This link may have expired or already been used.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
-  // 🔹 Verification gate
-  if (!verified) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
-        <Card className="max-w-sm w-full p-6 shadow-lg">
-          <CardContent className="space-y-5">
-            <div className="text-center">
-              <h1 className="text-lg font-semibold">Verify Your Email</h1>
-              <p className="text-sm text-muted-foreground mt-1">
-                Enter the email this quote was sent to and complete the CAPTCHA to continue.
-              </p>
-            </div>
-            <Input
-              id="email-input"
-              type="email"
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-            <div className="flex justify-center pt-2">
-              <Turnstile sitekey={siteKey} onVerify={(t) => setCaptcha(t)} />
-            </div>
-            {error && <p className="text-sm text-red-500">{error}</p>}
-            <Button
-              disabled={!email || !captcha || verifying}
-              onClick={handleVerify}
-              className="w-full font-semibold"
-            >
-              {verifying ? "Verifying..." : "View Your Quote"}
-            </Button>
-            <p className="text-[11px] text-center text-muted-foreground">
-              This secure link will expire automatically for security.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
-  // 🔹 Render your existing Public Quote UI
   return (
-    <PublicQuoteUI
-      params={{ token: params.token }}
-      onAccept={() => handleConsume("accept")}
-      onDecline={() => handleConsume("decline")}
-      verifiedEmail={email}
-      verifiedLink={verified}
-    />
+    <div className="max-w-md mx-auto py-12">
+      <Card>
+        <CardHeader>
+          <CardTitle>Secure Action</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {!verified ? (
+            <>
+              <p className="text-sm text-muted-foreground">
+                Enter the email this link was sent to, then complete the CAPTCHA to continue.
+              </p>
+              <Input
+                type="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+              <Turnstile sitekey={siteKey} onVerify={(t) => setCaptcha(t)} />
+              {error && <p className="text-sm text-red-500">{error}</p>}
+              <Button disabled={!email || !captcha || verifying} onClick={handleVerify}>
+                {verifying ? "Verifying..." : "Continue"}
+              </Button>
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-muted-foreground">
+                Verified for <strong>{email}</strong>.
+              </p>
+              <div className="rounded border p-3 text-sm">
+                <div>Action: {verified.action_type}</div>
+                <div>Expires: {new Date(verified.expires_at).toLocaleString()}</div>
+                {/* Optional: render verified.metadata preview */}
+              </div>
+              {error && <p className="text-sm text-red-500">{error}</p>}
+              <Button disabled={consuming} onClick={handleConsume}>
+                {consuming ? "Processing..." : "Confirm & Continue"}
+              </Button>
+            </>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   )
 }
