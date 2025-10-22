@@ -414,3 +414,42 @@ export interface Passenger {
   createdAt: string
   updatedAt: string
 }
+// lib/types.ts
+
+export interface AircraftManufacturer {
+  id: string
+  name: string
+  tenant_id: string | null
+  created_by?: string | null
+  created_at?: string | null
+}
+
+export interface AircraftModelRecord {
+  id: string
+  manufacturer_id: string
+  name: string
+  icao_type_designator?: string | null
+  tenant_id?: string | null
+  size_code?: string | null
+  created_at?: string | null
+}
+
+export interface AircraftRecord {
+  id: string
+  tenant_id: string
+  tail_number: string
+  model_id?: string | null
+  manufacturer_id?: string | null
+  operator_id?: string | null
+  type_rating_id: string
+  status: string
+  home_base?: string | null
+  capacity_pax?: number | null
+  year_of_manufacture?: number | null
+  serial_number?: string | null
+  range_nm?: number | null
+  mtow_kg?: number | null
+  notes?: string | null
+  created_at?: string
+  updated_at?: string
+}

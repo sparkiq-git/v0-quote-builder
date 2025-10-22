@@ -10,19 +10,23 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 
 type AirportType = "large_airport" | "medium_airport" | "small_airport" | string
 
-type AirportOption = {
+export type AirportOption = {
   id: string
   label: string
+  airport?: string | null          
+  airport_code?: string | null     
   iata?: string | null
   icao?: string | null
   name?: string | null
-  city?: string | null
+  municipality?: string | null
   country?: string | null
-  country_code?: string | null // ⬅️ needed for flag + sorting
-  airport_type?: AirportType | null // ⬅️ needed for sorting
-  lat?: number | null
-  lon?: number | null
+  country_code?: string | null
+  airport_type?: AirportType | null
+  latitude?: number | null
+  longitude?: number | null
+  rank?: number | null
 }
+
 
 const TYPE_WEIGHT: Record<string, number> = {
   large_airport: 3,
@@ -42,7 +46,8 @@ function useDebounce<T>(value: T, delay = 150) {
 
 interface AirportComboboxProps {
   value: string
-  onChange: (value: string) => void
+  onChange?: (value: string) => void
+  onSelect?: (airport: AirportOption) => void
   placeholder?: string
   label?: string
   required?: boolean
@@ -68,7 +73,6 @@ const CountryFlag = ({ code, className }: { code: string; className?: string }) 
   }
 
   const countryCode = code.toLowerCase()
-
   return (
     <div
       className={cn(
@@ -81,7 +85,6 @@ const CountryFlag = ({ code, className }: { code: string; className?: string }) 
       style={{
         width: "2rem",
         height: "1.5rem",
-        padding: 0,
       }}
       aria-label={`${code} flag`}
     >
@@ -92,8 +95,8 @@ const CountryFlag = ({ code, className }: { code: string; className?: string }) 
         style={{
           width: "100%",
           height: "100%",
-          display: "block",
           objectFit: "cover",
+          display: "block",
         }}
         loading="lazy"
       />
@@ -104,6 +107,7 @@ const CountryFlag = ({ code, className }: { code: string; className?: string }) 
 export function AirportCombobox({
   value,
   onChange,
+  onSelect,
   placeholder = "Select airport...",
   label,
   required = false,
@@ -114,7 +118,6 @@ export function AirportCombobox({
   const [items, setItems] = React.useState<AirportOption[]>([])
   const [loading, setLoading] = React.useState(false)
 
-  // keep popover width aligned with trigger
   const triggerRef = React.useRef<HTMLButtonElement | null>(null)
   const [triggerW, setTriggerW] = React.useState(0)
   React.useLayoutEffect(() => {
@@ -127,9 +130,9 @@ export function AirportCombobox({
     return () => ro.disconnect()
   }, [open])
 
+  // fetch airports
   React.useEffect(() => {
     let active = true
-
     async function run() {
       const q = (debounced || "").trim()
       if (q.length < 2) {
@@ -142,18 +145,6 @@ export function AirportCombobox({
         const data = await r.json()
         if (!active) return
         const list: AirportOption[] = Array.isArray(data?.items) ? data.items : []
-
-        // Sort: US first → by airport_type weight → by label
-        list.sort((a, b) => {
-          const aUS = (a.country_code || "").toUpperCase() === "US" ? 1 : 0
-          const bUS = (b.country_code || "").toUpperCase() === "US" ? 1 : 0
-          if (aUS !== bUS) return bUS - aUS
-          const wa = typeWeight(a.airport_type)
-          const wb = typeWeight(b.airport_type)
-          if (wa !== wb) return wb - wa
-          return (a.label || "").localeCompare(b.label || "")
-        })
-
         setItems(list)
       } catch {
         if (active) setItems([])
@@ -161,7 +152,6 @@ export function AirportCombobox({
         if (active) setLoading(false)
       }
     }
-
     run()
     return () => {
       active = false
@@ -171,6 +161,13 @@ export function AirportCombobox({
   const selected = value ? items.find((i) => i.id === value) : undefined
   const selectedLabel = selected?.label || (value ? value : "")
   const selectedCode = (selected?.country_code || "").toUpperCase()
+
+  const handleSelect = (airport: AirportOption) => {
+    // 🧩 unified handler — supports both onSelect (object) and onChange (id)
+    if (onSelect) onSelect(airport)
+    if (onChange) onChange(airport.id)
+    setOpen(false)
+  }
 
   return (
     <div>
@@ -224,10 +221,7 @@ export function AirportCombobox({
                     <CommandItem
                       key={airport.id}
                       value={airport.label}
-                      onSelect={() => {
-                        onChange(airport.id === value ? "" : airport.id)
-                        setOpen(false)
-                      }}
+                      onSelect={() => handleSelect(airport)}
                       className="cursor-pointer"
                     >
                       <div className="flex items-center min-w-0 flex-1 gap-0">
@@ -236,8 +230,8 @@ export function AirportCombobox({
                         <div className="min-w-0 flex-1">
                           <div className="truncate font-medium">{airport.label}</div>
                           <div className="text-xs text-muted-foreground truncate">
-                            {airport.municipality || airport.municipality || "—"}
-                            {airport.country_code ? ` · ${String(airport.country_code).replace(/_/g, " ")}` : ""}
+                            {airport.municipality || airport.name || "—"}
+                            {airport.country_code ? ` · ${airport.country_code}` : ""}
                           </div>
                         </div>
                       </div>

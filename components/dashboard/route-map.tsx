@@ -267,8 +267,8 @@ export function RouteMap() {
           // Create route line with custom styling
           const routeLine = window.L.polyline([originLatLng, destLatLng], {
             color: color,
-            weight: hoveredRoute === route.id ? 2 : 1.5,
-            opacity: hoveredRoute === route.id ? 0.9 : 0.7,
+            weight: 1.5,
+            opacity: 0.7,
             dashArray: "3, 2",
             className: `route-${route.id}`,
           }).addTo(map.current)
@@ -296,12 +296,10 @@ export function RouteMap() {
 
           // Add hover effects
           routeLine.on("mouseover", () => {
-            setHoveredRoute(route.id)
             routeLine.setStyle({ weight: 2, opacity: 0.9 })
           })
 
           routeLine.on("mouseout", () => {
-            setHoveredRoute(null)
             routeLine.setStyle({ weight: 1.5, opacity: 0.7 })
           })
 
@@ -451,7 +449,7 @@ export function RouteMap() {
         maxZoom: 6,
       })
     }
-  }, [activeRoutes, hoveredRoute, mapLoaded])
+  }, [activeRoutes, mapLoaded])
 
   // Recent events for sidebar
   const recentEvents = useMemo(() => {

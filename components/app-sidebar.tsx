@@ -14,22 +14,23 @@ import {
   SidebarGroup,
   SidebarGroupContent,
 } from "@/components/ui/sidebar"
-import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import {
   LayoutDashboard,
   Users,
   FileText,
   Plane,
-  RotateCcw,
   Settings,
   UserCog,
   Building2,
   UserCircle,
   ChevronDown,
+  Users2,
 } from "lucide-react"
 import { useMockStore } from "@/lib/mock/store"
 import { cn } from "@/lib/utils"
+import { NavUser } from "@/components/nav-user"
+import { createClient } from "@/lib/supabase/client"
 
 const mainNavigation = [
   {
@@ -78,6 +79,11 @@ const settingsNavigation = [
     href: "/settings",
     icon: Settings,
   },
+  {
+    title: "Users",
+    href: "/settings/users",
+    icon: Users2,
+  },
 ]
 
 export function AppSidebar() {
@@ -87,6 +93,35 @@ export function AppSidebar() {
 
   const [isOperationsExpanded, setIsOperationsExpanded] = useState(false)
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  const [user, setUser] = useState<{
+    name: string
+    email: string
+    avatar?: string
+    role: string
+    tenantId: string | null
+  } | null>(null)
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const supabase = createClient()
+      const {
+        data: { user: authUser },
+      } = await supabase.auth.getUser()
+
+      if (authUser) {
+        setUser({
+          name: authUser.user_metadata?.full_name || authUser.email?.split("@")[0] || "User",
+          email: authUser.email || "",
+          avatar: authUser.user_metadata?.avatar_url,
+          role: authUser.user_metadata?.role || "Member",
+          tenantId: authUser.app_metadata?.tenant_id || null,
+        })
+      }
+    }
+
+    fetchUser()
+  }, [])
 
   useEffect(() => {
     if (pathname.startsWith("/operations/")) {
@@ -112,12 +147,6 @@ export function AppSidebar() {
         setIsOperationsExpanded(false)
       }
     }, 300)
-  }
-
-  const handleResetDemo = () => {
-    if (confirm("Are you sure you want to reset all demo data? This cannot be undone.")) {
-      dispatch({ type: "RESET_DATA" })
-    }
   }
 
   return (
@@ -250,15 +279,7 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-sidebar-border">
-        <div className="p-4 space-y-2">
-          <Button variant="outline" size="sm" onClick={handleResetDemo} className="w-full justify-start bg-transparent">
-            <RotateCcw className="h-4 w-4 mr-2" />
-            Reset Demo Data
-          </Button>
-          <div className="text-xs text-sidebar-foreground/60 text-center">UI-only demo • Data stored locally</div>
-        </div>
-      </SidebarFooter>
+      <SidebarFooter className="border-t border-sidebar-border">{user && <NavUser user={user} />}</SidebarFooter>
     </Sidebar>
   )
 }

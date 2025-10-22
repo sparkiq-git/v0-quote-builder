@@ -3,7 +3,11 @@ import type { Metadata } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
 import "./globals.css"
 import { MockStoreProvider } from "@/lib/mock/store"
-import { Toaster } from "@/components/ui/toaster"
+
+// ✅ Sonner + Realtime
+import { Toaster } from "sonner"
+import { LeadListener } from "@/components/realtime/lead-listener"
+import { createClient } from "@/lib/supabase/server" // server-side only
 
 const geistSans = Geist({
   subsets: ["latin"],
@@ -23,17 +27,39 @@ export const metadata: Metadata = {
   generator: "v0.app",
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode
-}>) {
+}) {
+  // ✅ SERVER-SAFE Supabase call
+  let tenantId: string | null = null
+
+  try {
+    const supabase = createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    tenantId = user?.app_metadata?.tenant_id ?? null
+  } catch (err) {
+    console.warn("Supabase user fetch failed (likely client render):", err)
+  }
+
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} antialiased`} suppressHydrationWarning>
+    <html
+      lang="en"
+      className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+      suppressHydrationWarning
+    >
       <body>
         <MockStoreProvider>
           {children}
-          <Toaster />
+
+          {/* ✅ Global Sonner toaster */}
+          <Toaster richColors position="top-right" closeButton />
+
+          {/* ✅ Global listener; runs safely client-side only */}
+          <LeadListener tenantId={tenantId} />
         </MockStoreProvider>
       </body>
     </html>

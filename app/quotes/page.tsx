@@ -168,9 +168,6 @@ export default function QuotesPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Quotes</h1>
-          <div className="mt-6">
-            <QuoteWorkflowStepper currentStep={1} />
-          </div>
         </div>
       </div>
 

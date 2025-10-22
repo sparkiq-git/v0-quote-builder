@@ -12,23 +12,12 @@ import { Users, FileText, Clock, Plus, Calendar, Plane } from "lucide-react"
 import { useMockStore } from "@/lib/mock/store"
 import { formatTimeAgo } from "@/lib/utils/format"
 import { RouteMap } from "@/components/dashboard/route-map"
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb"
+
 
 
 /* ---------------------------------- page ---------------------------------- */
 export default function DashboardPage() {
-  const { user, role, tenantId } = await getServerUser()
-
-    if (!user) {
-    redirect("/sign-in")
-  }
+ 
   const { state, getMetrics, loading } = useMockStore()
 
   const metrics = getMetrics()
