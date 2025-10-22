@@ -107,14 +107,18 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     if (upsertError)
       return NextResponse.json({ error: upsertError.message }, { status: 500 })
 
-    const existingIds = validLegs.map((l) => l.id)
-    const { error: deleteError } = await supabase
-      .from("quote_detail")
-      .delete()
-      .eq("quote_id", id)
-      .not("id", "in", `(${existingIds.map((x) => `'${x}'`).join(",")})`)
-    if (deleteError)
-      return NextResponse.json({ error: deleteError.message }, { status: 500 })
+// 🧹 Step 2: Delete legs no longer present
+const existingIds = validLegs.map((l) => l.id)
+if (existingIds.length > 0) {
+  const { error: deleteError } = await supabase
+    .from("quote_detail")
+    .delete()
+    .eq("quote_id", id)
+    .not("id", "in", `(${existingIds.join(",")})`)
+  if (deleteError)
+    return NextResponse.json({ error: deleteError.message }, { status: 500 })
+}
+
 
     const leg_count = validLegs.length
     const total_pax = Math.max(...validLegs.map((l) => Number(l.pax_count || 0))) || 1
