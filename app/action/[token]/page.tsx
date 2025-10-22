@@ -20,22 +20,56 @@ export default function ActionPage({ params }: { params: { token: string } }) {
   const [error, setError] = useState<string | null>(null)
   const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!
 
+  // --- Unified safe fetch helper ---
+  async function safeFetchJSON(url: string, options: RequestInit) {
+    const res = await fetch(url, options)
+    let json: any = null
+
+    try {
+      json = await res.json()
+    } catch {
+      const text = await res.text()
+      console.error(`Non-JSON response from ${url}:`, text)
+      throw new Error(`Unexpected ${res.status} response: ${text.slice(0, 120)}`)
+    }
+
+    if (!res.ok || json?.ok === false) {
+      console.error(`Request to ${url} failed:`, json)
+      throw new Error(json?.error || `Request failed (${res.status})`)
+    }
+
+    return json
+  }
+
   async function handleVerify() {
     setError(null)
+    setVerifying(true)
     try {
-      setVerifying(true)
-      const res = await fetch("/api/action-links/verify", {
+      const json = await safeFetchJSON("/api/action-links/verify", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ token: params.token, email, captchaToken: captcha }),
+        body: JSON.stringify({
+          token: params.token,
+          email,
+          captchaToken: captcha,
+        }),
       })
-      const json = await res.json()
-      if (!res.ok || !json.ok) throw new Error(json.error || "Verification failed")
+
+      console.log("Verification response:", json)
+
       setVerified(json.data)
-      toast({ title: "Verified successfully", description: "Your quote is now unlocked." })
+      toast({
+        title: "Verified successfully",
+        description: "Your quote is now unlocked.",
+      })
     } catch (e: any) {
+      console.error("Verification error:", e)
       setError(e.message)
-      toast({ title: "Verification failed", description: e.message, variant: "destructive" })
+      toast({
+        title: "Verification failed",
+        description: e.message,
+        variant: "destructive",
+      })
     } finally {
       setVerifying(false)
     }
@@ -43,23 +77,32 @@ export default function ActionPage({ params }: { params: { token: string } }) {
 
   async function handleConsume(result: "accept" | "decline") {
     try {
-      const res = await fetch("/api/action-links/consume", {
+      const json = await safeFetchJSON("/api/action-links/consume", {
         method: "POST",
-        headers: { "content-type": "application/json", "idempotency-key": uuid() },
+        headers: {
+          "content-type": "application/json",
+          "idempotency-key": uuid(),
+        },
         body: JSON.stringify({ token: params.token, email, result }),
       })
-      const json = await res.json()
-      if (!res.ok || !json.ok) throw new Error(json.error || "Action failed")
+
+      console.log("Consume response:", json)
 
       toast({
         title: result === "accept" ? "Quote accepted" : "Quote declined",
         description: "Your response has been securely recorded.",
       })
     } catch (e: any) {
-      toast({ title: "Error", description: e.message, variant: "destructive" })
+      console.error("Consume error:", e)
+      toast({
+        title: "Error",
+        description: e.message,
+        variant: "destructive",
+      })
     }
   }
 
+  // --- UI ---
   if (!verified) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
@@ -79,13 +122,21 @@ export default function ActionPage({ params }: { params: { token: string } }) {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
+
             <div className="flex justify-center pt-2">
               <Turnstile sitekey={siteKey} onVerify={(t) => setCaptcha(t)} />
             </div>
+
             {error && <p className="text-sm text-red-500">{error}</p>}
-            <Button disabled={!email || !captcha || verifying} onClick={handleVerify} className="w-full font-semibold">
+
+            <Button
+              disabled={!email || !captcha || verifying}
+              onClick={handleVerify}
+              className="w-full font-semibold"
+            >
               {verifying ? "Verifying..." : "View Your Quote"}
             </Button>
+
             <p className="text-[11px] text-center text-muted-foreground">
               This secure link will expire automatically for security.
             </p>
