@@ -30,7 +30,7 @@ const { error: optionError } = await supabase
     options.map((o: any, index: number) => ({
       id: o.id,
       label: o.label || `Option ${index + 1}`,
-      quote_id: id, // ✅ this will now always be correct
+      quote_id: o.quote_id, // ✅ this will now always be correct
       aircraft_id: o.aircraft_id,
       flight_hours: o.flight_hours ?? 0,
       cost_operator: o.cost_operator ?? 0,
