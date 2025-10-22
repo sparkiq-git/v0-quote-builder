@@ -79,7 +79,7 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
           action_type: "quote",
           email: quote.contact_email,
           tenant_id: quote.tenant_id,
-          created_by: quote.created_by, 
+          created_by: quote.created_by_user_id, 
           metadata: { quote_id: quote.id, quote_ref: quote.reference_code },
         }),
       })
