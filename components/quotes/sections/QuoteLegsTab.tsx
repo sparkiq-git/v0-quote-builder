@@ -333,7 +333,7 @@ export function QuoteLegsTab({ quote, onUpdate, onLegsChange, onNext, onBack }: 
                         setMultiLegs((prev) =>
                           prev.map((l) =>
                             l.id === leg.id
-                              ? { ...l, origin: a.airport, origin_code: a.airport_code }
+                              ? { ...l, origin: a.airport, origin_code: a.airport_code, origin_lat: a.latitude ?? null, origin_long: a.longitude ?? null, }
                               : l
                           )
                         )
