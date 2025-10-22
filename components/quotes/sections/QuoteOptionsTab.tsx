@@ -317,7 +317,7 @@ const handleNext = async () => {
 
                       {option.feesEnabled && (
                         <div className="space-y-2">
-                          {option.fees.map((fee) => (
+                          {(option.fees ?? []).map((fee) => (
                             <div
                               key={fee.id}
                               className="flex items-center gap-3 p-2 bg-muted/40 rounded-lg"
