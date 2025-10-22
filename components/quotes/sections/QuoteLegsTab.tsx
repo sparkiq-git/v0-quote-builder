@@ -182,7 +182,7 @@ const handleAddLeg = () => {
     destination_code: "",
     departureDate: "",
     departureTime: "",
-    passengers: 1,
+    passengers: multiLegs[multiLegs.length - 1]?.passengers || 1,
     origin_lat: null,
     origin_long: null,
     destination_lat: null,
