@@ -131,6 +131,7 @@ useEffect(() => {
       selectedAmenities: [],
     }
     onUpdate({ options: renumberOptions([...options, newOption]) })
+    }
 
 const handleUpdateOption = (id: string, updates: Partial<QuoteOption>) => {
   if (!initialized) return // 🧱 Skip updates during initial load
