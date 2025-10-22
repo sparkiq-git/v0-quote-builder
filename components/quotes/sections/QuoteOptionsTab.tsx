@@ -217,7 +217,7 @@ export function QuoteOptionsTab({ quote, onUpdate, onNext, onBack }: Props) {
                         <Label>Commission</Label>
                         <Input
                           type="number"
-                          value={option.commission ?? 0}
+                          value={option.price_commission ?? 0}
                           onChange={(e) =>
                             handleUpdateOption(option.id, {
                               commission: parseFloat(e.target.value) || 0,
