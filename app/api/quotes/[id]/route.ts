@@ -27,6 +27,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   const { error: optionError } = await supabase.from("quote_option").upsert(
     options.map((o: any) => ({
       id: o.id,
+      label: o.label || `Option ${index + 1}`,
       quote_id: id,
       aircraft_id: o.aircraft_id,
       flight_hours: o.flight_hours ?? 0,
