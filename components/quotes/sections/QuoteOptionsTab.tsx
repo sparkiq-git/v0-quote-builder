@@ -86,7 +86,7 @@ useEffect(() => {
   useEffect(() => {
     const fetchAircraftForOptions = async () => {
       const ids = options
-        .map((o) => o.aircraftModelId || o.aircraftTailId)
+        .map((o) => o.aircraft_id || o.aircraft_id)
         .filter((id): id is string => !!id)
 
       if (ids.length === 0) return
@@ -247,7 +247,7 @@ const handleNext = async () => {
                   <div className="space-y-3">
                     <Label>Aircraft Selection</Label>
                     <AircraftCombobox
-                      value={option.aircraftModelId || null}
+                      value={option.aircraft_id || null}
                       onSelect={(a) => {
                         setAircraftCache((prev) => ({ ...prev, [a.aircraft_id]: a }))
                         handleUpdateOption(option.id, {
@@ -267,11 +267,11 @@ const handleNext = async () => {
                       onClickAdd={() => setCreateOpen(true)}
                     />
 
-                    {(option.aircraftTailId || option.aircraftModelId) && (
+                    {(option.aircraft_id || option.aircraft_id) && (
                       <AircraftSummaryCard
-                        aircraft={aircraftCache[option.aircraftTailId || option.aircraftModelId!]}
+                        aircraft={aircraftCache[option.aircraft_id || option.aircraft_id!]}
                         onEdit={() =>
-                          setEditOpenFor((option.aircraftTailId || option.aircraftModelId)!)
+                          setEditOpenFor((option.aircraft_id || option.aircraft_id)!)
                         }
                       />
                     )}
