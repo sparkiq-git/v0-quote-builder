@@ -1,16 +1,23 @@
 "use client"
 
+import { useState } from "react"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog"
 import { ContactCombobox } from "@/components/ui/contact-combobox"
 import { DateTimePicker } from "@/components/ui/date-time-picker"
 import { ChevronRight } from "lucide-react"
-import { useState } from "react"
 import { updateContact } from "@/lib/supabase/queries/contacts"
 import { useToast } from "@/hooks/use-toast"
 import type { Quote } from "@/lib/types"
@@ -25,6 +32,7 @@ export function QuoteDetailsTab({ quote, onUpdate, onNext }: Props) {
   const { toast } = useToast()
   const [showPrompt, setShowPrompt] = useState(false)
   const [pendingEdit, setPendingEdit] = useState<{ field: string; value: string } | null>(null)
+  const [saving, setSaving] = useState(false)
 
   const handleFieldChange = (field: "email" | "phone" | "company", value: string) => {
     onUpdate({
@@ -35,6 +43,37 @@ export function QuoteDetailsTab({ quote, onUpdate, onNext }: Props) {
     if (quote.contact_id) {
       setPendingEdit({ field, value })
       setShowPrompt(true)
+    }
+  }
+
+  // 🔄 Save + navigate
+  const handleNext = async () => {
+    try {
+      setSaving(true)
+      const res = await fetch(`/api/quotes/${quote.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          quote: {
+            contact_id: quote.contact_id,
+            contact_name: quote.contact_name,
+            contact_email: quote.contact_email,
+            contact_phone: quote.contact_phone,
+            contact_company: quote.contact_company,
+            valid_until: quote.valid_until,
+            notes: quote.notes,
+          },
+        }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || "Failed to save quote details")
+
+      toast({ title: "Quote saved", description: "Contact details saved successfully." })
+      onNext()
+    } catch (err: any) {
+      toast({ title: "Error saving", description: err.message, variant: "destructive" })
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -171,8 +210,8 @@ export function QuoteDetailsTab({ quote, onUpdate, onNext }: Props) {
 
         {/* Navigation */}
         <div className="flex justify-end pt-4 border-t">
-          <Button onClick={onNext}>
-            Next: Trip Legs
+          <Button onClick={handleNext} disabled={saving}>
+            {saving ? "Saving..." : "Next: Trip Legs"}
             <ChevronRight className="ml-2 h-4 w-4" />
           </Button>
         </div>
