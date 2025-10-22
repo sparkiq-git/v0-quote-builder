@@ -160,33 +160,24 @@ const handleUpdateOption = (id: string, updates: Partial<QuoteOption>) => {
 // 🧩 Save quote options before moving to next tab
 const handleNext = async () => {
   try {
+    setSaving(true)
     const res = await fetch(`/api/quotes/${quote.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        quote,
-        options, // 👈 send current options state
-      }),
+      body: JSON.stringify({ quote, options }),
     })
-
     const json = await res.json()
     if (!res.ok) throw new Error(json.error || "Failed to save quote options")
 
-    toast({
-      title: "Quote Saved",
-      description: "Aircraft options were successfully saved.",
-    })
-
-    onNext() // ✅ continue navigation after saving
+    toast({ title: "Quote Saved", description: "Aircraft options saved successfully." })
+    onNext()
   } catch (err: any) {
-    console.error("❌ Error saving quote:", err)
-    toast({
-      title: "Error saving",
-      description: err.message,
-      variant: "destructive",
-    })
+    toast({ title: "Error saving", description: err.message, variant: "destructive" })
+  } finally {
+    setSaving(false)
   }
 }
+
 
 
   return (
