@@ -32,6 +32,35 @@ export function QuoteOptionsTab({ quote, onUpdate, onNext, onBack }: Props) {
   const [editOpenFor, setEditOpenFor] = useState<string | null>(null)
   const [aircraftCache, setAircraftCache] = useState<Record<string, AircraftFull>>({})
 
+    // 🧠 Load aircraft details from DB for saved options
+  useEffect(() => {
+    const fetchAircraftForOptions = async () => {
+      const ids = options
+        .map((o) => o.aircraftModelId || o.aircraftTailId)
+        .filter((id): id is string => !!id)
+
+      if (ids.length === 0) return
+
+      const missingIds = ids.filter((id) => !aircraftCache[id])
+      if (missingIds.length === 0) return
+
+      const res = await fetch("/api/aircraft-full")
+      const json = await res.json()
+      if (!res.ok) return
+
+      const byId = Object.fromEntries(
+        json.data
+          .filter((a: AircraftFull) => missingIds.includes(a.aircraft_id))
+          .map((a: AircraftFull) => [a.aircraft_id, a])
+      )
+
+      setAircraftCache((prev) => ({ ...prev, ...byId }))
+    }
+
+    fetchAircraftForOptions()
+  }, [options])
+
+
   const handleAddOption = () => {
     const newOption: QuoteOption = {
       id: crypto.randomUUID(),
