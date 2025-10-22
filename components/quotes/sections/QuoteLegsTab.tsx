@@ -376,40 +376,24 @@ export function QuoteLegsTab({ quote, onUpdate, onLegsChange, onNext, onBack }: 
 
                   <div className="grid gap-2 lg:col-span-2">
                     <Label>Destination *</Label>
-<AirportCombobox
-  value={leg.destination_code}
-  autoresolve
-  onResolved={(a) =>
-    setMultiLegs((prev) =>
-      prev.map((l) =>
-        l.id === leg.id
-          ? {
-              ...l,
-              destination: l.destination || a.airport || l.destination,
-              destination_code: l.destination_code || a.airport_code || l.destination_code,
-              destination_lat: l.destination_lat ?? (a.latitude ?? null),
-              destination_long: l.destination_long ?? (a.longitude ?? null),
-            }
-          : l
-      )
-    )
-  }
-  onSelect={(a) =>
-    setMultiLegs((prev) =>
-      prev.map((l) =>
-        l.id === leg.id
-          ? {
-              ...l,
-              destination: a.airport,
-              destination_code: a.airport_code,
-              destination_lat: a.latitude ?? null,
-              destination_long: a.longitude ?? null,
-            }
-          : l
-      )
-    )
-  }
-/>
+ <AirportCombobox
+              value={leg.destination_code}
+              onSelect={(a) =>
+                setMultiLegs((prev) =>
+                  prev.map((l) =>
+                    l.id === leg.id
+                      ? {
+                          ...l,
+                          destination: a.airport,
+                          destination_code: a.airport_code,
+                          destination_lat: a.latitude ?? null,
+                          destination_long: a.longitude ?? null,
+                        }
+                      : l
+                  )
+                )
+              }
+            />
 
                   </div>
 
