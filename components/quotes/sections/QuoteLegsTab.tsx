@@ -173,24 +173,28 @@ export function QuoteLegsTab({ quote, onUpdate, onLegsChange, onNext, onBack }: 
   }
 
   /* ------------------ 🧱 Multi-leg Handlers ------------------ */
-  const handleAddLeg = () => {
-    const last = multiLegs[multiLegs.length - 1]
-    const newLeg: Leg = {
-      id: crypto.randomUUID(),
-      origin: last?.destination || "",
-      origin_code: last?.destination_code || "",
-      destination: "",
-      destination_code: "",
-      departureDate: "",
-      departureTime: "",
-      passengers: last?.passengers || 1,
-      origin_lat: formState.origin_lat ?? legs[0]?.origin_lat ?? null,
-      origin_long: formState.origin_long ?? legs[0]?.origin_long ?? null,
-      destination_lat: formState.destination_lat ?? legs[0]?.destination_lat ?? null,
-      destination_long: formState.destination_long ?? legs[0]?.destination_long ?? null,
-    }
-    setMultiLegs([...multiLegs, newLeg])
+const handleAddLeg = () => {
+  const last = multiLegs[multiLegs.length - 1]
+
+  const newLeg: Leg = {
+    id: crypto.randomUUID(),
+    origin: last?.destination || "",
+    origin_code: last?.destination_code || "",
+    destination: "",
+    destination_code: "",
+    departureDate: "",
+    departureTime: "",
+    passengers: last?.passengers || 1,
+    // ✅ carry over the destination coords of the last leg
+    origin_lat: last?.destination_lat ?? null,
+    origin_long: last?.destination_long ?? null,
+    destination_lat: null,
+    destination_long: null,
   }
+
+  setMultiLegs([...multiLegs, newLeg])
+}
+
 
   const handleRemoveLeg = (id: string) => {
     setMultiLegs((prev) => prev.filter((l) => l.id !== id))
