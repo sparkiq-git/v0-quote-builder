@@ -94,7 +94,7 @@ export function QuoteOptionsTab({ quote, onUpdate, onNext, onBack }: Props) {
     const feeTotal = option.feesEnabled
       ? (option.fees || []).reduce((sum, f) => sum + (f.amount || 0), 0)
       : 0
-    return option.cost_operator + option.commission + feeTotal
+    return option.cost_operator + option.price_commission + feeTotal
   }
 
   const total = options.reduce((sum, o) => sum + calculateOptionTotal(o), 0)
@@ -220,7 +220,7 @@ export function QuoteOptionsTab({ quote, onUpdate, onNext, onBack }: Props) {
                           value={option.price_commission ?? 0}
                           onChange={(e) =>
                             handleUpdateOption(option.id, {
-                              commission: parseFloat(e.target.value) || 0,
+                              price_commission: parseFloat(e.target.value) || 0,
                             })
                           }
                         />
