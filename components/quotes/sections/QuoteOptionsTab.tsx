@@ -93,8 +93,8 @@ useEffect(() => {
   price_total: 0,
   notes: "",
       fees: [
-        { id: crypto.randomUUID(), name: "US Domestic Segment Fee", amount: 4.3 },
-        { id: crypto.randomUUID(), name: "US International Head Tax", amount: 19.1 },
+        { id: crypto.randomUUID(), name: "US Domestic Segment Fee", amount: 0 },
+        { id: crypto.randomUUID(), name: "US International Head Tax", amount: 0 },
         { id: crypto.randomUUID(), name: "Federal Excise Tax (FET)", amount: 0 },
       ],
       feesEnabled: false,
