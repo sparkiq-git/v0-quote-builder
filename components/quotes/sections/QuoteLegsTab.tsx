@@ -174,35 +174,23 @@ export function QuoteLegsTab({ quote, onUpdate, onLegsChange, onNext, onBack }: 
 
   /* ------------------ 🧱 Multi-leg Handlers ------------------ */
 const handleAddLeg = () => {
-  const last = multiLegs[multiLegs.length - 1];
-
-  // Make sure the previous leg is complete
-  if (!last?.destination_code) {
-    toast({
-      title: "Complete the previous leg first",
-      description: "Please select a destination before adding a new leg.",
-      variant: "destructive",
-    });
-    return;
-  }
-
   const newLeg: Leg = {
     id: crypto.randomUUID(),
-    origin: last.destination || "",
-    origin_code: last.destination_code || "",
-    origin_lat: last.destination_lat ?? null,   // ✅ from previous destination
-    origin_long: last.destination_long ?? null, // ✅ from previous destination
+    origin: "",
+    origin_code: "",
     destination: "",
     destination_code: "",
-    destination_lat: null,
-    destination_long: null,
     departureDate: "",
     departureTime: "",
-    passengers: last.passengers || 1,
+    passengers: 1,
+    origin_lat: null,
+    origin_long: null,
+    destination_lat: null,
+    destination_long: null,
   };
-
   setMultiLegs([...multiLegs, newLeg]);
 };
+
 
 
 
