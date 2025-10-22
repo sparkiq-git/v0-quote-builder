@@ -1,9 +1,6 @@
 "use client"
 
 import { supabase } from "@/lib/supabase/client"
-import { upsertQuoteDetails } from "@/lib/supabase/queries/quote-details"
-import { upsertQuoteItems } from "@/lib/supabase/queries/quote-items"
-import { upsertQuoteOptions } from "@/lib/supabase/queries/quote-options"
 
 /* =========================================================
    HELPERS
@@ -79,7 +76,6 @@ export async function getQuoteById(id: string) {
     supabase.from("quote_option").select("*").eq("quote_id", id).order("label", { ascending: true }),
   ])
 
-  // 🔁 Normalize services for UI (amount alias)
   const services = (servicesDb || []).map((s: any) => ({
     ...s,
     amount: s.amount ?? s.unit_price ?? 0,
@@ -96,157 +92,50 @@ export async function getQuoteById(id: string) {
 }
 
 /* =========================================================
-   UPDATE (BASIC FIELDS)
-========================================================= */
-export async function updateQuote(id: string, updates: any) {
-  if (!id) throw new Error("Missing quote ID")
-
-  const allowedKeys = [
-    "tenant_id",
-    "contact_id",
-    "contact_name",
-    "contact_email",
-    "contact_company",
-    "contact_phone",
-    "valid_until",
-    "title",
-    "status",
-    "magic_link_slug",
-    "currency",
-    "notes",
-    "trip_type",
-    "trip_summary",
-    "total_pax",
-    "special_notes",
-    "leg_count",
-    "earliest_departure",
-  ]
-
-  const safeUpdates: Record<string, any> = {}
-  for (const key of allowedKeys) if (key in updates) safeUpdates[key] = updates[key]
-
-  const { error } = await supabase.from("quote").update(safeUpdates).eq("id", id)
-  if (error) throw error
-}
-
-/* =========================================================
-   UPSERT RELATED DATA (details, items, options)
-   Returns updated quote with nested data
+   UPDATE (PATCH)
 ========================================================= */
 export async function saveQuoteAll(quote: any) {
-console.log("💾 saveQuoteAll triggered", { quoteId: quote?.id, legs: quote?.legs?.length, tripType: quote?.trip_type })
-
   if (!quote?.id) throw new Error("Missing quote id in saveQuoteAll()")
 
-// 🧹 Normalize legs for Supabase
-const legsForSave = (quote.legs || []).map((l: any) => ({
-  id: l.id || crypto.randomUUID(),
-  origin:
-    typeof l.origin === "object"
-      ? l.origin.airport || l.origin.name || null
-      : l.origin ?? null,
-  origin_code:
-    typeof l.origin === "object"
-      ? l.origin.airport_code || l.origin.code || l.origin.iata || null
-      : l.origin_code ?? null,
-  destination:
-    typeof l.destination === "object"
-      ? l.destination.airport || l.destination.name || null
-      : l.destination ?? null,
-  destination_code:
-    typeof l.destination === "object"
-      ? l.destination.airport_code || l.destination.code || l.destination.iata || null
-      : l.destination_code ?? null,
-  departureDate: l.departureDate ?? l.depart_dt ?? null,
-  departureTime: l.departureTime ?? l.depart_time ?? null,
-  passengers: typeof l.passengers === "number" ? l.passengers : l.pax_count ?? null,
-    origin_lat:
-    l.origin_lat ??
-    l.origin?.latitude ??
-    l.origin?.lat ??
-    null,
-  origin_long:
-    l.origin_long ??
-    l.origin?.longitude ??
-    l.origin?.lon ??
-    null,
-  destination_lat:
-    l.destination_lat ??
-    l.destination?.latitude ??
-    l.destination?.lat ??
-    null,
-  destination_long:
-    l.destination_long ??
-    l.destination?.longitude ??
-    l.destination?.lon ??
-    null,
-  distance_nm: l.distance_nm ?? null,
-}))
+  // 🛰️ Log for debug
+  console.log("💾 saveQuoteAll → PATCH route", {
+    quoteId: quote.id,
+    legs: quote.legs?.length || 0,
+    options: quote.options?.length || 0,
+  })
 
-
-  // 🔁 Normalize services before saving
-  const servicesForSave = (quote.services || []).map((s: any) => ({
-    ...s,
-    amount: Number(s.amount ?? s.unit_price ?? 0),
-    qty: s.qty ?? 1,
-    taxable: s.taxable ?? true,
-  }))
-
-  await Promise.all([
-    updateQuote(quote.id, {
+  const payload = {
+    quote: {
+      contact_id: quote.contact_id,
       contact_name: quote.contact_name,
       contact_email: quote.contact_email,
-      contact_company: quote.contact_company,
       contact_phone: quote.contact_phone,
-      title: quote.title,
-      notes: quote.notes,
+      contact_company: quote.contact_company,
       valid_until: quote.valid_until,
+      notes: quote.notes,
+      title: quote.title,
       status: quote.status,
       trip_type: quote.trip_type,
       trip_summary: quote.trip_summary,
       total_pax: quote.total_pax,
       special_notes: quote.special_notes,
-    }),
-    upsertQuoteDetails(quote.id, legsForSave, quote.trip_type),
-    upsertQuoteItems(quote.id, servicesForSave),
-    upsertQuoteOptions(quote.id, quote.options || []),
-  ])
-
-  // 🧾 Fetch latest state from DB
-  const { data: refreshedQuote, error: quoteError } = await supabase
-    .from("quote")
-    .select("*")
-    .eq("id", quote.id)
-    .single()
-  if (quoteError) throw quoteError
-
-  const [{ data: legs }, { data: servicesDb }, { data: options }] = await Promise.all([
-    supabase.from("quote_detail").select("*").eq("quote_id", quote.id).order("seq", { ascending: true }),
-    supabase.from("quote_item").select("*").eq("quote_id", quote.id).order("created_at", { ascending: true }),
-    supabase.from("quote_option").select("*").eq("quote_id", quote.id).order("label", { ascending: true }),
-  ])
-
-  // Normalize again for UI
-  const services = (servicesDb || []).map((s: any) => ({
-    ...s,
-    amount: s.amount ?? s.unit_price ?? 0,
-    qty: s.qty ?? 1,
-    taxable: s.taxable ?? true,
-  }))
-
-  return {
-    ...refreshedQuote,
-    legs: (legs || []).map((l) => ({
-      ...l,
-      departureDate: l.depart_dt,
-      departureTime: l.depart_time,
-      passengers: l.pax_count,
-    })),
-    services,
-    options: options || [],
+    },
+    legs: quote.legs || [],
+    options: quote.options || [],
   }
-}
 
+  const res = await fetch(`/api/quotes/${quote.id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  })
+
+  const json = await res.json()
+  if (!res.ok) throw new Error(json.error || "Failed to save quote")
+
+  // Refresh from DB
+  return await getQuoteById(quote.id)
+}
 
 /* =========================================================
    DELETE
