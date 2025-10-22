@@ -101,12 +101,14 @@ useEffect(() => {
 
   const handleAddOption = () => {
     const newOption: QuoteOption = {
-      id: crypto.randomUUID(),
-      aircraftModelId: "",
-      totalHours: 0,
-      cost_operator: 0,
-      price_commission: 0,
-      notes: "",
+  id: crypto.randomUUID(),
+  aircraft_id: "",
+  flight_hours: 0,
+  cost_operator: 0,
+  price_commission: 0,
+  price_base: 0,
+  price_total: 0,
+  notes: "",
       fees: [
         { id: crypto.randomUUID(), name: "US Domestic Segment Fee", amount: 4.3 },
         { id: crypto.randomUUID(), name: "US International Head Tax", amount: 19.1 },
