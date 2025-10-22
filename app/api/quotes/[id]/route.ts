@@ -36,27 +36,29 @@ if (quote) {
 }
 
 
-  // Upsert quote options
-const { error: optionError } = await supabase
-  .from("quote_option")
-  .upsert(
-    options.map((o: any, index: number) => ({
-      id: o.id,
-      label: o.label || `Option ${index + 1}`,
-      quote_id: o.quote_id, // ✅ this will now always be correct
-      aircraft_id: o.aircraft_id,
-      flight_hours: o.flight_hours ?? 0,
-      cost_operator: o.cost_operator ?? 0,
-      price_commission: o.price_commission ?? 0,
-      price_base: o.price_base ?? 0,
-      price_total: o.price_total ?? 0,
-      notes: o.notes ?? null,
-      updated_at: new Date().toISOString(),
-    }))
-  );
+// ✅ Only upsert options if they're provided and valid
+if (options && Array.isArray(options) && options.length > 0) {
+  const { error: optionError } = await supabase
+    .from("quote_option")
+    .upsert(
+      options.map((o: any, index: number) => ({
+        id: o.id,
+        label: o.label || `Option ${index + 1}`,
+        quote_id: o.quote_id || id,
+        aircraft_id: o.aircraft_id,
+        flight_hours: o.flight_hours ?? 0,
+        cost_operator: o.cost_operator ?? 0,
+        price_commission: o.price_commission ?? 0,
+        price_base: o.price_base ?? 0,
+        price_total: o.price_total ?? 0,
+        notes: o.notes ?? null,
+        updated_at: new Date().toISOString(),
+      }))
+    )
 
   if (optionError)
     return NextResponse.json({ error: optionError.message }, { status: 500 })
+}
 
   return NextResponse.json({ success: true })
 }
