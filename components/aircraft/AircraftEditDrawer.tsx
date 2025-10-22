@@ -34,6 +34,38 @@ export function AircraftEditDrawer({ aircraftId, open, onOpenChange, onUpdated, 
   const [form, setForm] = useState({ ...initial })
   const set = (k: keyof typeof form, v: any) => setForm((f) => ({ ...f, [k]: v }))
 
+    // 🧠 Auto-load aircraft details when the drawer opens
+  useEffect(() => {
+    if (!open || !aircraftId) return
+
+    const fetchAircraft = async () => {
+      try {
+        const res = await fetch(`/api/aircraft/${aircraftId}`)
+        const json = await res.json()
+        if (res.ok && json.data) {
+          setForm({
+            tail_number: json.data.tail_number ?? "",
+            manufacturer_id: json.data.manufacturer_id ?? null,
+            model_id: json.data.model_id ?? null,
+            operator_id: json.data.operator_id ?? null,
+            home_base: json.data.home_base ?? "",
+            capacity_pax: json.data.capacity_pax ?? null,
+            range_nm: json.data.range_nm ?? null,
+            notes: json.data.notes ?? "",
+            type_rating_id: json.data.type_rating_id ?? null,
+          })
+        } else {
+          console.error("Failed to fetch aircraft:", json.error)
+        }
+      } catch (err) {
+        console.error("Error fetching aircraft:", err)
+      }
+    }
+
+    fetchAircraft()
+  }, [open, aircraftId])
+
+
   const save = async () => {
     setSaving(true)
     try {
