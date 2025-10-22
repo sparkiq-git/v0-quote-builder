@@ -67,11 +67,13 @@
     "react-easy-crop": "latest",
     "react-hook-form": "latest",
     "react-resizable-panels": "^2.1.7",
+    "react-turnstile": "latest",
     "recharts": "2.15.4",
     "sonner": "latest",
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
     "use-sync-external-store": "latest",
+    "uuid": "latest",
     "vaul": "^0.9.9",
     "zod": "3.25.67",
     "zustand": "latest"
