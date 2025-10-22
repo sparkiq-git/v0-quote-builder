@@ -241,7 +241,7 @@ export function QuoteLegsTab({ quote, onUpdate, onLegsChange, onNext, onBack }: 
                       origin: a.airport,
                       origin_code: a.airport_code,
                       origin_lat: a.lat ?? null,
-                      origin_long: a.long ?? null,
+                      origin_long: a.lon ?? null,
                     }))
                   }
                 />
@@ -258,7 +258,7 @@ export function QuoteLegsTab({ quote, onUpdate, onLegsChange, onNext, onBack }: 
                       destination: a.airport,
                       destination_code: a.airport_code,
                       destination_lat: a.lat ?? null,
-                      destination_long: a.long ?? null,
+                      destination_long: a.lon ?? null,
                     }))
                   }
                 />
@@ -353,7 +353,7 @@ export function QuoteLegsTab({ quote, onUpdate, onLegsChange, onNext, onBack }: 
                         setMultiLegs((prev) =>
                           prev.map((l) =>
                             l.id === leg.id
-                              ? { ...l, origin: a.airport, origin_code: a.airport_code, origin_lat: a.lat ?? null, origin_long: a.long ?? null, }
+                              ? { ...l, origin: a.airport, origin_code: a.airport_code, origin_lat: a.lat ?? null, origin_long: a.lon ?? null, }
                               : l
                           )
                         )
@@ -374,7 +374,7 @@ export function QuoteLegsTab({ quote, onUpdate, onLegsChange, onNext, onBack }: 
                                   destination: a.airport,
                                   destination_code: a.airport_code,
                                   destination_lat: a.lat ?? null,
-                                  destination_long: a.long ?? null,
+                                  destination_long: a.lon ?? null,
                                 }
                               : l
                           )
