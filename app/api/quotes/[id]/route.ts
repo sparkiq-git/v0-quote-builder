@@ -24,11 +24,13 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     return NextResponse.json({ error: quoteError.message }, { status: 500 })
 
   // Upsert quote options
-  const { error: optionError } = await supabase.from("quote_option").upsert(
-    options.map((o: any) => ({
+const { error: optionError } = await supabase
+  .from("quote_option")
+  .upsert(
+    options.map((o: any, index: number) => ({
       id: o.id,
       label: o.label || `Option ${index + 1}`,
-      quote_id: id,
+      quote_id: id, // ✅ this will now always be correct
       aircraft_id: o.aircraft_id,
       flight_hours: o.flight_hours ?? 0,
       cost_operator: o.cost_operator ?? 0,
@@ -36,8 +38,9 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
       price_base: o.price_base ?? 0,
       price_total: o.price_total ?? 0,
       notes: o.notes ?? null,
+      updated_at: new Date().toISOString(),
     }))
-  )
+  );
 
   if (optionError)
     return NextResponse.json({ error: optionError.message }, { status: 500 })
