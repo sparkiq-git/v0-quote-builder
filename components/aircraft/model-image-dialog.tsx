@@ -67,8 +67,8 @@ export function ModelImageDialog({ modelId, open, onOpenChange }: ModelImageDial
             modelId={modelId} 
             tenantId={tenantId}
             onImagesUpdated={() => {
-              // Refresh the models list when images are updated
-              window.location.reload()
+              // Close the dialog after successful image upload
+              onOpenChange(false)
             }}
           />
         </div>

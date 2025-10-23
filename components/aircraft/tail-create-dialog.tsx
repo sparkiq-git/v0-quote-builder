@@ -293,8 +293,7 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
         return
       }
 
-      // Refresh the page to update the aircraft list
-      window.location.reload()
+      // Close the dialog after successful update
       setOpen(false)
     } catch (error: any) {
       console.error("Error in form submission:", error)
@@ -629,14 +628,42 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
                 <AircraftImageManager 
                   aircraftId={existingTail.id} 
                   tenantId={tenantId} 
-                  onImagesUpdated={() => {
-                    // Refresh the existing tail data
+                  onImagesUpdated={async () => {
+                    // Refresh the existing tail data after image upload
                     if (tailId) {
-                      // Trigger a refresh of the tail data
-                      setExistingTail(null)
-                      setTimeout(() => {
-                        // This will trigger the useEffect to reload the tail
-                      }, 100)
+                      try {
+                        console.log("🔄 Refreshing tail data after image upload...")
+                        const { data, error } = await supabase
+                          .from("aircraft")
+                          .select("*")
+                          .eq("id", tailId)
+                          .single()
+                        
+                        if (error) {
+                          console.error("Error refreshing tail data:", error)
+                          return
+                        }
+                        
+                        console.log("✅ Tail data refreshed:", data)
+                        setExistingTail(data)
+                        
+                        // Update the form with the refreshed data
+                        reset({
+                          modelId: data.model_id,
+                          tailNumber: data.tail_number,
+                          operator: data.operator_id || "",
+                          amenities: data.notes || "",
+                          year: data.year_of_manufacture,
+                          yearOfRefurbishment: data.year_of_refurbish || undefined,
+                          status: data.status?.toLowerCase() || "active",
+                          capacityOverride: data.capacity_pax,
+                          rangeNmOverride: data.range_nm,
+                          speedKnotsOverride: data.cruising_speed,
+                          images: [],
+                        })
+                      } catch (error) {
+                        console.error("Error refreshing tail data:", error)
+                      }
                     }
                   }}
                 />
