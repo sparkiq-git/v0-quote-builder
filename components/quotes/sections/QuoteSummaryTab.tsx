@@ -201,34 +201,59 @@ const totalOptions = useMemo(() => {
 
         <Separator />
 
-        {/* Quote Options */}
-        <div>
-          <h3 className="text-lg font-semibold mb-2">Aircraft Options</h3>
-          {quote.options?.length ? (
-            <ul className="space-y-2 text-sm">
-              {quote.options.map((o, i) => (
-                <li
-                  key={o.id || i}
-                  className="border p-3 rounded-md bg-muted/30 flex justify-between"
-                >
-                  <span>
-                    <span className="font-medium">{o.label || `Option ${i + 1}`}</span>
-                    {o.notes && (
-                      <span className="text-muted-foreground block text-xs">
-                        {o.notes}
-                      </span>
-                    )}
-                  </span>
-                  <span>{formatCurrency(totalOptions || 0)}</span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-muted-foreground text-sm">
-              No aircraft options added.
-            </p>
-          )}
-        </div>
+        {/* Aircraft Options */}
+<div>
+  <h3 className="text-lg font-semibold mb-2">Aircraft Options</h3>
+  {quote.options?.length ? (
+    <ul className="space-y-2 text-sm">
+      {quote.options.map((o, i) => {
+        const optionTotal =
+          (Number(o.cost_operator) || 0) +
+          (Number(o.price_commission) || 0) +
+          (Number(o.price_taxes) || 0)
+
+        return (
+          <li
+            key={o.id || i}
+            className="border p-4 rounded-md bg-muted/30 flex justify-between items-center"
+          >
+            {/* Left side: info */}
+            <div className="flex flex-col">
+              <span className="font-medium text-base">
+                {o.label || `Option ${i + 1}`}
+              </span>
+              {o.notes && (
+                <span className="text-muted-foreground text-xs mb-1">
+                  {o.notes}
+                </span>
+              )}
+              <span className="text-muted-foreground text-xs">
+                {o.aircraft_manufacturer || "—"}{" "}
+                {o.aircraft_model || ""}{" "}
+                {o.aircraft_tail ? `(${o.aircraft_tail})` : ""}
+              </span>
+              {o.operator_name && (
+                <span className="text-muted-foreground text-xs">
+                  Operated by {o.operator_name}
+                </span>
+              )}
+            </div>
+
+            {/* Right side: total */}
+            <span className="text-base font-semibold">
+              {formatCurrency(optionTotal)}
+            </span>
+          </li>
+        )
+      })}
+    </ul>
+  ) : (
+    <p className="text-muted-foreground text-sm">
+      No aircraft options added.
+    </p>
+  )}
+</div>
+
 
         <Separator />
 
