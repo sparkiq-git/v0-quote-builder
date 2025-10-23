@@ -158,6 +158,13 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
     }
   }, [open, isEditing, tailId, existingTail, tenantId, defaultTypeRatingId, modelsLoading, operatorsLoading, loading, isSubmitting])
 
+  // Debug form errors
+  useEffect(() => {
+    if (Object.keys(errors).length > 0) {
+      console.log("❌ Form validation errors detected:", errors)
+    }
+  }, [errors])
+
   const selectedModelId = watch("modelId")
   const selectedModel = selectedModelId ? models.find(m => m.id === selectedModelId) : null
   const tailNumber = watch("tailNumber")
@@ -245,6 +252,8 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
 
   const onSubmit = async (data: TailFormData) => {
     console.log("🎯 onSubmit function called!")
+    console.log("📊 Form data received:", data)
+    console.log("🔍 Current form state:", { isEditing, existingTail: !!existingTail, tenantId })
     try {
       console.log("🚀 Form submission started:", { data, isEditing, existingTail: !!existingTail })
       
@@ -352,12 +361,7 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
               : "Add a new aircraft tail with specific tail number and optional overrides."}
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={(e) => {
-          console.log("📝 Form onSubmit event triggered")
-          console.log("Form event:", e)
-          console.log("Form errors before submission:", errors)
-          handleSubmit(onSubmit)(e)
-        }} className="space-y-6" onInvalid={(e) => {
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6" onInvalid={(e) => {
           console.log("❌ Form validation failed:", e)
           console.log("Form errors:", errors)
         }}>
