@@ -42,7 +42,7 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
     if (!quote.options?.length) return 0
     return quote.options.reduce((sum, o) => {
       const base =
-        (Number(o.price_total) ||
+        (Number(o.cost_operator) ||
           Number(o.price_base) ||
           Number(o.price_commission) ||
           0) + 0
