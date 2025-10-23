@@ -207,7 +207,7 @@ if (services && Array.isArray(services)) {
 
   const validServices = services.map((s) => ({
     id: s.id || crypto.randomUUID(),
-    quote_id: id,
+    quote_id: quote_id,
     item_id: s.item_id || null,
     name: s.item_id ? itemMap[s.item_id] || "Unnamed item" : s.description || "Custom item",
     description: s.description || itemMap[s.item_id] || "Service item",
@@ -232,7 +232,7 @@ if (services && Array.isArray(services)) {
     .from("quote_item")
     .delete()
     .eq("quote_id", id)
-    .not("id", "in", `(${existingIds.join(",")})`)
+    .not("id", "in", `(${existingIds.map((x) => `'${x}'`).join(",")})`))
 
   if (deleteError)
     return NextResponse.json({ error: deleteError.message }, { status: 500 })
