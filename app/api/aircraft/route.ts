@@ -15,7 +15,29 @@ export async function GET() {
     .select(`
       id, tail_number, model_id, manufacturer_id, operator_id,
       type_rating_id, status, home_base, capacity_pax, year_of_manufacture,
-      serial_number, range_nm, mtow_kg, notes, created_at, updated_at
+      serial_number, range_nm, mtow_kg, notes, created_at, updated_at,
+      aircraft_model!model_id (
+        id,
+        name,
+        manufacturer_id,
+        size_code,
+        aircraft_manufacturer!manufacturer_id (
+          id,
+          name
+        ),
+        aircraft_model_image (
+          id,
+          public_url,
+          is_primary,
+          display_order
+        )
+      ),
+      aircraft_image (
+        id,
+        public_url,
+        is_primary,
+        display_order
+      )
     `)
     .eq("tenant_id", tenantId)
     .order("created_at", { ascending: false })
