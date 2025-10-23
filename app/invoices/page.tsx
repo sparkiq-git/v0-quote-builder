@@ -1,4 +1,4 @@
-import { InvoiceTable } from "@/app/components/invoices/InvoiceTable"
+import { InvoiceTable } from "@/components/invoices/InvoiceTable"
 
 export default function InvoicesPage() {
   return (
