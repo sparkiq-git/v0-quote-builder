@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useEffect, useState, useMemo } from "react"
 import {
   Card,
   CardHeader,
@@ -32,40 +32,59 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
   const [copied, setCopied] = useState(false)
   const [publishing, setPublishing] = useState(false)
   const [publishedUrl, setPublishedUrl] = useState<string | null>(null)
+  const [aircraftMap, setAircraftMap] = useState<Record<string, any>>({})
 
-  // ✅ Fallback URL
   const quoteUrl =
     publishedUrl ?? `${process.env.NEXT_PUBLIC_APP_URL}/q/${quote.magic_link_slug}`
 
-  /* ---------------- 💰 Totals ---------------- */
-const totalOptions = useMemo(() => {
-  if (!quote.options?.length) return 0
-  return quote.options.reduce((sum, o) => {
-    const total =
-      (Number(o.cost_operator) || 0) +
-      (Number(o.price_commission) || 0) +
-      (Number(o.price_taxes) || 0)
-    return sum + total
-  }, 0)
-}, [quote.options])
+  /* ---------------- Fetch aircraft info (lazy load) ---------------- */
+  useEffect(() => {
+    if (!quote.options?.length) return
+    const hasAircraft = quote.options.some((o) => o.aircraft_id)
+    if (!hasAircraft) return
 
+    const fetchAircraft = async () => {
+      try {
+        const res = await fetch("/api/aircraft-full")
+        const json = await res.json()
+        if (!res.ok) throw new Error(json.error || "Failed to load aircraft list")
 
-  const totalServices = useMemo(() => {
-    if (!quote.services?.length) return 0
-    return quote.services.reduce(
-      (sum, s) => sum + (Number(s.amount) || Number(s.unit_price) || 0),
-      0
-    )
-  }, [quote.services])
+        const map = Object.fromEntries(json.data.map((a: any) => [a.id, a]))
+        setAircraftMap(map)
+      } catch (err: any) {
+        console.error("❌ Aircraft fetch failed:", err)
+      }
+    }
+
+    fetchAircraft()
+  }, [quote.options])
+
+  /* ---------------- Totals ---------------- */
+  const totalOptions = useMemo(() => {
+    if (!quote.options?.length) return 0
+    return quote.options.reduce((sum, o) => {
+      const total =
+        (Number(o.cost_operator) || 0) +
+        (Number(o.price_commission) || 0) +
+        (Number(o.price_taxes) || 0)
+      return sum + total
+    }, 0)
+  }, [quote.options])
+
+  const totalServices =
+    quote.services?.reduce((s, v) => s + (v.amount || 0), 0) || 0
 
   const grandTotal = totalOptions + totalServices
 
-  /* ---------------- 📋 Copy link ---------------- */
+  /* ---------------- Copy Link ---------------- */
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(quoteUrl)
       setCopied(true)
-      toast({ title: "Copied!", description: "Quote link copied to clipboard." })
+      toast({
+        title: "Copied!",
+        description: "Quote link copied to clipboard.",
+      })
       setTimeout(() => setCopied(false), 2000)
     } catch {
       toast({
@@ -76,19 +95,20 @@ const totalOptions = useMemo(() => {
     }
   }
 
-  /* ---------------- 🌐 Open link ---------------- */
+  /* ---------------- Open Quote ---------------- */
   const handleOpen = () => {
     window.open(quoteUrl, "_blank", "noopener,noreferrer")
   }
 
-  /* ---------------- 🚀 Publish quote ---------------- */
+  /* ---------------- Publish Quote ---------------- */
   const handlePublish = async () => {
     setPublishing(true)
     try {
       const fnUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/create-action-link`
       const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-      if (!anonKey) throw new Error("Missing NEXT_PUBLIC_SUPABASE_ANON_KEY")
+      if (!anonKey)
+        throw new Error("Missing NEXT_PUBLIC_SUPABASE_ANON_KEY")
       if (!process.env.NEXT_PUBLIC_SUPABASE_URL)
         throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL")
 
@@ -104,7 +124,10 @@ const totalOptions = useMemo(() => {
           email: quote.contact_email,
           tenant_id: quote.tenant_id,
           created_by: quote.created_by_user_id,
-          metadata: { quote_id: quote.id, quote_ref: quote.reference_code },
+          metadata: {
+            quote_id: quote.id,
+            quote_ref: quote.reference_code,
+          },
         }),
       })
 
@@ -132,7 +155,7 @@ const totalOptions = useMemo(() => {
     }
   }
 
-  /* ---------------- 🧾 Render ---------------- */
+  /* ---------------- UI ---------------- */
   return (
     <Card>
       <CardHeader>
@@ -141,12 +164,12 @@ const totalOptions = useMemo(() => {
           Summary & Publish
         </CardTitle>
         <CardDescription>
-          Review all quote details before publishing.
+          Review all details before publishing your quote.
         </CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-8">
-        {/* Contact */}
+        {/* Contact Info */}
         <div>
           <h3 className="text-lg font-semibold mb-2">Contact</h3>
           <div className="grid md:grid-cols-2 gap-2 text-sm">
@@ -171,23 +194,22 @@ const totalOptions = useMemo(() => {
 
         <Separator />
 
-        {/* Trip Itinerary */}
+        {/* Trip Legs */}
         <div>
           <h3 className="text-lg font-semibold mb-2">Trip Itinerary</h3>
           {quote.legs?.length ? (
             <ul className="space-y-2 text-sm">
               {quote.legs.map((leg, i) => (
-                <li
-                  key={leg.id || i}
-                  className="border p-3 rounded-md bg-muted/30"
-                >
-                  <p className="font-medium">
-                    {leg.origin || "?"} → {leg.destination || "?"}
+                <li key={i} className="border p-3 rounded-md bg-muted/30">
+                  <p>
+                    <span className="font-medium">
+                      {leg.origin || "?"} → {leg.destination || "?"}
+                    </span>
                   </p>
                   <p className="text-muted-foreground text-xs">
-                    {leg.depart_dt || leg.departureDate || "No date"} at{" "}
-                    {leg.depart_time || leg.departureTime || "No time"} —{" "}
-                    {leg.pax_count || leg.passengers || 0} pax
+                    {leg.departureDate || "No date"} at{" "}
+                    {leg.departureTime || "No time"} —{" "}
+                    {leg.passengers || 0} pax
                   </p>
                 </li>
               ))}
@@ -202,87 +224,63 @@ const totalOptions = useMemo(() => {
         <Separator />
 
         {/* Aircraft Options */}
-<div>
-  <h3 className="text-lg font-semibold mb-2">Aircraft Options</h3>
-  {quote.options?.length ? (
-    <ul className="space-y-2 text-sm">
-      {quote.options.map((o, i) => {
-        const optionTotal =
-          (Number(o.cost_operator) || 0) +
-          (Number(o.price_commission) || 0) +
-          (Number(o.price_taxes) || 0)
-
-        return (
-          <li
-            key={o.id || i}
-            className="border p-4 rounded-md bg-muted/30 flex justify-between items-center"
-          >
-            {/* Left side: info */}
-            <div className="flex flex-col">
-              <span className="font-medium text-base">
-                {o.label || `Option ${i + 1}`}
-              </span>
-              {o.notes && (
-                <span className="text-muted-foreground text-xs mb-1">
-                  {o.notes}
-                </span>
-              )}
-              <span className="text-muted-foreground text-xs">
-                {o.aircraft_manufacturer || "—"}{" "}
-                {o.aircraft_model || ""}{" "}
-                {o.aircraft_tail ? `(${o.aircraft_tail})` : ""}
-              </span>
-              {o.operator_name && (
-                <span className="text-muted-foreground text-xs">
-                  Operated by {o.operator_name}
-                </span>
-              )}
-            </div>
-
-            {/* Right side: total */}
-            <span className="text-base font-semibold">
-              {formatCurrency(optionTotal)}
-            </span>
-          </li>
-        )
-      })}
-    </ul>
-  ) : (
-    <p className="text-muted-foreground text-sm">
-      No aircraft options added.
-    </p>
-  )}
-</div>
-
-
-        <Separator />
-
-        {/* Services */}
         <div>
-          <h3 className="text-lg font-semibold mb-2">Additional Services</h3>
-          {quote.services?.length ? (
+          <h3 className="text-lg font-semibold mb-2">Aircraft Options</h3>
+          {quote.options?.length ? (
             <ul className="space-y-2 text-sm">
-              {quote.services.map((s, i) => (
-                <li
-                  key={s.id || i}
-                  className="border p-3 rounded-md bg-muted/30 flex justify-between"
-                >
-                  <span>
-                    <span className="font-medium">
-                      {s.description || "Service"}
-                    </span>
-                    {s.taxable && (
-                      <span className="text-xs text-muted-foreground block">
-                        Taxable
+              {quote.options.map((o, i) => {
+                const total =
+                  (Number(o.cost_operator) || 0) +
+                  (Number(o.price_commission) || 0) +
+                  (Number(o.price_taxes) || 0)
+
+                const aircraft = o.aircraft_id
+                  ? aircraftMap[o.aircraft_id]
+                  : null
+
+                return (
+                  <li
+                    key={o.id || i}
+                    className="border p-4 rounded-md bg-muted/30 flex justify-between items-center"
+                  >
+                    <div className="flex flex-col">
+                      <span className="font-medium text-base">
+                        {o.label || `Option ${i + 1}`}
                       </span>
-                    )}
-                  </span>
-                  <span>{formatCurrency(s.amount || 0)}</span>
-                </li>
-              ))}
+                      {o.notes && (
+                        <span className="text-muted-foreground text-xs mb-1">
+                          {o.notes}
+                        </span>
+                      )}
+                      <span className="text-muted-foreground text-xs">
+                        {aircraft
+                          ? `${aircraft.manufacturer || "—"} ${
+                              aircraft.model || ""
+                            } ${
+                              aircraft.tail
+                                ? `(${aircraft.tail})`
+                                : ""
+                            }`
+                          : "—"}
+                      </span>
+                      {aircraft?.operator_name && (
+                        <span className="text-muted-foreground text-xs">
+                          Operated by {aircraft.operator_name}
+                        </span>
+                      )}
+                    </div>
+
+                    <span className="text-base font-semibold">
+                      {formatCurrency(total)}
+                    </span>
+                  </li>
+                )
+              })}
             </ul>
           ) : (
-            <p className="text-muted-foreground text-sm">No services added.</p>
+            <p className="text-muted-foreground text-sm">
+              No aircraft options added.
+            </p>
           )}
         </div>
 
@@ -291,10 +289,10 @@ const totalOptions = useMemo(() => {
         {/* Totals */}
         <div className="text-right space-y-1">
           <p className="text-sm text-muted-foreground">
-            Aircraft Options Total: {formatCurrency(totalOptions)}
+            Options Total: {formatCurrency(totalOptions)}
           </p>
           <p className="text-sm text-muted-foreground">
-            Additional Services Total: {formatCurrency(totalServices)}
+            Services Total: {formatCurrency(totalServices)}
           </p>
           <p className="text-lg font-semibold">
             Grand Total: {formatCurrency(grandTotal)}
