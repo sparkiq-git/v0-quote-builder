@@ -23,25 +23,35 @@ export async function GET() {
     if (!tenantId)
       return NextResponse.json({ success: false, error: "Missing tenant ID" }, { status: 400 })
 
-    const { data, error } = await supabase
+    // First get all public aircraft models
+    const { data: models, error: modelsError } = await supabase
       .from("aircraft_model")
       .select(`
         id, manufacturer_id, name, icao_type_designator, size_code, created_at,
-        range_nm, mtow_kg, cruising_speed, capacity_pax, notes,
+        range_nm, mtow_kg, cruising_speed, capacity_pax, notes, created_by,
         aircraft_manufacturer!manufacturer_id (
           id,
           name
-        ),
-        aircraft_model_image!tenant_id (
-          id,
-          public_url,
-          is_primary,
-          display_order
         )
       `)
       .order("name")
 
-    if (error) throw error
+    if (modelsError) throw modelsError
+
+    // Then get tenant-specific images for these models
+    const { data: images, error: imagesError } = await supabase
+      .from("aircraft_model_image")
+      .select("id, aircraft_model_id, public_url, is_primary, display_order")
+      .eq("tenant_id", tenantId)
+
+    if (imagesError) throw imagesError
+
+    // Combine the data
+    const data = models?.map(model => ({
+      ...model,
+      aircraft_model_image: images?.filter(img => img.aircraft_model_id === model.id) || []
+    })) || []
+
     return NextResponse.json({ success: true, data })
   } catch (err: any) {
     console.error("[API] GET /models error:", err)
