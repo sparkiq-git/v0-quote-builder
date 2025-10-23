@@ -14,14 +14,14 @@ const ModelSchema = z.object({
 export async function GET() {
   try {
     const supabase = await createClient()
+    
+    // For public catalog, we don't require authentication
+    // But we still need to get the current user's tenant_id for images if they're logged in
     const {
       data: { user },
     } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 })
-
-    const tenantId = user.app_metadata?.tenant_id
-    if (!tenantId)
-      return NextResponse.json({ success: false, error: "Missing tenant ID" }, { status: 400 })
+    
+    const tenantId = user?.app_metadata?.tenant_id
 
     // First get all public aircraft models
     const { data: models, error: modelsError } = await supabase
@@ -51,18 +51,24 @@ export async function GET() {
 
     console.log('Manufacturers query successful:', { manufacturersCount: manufacturers?.length })
 
-    // Then get tenant-specific images for these models
-    const { data: images, error: imagesError } = await supabase
-      .from("aircraft_model_image")
-      .select("id, aircraft_model_id, public_url, is_primary, display_order")
-      .eq("tenant_id", tenantId)
+    // Then get tenant-specific images for these models (if user is logged in)
+    let images = []
+    if (tenantId) {
+      const { data: imagesData, error: imagesError } = await supabase
+        .from("aircraft_model_image")
+        .select("id, aircraft_model_id, public_url, is_primary, display_order")
+        .eq("tenant_id", tenantId)
 
-    if (imagesError) {
-      console.error('Images query error:', imagesError)
-      throw imagesError
+      if (imagesError) {
+        console.error('Images query error:', imagesError)
+        throw imagesError
+      }
+
+      images = imagesData || []
+      console.log('Images query successful:', { imagesCount: images.length })
+    } else {
+      console.log('No tenant ID, skipping images query')
     }
-
-    console.log('Images query successful:', { imagesCount: images?.length })
 
     // Combine the data
     const data = models?.map(model => ({
@@ -76,6 +82,7 @@ export async function GET() {
       manufacturersCount: manufacturers?.length || 0,
       imagesCount: images?.length || 0,
       combinedDataCount: data.length,
+      hasTenantId: !!tenantId,
       firstModel: models?.[0],
       firstManufacturer: manufacturers?.[0]
     })
@@ -87,7 +94,7 @@ export async function GET() {
   }
 }
 
-/** 🔹 POST: Create a new public model */
+/** 🔹 POST: Create a new public model (requires authentication) */
 export async function POST(req: Request) {
   try {
     const body = await req.json()
@@ -119,7 +126,7 @@ export async function POST(req: Request) {
   }
 }
 
-/** 🔹 PATCH: Update a public model by ID (only by creator) */
+/** 🔹 PATCH: Update a public model by ID (requires authentication, only by creator) */
 export async function PATCH(req: Request) {
   try {
     const { id, ...updates } = await req.json()
@@ -147,7 +154,7 @@ export async function PATCH(req: Request) {
   }
 }
 
-/** 🔹 DELETE: Delete a public model by ID (only by creator) */
+/** 🔹 DELETE: Delete a public model by ID (requires authentication, only by creator) */
 export async function DELETE(req: Request) {
   try {
     const { id } = await req.json()
