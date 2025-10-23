@@ -31,7 +31,7 @@ import {
 
 import { useToast } from "@/hooks/use-toast"
 import { useAircraftModels } from "@/hooks/use-aircraft-models"
-import { updateModel, deleteModel } from "@/lib/supabase/queries/models"
+// Removed deleteModel import since users can't delete public models
 import { ModelEditDialog } from "./model-edit-dialog"
 
 /* ---------- Image Carousel ---------- */
@@ -97,29 +97,17 @@ export function ModelsGrid() {
   const { models, loading, error } = useAircraftModels()
   const { toast } = useToast()
   const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState<"all" | "mine">("all")
-  const [deleteId, setDeleteId] = useState<string | null>(null)
+  // Removed statusFilter since all models are public
+  // Removed delete functionality since users can't delete public models
   const [editId, setEditId] = useState<string | null>(null)
   const [editOpen, setEditOpen] = useState(false)
 
   const filtered = (models || []).filter((m) => {
     const matchesSearch = m.name.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesStatus = statusFilter === "all" || (statusFilter === "mine" && m.createdBy)
-    return matchesSearch && matchesStatus
+    return matchesSearch
   })
 
-  // Archive functionality removed for public catalog
-
-  const handleDelete = async (id: string) => {
-    try {
-      await deleteModel(id)
-      toast({ title: "Model deleted" })
-      setDeleteId(null)
-      // Refresh will happen automatically via the hook
-    } catch (e: any) {
-      toast({ title: "Error", description: e.message, variant: "destructive" })
-    }
-  }
+  // Archive and delete functionality removed for public catalog
 
   if (loading) {
     return (
@@ -159,14 +147,7 @@ export function ModelsGrid() {
               className="flex-1"
             />
           </div>
-          <ToggleGroup
-            type="single"
-            value={statusFilter}
-            onValueChange={(v) => v && setStatusFilter(v as "all" | "mine")}
-          >
-            <ToggleGroupItem value="all">All Models</ToggleGroupItem>
-            <ToggleGroupItem value="mine">My Models</ToggleGroupItem>
-          </ToggleGroup>
+          {/* Removed filter toggle since all models are public */}
         </div>
 
         {filtered.length > 0 ? (
@@ -190,11 +171,6 @@ export function ModelsGrid() {
                   {m.manufacturer && (
                     <p className="text-sm text-muted-foreground">{m.manufacturer}</p>
                   )}
-                  {m.createdBy && (
-                    <Badge variant="outline" className="text-xs">
-                      My Model
-                    </Badge>
-                  )}
                   <div className="text-sm space-y-1">
                     {m.capacityPax && <div>Capacity: {m.capacityPax} pax</div>}
                     {m.rangeNm && <div>Range: {m.rangeNm} nm</div>}
@@ -216,33 +192,15 @@ export function ModelsGrid() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      {m.createdBy && (
-                        <>
-                          <DropdownMenuItem
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setEditId(m.id)
-                              setEditOpen(true)
-                            }}
-                          >
-                            <Edit className="mr-2 h-4 w-4" /> Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setDeleteId(m.id)
-                            }}
-                            className="text-destructive"
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" /> Delete
-                          </DropdownMenuItem>
-                        </>
-                      )}
-                      {!m.createdBy && (
-                        <DropdownMenuItem disabled>
-                          <span className="text-muted-foreground">View Only</span>
-                        </DropdownMenuItem>
-                      )}
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setEditId(m.id)
+                          setEditOpen(true)
+                        }}
+                      >
+                        <Edit className="mr-2 h-4 w-4" /> Add Images
+                      </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </CardFooter>
@@ -253,33 +211,12 @@ export function ModelsGrid() {
           <div className="text-center py-10">
             <p className="text-muted-foreground mb-4">No models found.</p>
             <p className="text-sm text-muted-foreground">
-              {statusFilter === "mine" 
-                ? "You haven't created any models yet." 
-                : "No aircraft models are available. Create your first model to get started."
-              }
+              No aircraft models match your search criteria.
             </p>
           </div>
         )}
 
-        <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Delete Aircraft Model</AlertDialogTitle>
-              <AlertDialogDescription>
-                Are you sure? This action cannot be undone.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={() => deleteId && handleDelete(deleteId)}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              >
-                Delete
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        {/* Delete dialog removed since users can't delete public models */}
       </div>
     </>
   )

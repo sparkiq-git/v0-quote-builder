@@ -10,20 +10,17 @@ import { ModelsTable } from "@/components/aircraft/models-table"
 import { ModelsGrid } from "@/components/aircraft/models-grid"
 import { TailsTable } from "@/components/aircraft/tails-table"
 import { TailsGrid } from "@/components/aircraft/tails-grid"
-import { ModelCreateDialog } from "@/components/aircraft/model-create-dialog"
 import { TailCreateDialog } from "@/components/aircraft/tail-create-dialog"
 
 export default function AircraftPage() {
   const [view, setView] = useState<"grid" | "table">("grid")
   const [activeTab, setActiveTab] = useState<"models" | "tails">("models")
-  const [showModelDialog, setShowModelDialog] = useState(false)
   const [showTailDialog, setShowTailDialog] = useState(false)
 
   return (
     <>
-      {/* Single, top-level dialogs */}
-      <ModelCreateDialog open={showModelDialog} onOpenChange={setShowModelDialog} />
-      <TailCreateDialog open={showTailDialog} onOpenChange={setShowTailDialog} />
+             {/* Single, top-level dialog for tails only */}
+             <TailCreateDialog open={showTailDialog} onOpenChange={setShowTailDialog} />
 
       <div className="space-y-6">
         <div className="flex items-center justify-between">
@@ -31,17 +28,13 @@ export default function AircraftPage() {
             <h1 className="text-3xl font-bold tracking-tight">Aircraft</h1>
             <p className="text-muted-foreground">Manage aircraft models and tail numbers</p>
           </div>
-          <div className="flex gap-2">
-            {activeTab === "models" ? (
-              <Button onClick={() => setShowModelDialog(true)}>
-                <Plus className="h-4 w-4 mr-2" /> Add Model
-              </Button>
-            ) : (
-              <Button onClick={() => setShowTailDialog(true)}>
-                <Plus className="h-4 w-4 mr-2" /> Add Tail
-              </Button>
-            )}
-          </div>
+                 <div className="flex gap-2">
+                   {activeTab === "tails" && (
+                     <Button onClick={() => setShowTailDialog(true)}>
+                       <Plus className="h-4 w-4 mr-2" /> Add Tail
+                     </Button>
+                   )}
+                 </div>
         </div>
 
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "models" | "tails")} className="space-y-4">
