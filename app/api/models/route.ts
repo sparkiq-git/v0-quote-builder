@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
+import { createActionLinkClient } from "@/lib/supabase/action-links"
 import { z } from "zod"
 
 /** 🔹 Define minimal schema validation (keeps API safe) */
@@ -13,17 +14,27 @@ const ModelSchema = z.object({
 /** 🔹 GET: List public aircraft models with tenant-specific images */
 export async function GET() {
   try {
-    const supabase = await createClient()
+    // Use service role client to bypass RLS for public catalog access
+    const supabase = await createActionLinkClient(true)
     
     // For public catalog, we don't require authentication
     // But we still need to get the current user's tenant_id for images if they're logged in
+    const regularClient = await createClient()
     const {
       data: { user },
-    } = await supabase.auth.getUser()
+    } = await regularClient.auth.getUser()
     
     const tenantId = user?.app_metadata?.tenant_id
 
-    // First get all public aircraft models
+    // Test query to verify service role client can access data
+    const { data: testData, error: testError } = await supabase
+      .from("aircraft_model")
+      .select("id, name")
+      .limit(1)
+    
+    console.log('Service role test query:', { testData, testError })
+
+    // First get all public aircraft models (using service role to bypass RLS)
     const { data: models, error: modelsError } = await supabase
       .from("aircraft_model")
       .select(`
@@ -37,9 +48,9 @@ export async function GET() {
       throw modelsError
     }
 
-    console.log('Models query successful:', { modelsCount: models?.length })
+    console.log('Models query successful:', { modelsCount: models?.length, usingServiceRole: true })
 
-    // Get manufacturer data for these models
+    // Get manufacturer data for these models (using service role to bypass RLS)
     const { data: manufacturers, error: manufacturersError } = await supabase
       .from("aircraft_manufacturer")
       .select("id, name")
