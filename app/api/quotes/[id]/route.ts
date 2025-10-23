@@ -106,6 +106,12 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
               is_primary,
               display_order
             )
+          ),
+          aircraft_image (
+            id,
+            public_url,
+            is_primary,
+            display_order
           )
         `)
         .in("id", aircraftIds)
@@ -187,10 +193,21 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
             operator: aircraft.operator_id,
             year: aircraft.year_of_manufacture,
             amenities: aircraft.notes || '',
-            images: [], // TODO: Add tail images support
+            images: aircraft.aircraft_image
+              ?.sort((a: any, b: any) => {
+                if (a.is_primary && !b.is_primary) return -1
+                if (!a.is_primary && b.is_primary) return 1
+                return a.display_order - b.display_order
+              })
+              .map((img: any) => img.public_url)
+              .filter(Boolean) || [],
             capacityOverride: aircraft.capacity_pax,
             rangeNmOverride: aircraft.range_nm,
             speedKnotsOverride: null,
+            status: aircraft.status,
+            homeBase: aircraft.home_base,
+            serialNumber: aircraft.serial_number,
+            mtowKg: aircraft.mtow_kg,
           } : null,
         }
       }),
