@@ -99,7 +99,6 @@ export function ModelsTable() {
           modelId={editModelId}
           open={isEditOpen}
           onOpenChange={setIsEditOpen}
-          onUpdated={onRefresh}
         />
       )}
 
@@ -210,9 +209,15 @@ export function ModelsTable() {
             </Table>
           </div>
         ) : (
-          <p className="text-center text-muted-foreground py-10">
-            No models found.
-          </p>
+          <div className="text-center py-10">
+            <p className="text-muted-foreground mb-4">No models found.</p>
+            <p className="text-sm text-muted-foreground">
+              {statusFilter === "mine" 
+                ? "You haven't created any models yet." 
+                : "No aircraft models are available. Create your first model to get started."
+              }
+            </p>
+          </div>
         )}
 
         {/* 🗑️ Delete Confirm */}

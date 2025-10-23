@@ -52,6 +52,12 @@ export async function GET() {
       aircraft_model_image: images?.filter(img => img.aircraft_model_id === model.id) || []
     })) || []
 
+    console.log('Models API response:', { 
+      modelsCount: models?.length || 0, 
+      imagesCount: images?.length || 0,
+      combinedDataCount: data.length 
+    })
+
     return NextResponse.json({ success: true, data })
   } catch (err: any) {
     console.error("[API] GET /models error:", err)

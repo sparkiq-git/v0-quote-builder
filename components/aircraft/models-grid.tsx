@@ -145,7 +145,6 @@ export function ModelsGrid() {
           open={editOpen}
           onOpenChange={setEditOpen}
           modelId={editId}
-          onUpdated={onRefresh}
         />
       )}
 
@@ -251,7 +250,15 @@ export function ModelsGrid() {
             ))}
           </div>
         ) : (
-          <p className="text-center text-muted-foreground py-10">No models found.</p>
+          <div className="text-center py-10">
+            <p className="text-muted-foreground mb-4">No models found.</p>
+            <p className="text-sm text-muted-foreground">
+              {statusFilter === "mine" 
+                ? "You haven't created any models yet." 
+                : "No aircraft models are available. Create your first model to get started."
+              }
+            </p>
+          </div>
         )}
 
         <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>

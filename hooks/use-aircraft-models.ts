@@ -32,10 +32,23 @@ export function useAircraftModels() {
         const response = await fetch('/api/models')
         
         if (!response.ok) {
-          throw new Error('Failed to fetch aircraft models')
+          const errorText = await response.text()
+          console.error('API Error Response:', { status: response.status, errorText })
+          throw new Error(`Failed to fetch aircraft models: ${response.status} ${errorText}`)
         }
         
-        const { data } = await response.json()
+        const responseData = await response.json()
+        console.log('Raw API response:', responseData)
+        
+        const { data } = responseData
+        
+        console.log('Data from API:', { data, dataLength: data?.length })
+        
+        if (!data || data.length === 0) {
+          console.log('No aircraft models found in database')
+          setModels([])
+          return
+        }
         
         // Transform the data to match the expected format
         const transformedData = data.map((model: any) => ({
