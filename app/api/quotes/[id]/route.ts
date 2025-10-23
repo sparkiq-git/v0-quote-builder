@@ -81,11 +81,46 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       console.error("Services fetch error:", servicesError)
     }
 
+    // Fetch aircraft models and tails for the options
+    const aircraftModelIds = (options || []).map(opt => opt.aircraft_id).filter(Boolean)
+    const aircraftTailIds = (options || []).map(opt => opt.aircraft_tail_id).filter(Boolean)
+    
+    let aircraftModels = []
+    let aircraftTails = []
+    
+    if (aircraftModelIds.length > 0) {
+      const { data: models, error: modelsError } = await supabase
+        .from("aircraft_model")
+        .select("*")
+        .in("id", aircraftModelIds)
+      
+      if (modelsError) {
+        console.error("Aircraft models fetch error:", modelsError)
+      } else {
+        aircraftModels = models || []
+      }
+    }
+    
+    if (aircraftTailIds.length > 0) {
+      const { data: tails, error: tailsError } = await supabase
+        .from("aircraft")
+        .select("*")
+        .in("id", aircraftTailIds)
+      
+      if (tailsError) {
+        console.error("Aircraft tails fetch error:", tailsError)
+      } else {
+        aircraftTails = tails || []
+      }
+    }
+
     // Debug logging
     console.log("Raw quote data:", JSON.stringify(quote, null, 2))
     console.log("Raw legs data:", JSON.stringify(legs, null, 2))
     console.log("Raw options data:", JSON.stringify(options, null, 2))
     console.log("Raw services data:", JSON.stringify(services, null, 2))
+    console.log("Aircraft models data:", JSON.stringify(aircraftModels, null, 2))
+    console.log("Aircraft tails data:", JSON.stringify(aircraftTails, null, 2))
 
     // Transform the data to match the expected format
     const transformedQuote = {
@@ -108,21 +143,48 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
         distance_nm: leg.distance_nm,
       })),
       // Transform options from quote_option to expected format
-      options: (options || []).map((option: any) => ({
-        id: option.id,
-        aircraftModelId: option.aircraft_id,
-        aircraftTailId: option.aircraft_tail_id,
-        totalHours: option.flight_hours || 0,
-        operatorCost: option.cost_operator || 0,
-        commission: option.price_commission || 0,
-        tax: option.price_base || 0,
-        fees: [], // TODO: Add fees support if needed
-        feesEnabled: false,
-        selectedAmenities: [], // TODO: Add amenities support if needed
-        notes: option.notes,
-        conditions: option.conditions,
-        additionalNotes: option.additional_notes,
-      })),
+      options: (options || []).map((option: any) => {
+        const aircraftModel = aircraftModels.find(m => m.id === option.aircraft_id)
+        const aircraftTail = aircraftTails.find(t => t.id === option.aircraft_tail_id)
+        
+        return {
+          id: option.id,
+          aircraftModelId: option.aircraft_id,
+          aircraftTailId: option.aircraft_tail_id,
+          totalHours: option.flight_hours || 0,
+          operatorCost: option.cost_operator || 0,
+          commission: option.price_commission || 0,
+          tax: option.price_base || 0,
+          fees: [], // TODO: Add fees support if needed
+          feesEnabled: false,
+          selectedAmenities: [], // TODO: Add amenities support if needed
+          notes: option.notes,
+          conditions: option.conditions,
+          additionalNotes: option.additional_notes,
+          // Include aircraft model data for the component
+          aircraftModel: aircraftModel ? {
+            id: aircraftModel.id,
+            name: aircraftModel.name,
+            manufacturer: aircraftModel.manufacturer_id,
+            defaultCapacity: aircraftModel.size_code ? parseInt(aircraftModel.size_code) : 8,
+            defaultRangeNm: 2000, // Default range
+            defaultSpeedKnots: 400, // Default speed
+            images: aircraftModel.images || [],
+          } : null,
+          // Include aircraft tail data for the component
+          aircraftTail: aircraftTail ? {
+            id: aircraftTail.id,
+            tailNumber: aircraftTail.tail_number,
+            operator: aircraftTail.operator_id,
+            year: aircraftTail.year_of_manufacture,
+            amenities: aircraftTail.notes || '',
+            images: [], // TODO: Add tail images support
+            capacityOverride: aircraftTail.capacity_pax,
+            rangeNmOverride: aircraftTail.range_nm,
+            speedKnotsOverride: null,
+          } : null,
+        }
+      }),
       // Transform services from quote_item to expected format
       services: (services || []).map((service: any) => ({
         id: service.id,

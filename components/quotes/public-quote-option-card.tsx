@@ -54,10 +54,11 @@ export function PublicQuoteOptionCard({
   const [count, setCount] = useState(0)
 
   const { state } = useMockStore()
-  const aircraftModel = (state.aircraftModels || []).find((m) => m.id === option.aircraftModelId)
-  const aircraftTail = option.aircraftTailId
+  // Use aircraft data from the option if available (for action link flow), otherwise fall back to mock store
+  const aircraftModel = option.aircraftModel || (state.aircraftModels || []).find((m) => m.id === option.aircraftModelId)
+  const aircraftTail = option.aircraftTail || (option.aircraftTailId
     ? (state.aircraftTails || []).find((t) => t.id === option.aircraftTailId)
-    : null
+    : null)
 
   const total = option.operatorCost + option.commission + option.tax
 
