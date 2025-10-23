@@ -84,27 +84,47 @@ export default function TestVerifyPage() {
             />
           </div>
 
-          <div className="flex gap-2">
-            <Button 
-              onClick={() => testEndpoint("/api/action-links/verify-no-redis")}
-              disabled={loading || !token || !email || !captchaToken}
-            >
-              Test No Redis
-            </Button>
+          <div className="space-y-2">
+            <div className="flex gap-2">
+              <Button 
+                onClick={() => testEndpoint("/api/action-links/verify-no-redis")}
+                disabled={loading || !token || !email || !captchaToken}
+              >
+                Test No Redis
+              </Button>
+              
+              <Button 
+                onClick={() => testEndpoint("/api/action-links/verify-no-captcha")}
+                disabled={loading || !token || !email || !captchaToken}
+              >
+                Test No CAPTCHA
+              </Button>
+              
+              <Button 
+                onClick={() => testEndpoint("/api/action-links/verify")}
+                disabled={loading || !token || !email || !captchaToken}
+              >
+                Test Original
+              </Button>
+            </div>
             
-            <Button 
-              onClick={() => testEndpoint("/api/action-links/verify-no-captcha")}
-              disabled={loading || !token || !email || !captchaToken}
-            >
-              Test No CAPTCHA
-            </Button>
-            
-            <Button 
-              onClick={() => testEndpoint("/api/action-links/verify")}
-              disabled={loading || !token || !email || !captchaToken}
-            >
-              Test Original
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                onClick={() => testEndpoint("/api/test-imports")}
+                disabled={loading}
+                variant="outline"
+              >
+                Test Imports
+              </Button>
+              
+              <Button 
+                onClick={() => testEndpoint("/api/test-connections")}
+                disabled={loading}
+                variant="outline"
+              >
+                Test Connections
+              </Button>
+            </div>
           </div>
 
           {loading && (
