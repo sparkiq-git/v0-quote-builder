@@ -26,6 +26,70 @@ function haversineDistanceNM(lat1: number, lon1: number, lat2: number, lon2: num
   return Math.round(R * c)
 }
 
+/* ---------------- GET handler ---------------- */
+export async function GET(req: Request, { params }: { params: { id: string } }) {
+  const supabase = await createClient()
+  const { id } = params
+
+  try {
+    // Fetch the main quote
+    const { data: quote, error: quoteError } = await supabase
+      .from("quote")
+      .select("*")
+      .eq("id", id)
+      .single()
+
+    if (quoteError) {
+      console.error("Quote fetch error:", quoteError)
+      return NextResponse.json({ error: "Quote not found" }, { status: 404 })
+    }
+
+    // Fetch quote legs
+    const { data: legs, error: legsError } = await supabase
+      .from("quote_detail")
+      .select("*")
+      .eq("quote_id", id)
+      .order("seq")
+
+    if (legsError) {
+      console.error("Legs fetch error:", legsError)
+    }
+
+    // Fetch quote options
+    const { data: options, error: optionsError } = await supabase
+      .from("quote_option")
+      .select("*")
+      .eq("quote_id", id)
+
+    if (optionsError) {
+      console.error("Options fetch error:", optionsError)
+    }
+
+    // Fetch quote services
+    const { data: services, error: servicesError } = await supabase
+      .from("quote_item")
+      .select("*")
+      .eq("quote_id", id)
+
+    if (servicesError) {
+      console.error("Services fetch error:", servicesError)
+    }
+
+    // Transform the data to match the expected format
+    const transformedQuote = {
+      ...quote,
+      legs: legs || [],
+      options: options || [],
+      services: services || [],
+    }
+
+    return NextResponse.json(transformedQuote)
+  } catch (error) {
+    console.error("Unexpected error fetching quote:", error)
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+  }
+}
+
 /* ---------------- PATCH handler ---------------- */
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
   const supabase = await createClient()

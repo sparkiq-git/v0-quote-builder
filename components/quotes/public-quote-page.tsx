@@ -224,6 +224,7 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
   const [isDeclineModalOpen, setIsDeclineModalOpen] = useState(false)
   const [declineReason, setDeclineReason] = useState("")
   const [declineNotes, setDeclineNotes] = useState("")
+  const [showValidationAlert, setShowValidationAlert] = useState(false)
   const [isLocked, setIsLocked] = useState(false)
 
   const mockQuote = getQuoteByToken(params.token)
@@ -253,23 +254,77 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
       quote?.status === "payment_received" ||
       quote?.status === "itinerary_created"
     const isDeclined = quote?.status === "declined"
-    setIsLocked(Boolean(isSubmitted || isDeclined))
-  }, [quote])
+    const locked = Boolean(isSubmitted || isDeclined)
+    setIsLocked(locked)
+
+    if (quote && quote.options?.length === 1 && !quote.selectedOptionId && !locked) {
+      handleSelectOption(quote.options[0].id)
+    }
+
+    if (quote?.status === "itinerary_created" && !existingItinerary) {
+      try {
+        const itinerary = createItineraryFromQuote(quote.id)
+        toast({
+          title: "Itinerary Created",
+          description: "Your itinerary has been automatically created and is ready for viewing.",
+        })
+      } catch (error) {
+        console.error("Failed to create itinerary:", error)
+      }
+    }
+  }, [quote, existingItinerary, createItineraryFromQuote, toast])
 
   const selectedOption = quote?.options?.find((o) => o.id === quote.selectedOptionId) || null
+
+  const handleSelectOption = (optionId: string) => {
+    if (isLocked) return
+    setShowValidationAlert(false)
+    dispatch({ type: "UPDATE_QUOTE", payload: { id: quote.id, updates: { selectedOptionId: optionId } } })
+    dispatch({
+      type: "ADD_EVENT",
+      payload: {
+        id: `event-${Date.now()}`,
+        type: "option_selected",
+        quoteId: quote.id,
+        timestamp: new Date().toISOString(),
+        metadata: { optionId },
+      },
+    })
+    toast({
+      title: "Option selected",
+      description: "Your selection has been recorded. We'll be in touch soon to finalize your booking.",
+    })
+  }
 
   // ======= MODIFIED =======
   const handleSubmitQuote = () => {
     if (onAccept) return onAccept()
     if (!quote.selectedOptionId) {
+      setShowValidationAlert(true)
       toast({
         title: "Aircraft selection required",
         description: "You must select an aircraft option before requesting to book.",
         variant: "destructive",
       })
+      setTimeout(() => setShowValidationAlert(false), 5000)
       return
     }
     dispatch({ type: "UPDATE_QUOTE", payload: { id: quote.id, updates: { status: "client_accepted" } } })
+    dispatch({
+      type: "ADD_EVENT",
+      payload: {
+        id: `event-${Date.now()}`,
+        type: "quote_submitted",
+        quoteId: quote.id,
+        timestamp: new Date().toISOString(),
+        metadata: { selectedOptionId: quote.selectedOptionId },
+      },
+    })
+    toast({
+      title: "Quote accepted successfully!",
+      description:
+        "We've received your acceptance. We'll now check availability and send you the contract and payment details shortly.",
+    })
   }
 
   const handleDeclineQuote = () => {
@@ -283,15 +338,25 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
       return
     }
     dispatch({ type: "UPDATE_QUOTE", payload: { id: quote.id, updates: { status: "declined" } } })
+    dispatch({
+      type: "ADD_EVENT",
+      payload: {
+        id: `event-${Date.now()}`,
+        type: "quote_declined",
+        quoteId: quote.id,
+        timestamp: new Date().toISOString(),
+        metadata: { reason: declineReason, notes: declineNotes },
+      },
+    })
+    toast({
+      title: "Quote declined",
+      description: "Your decline has been recorded and the broker has been notified. Thank you for your time.",
+    })
+    setIsDeclineModalOpen(false)
+    setDeclineReason("")
+    setDeclineNotes("")
   }
   // =========================
-
-  const servicesTotal = quote?.services?.reduce((sum, s) => sum + s.amount, 0) || 0
-  const selectedOptionTotal =
-    selectedOption?.operatorCost +
-      selectedOption?.commission +
-      (selectedOption?.feesEnabled ? selectedOption.fees.reduce((s, f) => s + f.amount, 0) : 0) || 0
-  const grandTotal = selectedOptionTotal + servicesTotal
 
   // Show loading state if quote is not available
   if (!quote) {
@@ -305,12 +370,546 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
     )
   }
 
-  // UI preserved exactly
+  // REAL DATA (from store) wired into props/sections
+  const servicesTotal = quote.services?.reduce((sum, s) => sum + s.amount, 0) || 0
+  const selectedOptionTotal = selectedOption
+    ? selectedOption.operatorCost +
+      selectedOption.commission +
+      (selectedOption.feesEnabled ? selectedOption.fees.reduce((sum, fee) => sum + fee.amount, 0) : 0)
+    : 0
+  const grandTotal = selectedOptionTotal + servicesTotal
+
+  const displayOptions =
+    (["client_accepted", "availability_confirmed", "payment_received", "itinerary_created"] as const).includes(
+      quote.status,
+    ) && quote.selectedOptionId
+      ? [
+          ...quote.options.filter((o) => o.id === quote.selectedOptionId),
+          ...quote.options.filter((o) => o.id !== quote.selectedOptionId),
+        ]
+      : quote.options || []
+
+  const getStatusDisplay = (status: string) => {
+    switch (status) {
+      case "pending_response":
+        return { text: "Pending Your Response", variant: "outline" as const, icon: Clock }
+      case "client_accepted":
+        return { text: "Checking Availability", variant: "default" as const, icon: CheckCircle }
+      case "availability_confirmed":
+        return { text: "Contract Being Prepared", variant: "default" as const, icon: FileText }
+      case "payment_received":
+        return { text: "Preparing Itinerary", variant: "default" as const, icon: CreditCard }
+      case "itinerary_created":
+        return { text: "Confirmed & Itinerary Ready", variant: "default" as const, icon: CheckCircle }
+      case "declined":
+        return { text: "Declined", variant: "destructive" as const, icon: Clock }
+      case "expired":
+        return { text: "Expired", variant: "secondary" as const, icon: Clock }
+      default:
+        return { text: status.replace("_", " "), variant: "outline" as const, icon: Clock }
+    }
+  }
+
+  const statusDisplay = getStatusDisplay(quote.status)
+  const StatusIcon = statusDisplay.icon
+
+  const getButtonText = () => {
+    if (!isLocked) {
+      return quote.selectedOptionId ? "Confirm availability" : "Select an aircraft to accept"
+    }
+    switch (quote.status) {
+      case "client_accepted":
+        return "Checking Availability"
+      case "availability_confirmed":
+        return "Contract Being Prepared"
+      case "payment_received":
+        return "Preparing Itinerary"
+      case "itinerary_created":
+        return "Confirmed & Itinerary Ready"
+      case "declined":
+        return "Quote Declined"
+      case "expired":
+        return "Quote Expired"
+      default:
+        return "Processing..."
+    }
+  }
+
+  const getButtonStyle = () => {
+    if (!isLocked) {
+      return quote.selectedOptionId
+        ? { background: "#1e40af !important", color: "#ffffff !important" }
+        : { background: "#e5e7eb !important", color: "#4b5563 !important" }
+    }
+    switch (quote.status) {
+      case "itinerary_created":
+        return { background: "#059669 !important", color: "#ffffff !important" }
+      case "declined":
+      case "expired":
+        return { background: "#dc2626 !important", color: "#ffffff !important" }
+      default:
+        return { background: "#6b7280 !important", color: "#ffffff !important" }
+    }
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* your full UI structure */}
-      {/* unchanged from your original version */}
-      {/* calls handleSubmitQuote and handleDeclineQuote */}
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 lg:h-screen lg:overflow-hidden overflow-x-hidden">
+      {/* ========================= MOBILE (REORDERED) ========================= */}
+      <div className="lg:hidden">
+        <div className="p-4 space-y-3">
+          <SectionCard>
+            {/* Branding */}
+            <div className="flex items-center gap-2">
+              <img src="/images/aero-iq-logo.png" alt="Aero IQ" className="h-5 w-auto mb-3" />
+            </div>
+
+            {/* Customer */}
+            <div className="space-y-0">
+              <div>
+                <p className="font-medium text-sm">{quote.customer?.name ?? "Fernando Arriaga"}</p>
+                <p className="text-xs text-gray-600">{quote.customer?.company ?? "Spark IQ"}</p>
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <Mail className="h-4 w-4 text-gray-500" />
+                  <span className="text-xs">{quote.customer?.email ?? "farriaga@sparkiq.io"}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Phone className="h-4 w-4 text-gray-500" />
+                  <span className="text-xs">{quote.customer?.phone ?? "619-606-1123"}</span>
+                </div>
+              </div>
+            </div>
+          </SectionCard>
+
+          {/* Trip Summary directly under Customer */}
+          <SectionCard>
+            <div className="divide-y divide-gray-200">
+              <p className="font-medium text-sm">Trip Summary</p>
+              {quote.legs?.map((leg, index) => (
+                <LegRow key={index} leg={leg} index={index} />
+              ))}
+            </div>
+          </SectionCard>
+
+          {/* Additional Services (list) */}
+          {quote.services?.length > 0 && (
+            <SectionCard>
+              <p className="font-medium text-sm">Additional Services</p>
+              <ul className="space-y-0 text-xs">
+                {quote.services.map((service) => (
+                  <li key={service.id} className="text-gray-700">
+                    <span className="font-medium">{service.name}</span>
+                    {service.description && <span className="text-gray-500"> — {service.description}</span>}
+                  </li>
+                ))}
+              </ul>
+            </SectionCard>
+          )}
+
+          {/* Total Trip Cost */}
+          <SectionCard>
+            <div className="space-y-0">
+              <p className="font-medium text-sm mb-2">Total Trip Cost</p>
+
+              <div className="grid grid-cols-2 items-center">
+                <span className="text-gray-700 text-xs">Selected Aircraft</span>
+                <span className="font-medium text-right text-xs">{formatCurrency(selectedOptionTotal)}</span>
+              </div>
+
+              {quote.services?.map((s) => (
+                <div key={s.id} className="grid grid-cols-2 items-center text-xs">
+                  <span className="text-gray-600">{s.name}</span>
+                  <span className="text-right">{formatCurrency(s.amount)}</span>
+                </div>
+              ))}
+
+              <div className="grid grid-cols-2 items-center font-bold text-sm pt-3 border-t border-gray-200">
+                <span>Grand Total</span>
+                <span className="text-right">{formatCurrency(grandTotal)}</span>
+              </div>
+            </div>
+          </SectionCard>
+
+          {/* Aircraft Options (moved AFTER totals on mobile) */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-gray-600 text-xs">Aircraft Options</p>
+              <Badge variant={statusDisplay.variant} className="text-xs flex items-center gap-1">
+                <StatusIcon className="h-3 w-3" />
+                {statusDisplay.text}
+              </Badge>
+            </div>
+            {displayOptions.map((option) => (
+              <div key={option.id} className="w-full">
+                <PublicQuoteOptionCard
+                  option={option}
+                  isSelected={option.id === quote.selectedOptionId}
+                  isLocked={isLocked}
+                  onSelect={() => handleSelectOption(option.id)}
+                  primaryColor={quote.branding?.primaryColor}
+                  hasSelectedOption={!!quote.selectedOptionId}
+                />
+              </div>
+            ))}
+          </div>
+
+          {/* Mobile Terms (visible on phones) */}
+          {quote.options?.length >= 1 && quote.terms && (
+            <SectionCard className="mt-2">
+              <p className="text-xs text-muted-foreground whitespace-pre-wrap">{quote.terms}</p>
+            </SectionCard>
+          )}
+
+          {/* Actions */}
+          <div
+            className="
+              sticky bottom-0 -mx-6 px-6 pt-3 pb-4 z-50
+              bg-white/50 dark:bg-gray-950/50
+              supports-[backdrop-filter]:backdrop-blur
+              supports-[backdrop-filter]:bg-white/30
+              dark:supports-[backdrop-filter]:bg-gray-950/30
+              before:content-[''] before:absolute before:inset-x-0 before:-top-6 before:h-6
+              before:bg-gradient-to-t before:from-white/50 before:to-transparent
+              dark:before:from-gray-950/50 dark:before:to-transparent
+            "
+          >
+            <div className="space-y-3 pb-6">
+              {quote.status === "itinerary_created" && existingItinerary && (
+                <Button asChild className="w-full !bg-blue-600 hover:!bg-blue-700 !text-white !font-semibold">
+                  <a href={`/itineraries/${existingItinerary.publicHash}`} target="_blank" rel="noopener noreferrer">
+                    View Your Itinerary
+                  </a>
+                </Button>
+              )}
+
+              <Button
+                onClick={quote.selectedOptionId ? handleSubmitQuote : undefined}
+                disabled={isLocked || !quote.selectedOptionId}
+                className={`w-full hover:opacity-90 transition-opacity !font-semibold ${
+                  !isLocked && quote.selectedOptionId ? "!bg-blue-700" : ""
+                }`}
+                style={{
+                  ...getButtonStyle(),
+                  borderColor: "transparent !important",
+                }}
+              >
+                {getButtonText()}
+              </Button>
+
+              {/* Decline dialog (mobile) */}
+              {quote.status === "pending_response" && (
+                <Dialog open={isDeclineModalOpen} onOpenChange={setIsDeclineModalOpen}>
+                  <DialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-full border-red-400 text-red-600 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950 bg-transparent"
+                    >
+                      Decline Quote
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[425px] mx-4">
+                    <DialogHeader>
+                      <DialogTitle>Decline Quote</DialogTitle>
+                      <DialogDescription>
+                        Please let us know why you're declining this quote. This helps us improve our service.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                      <div className="grid gap-2">
+                        <Label htmlFor="reason">Reason for declining *</Label>
+                        <Select value={declineReason} onValueChange={setDeclineReason}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a reason" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="too_expensive">Too expensive</SelectItem>
+                            <SelectItem value="wrong_dates">Wrong dates or timing</SelectItem>
+                            <SelectItem value="wrong_info">Incorrect information</SelectItem>
+                            <SelectItem value="found_alternative">Found alternative option</SelectItem>
+                            <SelectItem value="trip_cancelled">Trip cancelled</SelectItem>
+                            <SelectItem value="other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="notes">Special notes (optional)</Label>
+                        <Textarea
+                          id="notes"
+                          placeholder="Any additional feedback..."
+                          value={declineNotes}
+                          onChange={(e) => setDeclineNotes(e.target.value)}
+                          rows={3}
+                        />
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setIsDeclineModalOpen(false)}>
+                        Cancel
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        onClick={() => {
+                          if (!declineReason) return
+                          setIsDeclineModalOpen(false)
+                        }}
+                      >
+                        Decline Quote
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ========================= DESKTOP ========================= */}
+      <div className="hidden lg:block h-screen overflow-hidden overflow-x-hidden">
+        <div className="absolute inset-0 z-10">
+          <div className="h-full flex">
+            {/* LEFT PANE (full height scroll) */}
+            <div className="w-1/4 h-full overflow-y-auto overflow-x-hidden">
+              <div className="relative h-full p-6 pb-28 space-y-3">
+                <SectionCard>
+                  {/* Branding */}
+                  <div className="flex items-center gap-2 mb-5">
+                    <img src="/images/aero-iq-logo.png" alt="Aero IQ" className="h-5 w-auto" />
+                  </div>
+
+                  {/* Customer */}
+                  <div className="space-y-0">
+                    <div>
+                      <p className="font-medium text-sm">{quote.customer?.name ?? "Fernando Arriaga"}</p>
+                      <p className="text-xs text-gray-600">{quote.customer?.company ?? "Spark IQ"}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <Mail className="h-4 w-4 text-gray-500" />
+                        <span className="text-xs">{quote.customer?.email ?? "farriaga@sparkiq.io"}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Phone className="h-4 w-4 text-gray-500" />
+                        <span className="text-xs">{quote.customer?.phone ?? "619-606-1123"}</span>
+                      </div>
+                    </div>
+                  </div>
+                </SectionCard>
+
+                {/* Trip Summary */}
+                <SectionCard>
+                  <p className="font-medium text-sm mb-2">Trip Summary</p>
+                  <div className="divide-y divide-gray-200">
+                    {quote.legs?.map((leg, index) => (
+                      <LegRow key={index} leg={leg} index={index} />
+                    ))}
+                  </div>
+                </SectionCard>
+
+                {/* Additional Services */}
+                {quote.services?.length > 0 && (
+                  <SectionCard>
+                    <p className="font-medium text-sm mb-2">Additional Services</p>
+                    <ul className="space-y-0 text-xs">
+                      {quote.services.map((service) => (
+                        <li key={service.id} className="text-gray-700">
+                          <span className="font-medium">{service.name}</span>
+                          {service.description && <span className="text-gray-500"> — {service.description}</span>}
+                        </li>
+                      ))}
+                    </ul>
+                  </SectionCard>
+                )}
+
+                {/* Total Trip Cost */}
+                <SectionCard>
+                  <div className="space-y-0">
+                    <p className="font-medium text-sm mb-2">Total Trip Cost</p>
+                    <div className="grid grid-cols-2 items-center">
+                      <span className="text-gray-700 text-xs">Selected Aircraft</span>
+                      <span className="font-medium text-right text-xs">{formatCurrency(selectedOptionTotal)}</span>
+                    </div>
+
+                    {quote.services?.map((s) => (
+                      <div key={s.id} className="grid grid-cols-2 items-center text-xs">
+                        <span className="text-gray-600">{s.name}</span>
+                        <span className="text-right">{formatCurrency(s.amount)}</span>
+                      </div>
+                    ))}
+
+                    <div className="grid grid-cols-2 items-center font-bold text-sm pt-3 border-t border-gray-200">
+                      <span>Grand Total</span>
+                      <span className="text-right">{formatCurrency(grandTotal)}</span>
+                    </div>
+                  </div>
+                </SectionCard>
+
+                {/* FULL-BLEED STICKY ACTIONS */}
+                <div
+                  className="
+                    sticky bottom-0 -mx-6 px-6 pt-3 pb-4 z-50
+                    bg-white/50 dark:bg-gray-950/50
+                    supports-[backdrop-filter]:backdrop-blur
+                    supports-[backdrop-filter]:bg-white/30
+                    dark:supports-[backdrop-filter]:bg-gray-950/30
+                    before:content-[''] before:absolute before:inset-x-0 before:-top-6 before:h-6
+                    before:bg-gradient-to-t before:from-white/50 before:to-transparent
+                    dark:before:from-gray-950/50 dark:before:to-transparent
+                  "
+                >
+                  <div className="space-y-3">
+                    {quote.status === "itinerary_created" && existingItinerary && (
+                      <Button asChild className="w-full !bg-blue-600 hover:!bg-blue-700 !text-white !font-semibold">
+                        <a
+                          href={`/itineraries/${existingItinerary.publicHash}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          View Your Itinerary
+                        </a>
+                      </Button>
+                    )}
+
+                    <Button
+                      onClick={quote.selectedOptionId ? handleSubmitQuote : undefined}
+                      disabled={isLocked || !quote.selectedOptionId}
+                      className={`w-full hover:opacity-90 transition-opacity relative z-50 !font-semibold ${
+                        !isLocked && quote.selectedOptionId ? "!bg-blue-700" : ""
+                      }`}
+                      style={{
+                        ...getButtonStyle(),
+                        borderColor: "transparent !important",
+                      }}
+                    >
+                      {getButtonText()}
+                    </Button>
+
+                    {/* Desktop Decline Quote */}
+                    {quote.status === "pending_response" && (
+                      <Dialog open={isDeclineModalOpen} onOpenChange={setIsDeclineModalOpen}>
+                        <DialogTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className="w-full border-red-400 text-red-600 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950 bg-transparent"
+                          >
+                            Decline Quote
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-[425px] mx-4">
+                          <DialogHeader>
+                            <DialogTitle>Decline Quote</DialogTitle>
+                            <DialogDescription>
+                              Please let us know why you're declining this quote. This helps us improve our service.
+                            </DialogDescription>
+                          </DialogHeader>
+                          <div className="grid gap-4 py-4">
+                            <div className="grid gap-2">
+                              <Label htmlFor="reason">Reason for declining *</Label>
+                              <Select value={declineReason} onValueChange={setDeclineReason}>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select a reason" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="too_expensive">Too expensive</SelectItem>
+                                  <SelectItem value="wrong_dates">Wrong dates or timing</SelectItem>
+                                  <SelectItem value="wrong_info">Incorrect information</SelectItem>
+                                  <SelectItem value="found_alternative">Found alternative option</SelectItem>
+                                  <SelectItem value="trip_cancelled">Trip cancelled</SelectItem>
+                                  <SelectItem value="other">Other</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="grid gap-2">
+                              <Label htmlFor="notes">Special notes (optional)</Label>
+                              <Textarea
+                                id="notes"
+                                placeholder="Any additional feedback..."
+                                value={declineNotes}
+                                onChange={(e) => setDeclineNotes(e.target.value)}
+                                rows={3}
+                              />
+                            </div>
+                          </div>
+                          <DialogFooter>
+                            <Button variant="outline" onClick={() => setIsDeclineModalOpen(false)}>
+                              Cancel
+                            </Button>
+                            <Button variant="destructive" onClick={handleDeclineQuote}>
+                              Decline Quote
+                            </Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Right spacer */}
+            <div className="flex-1 bg-gray-50 dark:bg-gray-900" />
+          </div>
+        </div>
+
+        {/* Right pane: options (full height scroll) */}
+        <div className="absolute top-0 right-0 bottom-1 left-1/4 z-20 overflow-x-hidden">
+          <div className="h-full pt-6 pb-6 px-3">
+            <div className="h-full overflow-y-auto overflow-x-hidden bg-white/95 border border-gray-200 rounded-lg p-0">
+              <div className="p-0">
+                <div className="px-4 py-3 border-b border-gray-200 bg-white/80 mb-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-medium text-gray-900">Aircraft Options</h3>
+                    <Badge variant={statusDisplay.variant} className="text-xs flex items-center gap-1">
+                      <StatusIcon className="h-3 w-3" />
+                      {statusDisplay.text}
+                    </Badge>
+                  </div>
+                </div>
+
+                <div className="-mx-2 space-y-2">
+                  {displayOptions.map((option) => (
+                    <div key={option.id} className="w-full px-2">
+                      <PublicQuoteOptionCard
+                        option={option}
+                        isSelected={option.id === quote.selectedOptionId}
+                        isLocked={isLocked}
+                        onSelect={() => handleSelectOption(option.id)}
+                        primaryColor={quote.branding?.primaryColor}
+                        hasSelectedOption={!!quote.selectedOptionId}
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                {/* Desktop Terms (same width as cards) */}
+                {quote.options?.length >= 1 && quote.terms && (
+                  <div className="flex justify-center pl-6 pr-6">
+                    <Card className="mt-3 mb-3 w-full">
+                      <CardContent className="pl-1">
+                        <p className="text-xs text-muted-foreground whitespace-pre-wrap">{quote.terms}</p>
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
+
+                {quote.options?.length === 0 && (
+                  <Card className="mx-2">
+                    <CardContent className="flex flex-col items-center justify-center py-12">
+                      <Plane className="h-14 w-14 text-muted-foreground mb-3" />
+                      <h3 className="text-base font-semibold mb-1">No aircraft options available</h3>
+                      <p className="text-muted-foreground text-center text-sm">
+                        Please contact us directly to discuss aircraft options for your trip.
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+        {/* /Right pane */}
+      </div>
     </div>
   )
 }
