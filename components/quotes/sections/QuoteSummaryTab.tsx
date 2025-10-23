@@ -285,22 +285,6 @@ useEffect(() => {
 </div>
 
 
-            {/* Right side: total */}
-            <span className="text-base font-semibold">
-              {formatCurrency(optionTotal)}
-            </span>
-          </li>
-        )
-      })}
-    </ul>
-  ) : (
-    <p className="text-muted-foreground text-sm">
-      No aircraft options added.
-    </p>
-  )}
-</div>
-
-
         <Separator />
 
         {/* Services */}
