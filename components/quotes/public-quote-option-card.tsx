@@ -14,7 +14,6 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import type { QuoteOption } from "@/lib/types"
 import { formatCurrency } from "@/lib/utils/format"
-import { useMockStore } from "@/lib/mock/store"
 import { Wifi, Coffee, Tv, Utensils, Bed, Headphones, Zap, Shield, Star, CheckCircle } from "lucide-react"
 
 interface PublicQuoteOptionCardProps {
@@ -53,12 +52,9 @@ export function PublicQuoteOptionCard({
   const [current, setCurrent] = useState(0)
   const [count, setCount] = useState(0)
 
-  const { state } = useMockStore()
-  // Use aircraft data from the option if available (for action link flow), otherwise fall back to mock store
-  const aircraftModel = option.aircraftModel || (state.aircraftModels || []).find((m) => m.id === option.aircraftModelId)
-  const aircraftTail = option.aircraftTail || (option.aircraftTailId
-    ? (state.aircraftTails || []).find((t) => t.id === option.aircraftTailId)
-    : null)
+  // Use aircraft data from the option (should be provided by the API)
+  const aircraftModel = option.aircraftModel
+  const aircraftTail = option.aircraftTail
 
   const total = option.operatorCost + option.commission + option.tax
 

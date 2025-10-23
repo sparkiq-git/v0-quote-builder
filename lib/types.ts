@@ -96,6 +96,7 @@ export interface QuoteOption {
   totalHours: number
   operatorCost: number
   commission: number
+  tax?: number // Added tax field for pricing calculation
   fees: QuoteFee[]
   feesEnabled: boolean // Toggle for fees display/calculation
   selectedAmenities: string[] // Array of amenity strings from the tail
@@ -103,6 +104,9 @@ export interface QuoteOption {
   notes?: string
   conditions?: string
   additionalNotes?: string
+  // Aircraft data (populated by API)
+  aircraftModel?: AircraftModel
+  aircraftTail?: AircraftTail
 }
 
 export interface Quote {

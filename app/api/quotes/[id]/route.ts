@@ -219,6 +219,64 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
 
 /* ---------------- PATCH handler ---------------- */
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+  const supabase = await createActionLinkClient(true)
+  const { id } = params
+
+  try {
+    const body = await req.json()
+    const { selectedOptionId, status, declineReason, declineNotes } = body
+
+    // Check if this is a public quote access (from action link)
+    const referer = req.headers.get("referer")
+    const isPublicAccess = referer?.includes("/action/") || req.headers.get("x-public-quote") === "true"
+
+    if (!isPublicAccess) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    // Update quote with new selection or status
+    const updates: any = {}
+    if (selectedOptionId !== undefined) {
+      updates.selected_option_id = selectedOptionId
+    }
+    if (status) {
+      updates.status = status
+    }
+
+    const { data: updatedQuote, error: updateError } = await supabase
+      .from("quote")
+      .update(updates)
+      .eq("id", id)
+      .select()
+      .single()
+
+    if (updateError) {
+      console.error("Quote update error:", updateError)
+      return NextResponse.json({ error: "Failed to update quote" }, { status: 500 })
+    }
+
+    // Log the action in audit log
+    await supabase.from("action_link_audit_log").insert({
+      action_type: "quote_updated",
+      quote_id: id,
+      metadata: {
+        selectedOptionId,
+        status,
+        declineReason,
+        declineNotes,
+        timestamp: new Date().toISOString(),
+      },
+    })
+
+    return NextResponse.json({ success: true, quote: updatedQuote })
+  } catch (error) {
+    console.error("Unexpected error updating quote:", error)
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+  }
+}
+
+/* ---------------- PUT handler (existing) ---------------- */
+export async function PUT(req: Request, { params }: { params: { id: string } }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })

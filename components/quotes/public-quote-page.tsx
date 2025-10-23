@@ -20,7 +20,6 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Badge } from "@/components/ui/badge"
 
 import { PublicQuoteOptionCard } from "@/components/quotes/public-quote-option-card"
-import { useMockStore } from "@/lib/mock/store"
 import { formatDate, formatCurrency } from "@/lib/utils/format"
 import { useToast } from "@/hooks/use-toast"
 
@@ -217,8 +216,7 @@ function LegRow({ leg, index }: { leg: any; index: number }) {
 
 /* ===================================================================== */
 
-export default function PublicQuotePage({ params, onAccept, onDecline, verifiedEmail, quote: propQuote }: PublicQuotePageProps) {
-  const { getQuoteByToken, dispatch, createItineraryFromQuote, getItineraryByQuoteId } = useMockStore()
+export default function PublicQuotePage({ params, onAccept, onDecline, verifiedEmail, quote }: PublicQuotePageProps) {
   const { toast } = useToast()
   const [hasViewed, setHasViewed] = useState(false)
   const [isDeclineModalOpen, setIsDeclineModalOpen] = useState(false)
@@ -226,26 +224,14 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
   const [declineNotes, setDeclineNotes] = useState("")
   const [showValidationAlert, setShowValidationAlert] = useState(false)
   const [isLocked, setIsLocked] = useState(false)
-
-  const mockQuote = getQuoteByToken(params.token)
-  const quote = propQuote || mockQuote
-  const existingItinerary = quote ? getItineraryByQuoteId(quote.id) : null
+  const [selectedOptionId, setSelectedOptionId] = useState<string | null>(quote?.selectedOptionId || null)
 
   useEffect(() => {
     if (quote && !hasViewed) {
-      dispatch({
-        type: "ADD_EVENT",
-        payload: {
-          id: `event-${Date.now()}`,
-          type: "quote_viewed",
-          quoteId: quote.id,
-          timestamp: new Date().toISOString(),
-          metadata: { verifiedEmail },
-        },
-      })
+      // TODO: Add analytics tracking here if needed
       setHasViewed(true)
     }
-  }, [quote, hasViewed, dispatch, verifiedEmail])
+  }, [quote, hasViewed, verifiedEmail])
 
   useEffect(() => {
     const isSubmitted =
@@ -257,49 +243,50 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
     const locked = Boolean(isSubmitted || isDeclined)
     setIsLocked(locked)
 
-    if (quote && quote.options?.length === 1 && !quote.selectedOptionId && !locked) {
-      handleSelectOption(quote.options[0].id)
+    if (quote && quote.options?.length === 1 && !selectedOptionId && !locked) {
+      setSelectedOptionId(quote.options[0].id)
     }
+  }, [quote, selectedOptionId])
 
-    if (quote?.status === "itinerary_created" && !existingItinerary) {
-      try {
-        const itinerary = createItineraryFromQuote(quote.id)
-        toast({
-          title: "Itinerary Created",
-          description: "Your itinerary has been automatically created and is ready for viewing.",
-        })
-      } catch (error) {
-        console.error("Failed to create itinerary:", error)
-      }
-    }
-  }, [quote, existingItinerary, createItineraryFromQuote, toast])
+  const selectedOption = quote?.options?.find((o) => o.id === selectedOptionId) || null
 
-  const selectedOption = quote?.options?.find((o) => o.id === quote.selectedOptionId) || null
-
-  const handleSelectOption = (optionId: string) => {
+  const handleSelectOption = async (optionId: string) => {
     if (isLocked) return
     setShowValidationAlert(false)
-    dispatch({ type: "UPDATE_QUOTE", payload: { id: quote.id, updates: { selectedOptionId: optionId } } })
-    dispatch({
-      type: "ADD_EVENT",
-      payload: {
-        id: `event-${Date.now()}`,
-        type: "option_selected",
-        quoteId: quote.id,
-        timestamp: new Date().toISOString(),
-        metadata: { optionId },
-      },
-    })
-    toast({
-      title: "Option selected",
-      description: "Your selection has been recorded. We'll be in touch soon to finalize your booking.",
-    })
+    setSelectedOptionId(optionId)
+    
+    try {
+      const response = await fetch(`/api/quotes/${quote.id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "x-public-quote": "true",
+        },
+        body: JSON.stringify({ selectedOptionId: optionId }),
+      })
+      
+      if (!response.ok) {
+        throw new Error("Failed to update selection")
+      }
+      
+      toast({
+        title: "Option selected",
+        description: "Your selection has been recorded. We'll be in touch soon to finalize your booking.",
+      })
+    } catch (error) {
+      console.error("Failed to update selection:", error)
+      toast({
+        title: "Error",
+        description: "Failed to save your selection. Please try again.",
+        variant: "destructive",
+      })
+    }
   }
 
   // ======= MODIFIED =======
-  const handleSubmitQuote = () => {
+  const handleSubmitQuote = async () => {
     if (onAccept) return onAccept()
-    if (!quote.selectedOptionId) {
+    if (!selectedOptionId) {
       setShowValidationAlert(true)
       toast({
         title: "Aircraft selection required",
@@ -309,25 +296,40 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
       setTimeout(() => setShowValidationAlert(false), 5000)
       return
     }
-    dispatch({ type: "UPDATE_QUOTE", payload: { id: quote.id, updates: { status: "client_accepted" } } })
-    dispatch({
-      type: "ADD_EVENT",
-      payload: {
-        id: `event-${Date.now()}`,
-        type: "quote_submitted",
-        quoteId: quote.id,
-        timestamp: new Date().toISOString(),
-        metadata: { selectedOptionId: quote.selectedOptionId },
-      },
-    })
-    toast({
-      title: "Quote accepted successfully!",
-      description:
-        "We've received your acceptance. We'll now check availability and send you the contract and payment details shortly.",
-    })
+    
+    try {
+      const response = await fetch(`/api/quotes/${quote.id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "x-public-quote": "true",
+        },
+        body: JSON.stringify({ 
+          selectedOptionId,
+          status: "client_accepted"
+        }),
+      })
+      
+      if (!response.ok) {
+        throw new Error("Failed to accept quote")
+      }
+      
+      toast({
+        title: "Quote accepted successfully!",
+        description:
+          "We've received your acceptance. We'll now check availability and send you the contract and payment details shortly.",
+      })
+    } catch (error) {
+      console.error("Failed to accept quote:", error)
+      toast({
+        title: "Error",
+        description: "Failed to accept quote. Please try again.",
+        variant: "destructive",
+      })
+    }
   }
 
-  const handleDeclineQuote = () => {
+  const handleDeclineQuote = async () => {
     if (onDecline) return onDecline()
     if (!declineReason) {
       toast({
@@ -337,24 +339,40 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
       })
       return
     }
-    dispatch({ type: "UPDATE_QUOTE", payload: { id: quote.id, updates: { status: "declined" } } })
-    dispatch({
-      type: "ADD_EVENT",
-      payload: {
-        id: `event-${Date.now()}`,
-        type: "quote_declined",
-        quoteId: quote.id,
-        timestamp: new Date().toISOString(),
-        metadata: { reason: declineReason, notes: declineNotes },
-      },
-    })
-    toast({
-      title: "Quote declined",
-      description: "Your decline has been recorded and the broker has been notified. Thank you for your time.",
-    })
-    setIsDeclineModalOpen(false)
-    setDeclineReason("")
-    setDeclineNotes("")
+    
+    try {
+      const response = await fetch(`/api/quotes/${quote.id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "x-public-quote": "true",
+        },
+        body: JSON.stringify({ 
+          status: "declined",
+          declineReason,
+          declineNotes
+        }),
+      })
+      
+      if (!response.ok) {
+        throw new Error("Failed to decline quote")
+      }
+      
+      toast({
+        title: "Quote declined",
+        description: "Your decline has been recorded and the broker has been notified. Thank you for your time.",
+      })
+      setIsDeclineModalOpen(false)
+      setDeclineReason("")
+      setDeclineNotes("")
+    } catch (error) {
+      console.error("Failed to decline quote:", error)
+      toast({
+        title: "Error",
+        description: "Failed to decline quote. Please try again.",
+        variant: "destructive",
+      })
+    }
   }
   // =========================
 
@@ -382,10 +400,10 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
   const displayOptions =
     (["client_accepted", "availability_confirmed", "payment_received", "itinerary_created"] as const).includes(
       quote.status,
-    ) && quote.selectedOptionId
+    ) && selectedOptionId
       ? [
-          ...quote.options.filter((o) => o.id === quote.selectedOptionId),
-          ...quote.options.filter((o) => o.id !== quote.selectedOptionId),
+          ...quote.options.filter((o) => o.id === selectedOptionId),
+          ...quote.options.filter((o) => o.id !== selectedOptionId),
         ]
       : quote.options || []
 
@@ -415,7 +433,7 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
 
   const getButtonText = () => {
     if (!isLocked) {
-      return quote.selectedOptionId ? "Confirm availability" : "Select an aircraft to accept"
+      return selectedOptionId ? "Confirm availability" : "Select an aircraft to accept"
     }
     switch (quote.status) {
       case "client_accepted":
@@ -437,7 +455,7 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
 
   const getButtonStyle = () => {
     if (!isLocked) {
-      return quote.selectedOptionId
+      return selectedOptionId
         ? { background: "#1e40af !important", color: "#ffffff !important" }
         : { background: "#e5e7eb !important", color: "#4b5563 !important" }
     }
@@ -544,11 +562,11 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
               <div key={option.id} className="w-full">
                 <PublicQuoteOptionCard
                   option={option}
-                  isSelected={option.id === quote.selectedOptionId}
+                  isSelected={option.id === selectedOptionId}
                   isLocked={isLocked}
                   onSelect={() => handleSelectOption(option.id)}
                   primaryColor={quote.branding?.primaryColor}
-                  hasSelectedOption={!!quote.selectedOptionId}
+                  hasSelectedOption={!!selectedOptionId}
                 />
               </div>
             ))}
@@ -575,19 +593,19 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
             "
           >
             <div className="space-y-3 pb-6">
-              {quote.status === "itinerary_created" && existingItinerary && (
+              {quote.status === "itinerary_created" && (
                 <Button asChild className="w-full !bg-blue-600 hover:!bg-blue-700 !text-white !font-semibold">
-                  <a href={`/itineraries/${existingItinerary.publicHash}`} target="_blank" rel="noopener noreferrer">
+                  <a href={`/itineraries/${quote.id}`} target="_blank" rel="noopener noreferrer">
                     View Your Itinerary
                   </a>
                 </Button>
               )}
 
               <Button
-                onClick={quote.selectedOptionId ? handleSubmitQuote : undefined}
-                disabled={isLocked || !quote.selectedOptionId}
+                onClick={selectedOptionId ? handleSubmitQuote : undefined}
+                disabled={isLocked || !selectedOptionId}
                 className={`w-full hover:opacity-90 transition-opacity !font-semibold ${
-                  !isLocked && quote.selectedOptionId ? "!bg-blue-700" : ""
+                  !isLocked && selectedOptionId ? "!bg-blue-700" : ""
                 }`}
                 style={{
                   ...getButtonStyle(),
@@ -759,10 +777,10 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
                   "
                 >
                   <div className="space-y-3">
-                    {quote.status === "itinerary_created" && existingItinerary && (
+                    {quote.status === "itinerary_created" && (
                       <Button asChild className="w-full !bg-blue-600 hover:!bg-blue-700 !text-white !font-semibold">
                         <a
-                          href={`/itineraries/${existingItinerary.publicHash}`}
+                          href={`/itineraries/${quote.id}`}
                           target="_blank"
                           rel="noopener noreferrer"
                         >
@@ -772,10 +790,10 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
                     )}
 
                     <Button
-                      onClick={quote.selectedOptionId ? handleSubmitQuote : undefined}
-                      disabled={isLocked || !quote.selectedOptionId}
+                      onClick={selectedOptionId ? handleSubmitQuote : undefined}
+                      disabled={isLocked || !selectedOptionId}
                       className={`w-full hover:opacity-90 transition-opacity relative z-50 !font-semibold ${
-                        !isLocked && quote.selectedOptionId ? "!bg-blue-700" : ""
+                        !isLocked && selectedOptionId ? "!bg-blue-700" : ""
                       }`}
                       style={{
                         ...getButtonStyle(),
@@ -872,11 +890,11 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
                     <div key={option.id} className="w-full px-2">
                       <PublicQuoteOptionCard
                         option={option}
-                        isSelected={option.id === quote.selectedOptionId}
+                        isSelected={option.id === selectedOptionId}
                         isLocked={isLocked}
                         onSelect={() => handleSelectOption(option.id)}
                         primaryColor={quote.branding?.primaryColor}
-                        hasSelectedOption={!!quote.selectedOptionId}
+                        hasSelectedOption={!!selectedOptionId}
                       />
                     </div>
                   ))}
