@@ -219,7 +219,7 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
                       </span>
                     )}
                   </span>
-                  <span>{formatCurrency(o.price_total || 0)}</span>
+                  <span>{formatCurrency(totalOptions || 0)}</span>
                 </li>
               ))}
             </ul>
