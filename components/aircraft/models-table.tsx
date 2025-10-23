@@ -46,31 +46,18 @@ export function ModelsTable() {
   const { models, loading, error } = useAircraftModels()
   const { toast } = useToast()
   const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState<"active" | "all">("active")
+  const [statusFilter, setStatusFilter] = useState<"all" | "mine">("all")
   const [deleteModelId, setDeleteModelId] = useState<string | null>(null)
   const [editModelId, setEditModelId] = useState<string | null>(null)
   const [isEditOpen, setIsEditOpen] = useState(false)
 
   const filtered = (models || []).filter((m) => {
     const matchesSearch = m.name.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesStatus =
-      statusFilter === "all" || (statusFilter === "active" && !m.isArchived)
+    const matchesStatus = statusFilter === "all" || (statusFilter === "mine" && m.createdBy)
     return matchesSearch && matchesStatus
   })
 
-  const handleArchive = async (id: string, isArchived: boolean) => {
-    try {
-      await updateModel(id, { isArchived })
-      toast({ title: `Model ${isArchived ? "archived" : "unarchived"}` })
-      // Refresh will happen automatically via the hook
-    } catch (err) {
-      toast({
-        title: "Error updating model",
-        description: String(err),
-        variant: "destructive",
-      })
-    }
-  }
+  // Archive functionality removed for public catalog
 
   const handleDelete = async (id: string) => {
     try {
@@ -134,32 +121,28 @@ export function ModelsTable() {
           <div className="rounded-md border">
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Defaults</TableHead>
-                  <TableHead className="w-[70px]">Actions</TableHead>
-                </TableRow>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Owner</TableHead>
+                    <TableHead>Specifications</TableHead>
+                    <TableHead className="w-[70px]">Actions</TableHead>
+                  </TableRow>
               </TableHeader>
               <TableBody>
                 {filtered.map((m) => (
                   <TableRow
                     key={m.id}
-                    className={`${
-                      m.isArchived ? "opacity-60" : ""
-                    } hover:bg-muted/50 cursor-pointer`}
+                    className="hover:bg-muted/50 cursor-pointer"
                     onClick={() => {
-                      setEditModelId(m.id)
-                      setIsEditOpen(true)
+                      if (m.createdBy) {
+                        setEditModelId(m.id)
+                        setIsEditOpen(true)
+                      }
                     }}
                   >
                     <TableCell>
                       <div>
-                        <p
-                          className={`font-medium ${
-                            m.isArchived ? "line-through" : ""
-                          }`}
-                        >
+                        <p className="font-medium">
                           {m.name}
                         </p>
                         {m.manufacturer && (
@@ -170,18 +153,17 @@ export function ModelsTable() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={m.isArchived ? "secondary" : "default"}>
-                        {m.isArchived ? "Archived" : "Active"}
-                      </Badge>
+                      {m.createdBy ? (
+                        <Badge variant="default">My Model</Badge>
+                      ) : (
+                        <Badge variant="outline">Public</Badge>
+                      )}
                     </TableCell>
                     <TableCell className="text-sm space-y-1">
-                      {m.defaultCapacity && <div>Cap: {m.defaultCapacity}</div>}
-                      {m.defaultRangeNm && (
-                        <div>Range: {m.defaultRangeNm} nm</div>
-                      )}
-                      {m.defaultSpeedKnots && (
-                        <div>Speed: {m.defaultSpeedKnots} kt</div>
-                      )}
+                      {m.capacityPax && <div>Cap: {m.capacityPax} pax</div>}
+                      {m.rangeNm && <div>Range: {m.rangeNm} nm</div>}
+                      {m.cruisingSpeed && <div>Speed: {m.cruisingSpeed} kt</div>}
+                      {m.mtowKg && <div>MTOW: {m.mtowKg} kg</div>}
                     </TableCell>
                     <TableCell>
                       <DropdownMenu>
@@ -195,34 +177,30 @@ export function ModelsTable() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setEditModelId(m.id)
-                              setIsEditOpen(true)
-                            }}
-                          >
-                            <Edit className="mr-2 h-4 w-4" /> Edit
-                          </DropdownMenuItem>
-                          {!m.isArchived ? (
-                            <DropdownMenuItem
-                              onClick={() => handleArchive(m.id, true)}
-                            >
-                              <Archive className="mr-2 h-4 w-4" /> Archive
-                            </DropdownMenuItem>
-                          ) : (
-                            <DropdownMenuItem
-                              onClick={() => handleArchive(m.id, false)}
-                            >
-                              <ArchiveRestore className="mr-2 h-4 w-4" /> Unarchive
+                          {m.createdBy && (
+                            <>
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setEditModelId(m.id)
+                                  setIsEditOpen(true)
+                                }}
+                              >
+                                <Edit className="mr-2 h-4 w-4" /> Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => setDeleteModelId(m.id)}
+                                className="text-destructive"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" /> Delete
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                          {!m.createdBy && (
+                            <DropdownMenuItem disabled>
+                              <span className="text-muted-foreground">View Only</span>
                             </DropdownMenuItem>
                           )}
-                          <DropdownMenuItem
-                            onClick={() => setDeleteModelId(m.id)}
-                            className="text-destructive"
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" /> Delete
-                          </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>

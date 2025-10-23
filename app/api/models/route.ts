@@ -10,7 +10,7 @@ const ModelSchema = z.object({
   size_code: z.string().nullable().optional(),
 })
 
-/** 🔹 GET: List models for the authenticated tenant */
+/** 🔹 GET: List public aircraft models with tenant-specific images */
 export async function GET() {
   try {
     const supabase = await createClient()
@@ -26,19 +26,19 @@ export async function GET() {
     const { data, error } = await supabase
       .from("aircraft_model")
       .select(`
-        id, manufacturer_id, name, icao_type_designator, size_code, tenant_id, created_at,
+        id, manufacturer_id, name, icao_type_designator, size_code, created_at,
+        range_nm, mtow_kg, cruising_speed, capacity_pax, notes,
         aircraft_manufacturer!manufacturer_id (
           id,
           name
         ),
-        aircraft_model_image (
+        aircraft_model_image!tenant_id (
           id,
           public_url,
           is_primary,
           display_order
         )
       `)
-      .eq("tenant_id", tenantId)
       .order("name")
 
     if (error) throw error
@@ -49,7 +49,7 @@ export async function GET() {
   }
 }
 
-/** 🔹 POST: Create a new model */
+/** 🔹 POST: Create a new public model */
 export async function POST(req: Request) {
   try {
     const body = await req.json()
@@ -61,18 +61,14 @@ export async function POST(req: Request) {
     } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 })
 
-    const tenantId = user.app_metadata?.tenant_id
-    if (!tenantId)
-      return NextResponse.json({ success: false, error: "Missing tenant ID" }, { status: 400 })
-
     const { data, error } = await supabase
       .from("aircraft_model")
       .insert({
-        tenant_id: tenantId,
         manufacturer_id: parsed.manufacturer_id,
         name: parsed.name,
         icao_type_designator: parsed.icao_type_designator,
         size_code: parsed.size_code,
+        created_by: user.id,
       })
       .select("*")
       .single()
@@ -85,7 +81,7 @@ export async function POST(req: Request) {
   }
 }
 
-/** 🔹 PATCH: Update a model by ID */
+/** 🔹 PATCH: Update a public model by ID (only by creator) */
 export async function PATCH(req: Request) {
   try {
     const { id, ...updates } = await req.json()
@@ -97,15 +93,11 @@ export async function PATCH(req: Request) {
     } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 })
 
-    const tenantId = user.app_metadata?.tenant_id
-    if (!tenantId)
-      return NextResponse.json({ success: false, error: "Missing tenant ID" }, { status: 400 })
-
     const { data, error } = await supabase
       .from("aircraft_model")
       .update(updates)
       .eq("id", id)
-      .eq("tenant_id", tenantId)
+      .eq("created_by", user.id)
       .select("*")
       .single()
 
@@ -117,7 +109,7 @@ export async function PATCH(req: Request) {
   }
 }
 
-/** 🔹 DELETE: Delete a model by ID */
+/** 🔹 DELETE: Delete a public model by ID (only by creator) */
 export async function DELETE(req: Request) {
   try {
     const { id } = await req.json()
@@ -129,15 +121,11 @@ export async function DELETE(req: Request) {
     } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 })
 
-    const tenantId = user.app_metadata?.tenant_id
-    if (!tenantId)
-      return NextResponse.json({ success: false, error: "Missing tenant ID" }, { status: 400 })
-
     const { error } = await supabase
       .from("aircraft_model")
       .delete()
       .eq("id", id)
-      .eq("tenant_id", tenantId)
+      .eq("created_by", user.id)
 
     if (error) throw error
     return NextResponse.json({ success: true, message: "Model deleted" })

@@ -97,26 +97,18 @@ export function ModelsGrid() {
   const { models, loading, error } = useAircraftModels()
   const { toast } = useToast()
   const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState<"active" | "all">("active")
+  const [statusFilter, setStatusFilter] = useState<"all" | "mine">("all")
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [editId, setEditId] = useState<string | null>(null)
   const [editOpen, setEditOpen] = useState(false)
 
   const filtered = (models || []).filter((m) => {
     const matchesSearch = m.name.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesStatus = statusFilter === "all" || (!m.isArchived && statusFilter === "active")
+    const matchesStatus = statusFilter === "all" || (statusFilter === "mine" && m.createdBy)
     return matchesSearch && matchesStatus
   })
 
-  const handleArchive = async (id: string, archived: boolean) => {
-    try {
-      await updateModel(id, { isArchived: archived })
-      toast({ title: `Model ${archived ? "archived" : "unarchived"}` })
-      onRefresh?.()
-    } catch (e: any) {
-      toast({ title: "Error", description: e.message, variant: "destructive" })
-    }
-  }
+  // Archive functionality removed for public catalog
 
   const handleDelete = async (id: string) => {
     try {
@@ -171,10 +163,10 @@ export function ModelsGrid() {
           <ToggleGroup
             type="single"
             value={statusFilter}
-            onValueChange={(v) => v && setStatusFilter(v as "active" | "all")}
+            onValueChange={(v) => v && setStatusFilter(v as "all" | "mine")}
           >
-            <ToggleGroupItem value="active">Active</ToggleGroupItem>
-            <ToggleGroupItem value="all">All</ToggleGroupItem>
+            <ToggleGroupItem value="all">All Models</ToggleGroupItem>
+            <ToggleGroupItem value="mine">My Models</ToggleGroupItem>
           </ToggleGroup>
         </div>
 
@@ -183,7 +175,7 @@ export function ModelsGrid() {
             {filtered.map((m) => (
               <Card
                 key={m.id}
-                className={`${m.isArchived ? "opacity-60" : ""} hover:shadow-lg transition-shadow cursor-pointer`}
+                className="hover:shadow-lg transition-shadow cursor-pointer"
                 onClick={() => {
                   setEditId(m.id)
                   setEditOpen(true)
@@ -193,19 +185,22 @@ export function ModelsGrid() {
                   <ImageCarousel images={m.images || []} alt={m.name} />
                 </CardHeader>
                 <CardContent className="p-4 pt-0 space-y-3">
-                  <h3 className={`font-semibold text-lg ${m.isArchived ? "line-through" : ""}`}>
+                  <h3 className="font-semibold text-lg">
                     {m.name}
                   </h3>
                   {m.manufacturer && (
-                    <p className="text-sm text-muted-foreground">{m.manufacturer.name}</p>
+                    <p className="text-sm text-muted-foreground">{m.manufacturer}</p>
                   )}
-                  <Badge variant={m.isArchived ? "secondary" : "default"}>
-                    {m.isArchived ? "Archived" : "Active"}
-                  </Badge>
+                  {m.createdBy && (
+                    <Badge variant="outline" className="text-xs">
+                      My Model
+                    </Badge>
+                  )}
                   <div className="text-sm space-y-1">
-                    {m.defaultCapacity && <div>Capacity: {m.defaultCapacity}</div>}
-                    {m.defaultRangeNm && <div>Range: {m.defaultRangeNm} nm</div>}
-                    {m.defaultSpeedKnots && <div>Speed: {m.defaultSpeedKnots} kt</div>}
+                    {m.capacityPax && <div>Capacity: {m.capacityPax} pax</div>}
+                    {m.rangeNm && <div>Range: {m.rangeNm} nm</div>}
+                    {m.cruisingSpeed && <div>Speed: {m.cruisingSpeed} kt</div>}
+                    {m.mtowKg && <div>MTOW: {m.mtowKg} kg</div>}
                   </div>
                 </CardContent>
                 <CardFooter className="p-4 pt-0">
@@ -222,43 +217,33 @@ export function ModelsGrid() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setEditId(m.id)
-                          setEditOpen(true)
-                        }}
-                      >
-                        <Edit className="mr-2 h-4 w-4" /> Edit
-                      </DropdownMenuItem>
-                      {!m.isArchived ? (
-                        <DropdownMenuItem
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleArchive(m.id, true)
-                          }}
-                        >
-                          <Archive className="mr-2 h-4 w-4" /> Archive
-                        </DropdownMenuItem>
-                      ) : (
-                        <DropdownMenuItem
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleArchive(m.id, false)
-                          }}
-                        >
-                          <ArchiveRestore className="mr-2 h-4 w-4" /> Unarchive
+                      {m.createdBy && (
+                        <>
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setEditId(m.id)
+                              setEditOpen(true)
+                            }}
+                          >
+                            <Edit className="mr-2 h-4 w-4" /> Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setDeleteId(m.id)
+                            }}
+                            className="text-destructive"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" /> Delete
+                          </DropdownMenuItem>
+                        </>
+                      )}
+                      {!m.createdBy && (
+                        <DropdownMenuItem disabled>
+                          <span className="text-muted-foreground">View Only</span>
                         </DropdownMenuItem>
                       )}
-                      <DropdownMenuItem
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setDeleteId(m.id)
-                        }}
-                        className="text-destructive"
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" /> Delete
-                      </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </CardFooter>

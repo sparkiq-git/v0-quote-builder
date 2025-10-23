@@ -6,11 +6,18 @@ export interface AircraftModelData {
   id: string
   name: string
   manufacturer: string
-  defaultCapacity?: number
-  defaultRangeNm?: number
-  defaultSpeedKnots?: number
+  manufacturerId: string
+  icaoTypeDesignator?: string
+  sizeCode?: string
+  rangeNm?: number
+  mtowKg?: number
+  cruisingSpeed?: number
+  capacityPax?: number
+  notes?: string
   images: string[]
   isArchived?: boolean
+  createdBy?: string
+  createdAt: string
 }
 
 export function useAircraftModels() {
@@ -35,9 +42,14 @@ export function useAircraftModels() {
           id: model.id,
           name: model.name,
           manufacturer: model.aircraft_manufacturer?.name || 'Unknown',
-          defaultCapacity: model.size_code ? parseInt(model.size_code) : 8,
-          defaultRangeNm: 2000, // Default range
-          defaultSpeedKnots: 400, // Default speed
+          manufacturerId: model.manufacturer_id,
+          icaoTypeDesignator: model.icao_type_designator,
+          sizeCode: model.size_code,
+          rangeNm: model.range_nm,
+          mtowKg: model.mtow_kg,
+          cruisingSpeed: model.cruising_speed,
+          capacityPax: model.capacity_pax,
+          notes: model.notes,
           images: model.aircraft_model_image
             ?.sort((a: any, b: any) => {
               if (a.is_primary && !b.is_primary) return -1
@@ -46,7 +58,9 @@ export function useAircraftModels() {
             })
             .map((img: any) => img.public_url)
             .filter(Boolean) || [],
-          isArchived: false, // Default to not archived
+          isArchived: false, // Public models don't have archived state
+          createdBy: model.created_by,
+          createdAt: model.created_at,
         }))
         
         setModels(transformedData)
