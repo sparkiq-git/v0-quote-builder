@@ -67,7 +67,10 @@ export default function ActionPage({ params }: { params: { token: string } }) {
         try {
           const quoteRes = await safeFetchJSON(`/api/quotes/${json.data.metadata.quote_id}`, {
             method: "GET",
-            headers: { "content-type": "application/json" },
+            headers: { 
+              "content-type": "application/json",
+              "x-public-quote": "true"
+            },
           })
           setQuote(quoteRes)
         } catch (quoteErr) {

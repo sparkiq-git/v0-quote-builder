@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
+import { createActionLinkClient } from "@/lib/supabase/action-links"
 
 /* ---------------- Utility helpers ---------------- */
 function toDateTime(date?: string | null, time?: string | null): string | null {
@@ -28,8 +29,13 @@ function haversineDistanceNM(lat1: number, lon1: number, lat2: number, lon2: num
 
 /* ---------------- GET handler ---------------- */
 export async function GET(req: Request, { params }: { params: { id: string } }) {
-  const supabase = await createClient()
+  // Use service role client to bypass RLS for public quote access
+  const supabase = await createActionLinkClient(true)
   const { id } = params
+
+  // Check if this is a public quote access (from action link)
+  const referer = req.headers.get("referer")
+  const isPublicAccess = referer?.includes("/action/") || req.headers.get("x-public-quote") === "true"
 
   try {
     // Fetch the main quote
