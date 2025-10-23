@@ -206,20 +206,30 @@ const totalOptions = useMemo(() => {
         {/* Aircraft Options */}
 <div>
   <h3 className="text-lg font-semibold mb-2">Aircraft Options</h3>
-  {quote.options?.length ? (
+
+  {!quote?.options?.length ? (
+    <p className="text-muted-foreground text-sm">No aircraft options added.</p>
+  ) : (
     <ul className="space-y-2 text-sm">
-      {quote.options.map((o, i) => {
-        const optionTotal =
-          (Number(o.cost_operator) || 0) +
-          (Number(o.price_commission) || 0) +
-          (Number(o.price_taxes) || 0)
+      {quote.options.map((o: any, i: number) => {
+        const total =
+          (Number(o?.cost_operator) || 0) +
+          (Number(o?.price_commission) || 0) +
+          (Number(o?.price_taxes) || 0)
+
+        const ac = o?.aircraft_id ? aircraftMap[o.aircraft_id] : null
+        const line1 =
+          ac
+            ? `${ac.manufacturer ?? "—"} ${ac.model ?? ""}`.trim()
+            : "—"
+        const tail = ac?.tail ? `(${ac.tail})` : ""
+        const operatorLine = ac?.operator_name ? `Operated by ${ac.operator_name}` : ""
 
         return (
           <li
-            key={o.id || i}
+            key={o.id ?? i}
             className="border p-4 rounded-md bg-muted/30 flex justify-between items-center"
           >
-            {/* Left side: info */}
             <div className="flex flex-col">
               <span className="font-medium text-base">
                 {o.label || `Option ${i + 1}`}
@@ -230,16 +240,25 @@ const totalOptions = useMemo(() => {
                 </span>
               )}
               <span className="text-muted-foreground text-xs">
-                {o.aircraft_manufacturer || "—"}{" "}
-                {o.aircraft_model || ""}{" "}
-                {o.aircraft_tail ? `(${o.aircraft_tail})` : ""}
+                {line1} {tail}
               </span>
-              {o.operator_name && (
+              {operatorLine && (
                 <span className="text-muted-foreground text-xs">
-                  Operated by {o.operator_name}
+                  {operatorLine}
                 </span>
               )}
             </div>
+
+            <span className="text-base font-semibold">
+              {formatCurrency(total)}
+            </span>
+          </li>
+        )
+      })}
+    </ul>
+  )}
+</div>
+
 
             {/* Right side: total */}
             <span className="text-base font-semibold">
