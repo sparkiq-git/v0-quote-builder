@@ -48,6 +48,11 @@ const mainNavigation = [
     href: "/quotes",
     icon: FileText,
   },
+  {
+    title: "Invoices",
+    href: "/invoices",
+    icon: FileText,
+  },
 ]
 
 const operationsNavigation = [
