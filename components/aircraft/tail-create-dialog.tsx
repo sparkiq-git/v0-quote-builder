@@ -17,18 +17,18 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Separator } from "@/components/ui/separator"
-import { Badge } from "@/components/ui/badge"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { TailFormSchema, type TailFormData } from "@/lib/schemas/aircraft"
-import { useMockStore } from "@/lib/mock/store"
 import { useToast } from "@/hooks/use-toast"
+import { useAircraftModels } from "@/hooks/use-aircraft-models"
 import { ModelCreateDialog } from "./model-create-dialog"
-import { Check, ChevronsUpDown, Plus, X } from "lucide-react"
+import AircraftImageManager from "./aircraft-image-manager"
+import { Check, ChevronsUpDown, Plus } from "lucide-react"
 import { cn } from "@/lib/utils"
-import type { AircraftTail } from "@/lib/types"
+import { supabase } from "@/lib/supabase/client"
 
 interface TailCreateDialogProps {
   children: React.ReactNode
@@ -38,21 +38,65 @@ interface TailCreateDialogProps {
 }
 
 export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpenChange }: TailCreateDialogProps) {
-  const { state, dispatch, getTailById, getModelById, validateTailNumber } = useMockStore()
+  const { models, loading: modelsLoading } = useAircraftModels()
   const { toast } = useToast()
   const [internalOpen, setInternalOpen] = useState(false)
   const [modelComboOpen, setModelComboOpen] = useState(false)
   const [useDefaultCapacity, setUseDefaultCapacity] = useState(true)
   const [useDefaultRange, setUseDefaultRange] = useState(true)
   const [useDefaultSpeed, setUseDefaultSpeed] = useState(true)
-  const [images, setImages] = useState<string[]>([])
-  const [newImageUrl, setNewImageUrl] = useState("")
+  const [tenantId, setTenantId] = useState<string | null>(null)
+  const [existingTail, setExistingTail] = useState<any>(null)
+  const [loading, setLoading] = useState(false)
 
   const open = controlledOpen !== undefined ? controlledOpen : internalOpen
   const setOpen = onOpenChange || setInternalOpen
 
   const isEditing = !!tailId
-  const existingTail = tailId ? getTailById(tailId) : null
+
+  // Fetch tenant ID
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    async function loadTenant() {
+      try {
+        const { data } = await supabase.auth.getUser()
+        const tenantId = data?.user?.app_metadata?.tenant_id ?? null
+        setTenantId(tenantId)
+      } catch (err) {
+        console.error("Error loading tenant ID:", err)
+      }
+    }
+    loadTenant()
+  }, [])
+
+  // Fetch existing tail data for editing
+  useEffect(() => {
+    async function loadTail() {
+      if (!tailId || !open) return
+      try {
+        setLoading(true)
+        const { data, error } = await supabase
+          .from("aircraft")
+          .select("*")
+          .eq("id", tailId)
+          .single()
+        
+        if (error) throw error
+        setExistingTail(data)
+      } catch (err) {
+        console.error("Error loading tail:", err)
+        toast({ title: "Error", description: "Failed to load aircraft tail.", variant: "destructive" })
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    if (open && tailId) {
+      loadTail()
+    } else {
+      setExistingTail(null)
+    }
+  }, [open, tailId, toast])
 
   const {
     register,
@@ -80,32 +124,28 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
   })
 
   const selectedModelId = watch("modelId")
-  const selectedModel = selectedModelId ? getModelById(selectedModelId) : null
+  const selectedModel = selectedModelId ? models.find(m => m.id === selectedModelId) : null
   const tailNumber = watch("tailNumber")
 
   useEffect(() => {
     if (open && existingTail) {
-      const tailImages = existingTail.images || []
-      setImages(tailImages)
       reset({
-        modelId: existingTail.modelId,
-        tailNumber: existingTail.tailNumber,
-        operator: existingTail.operator || "",
-        amenities: existingTail.amenities || "",
-        year: existingTail.year,
-        yearOfRefurbishment: existingTail.yearOfRefurbishment,
+        modelId: existingTail.model_id,
+        tailNumber: existingTail.tail_number,
+        operator: existingTail.operator_id || "",
+        amenities: existingTail.notes || "",
+        year: existingTail.year_of_manufacture,
+        yearOfRefurbishment: existingTail.year_of_refurbish,
         status: existingTail.status,
-        capacityOverride: existingTail.capacityOverride,
-        rangeNmOverride: existingTail.rangeNmOverride,
-        speedKnotsOverride: existingTail.speedKnotsOverride,
-        images: tailImages,
+        capacityOverride: existingTail.capacity_pax,
+        rangeNmOverride: existingTail.range_nm,
+        speedKnotsOverride: null, // Not stored in database yet
+        images: [],
       })
-      setUseDefaultCapacity(existingTail.capacityOverride === undefined)
-      setUseDefaultRange(existingTail.rangeNmOverride === undefined)
-      setUseDefaultSpeed(existingTail.speedKnotsOverride === undefined)
+      setUseDefaultCapacity(existingTail.capacity_pax === null)
+      setUseDefaultRange(existingTail.range_nm === null)
+      setUseDefaultSpeed(true) // Always use default for now
     } else if (open && !existingTail) {
-      setImages([])
-      setNewImageUrl("")
       reset({
         modelId: "",
         tailNumber: "",
@@ -126,10 +166,6 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
   }, [open, existingTail, reset])
 
   useEffect(() => {
-    setValue("images", images)
-  }, [images, setValue])
-
-  useEffect(() => {
     if (useDefaultCapacity) {
       setValue("capacityOverride", undefined)
     }
@@ -147,85 +183,61 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
     }
   }, [useDefaultSpeed, setValue])
 
-  const addImage = () => {
-    if (newImageUrl.trim() && !images.includes(newImageUrl.trim())) {
-      const updatedImages = [...images, newImageUrl.trim()]
-      setImages(updatedImages)
-      setNewImageUrl("")
-    }
-  }
-
-  const removeImage = (index: number) => {
-    const updatedImages = images.filter((_, i) => i !== index)
-    setImages(updatedImages)
-  }
-
-  const handleImageKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      e.preventDefault()
-      addImage()
-    }
-  }
-
   const onSubmit = async (data: TailFormData) => {
     try {
-      console.log("[v0] Form submission started", { isEditing, data, images })
-
-      if (!validateTailNumber(data.tailNumber, existingTail?.id)) {
-        console.log("[v0] Tail number validation failed", { tailNumber: data.tailNumber })
+      if (!tenantId) {
         toast({
-          title: "Tail number already exists",
-          description: "Please choose a different tail number.",
+          title: "Error",
+          description: "Tenant ID not found. Please refresh and try again.",
           variant: "destructive",
         })
         return
       }
 
+      const aircraftData = {
+        tenant_id: tenantId,
+        tail_number: data.tailNumber,
+        model_id: data.modelId,
+        operator_id: data.operator || null,
+        year_of_manufacture: data.year || null,
+        year_of_refurbish: data.yearOfRefurbishment || null,
+        status: data.status,
+        capacity_pax: useDefaultCapacity ? null : data.capacityOverride || null,
+        range_nm: useDefaultRange ? null : data.rangeNmOverride || null,
+        notes: data.amenities || null,
+      }
+
       if (isEditing && existingTail) {
-        console.log("[v0] Updating existing tail", { tailId: existingTail.id, updates: data })
-        dispatch({
-          type: "UPDATE_TAIL",
-          payload: {
-            id: existingTail.id,
-            updates: {
-              ...data,
-              year: data.year || undefined,
-              amenities: data.amenities || undefined,
-              images: images.length > 0 ? images : undefined,
-            },
-          },
-        })
-        console.log("[v0] Tail update dispatched successfully")
+        const { error } = await supabase
+          .from("aircraft")
+          .update(aircraftData)
+          .eq("id", existingTail.id)
+
+        if (error) throw error
+
         toast({
           title: "Tail updated",
           description: "The aircraft tail has been updated successfully.",
         })
       } else {
-        console.log("[v0] Creating new tail", { data })
-        const newTail: AircraftTail = {
-          id: `tail-${Date.now()}`,
-          ...data,
-          year: data.year || undefined,
-          amenities: data.amenities || undefined,
-          images: images.length > 0 ? images : undefined,
-          isArchived: false,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        }
-        dispatch({ type: "ADD_TAIL", payload: newTail })
-        console.log("[v0] Tail creation dispatched successfully")
+        const { error } = await supabase
+          .from("aircraft")
+          .insert(aircraftData)
+
+        if (error) throw error
+
         toast({
           title: "Tail created",
           description: "The aircraft tail has been created successfully.",
         })
       }
-      console.log("[v0] Closing dialog")
+
       setOpen(false)
-    } catch (error) {
-      console.error("[v0] Error in form submission:", error)
+    } catch (error: any) {
+      console.error("Error in form submission:", error)
       toast({
         title: "Error",
-        description: "Something went wrong. Please try again.",
+        description: error.message || "Something went wrong. Please try again.",
         variant: "destructive",
       })
     }
@@ -236,7 +248,7 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
     setModelComboOpen(false)
   }
 
-  const activeModels = (state.aircraftModels || []).filter((model) => !model.isArchived)
+  const activeModels = models.filter((model) => !model.isArchived)
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -332,40 +344,6 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
                 {...register("amenities")}
                 placeholder="e.g., WiFi, Entertainment System, Refreshment Center"
               />
-            </div>
-            <div className="space-y-2">
-              <Label>Aircraft Images (Optional)</Label>
-              <div className="flex gap-2">
-                <Input
-                  value={newImageUrl}
-                  onChange={(e) => setNewImageUrl(e.target.value)}
-                  onKeyPress={handleImageKeyPress}
-                  placeholder="Enter image URL"
-                  className="flex-1"
-                />
-                <Button type="button" onClick={addImage} size="sm">
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-              {images.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {images.map((image, index) => (
-                    <Badge key={index} variant="secondary" className="flex items-center gap-1">
-                      <span className="max-w-[200px] truncate">Image {index + 1}</span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="h-4 w-4 p-0 hover:bg-destructive hover:text-destructive-foreground"
-                        onClick={() => removeImage(index)}
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    </Badge>
-                  ))}
-                </div>
-              )}
-              {errors.images && <p className="text-sm text-destructive">{errors.images.message}</p>}
             </div>
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
@@ -508,11 +486,38 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
             </div>
           </div>
 
+          {/* Image Management Section */}
+          {tenantId && (isEditing ? existingTail : true) && (
+            <div className="mt-8 border-t pt-6">
+              <h3 className="text-lg font-semibold mb-4">Aircraft Images</h3>
+              {isEditing && existingTail ? (
+                <AircraftImageManager 
+                  aircraftId={existingTail.id} 
+                  tenantId={tenantId} 
+                  onImagesUpdated={() => {
+                    // Refresh the existing tail data
+                    if (tailId) {
+                      // Trigger a refresh of the tail data
+                      setExistingTail(null)
+                      setTimeout(() => {
+                        // This will trigger the useEffect to reload the tail
+                      }, 100)
+                    }
+                  }}
+                />
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Save the aircraft first to manage images.
+                </p>
+              )}
+            </div>
+          )}
+
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="submit" disabled={isSubmitting || loading || modelsLoading}>
               {isSubmitting ? "Saving..." : isEditing ? "Update Tail" : "Create Tail"}
             </Button>
           </DialogFooter>
