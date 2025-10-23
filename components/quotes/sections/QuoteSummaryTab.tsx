@@ -32,6 +32,8 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
   const [copied, setCopied] = useState(false)
   const [publishing, setPublishing] = useState(false)
   const [publishedUrl, setPublishedUrl] = useState<string | null>(null)
+  const [aircraftMap, setAircraftMap] = useState<Record<string, any>>({})
+
 
   // ✅ Fallback URL
   const quoteUrl =
