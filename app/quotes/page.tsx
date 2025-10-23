@@ -282,24 +282,45 @@ export default function QuotesPage() {
                         <div className="text-muted-foreground">{formatTimeAgo(quote.createdAt)}</div>
                       </div>
                     </TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-2">
-                        <Button asChild variant="outline" size="sm">
-                          <Link href={`/quotes/${quote.id}`}>
-                            <Eye className="mr-2 h-4 w-4" />
-                            Edit
-                          </Link>
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDeleteQuote(quote.id)}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
+<TableCell>
+  <div className="flex items-center space-x-2">
+    <Button asChild variant="outline" size="sm">
+      <Link href={`/quotes/${quote.id}`}>
+        <Eye className="mr-2 h-4 w-4" />
+        Edit
+      </Link>
+    </Button>
+
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={() => handleConvertToInvoice(quote.id)}
+      disabled={converting === quote.id}
+    >
+      {converting === quote.id ? (
+        <>
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          Creating...
+        </>
+      ) : (
+        <>
+          <FileText className="mr-2 h-4 w-4" />
+          Invoice
+        </>
+      )}
+    </Button>
+
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={() => handleDeleteQuote(quote.id)}
+      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+    >
+      <Trash2 className="h-4 w-4" />
+    </Button>
+  </div>
+</TableCell>
+
                   </TableRow>
                 ))}
               </TableBody>
