@@ -9,7 +9,20 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
 
-const PublicQuotePage = dynamic(() => import("@/components/quotes/public-quote-page"), { ssr: false })
+// Configuration constants
+const API_ENDPOINTS = {
+  VERIFY: "/api/action-links/verify",
+  CONSUME: "/api/action-links/consume",
+  QUOTES: "/api/quotes"
+} as const
+
+const PublicQuotePage = dynamic(() => import("@/components/quotes/public-quote-page"), { 
+  ssr: false,
+  loading: () => <div className="text-center py-8">Loading quote...</div>,
+  onError: (error) => {
+    console.error("Failed to load PublicQuotePage:", error)
+  }
+})
 
 export default function ActionPage({ params }: { params: { token: string } }) {
   const { toast } = useToast()
@@ -19,13 +32,18 @@ export default function ActionPage({ params }: { params: { token: string } }) {
   const [verified, setVerified] = useState<any | null>(null)
   const [quote, setQuote] = useState<any | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!
+  const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY
+  if (!siteKey) {
+    console.error("Missing NEXT_PUBLIC_TURNSTILE_SITE_KEY environment variable")
+  }
 
   // --- Safe fetch with clone for dual parsing ---
   async function safeFetchJSON(url: string, options: RequestInit) {
     const res = await fetch(url, options)
-    const cloned = res.clone()
-
+    
+    // Only clone if we need to parse as text (for error cases)
+    let cloned: Response | null = null
+    
     try {
       const json = await res.json()
       if (!res.ok || json?.ok === false) {
@@ -34,6 +52,10 @@ export default function ActionPage({ params }: { params: { token: string } }) {
       }
       return json
     } catch (jsonErr) {
+      // Only clone if JSON parsing failed
+      if (!cloned) {
+        cloned = res.clone()
+      }
       try {
         const text = await cloned.text()
         console.error(`Non-JSON response from ${url}:`, text)
@@ -48,8 +70,22 @@ export default function ActionPage({ params }: { params: { token: string } }) {
   async function handleVerify() {
     setError(null)
     setVerifying(true)
+    
+    // Client-side validation
+    if (!email || !email.includes('@')) {
+      setError("Please enter a valid email address")
+      setVerifying(false)
+      return
+    }
+    
+    if (!captcha) {
+      setError("Please complete the CAPTCHA")
+      setVerifying(false)
+      return
+    }
+    
     try {
-      const json = await safeFetchJSON("/api/action-links/verify", {
+      const json = await safeFetchJSON(API_ENDPOINTS.VERIFY, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -65,7 +101,7 @@ export default function ActionPage({ params }: { params: { token: string } }) {
       // Fetch the actual quote data
       if (json.data?.metadata?.quote_id) {
         try {
-          const quoteRes = await safeFetchJSON(`/api/quotes/${json.data.metadata.quote_id}`, {
+          const quoteRes = await safeFetchJSON(`${API_ENDPOINTS.QUOTES}/${json.data.metadata.quote_id}`, {
             method: "GET",
             headers: { 
               "content-type": "application/json",
@@ -102,7 +138,7 @@ export default function ActionPage({ params }: { params: { token: string } }) {
 
   async function handleConsume(result: "accept" | "decline") {
     try {
-      const json = await safeFetchJSON("/api/action-links/consume", {
+      const json = await safeFetchJSON(API_ENDPOINTS.CONSUME, {
         method: "POST",
         headers: {
           "content-type": "application/json",
@@ -153,7 +189,13 @@ export default function ActionPage({ params }: { params: { token: string } }) {
             />
 
             <div className="flex justify-center pt-2">
-              <Turnstile sitekey={siteKey} onVerify={(t) => setCaptcha(t)} />
+              {siteKey ? (
+                <Turnstile sitekey={siteKey} onVerify={(t) => setCaptcha(t)} />
+              ) : (
+                <div className="text-sm text-red-500">
+                  CAPTCHA not configured. Please contact support.
+                </div>
+              )}
             </div>
 
             {error && <p className="text-sm text-red-500">{error}</p>}
