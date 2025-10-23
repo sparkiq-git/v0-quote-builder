@@ -34,7 +34,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
 
   const { id } = params
   const body = await req.json()
-  const { quote, options, legs } = body
+  const { quote, options, legs, services } = body
 
   console.log("🛰️ Incoming save payload:", JSON.stringify({ quote, options, legs }, null, 2))
 
