@@ -58,23 +58,6 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
 
   const isEditing = !!tailId
 
-  // Debug form state
-  useEffect(() => {
-    if (open) {
-      console.log("🔍 Dialog opened - Form state:", {
-        isEditing,
-        tailId,
-        existingTail: !!existingTail,
-        tenantId,
-        defaultTypeRatingId,
-        modelsLoading,
-        operatorsLoading,
-        loading,
-        isSubmitting
-      })
-    }
-  }, [open, isEditing, tailId, existingTail, tenantId, defaultTypeRatingId, modelsLoading, operatorsLoading, loading, isSubmitting])
-
   // Fetch tenant ID and default type rating
   useEffect(() => {
     if (typeof window === "undefined") return
@@ -157,6 +140,23 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
       images: [],
     },
   })
+
+  // Debug form state
+  useEffect(() => {
+    if (open) {
+      console.log("🔍 Dialog opened - Form state:", {
+        isEditing,
+        tailId,
+        existingTail: !!existingTail,
+        tenantId,
+        defaultTypeRatingId,
+        modelsLoading,
+        operatorsLoading,
+        loading,
+        isSubmitting
+      })
+    }
+  }, [open, isEditing, tailId, existingTail, tenantId, defaultTypeRatingId, modelsLoading, operatorsLoading, loading, isSubmitting])
 
   const selectedModelId = watch("modelId")
   const selectedModel = selectedModelId ? models.find(m => m.id === selectedModelId) : null
