@@ -81,14 +81,73 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       console.error("Services fetch error:", servicesError)
     }
 
+    // Debug logging
+    console.log("Raw quote data:", JSON.stringify(quote, null, 2))
+    console.log("Raw legs data:", JSON.stringify(legs, null, 2))
+    console.log("Raw options data:", JSON.stringify(options, null, 2))
+    console.log("Raw services data:", JSON.stringify(services, null, 2))
+
     // Transform the data to match the expected format
     const transformedQuote = {
       ...quote,
-      legs: legs || [],
-      options: options || [],
-      services: services || [],
+      // Transform legs from quote_detail to expected format
+      legs: (legs || []).map((leg: any) => ({
+        id: leg.id,
+        origin: leg.origin_code,
+        destination: leg.destination_code,
+        departureDate: leg.depart_dt,
+        departureTime: leg.depart_time,
+        passengers: leg.pax_count,
+        notes: leg.notes,
+        fboOriginId: leg.fbo_origin_id,
+        fboDestinationId: leg.fbo_destination_id,
+        origin_lat: leg.origin_lat,
+        origin_long: leg.origin_long,
+        destination_lat: leg.destination_lat,
+        destination_long: leg.destination_long,
+        distance_nm: leg.distance_nm,
+      })),
+      // Transform options from quote_option to expected format
+      options: (options || []).map((option: any) => ({
+        id: option.id,
+        aircraftModelId: option.aircraft_id,
+        aircraftTailId: option.aircraft_tail_id,
+        totalHours: option.flight_hours || 0,
+        operatorCost: option.cost_operator || 0,
+        commission: option.price_commission || 0,
+        tax: option.price_base || 0,
+        fees: [], // TODO: Add fees support if needed
+        feesEnabled: false,
+        selectedAmenities: [], // TODO: Add amenities support if needed
+        notes: option.notes,
+        conditions: option.conditions,
+        additionalNotes: option.additional_notes,
+      })),
+      // Transform services from quote_item to expected format
+      services: (services || []).map((service: any) => ({
+        id: service.id,
+        name: service.name,
+        description: service.description,
+        amount: service.unit_price || 0,
+        qty: service.qty || 1,
+        taxable: service.taxable,
+        notes: service.notes,
+      })),
+      // Ensure customer object exists
+      customer: quote.customer || {
+        id: quote.contact_id || 'unknown',
+        name: quote.contact_name || 'Unknown Customer',
+        email: quote.contact_email || '',
+        phone: quote.contact_phone || '',
+        company: quote.contact_company || '',
+      },
+      // Ensure branding exists
+      branding: quote.branding || {
+        primaryColor: '#2563eb',
+      },
     }
 
+    console.log("Transformed quote data:", JSON.stringify(transformedQuote, null, 2))
     return NextResponse.json(transformedQuote)
   } catch (error) {
     console.error("Unexpected error fetching quote:", error)
