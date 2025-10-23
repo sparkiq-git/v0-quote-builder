@@ -28,15 +28,28 @@ export async function GET() {
       .from("aircraft_model")
       .select(`
         id, manufacturer_id, name, icao_type_designator, size_code, created_at,
-        range_nm, mtow_kg, cruising_speed, capacity_pax, notes, created_by,
-        aircraft_manufacturer!manufacturer_id (
-          id,
-          name
-        )
+        range_nm, mtow_kg, cruising_speed, capacity_pax, notes, created_by
       `)
       .order("name")
 
-    if (modelsError) throw modelsError
+    if (modelsError) {
+      console.error('Models query error:', modelsError)
+      throw modelsError
+    }
+
+    console.log('Models query successful:', { modelsCount: models?.length })
+
+    // Get manufacturer data for these models
+    const { data: manufacturers, error: manufacturersError } = await supabase
+      .from("aircraft_manufacturer")
+      .select("id, name")
+
+    if (manufacturersError) {
+      console.error('Manufacturers query error:', manufacturersError)
+      throw manufacturersError
+    }
+
+    console.log('Manufacturers query successful:', { manufacturersCount: manufacturers?.length })
 
     // Then get tenant-specific images for these models
     const { data: images, error: imagesError } = await supabase
@@ -44,18 +57,27 @@ export async function GET() {
       .select("id, aircraft_model_id, public_url, is_primary, display_order")
       .eq("tenant_id", tenantId)
 
-    if (imagesError) throw imagesError
+    if (imagesError) {
+      console.error('Images query error:', imagesError)
+      throw imagesError
+    }
+
+    console.log('Images query successful:', { imagesCount: images?.length })
 
     // Combine the data
     const data = models?.map(model => ({
       ...model,
+      aircraft_manufacturer: manufacturers?.find(m => m.id === model.manufacturer_id) || null,
       aircraft_model_image: images?.filter(img => img.aircraft_model_id === model.id) || []
     })) || []
 
     console.log('Models API response:', { 
       modelsCount: models?.length || 0, 
+      manufacturersCount: manufacturers?.length || 0,
       imagesCount: images?.length || 0,
-      combinedDataCount: data.length 
+      combinedDataCount: data.length,
+      firstModel: models?.[0],
+      firstManufacturer: manufacturers?.[0]
     })
 
     return NextResponse.json({ success: true, data })
