@@ -206,7 +206,7 @@ if (services && Array.isArray(services)) {
 
   const validServices = services.map((s) => ({
     id: s.id || crypto.randomUUID(),
-    quote_id: id, // ✅ always use the quote_id from params
+    quote_id: id, // ✅ always the URL id
     item_id: s.item_id || null,
     name: s.item_id ? itemMap[s.item_id] || "Unnamed item" : s.description || "Custom item",
     description: s.description || itemMap[s.item_id] || "Service item",
@@ -219,18 +219,19 @@ if (services && Array.isArray(services)) {
     created_at: s.created_at || new Date().toISOString(),
   }))
 
-  // 🔹 Upsert
-  const { error: upsertError } = await supabase
-    .from("quote_item")
-    .upsert(validServices, { onConflict: "id" })
+  /* 🧩 Step 1: Upsert if there are any services */
+  if (validServices.length > 0) {
+    const { error: upsertError } = await supabase
+      .from("quote_item")
+      .upsert(validServices, { onConflict: "id" })
 
-  if (upsertError)
-    return NextResponse.json({ error: upsertError.message }, { status: 500 })
+    if (upsertError)
+      return NextResponse.json({ error: upsertError.message }, { status: 500 })
+  }
 
-  // 🔹 Safe delete cleanup
-  const existingIds = validServices.map((s) => s.id).filter(Boolean)
-
-  if (existingIds.length > 0) {
+  /* 🧹 Step 2: Delete cleanup — including full wipe when no services left */
+  if (validServices.length > 0) {
+    const existingIds = validServices.map((s) => s.id).filter(Boolean)
     const idList = `(${existingIds.join(",")})`
     const { error: deleteError } = await supabase
       .from("quote_item")
@@ -240,10 +241,20 @@ if (services && Array.isArray(services)) {
 
     if (deleteError)
       return NextResponse.json({ error: deleteError.message }, { status: 500 })
+  } else {
+    // 🧽 Delete all if none remain in UI
+    const { error: deleteAllError } = await supabase
+      .from("quote_item")
+      .delete()
+      .eq("quote_id", id)
+
+    if (deleteAllError)
+      return NextResponse.json({ error: deleteAllError.message }, { status: 500 })
   }
 
   console.log("💾 Saved services:", JSON.stringify(validServices, null, 2))
 }
+
 
 
   return NextResponse.json({ success: true })
