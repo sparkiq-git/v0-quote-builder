@@ -7,7 +7,7 @@ import { MockStoreProvider } from "@/lib/mock/store"
 // ✅ Sonner + Realtime
 import { Toaster } from "sonner"
 import { LeadListener } from "@/components/realtime/lead-listener"
-import { createClient } from "@/lib/supabase/server" // server-side only
+import { getServerUser } from "@/lib/supabase/server" // server-side only
 
 const geistSans = Geist({
   subsets: ["latin"],
@@ -36,11 +36,8 @@ export default async function RootLayout({
   let tenantId: string | null = null
 
   try {
-    const supabase = createClient()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-    tenantId = user?.app_metadata?.tenant_id ?? null
+    const { tenantId: userTenantId } = await getServerUser()
+    tenantId = userTenantId
   } catch (err) {
     console.warn("Supabase user fetch failed (likely client render):", err)
   }

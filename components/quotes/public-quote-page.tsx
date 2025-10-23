@@ -32,6 +32,8 @@ interface PublicQuotePageProps {
   onDecline?: () => void
   /** Optional verified email for context display */
   verifiedEmail?: string
+  /** Optional quote data (for action link flow) */
+  quote?: any
 }
 
 /* ---------- Primitives ---------- */
@@ -215,7 +217,7 @@ function LegRow({ leg, index }: { leg: any; index: number }) {
 
 /* ===================================================================== */
 
-export default function PublicQuotePage({ params, onAccept, onDecline, verifiedEmail }: PublicQuotePageProps) {
+export default function PublicQuotePage({ params, onAccept, onDecline, verifiedEmail, quote: propQuote }: PublicQuotePageProps) {
   const { getQuoteByToken, dispatch, createItineraryFromQuote, getItineraryByQuoteId } = useMockStore()
   const { toast } = useToast()
   const [hasViewed, setHasViewed] = useState(false)
@@ -224,7 +226,8 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
   const [declineNotes, setDeclineNotes] = useState("")
   const [isLocked, setIsLocked] = useState(false)
 
-  const quote = getQuoteByToken(params.token)
+  const mockQuote = getQuoteByToken(params.token)
+  const quote = propQuote || mockQuote
   const existingItinerary = quote ? getItineraryByQuoteId(quote.id) : null
 
   useEffect(() => {
@@ -253,7 +256,7 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
     setIsLocked(Boolean(isSubmitted || isDeclined))
   }, [quote])
 
-  const selectedOption = quote.options.find((o) => o.id === quote.selectedOptionId) || null
+  const selectedOption = quote?.options?.find((o) => o.id === quote.selectedOptionId) || null
 
   // ======= MODIFIED =======
   const handleSubmitQuote = () => {
@@ -283,12 +286,24 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
   }
   // =========================
 
-  const servicesTotal = quote.services.reduce((sum, s) => sum + s.amount, 0)
+  const servicesTotal = quote?.services?.reduce((sum, s) => sum + s.amount, 0) || 0
   const selectedOptionTotal =
     selectedOption?.operatorCost +
       selectedOption?.commission +
       (selectedOption?.feesEnabled ? selectedOption.fees.reduce((s, f) => s + f.amount, 0) : 0) || 0
   const grandTotal = selectedOptionTotal + servicesTotal
+
+  // Show loading state if quote is not available
+  if (!quote) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading quote...</p>
+        </div>
+      </div>
+    )
+  }
 
   // UI preserved exactly
   return (

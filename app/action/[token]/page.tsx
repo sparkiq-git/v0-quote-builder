@@ -17,6 +17,7 @@ export default function ActionPage({ params }: { params: { token: string } }) {
   const [captcha, setCaptcha] = useState<string | null>(null)
   const [verifying, setVerifying] = useState(false)
   const [verified, setVerified] = useState<any | null>(null)
+  const [quote, setQuote] = useState<any | null>(null)
   const [error, setError] = useState<string | null>(null)
   const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!
 
@@ -58,8 +59,27 @@ export default function ActionPage({ params }: { params: { token: string } }) {
         }),
       })
 
-      console.log("Verification response:", json)
+      console.log("Verification response:", json.data)
       setVerified(json.data)
+      
+      // Fetch the actual quote data
+      if (json.data?.metadata?.quote_id) {
+        try {
+          const quoteRes = await safeFetchJSON(`/api/quotes/${json.data.metadata.quote_id}`, {
+            method: "GET",
+            headers: { "content-type": "application/json" },
+          })
+          setQuote(quoteRes)
+        } catch (quoteErr) {
+          console.error("Failed to fetch quote:", quoteErr)
+          toast({
+            title: "Warning",
+            description: "Quote data could not be loaded, but you can still view the summary.",
+            variant: "destructive",
+          })
+        }
+      }
+      
       toast({
         title: "Verified successfully",
         description: "Your quote is now unlocked.",
@@ -156,6 +176,7 @@ export default function ActionPage({ params }: { params: { token: string } }) {
     <PublicQuotePage
       params={{ token: params.token }}
       verifiedEmail={email}
+      quote={quote}
       onAccept={() => handleConsume("accept")}
       onDecline={() => handleConsume("decline")}
     />
