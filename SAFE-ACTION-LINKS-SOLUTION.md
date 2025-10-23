@@ -7,10 +7,10 @@ I've created a **completely isolated** solution that won't interfere with your e
 ## 📁 **What Was Created (Isolated)**
 
 ### 1. **New Isolated Supabase Client**
-```typescript
+\`\`\`typescript
 // lib/supabase/action-links.ts - COMPLETELY SEPARATE
 export async function createActionLinkClient(useServiceRole = false)
-```
+\`\`\`
 
 ### 2. **Updated Only Action Link Routes**
 - `app/api/action-links/verify/route.ts` - uses isolated client
@@ -37,18 +37,18 @@ export async function createActionLinkClient(useServiceRole = false)
 ## 🎯 **How It Works**
 
 ### **Action Links Use Isolated Client**
-```typescript
+\`\`\`typescript
 // Only action link routes use this
 import { createActionLinkClient } from "@/lib/supabase/action-links"
 const supabase = await createActionLinkClient(true) // service role
-```
+\`\`\`
 
 ### **Everything Else Uses Your Existing Pattern**
-```typescript
+\`\`\`typescript
 // All your existing code continues to use this
 import { createClient } from "@/lib/supabase/server"
 const supabase = await createClient() // your existing pattern
-```
+\`\`\`
 
 ## 🚀 **Benefits**
 

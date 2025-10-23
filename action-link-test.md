@@ -23,7 +23,7 @@
 ## 🧪 **Testing Checklist**
 
 ### **Environment Variables Required**
-```bash
+\`\`\`bash
 # Supabase
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
@@ -43,7 +43,7 @@ FROM_EMAIL=AeroIQ <no-reply@aeroiq.io>
 
 # App
 NEXT_PUBLIC_APP_URL=https://your-domain.com
-```
+\`\`\`
 
 ### **Test Flow**
 
@@ -65,7 +65,7 @@ NEXT_PUBLIC_APP_URL=https://your-domain.com
    - Check audit logs
 
 ### **Database Verification**
-```sql
+\`\`\`sql
 -- Check action links
 SELECT * FROM action_link ORDER BY created_at DESC LIMIT 5;
 
@@ -74,7 +74,7 @@ SELECT * FROM audit_log WHERE action LIKE 'action_link%' ORDER BY created_at DES
 
 -- Check rate limits (if using Upstash)
 SELECT * FROM rate_limits ORDER BY created_at DESC LIMIT 10;
-```
+\`\`\`
 
 ## 🔒 **Security Features**
 
