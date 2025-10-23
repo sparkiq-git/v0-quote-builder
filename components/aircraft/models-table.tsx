@@ -40,7 +40,7 @@ import {
 import { useToast } from "@/hooks/use-toast"
 import { useAircraftModels } from "@/hooks/use-aircraft-models"
 // Removed deleteModel import since users can't delete public models
-import { ModelEditDialog } from "./model-edit-dialog"
+import { ModelImageDialog } from "./model-image-dialog"
 
 export function ModelsTable() {
   const { models, loading, error } = useAircraftModels()
@@ -48,8 +48,8 @@ export function ModelsTable() {
   const [searchTerm, setSearchTerm] = useState("")
   // Removed statusFilter since all models are public
   // Removed delete functionality since users can't delete public models
-  const [editModelId, setEditModelId] = useState<string | null>(null)
-  const [isEditOpen, setIsEditOpen] = useState(false)
+  const [imageModelId, setImageModelId] = useState<string | null>(null)
+  const [imageDialogOpen, setImageDialogOpen] = useState(false)
 
   const filtered = (models || []).filter((m) => {
     const matchesSearch = m.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -78,13 +78,13 @@ export function ModelsTable() {
   return (
     <>
       {/* ✈️ Controlled Edit dialog only */}
-      {editModelId && (
-        <ModelEditDialog
-          modelId={editModelId}
-          open={isEditOpen}
-          onOpenChange={setIsEditOpen}
-        />
-      )}
+        {imageModelId && (
+          <ModelImageDialog
+            modelId={imageModelId}
+            open={imageDialogOpen}
+            onOpenChange={setImageDialogOpen}
+          />
+        )}
 
       <div className="space-y-4">
         {/* 🔍 Search */}
@@ -116,8 +116,8 @@ export function ModelsTable() {
                     key={m.id}
                     className="hover:bg-muted/50 cursor-pointer"
                     onClick={() => {
-                      setEditModelId(m.id)
-                      setIsEditOpen(true)
+                      setImageModelId(m.id)
+                      setImageDialogOpen(true)
                     }}
                   >
                     <TableCell>
@@ -153,8 +153,8 @@ export function ModelsTable() {
                           <DropdownMenuItem
                             onClick={(e) => {
                               e.stopPropagation()
-                              setEditModelId(m.id)
-                              setIsEditOpen(true)
+                              setImageModelId(m.id)
+                              setImageDialogOpen(true)
                             }}
                           >
                             <Edit className="mr-2 h-4 w-4" /> Add Images

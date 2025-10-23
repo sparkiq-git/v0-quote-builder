@@ -32,7 +32,7 @@ import {
 import { useToast } from "@/hooks/use-toast"
 import { useAircraftModels } from "@/hooks/use-aircraft-models"
 // Removed deleteModel import since users can't delete public models
-import { ModelEditDialog } from "./model-edit-dialog"
+import { ModelImageDialog } from "./model-image-dialog"
 
 /* ---------- Image Carousel ---------- */
 function ImageCarousel({ images, alt }: { images: string[]; alt: string }) {
@@ -99,8 +99,8 @@ export function ModelsGrid() {
   const [searchTerm, setSearchTerm] = useState("")
   // Removed statusFilter since all models are public
   // Removed delete functionality since users can't delete public models
-  const [editId, setEditId] = useState<string | null>(null)
-  const [editOpen, setEditOpen] = useState(false)
+  const [imageModelId, setImageModelId] = useState<string | null>(null)
+  const [imageDialogOpen, setImageDialogOpen] = useState(false)
 
   const filtered = (models || []).filter((m) => {
     const matchesSearch = m.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -128,13 +128,13 @@ export function ModelsGrid() {
 
   return (
     <>
-      {editId && (
-        <ModelEditDialog
-          open={editOpen}
-          onOpenChange={setEditOpen}
-          modelId={editId}
-        />
-      )}
+        {imageModelId && (
+          <ModelImageDialog
+            open={imageDialogOpen}
+            onOpenChange={setImageDialogOpen}
+            modelId={imageModelId}
+          />
+        )}
 
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row gap-4">
@@ -156,10 +156,10 @@ export function ModelsGrid() {
               <Card
                 key={m.id}
                 className="hover:shadow-lg transition-shadow cursor-pointer"
-                onClick={() => {
-                  setEditId(m.id)
-                  setEditOpen(true)
-                }}
+                    onClick={() => {
+                      setImageModelId(m.id)
+                      setImageDialogOpen(true)
+                    }}
               >
                 <CardHeader className="p-4">
                   <ImageCarousel images={m.images || []} alt={m.name} />
@@ -195,8 +195,8 @@ export function ModelsGrid() {
                       <DropdownMenuItem
                         onClick={(e) => {
                           e.stopPropagation()
-                          setEditId(m.id)
-                          setEditOpen(true)
+                          setImageModelId(m.id)
+                          setImageDialogOpen(true)
                         }}
                       >
                         <Edit className="mr-2 h-4 w-4" /> Add Images
