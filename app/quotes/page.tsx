@@ -125,6 +125,38 @@ export default function QuotesPage() {
     }
   }
 
+//aqui!
+    const [converting, setConverting] = useState<string | null>(null)
+
+  const handleConvertToInvoice = async (quoteId: string) => {
+    try {
+      setConverting(quoteId)
+      const res = await fetch("/api/invoice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ quote_id: quoteId }),
+      })
+
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Failed to create invoice")
+
+      toast({
+        title: "Invoice created",
+        description: `Invoice ${data.data.invoice.number} created successfully.`,
+      })
+    } catch (err: any) {
+      console.error("❌ Invoice creation failed:", err)
+      toast({
+        title: "Failed to create invoice",
+        description: err.message || "Something went wrong.",
+        variant: "destructive",
+      })
+    } finally {
+      setConverting(null)
+    }
+  }
+//hasta aqui
+
   const filteredQuotes = quotes.filter((quote) => {
     if (statusFilter !== "all" && quote.status !== statusFilter) return false
 
