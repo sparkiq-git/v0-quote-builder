@@ -29,6 +29,7 @@ export default function AircraftImageManager({ aircraftId, tenantId, onImagesUpd
   const [zoom, setZoom] = useState(1)
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null)
   const [imageLoaded, setImageLoaded] = useState(false)
+  const [imageLoadTimeout, setImageLoadTimeout] = useState<NodeJS.Timeout | null>(null)
   const inputRef = useRef<HTMLInputElement | null>(null)
 
   // Load existing images
@@ -71,6 +72,18 @@ export default function AircraftImageManager({ aircraftId, tenantId, onImagesUpd
         setCrop({ x: 0, y: 0 })
         setZoom(1)
         setCroppedAreaPixels(null)
+        
+        // Clear any existing timeout
+        if (imageLoadTimeout) {
+          clearTimeout(imageLoadTimeout)
+        }
+        
+        // Set a fallback timeout to enable the button after 2 seconds
+        const timeout = setTimeout(() => {
+          console.log("Fallback: Enabling crop button after timeout")
+          setImageLoaded(true)
+        }, 2000)
+        setImageLoadTimeout(timeout)
       }
       reader.readAsDataURL(file)
     } else {
@@ -105,7 +118,12 @@ export default function AircraftImageManager({ aircraftId, tenantId, onImagesUpd
     if (!cropFile || !croppedAreaPixels) return
 
     try {
-      const croppedImage = await getCroppedImg(cropPreview!, croppedAreaPixels, 0)
+      const croppedImage = await getCroppedImg(cropPreview!, croppedAreaPixels)
+      if (!croppedImage) {
+        toast({ title: "Crop failed", description: "Failed to generate cropped image", variant: "destructive" })
+        return
+      }
+      
       const file = new File([croppedImage], cropFile.name, { type: cropFile.type })
       
       setImageFiles([...imageFiles, file])
@@ -118,7 +136,15 @@ export default function AircraftImageManager({ aircraftId, tenantId, onImagesUpd
       setCropOpen(false)
       setCropFile(null)
       setCropPreview(null)
+      setImageLoaded(false)
+      
+      // Clear timeout when closing
+      if (imageLoadTimeout) {
+        clearTimeout(imageLoadTimeout)
+        setImageLoadTimeout(null)
+      }
     } catch (error) {
+      console.error("Crop error:", error)
       toast({ title: "Crop failed", description: "Failed to crop image", variant: "destructive" })
     }
   }
@@ -286,7 +312,15 @@ export default function AircraftImageManager({ aircraftId, tenantId, onImagesUpd
                   onCropChange={setCrop}
                   onZoomChange={setZoom}
                   onCropComplete={handleCropComplete}
-                  onImageLoaded={() => setImageLoaded(true)}
+                  onImageLoaded={() => {
+                    console.log("Image loaded in cropper")
+                    // Clear the fallback timeout since image loaded properly
+                    if (imageLoadTimeout) {
+                      clearTimeout(imageLoadTimeout)
+                      setImageLoadTimeout(null)
+                    }
+                    setImageLoaded(true)
+                  }}
                 />
               )}
             </div>
@@ -307,7 +341,11 @@ export default function AircraftImageManager({ aircraftId, tenantId, onImagesUpd
               <Button variant="outline" onClick={() => setCropOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleCropConfirm} disabled={!imageLoaded}>
+              <Button 
+                onClick={handleCropConfirm} 
+                disabled={!imageLoaded}
+                title={!imageLoaded ? "Waiting for image to load..." : "Ready to crop"}
+              >
                 <Crop className="mr-2 h-4 w-4" />
                 Crop & Add
               </Button>
