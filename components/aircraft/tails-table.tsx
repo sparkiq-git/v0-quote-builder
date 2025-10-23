@@ -18,9 +18,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Search, MoreHorizontal, Edit, Archive, Trash2, Plane, Plus, ArchiveRestore } from "lucide-react"
+import { Search, MoreHorizontal, Edit, Archive, Trash2, Plane, Plus, ArchiveRestore, ImageIcon } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { TailCreateDialog } from "./tail-create-dialog"
+import { TailImageDialog } from "./tail-image-dialog"
 import { computeEffectiveTail } from "@/lib/utils/aircraft"
 import { useAircraft } from "@/hooks/use-aircraft"
 
@@ -34,6 +35,8 @@ export function TailsTable() {
   const [deleteTailId, setDeleteTailId] = useState<string | null>(null)
   const [editTailId, setEditTailId] = useState<string | null>(null)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [imageTailId, setImageTailId] = useState<string | null>(null)
+  const [imageDialogOpen, setImageDialogOpen] = useState(false)
 
   const filteredTails = aircraft.filter((tail) => {
     const model = tail.aircraftModel
@@ -307,6 +310,13 @@ export function TailsTable() {
                               Edit
                             </DropdownMenuItem>
                           </TailCreateDialog>
+                          <DropdownMenuItem onClick={() => {
+                            setImageTailId(tail.id)
+                            setImageDialogOpen(true)
+                          }}>
+                            <ImageIcon className="mr-2 h-4 w-4" />
+                            Add Images
+                          </DropdownMenuItem>
                           {!tail.isArchived && (
                             <DropdownMenuItem onClick={() => handleArchiveTail(tail.id)}>
                               <Archive className="mr-2 h-4 w-4" />
@@ -356,6 +366,9 @@ export function TailsTable() {
 
       {/* Edit Dialog */}
       <TailCreateDialog tailId={editTailId || undefined} open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen} />
+
+      {/* Image Dialog */}
+      <TailImageDialog tailId={imageTailId} open={imageDialogOpen} onOpenChange={setImageDialogOpen} />
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!deleteTailId} onOpenChange={() => setDeleteTailId(null)}>
