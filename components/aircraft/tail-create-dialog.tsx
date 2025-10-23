@@ -25,8 +25,10 @@ import { TailFormSchema, type TailFormData } from "@/lib/schemas/aircraft"
 import { useToast } from "@/hooks/use-toast"
 import { useAircraftModels } from "@/hooks/use-aircraft-models"
 import { useOperators } from "@/hooks/use-operators"
+import { useAircraftAmenities } from "@/hooks/use-amenities"
 import { ModelCreateDialog } from "./model-create-dialog"
 import AircraftImageManager from "./aircraft-image-manager"
+import { AmenitySelector } from "./amenity-selector"
 import { Check, ChevronsUpDown, Plus } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { supabase } from "@/lib/supabase/client"
@@ -41,6 +43,7 @@ interface TailCreateDialogProps {
 export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpenChange }: TailCreateDialogProps) {
   const { models, loading: modelsLoading } = useAircraftModels()
   const { operators, loading: operatorsLoading } = useOperators()
+  const { aircraftAmenities, loading: amenitiesLoading } = useAircraftAmenities(tailId || undefined)
   const { toast } = useToast()
   const [internalOpen, setInternalOpen] = useState(false)
   const [modelComboOpen, setModelComboOpen] = useState(false)
@@ -52,6 +55,7 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
   const [existingTail, setExistingTail] = useState<any>(null)
   const [loading, setLoading] = useState(false)
   const [defaultTypeRatingId, setDefaultTypeRatingId] = useState<string | null>(null)
+  const [selectedAmenityIds, setSelectedAmenityIds] = useState<string[]>([])
 
   const open = controlledOpen !== undefined ? controlledOpen : internalOpen
   const setOpen = onOpenChange || setInternalOpen
@@ -164,6 +168,14 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
       console.log("❌ Form validation errors detected:", errors)
     }
   }, [errors])
+
+  // Load existing amenities when editing
+  useEffect(() => {
+    if (isEditing && aircraftAmenities.length > 0) {
+      const amenityIds = aircraftAmenities.map(aa => aa.amenity_id)
+      setSelectedAmenityIds(amenityIds)
+    }
+  }, [isEditing, aircraftAmenities])
 
   const selectedModelId = watch("modelId")
   const selectedModel = selectedModelId ? models.find(m => m.id === selectedModelId) : null
@@ -323,6 +335,27 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
         setExistingTail(newTail)
         // Don't close the dialog, allow user to add images
         return
+      }
+
+      // Update amenities for the aircraft
+      if (selectedAmenityIds.length > 0 || isEditing) {
+        try {
+          const amenitiesResponse = await fetch(`/api/aircraft/${isEditing ? tailId : newTail.id}/amenities`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              amenityIds: selectedAmenityIds
+            })
+          })
+
+          if (!amenitiesResponse.ok) {
+            console.warn("Failed to update amenities, but aircraft was saved successfully")
+          }
+        } catch (amenitiesError) {
+          console.warn("Error updating amenities:", amenitiesError)
+        }
       }
 
       // Close the dialog after successful update
@@ -653,6 +686,15 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
                 </div>
               )}
             </div>
+          </div>
+
+          {/* Amenities Section */}
+          <div className="mt-8 border-t pt-6">
+            <AmenitySelector
+              selectedAmenityIds={selectedAmenityIds}
+              onSelectionChange={setSelectedAmenityIds}
+              disabled={isSubmitting}
+            />
           </div>
 
           {/* Image Management Section */}
