@@ -134,6 +134,31 @@ const totalOptions = useMemo(() => {
     }
   }
 
+useEffect(() => {
+  if (!quote?.options?.length) return
+  const needsAircraft = quote.options.some(o => !!o.aircraft_id)
+  if (!needsAircraft) return
+
+  let cancelled = false
+  ;(async () => {
+    try {
+      const res = await fetch("/api/aircraft-full", { cache: "no-store" })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json?.error || "Failed to load aircraft")
+      if (cancelled) return
+      const map = Object.fromEntries((json?.data || []).map((a: any) => [a.id, a]))
+      setAircraftMap(map)
+    } catch (e) {
+      console.error("Aircraft fetch failed:", e)
+    }
+  })()
+  return () => { cancelled = true }
+}, [quote?.options])
+
+
+
+
+
   /* ---------------- 🧾 Render ---------------- */
   return (
     <Card>
