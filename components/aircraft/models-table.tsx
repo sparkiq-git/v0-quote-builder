@@ -38,16 +38,12 @@ import {
 } from "lucide-react"
 
 import { useToast } from "@/hooks/use-toast"
+import { useAircraftModels } from "@/hooks/use-aircraft-models"
 import { updateModel, deleteModel } from "@/lib/supabase/queries/models"
-import type { AircraftModelRecord } from "@/lib/types"
 import { ModelEditDialog } from "./model-edit-dialog"
 
-interface ModelsTableProps {
-  models: AircraftModelRecord[]
-  onRefresh?: () => void
-}
-
-export function ModelsTable({ models, onRefresh }: ModelsTableProps) {
+export function ModelsTable() {
+  const { models, loading, error } = useAircraftModels()
   const { toast } = useToast()
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState<"active" | "all">("active")
@@ -66,7 +62,7 @@ export function ModelsTable({ models, onRefresh }: ModelsTableProps) {
     try {
       await updateModel(id, { isArchived })
       toast({ title: `Model ${isArchived ? "archived" : "unarchived"}` })
-      onRefresh?.()
+      // Refresh will happen automatically via the hook
     } catch (err) {
       toast({
         title: "Error updating model",
@@ -81,7 +77,7 @@ export function ModelsTable({ models, onRefresh }: ModelsTableProps) {
       await deleteModel(id)
       toast({ title: "Model deleted" })
       setDeleteModelId(null)
-      onRefresh?.()
+      // Refresh will happen automatically via the hook
     } catch (err) {
       toast({
         title: "Error deleting model",
@@ -89,6 +85,23 @@ export function ModelsTable({ models, onRefresh }: ModelsTableProps) {
         variant: "destructive",
       })
     }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-center">
+        <h3 className="text-lg font-semibold mb-2">Error loading models</h3>
+        <p className="text-muted-foreground mb-6 max-w-md">{error}</p>
+      </div>
+    )
   }
 
   return (

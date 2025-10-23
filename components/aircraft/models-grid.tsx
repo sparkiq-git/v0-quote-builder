@@ -30,8 +30,8 @@ import {
 } from "lucide-react"
 
 import { useToast } from "@/hooks/use-toast"
+import { useAircraftModels } from "@/hooks/use-aircraft-models"
 import { updateModel, deleteModel } from "@/lib/supabase/queries/models"
-import type { AircraftModelRecord } from "@/lib/types"
 import { ModelEditDialog } from "./model-edit-dialog"
 
 /* ---------- Image Carousel ---------- */
@@ -93,12 +93,8 @@ function ImageCarousel({ images, alt }: { images: string[]; alt: string }) {
 }
 
 /* ---------- ModelsGrid ---------- */
-interface ModelsGridProps {
-  models: AircraftModelRecord[]
-  onRefresh?: () => void
-}
-
-export function ModelsGrid({ models, onRefresh }: ModelsGridProps) {
+export function ModelsGrid() {
+  const { models, loading, error } = useAircraftModels()
   const { toast } = useToast()
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState<"active" | "all">("active")
@@ -127,10 +123,27 @@ export function ModelsGrid({ models, onRefresh }: ModelsGridProps) {
       await deleteModel(id)
       toast({ title: "Model deleted" })
       setDeleteId(null)
-      onRefresh?.()
+      // Refresh will happen automatically via the hook
     } catch (e: any) {
       toast({ title: "Error", description: e.message, variant: "destructive" })
     }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-center">
+        <h3 className="text-lg font-semibold mb-2">Error loading models</h3>
+        <p className="text-muted-foreground mb-6 max-w-md">{error}</p>
+      </div>
+    )
   }
 
   return (

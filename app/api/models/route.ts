@@ -25,7 +25,19 @@ export async function GET() {
 
     const { data, error } = await supabase
       .from("aircraft_model")
-      .select("id, manufacturer_id, name, icao_type_designator, size_code, tenant_id, created_at")
+      .select(`
+        id, manufacturer_id, name, icao_type_designator, size_code, tenant_id, created_at,
+        aircraft_manufacturer!manufacturer_id (
+          id,
+          name
+        ),
+        aircraft_model_image (
+          id,
+          public_url,
+          is_primary,
+          display_order
+        )
+      `)
       .eq("tenant_id", tenantId)
       .order("name")
 

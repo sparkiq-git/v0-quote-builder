@@ -1,11 +1,10 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Plus, Grid3x3, TableIcon } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
 
 import { ModelsTable } from "@/components/aircraft/models-table"
 import { ModelsGrid } from "@/components/aircraft/models-grid"
@@ -14,60 +13,17 @@ import { TailsGrid } from "@/components/aircraft/tails-grid"
 import { ModelCreateDialog } from "@/components/aircraft/model-create-dialog"
 import { TailCreateDialog } from "@/components/aircraft/tail-create-dialog"
 
-import { getModels } from "@/lib/supabase/queries/models"
-import { getAircraft } from "@/lib/supabase/queries/aircraft"
-import type { AircraftModelRecord, AircraftRecord } from "@/lib/types"
-
 export default function AircraftPage() {
-  const { toast } = useToast()
   const [view, setView] = useState<"grid" | "table">("grid")
   const [activeTab, setActiveTab] = useState<"models" | "tails">("models")
   const [showModelDialog, setShowModelDialog] = useState(false)
   const [showTailDialog, setShowTailDialog] = useState(false)
-  const [models, setModels] = useState<AircraftModelRecord[]>([])
-  const [tails, setTails] = useState<AircraftRecord[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  const refreshModels = useCallback(async () => setModels(await getModels()), [])
-  const refreshTails = useCallback(async () => setTails(await getAircraft()), [])
-
-  useEffect(() => {
-    async function loadData() {
-      try {
-        setLoading(true)
-        const [m, t] = await Promise.all([getModels(), getAircraft()])
-        setModels(m)
-        setTails(t)
-      } catch (e: any) {
-        toast({ title: "Error loading data", description: e.message, variant: "destructive" })
-        setError(e.message)
-      } finally {
-        setLoading(false)
-      }
-    }
-    loadData()
-  }, [toast])
-
-  if (loading)
-    return (
-      <div className="flex justify-center items-center h-[60vh]">
-        <p className="text-muted-foreground">Loading aircraft data...</p>
-      </div>
-    )
-
-  if (error)
-    return (
-      <div className="flex justify-center items-center h-[60vh]">
-        <p className="text-red-500">Error: {error}</p>
-      </div>
-    )
 
   return (
     <>
       {/* Single, top-level dialogs */}
-      <ModelCreateDialog open={showModelDialog} onOpenChange={setShowModelDialog} onCreated={refreshModels} />
-      <TailCreateDialog open={showTailDialog} onOpenChange={setShowTailDialog} onCreated={refreshTails} />
+      <ModelCreateDialog open={showModelDialog} onOpenChange={setShowModelDialog} />
+      <TailCreateDialog open={showTailDialog} onOpenChange={setShowTailDialog} />
 
       <div className="space-y-6">
         <div className="flex items-center justify-between">
@@ -114,11 +70,7 @@ export default function AircraftPage() {
                 <CardDescription>Browse and manage aircraft models</CardDescription>
               </CardHeader>
               <CardContent>
-                {view === "grid" ? (
-                  <ModelsGrid models={models} onRefresh={refreshModels} />
-                ) : (
-                  <ModelsTable models={models} onRefresh={refreshModels} />
-                )}
+                {view === "grid" ? <ModelsGrid /> : <ModelsTable />}
               </CardContent>
             </Card>
           </TabsContent>
@@ -130,7 +82,7 @@ export default function AircraftPage() {
                 <CardDescription>Manage tail numbers</CardDescription>
               </CardHeader>
               <CardContent>
-                {view === "grid" ? <TailsGrid tails={tails} /> : <TailsTable tails={tails} />}
+                {view === "grid" ? <TailsGrid /> : <TailsTable />}
               </CardContent>
             </Card>
           </TabsContent>

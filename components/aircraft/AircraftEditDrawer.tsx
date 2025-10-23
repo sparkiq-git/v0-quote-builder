@@ -138,11 +138,11 @@ export function AircraftEditDrawer({ aircraftId, open, onOpenChange, onUpdated, 
           <div className="grid grid-cols-3 gap-3">
             <div className="grid gap-1.5">
               <Label>Capacity (pax)</Label>
-              <Input type="number" value={form.capacity_pax ?? ""} onChange={(e)=>set("capacity_pax", e.target.value ? Number(e.target.value) : null)} />
+              <Input type="number" value={form.capacity_pax ?? ""} onChange={(e)=>set("capacity_pax", e.target.value ? (isNaN(Number(e.target.value)) ? null : Number(e.target.value)) : null)} />
             </div>
             <div className="grid gap-1.5">
               <Label>Range (nm)</Label>
-              <Input type="number" value={form.range_nm ?? ""} onChange={(e)=>set("range_nm", e.target.value ? Number(e.target.value) : null)} />
+              <Input type="number" value={form.range_nm ?? ""} onChange={(e)=>set("range_nm", e.target.value ? (isNaN(Number(e.target.value)) ? null : Number(e.target.value)) : null)} />
             </div>
             <div className="grid gap-1.5">
               <Label>Home Base</Label>

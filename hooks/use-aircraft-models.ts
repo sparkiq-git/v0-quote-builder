@@ -10,6 +10,7 @@ export interface AircraftModelData {
   defaultRangeNm?: number
   defaultSpeedKnots?: number
   images: string[]
+  isArchived?: boolean
 }
 
 export function useAircraftModels() {
@@ -45,6 +46,7 @@ export function useAircraftModels() {
             })
             .map((img: any) => img.public_url)
             .filter(Boolean) || [],
+          isArchived: false, // Default to not archived
         }))
         
         setModels(transformedData)
