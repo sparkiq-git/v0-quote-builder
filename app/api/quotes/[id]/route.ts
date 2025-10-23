@@ -232,7 +232,8 @@ if (services && Array.isArray(services)) {
     .from("quote_item")
     .delete()
     .eq("quote_id", id)
-    .not("id", "in", `(${existingIds.map((x) => `'${x}'`).join(",")})`))
+    .not("id", "in", `(${existingIds.join(",")})`)
+
 
   if (deleteError)
     return NextResponse.json({ error: deleteError.message }, { status: 500 })
