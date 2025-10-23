@@ -13,14 +13,18 @@ const VerifySchema = z.object({
 
 export async function POST(req: Request) {
   try {
+    console.log("🔍 Action link verify route started")
     const ip = req.headers.get("x-forwarded-for") ?? "unknown"
     const ua = req.headers.get("user-agent") ?? "unknown"
+    console.log("📊 Request details:", { ip, ua })
 
     // Parse & validate body
     let body: any
     try {
       body = await req.json()
-    } catch {
+      console.log("📦 Request body parsed successfully")
+    } catch (err) {
+      console.error("❌ JSON parse error:", err)
       return NextResponse.json({ ok: false, error: "Invalid JSON body" }, { status: 400 })
     }
 
@@ -30,17 +34,27 @@ export async function POST(req: Request) {
     }
 
     const { token, email, captchaToken } = parsed.data
+    console.log("✅ Request validation passed")
 
     // --- Rate limit by IP ---
-    const ipRes = await rlPerIp.limit(`verify:ip:${ip}`)
-    if (!ipRes.success) {
-      return NextResponse.json({ ok: false, error: "Too many requests" }, { status: 429 })
+    try {
+      const ipRes = await rlPerIp.limit(`verify:ip:${ip}`)
+      console.log("📊 IP rate limit result:", ipRes)
+      if (!ipRes.success) {
+        return NextResponse.json({ ok: false, error: "Too many requests" }, { status: 429 })
+      }
+    } catch (err) {
+      console.error("❌ IP rate limit error:", err)
+      return NextResponse.json({ ok: false, error: "Rate limiting failed" }, { status: 500 })
     }
 
     // --- Verify CAPTCHA ---
     try {
+      console.log("🔐 Verifying CAPTCHA...")
       await verifyTurnstile(captchaToken)
+      console.log("✅ CAPTCHA verification passed")
     } catch (err: any) {
+      console.error("❌ CAPTCHA verification failed:", err)
       return NextResponse.json(
         { ok: false, error: `Turnstile verification failed: ${err.message}` },
         { status: 400 }
@@ -48,18 +62,35 @@ export async function POST(req: Request) {
     }
 
     const tokenHash = sha256Base64url(token)
-    const supabase = await createActionLinkClient(true)
+    console.log("🔑 Token hash created:", tokenHash.substring(0, 10) + "...")
+    
+    let supabase
+    try {
+      supabase = await createActionLinkClient(true)
+      console.log("✅ Supabase client created")
+    } catch (err) {
+      console.error("❌ Supabase client creation failed:", err)
+      return NextResponse.json({ ok: false, error: "Database connection failed" }, { status: 500 })
+    }
 
     // --- Fetch link record ---
-    const { data: link, error: linkError } = await supabase
-      .from("action_link")
-      .select("*")
-      .eq("token_hash", tokenHash)
-      .single()
+    let link
+    try {
+      const { data: linkData, error: linkError } = await supabase
+        .from("action_link")
+        .select("*")
+        .eq("token_hash", tokenHash)
+        .single()
 
-    if (linkError || !link) {
-      console.error("Link fetch error:", linkError)
-      return NextResponse.json({ ok: false, error: "Invalid or missing link" }, { status: 400 })
+      if (linkError || !linkData) {
+        console.error("❌ Link fetch error:", linkError)
+        return NextResponse.json({ ok: false, error: "Invalid or missing link" }, { status: 400 })
+      }
+      link = linkData
+      console.log("✅ Link found:", link.id)
+    } catch (err) {
+      console.error("❌ Database query error:", err)
+      return NextResponse.json({ ok: false, error: "Database query failed" }, { status: 500 })
     }
 
     // --- Rate limit per token ---
