@@ -259,6 +259,7 @@ export default function AircraftImageManager({ aircraftId, tenantId, onImagesUpd
         />
         <div className="flex gap-2 mb-2">
           <Button
+            type="button"
             onClick={() => inputRef.current?.click()}
             variant="outline"
           >
@@ -311,6 +312,7 @@ export default function AircraftImageManager({ aircraftId, tenantId, onImagesUpd
                   className="w-full h-24 object-cover rounded"
                 />
                 <Button
+                  type="button"
                   size="sm"
                   variant="destructive"
                   className="absolute top-1 right-1 h-6 w-6 p-0"
@@ -321,7 +323,12 @@ export default function AircraftImageManager({ aircraftId, tenantId, onImagesUpd
               </div>
             ))}
           </div>
-          <Button onClick={uploadImages} disabled={uploading} className="w-full">
+          <Button 
+            type="button"
+            onClick={uploadImages} 
+            disabled={uploading} 
+            className="w-full"
+          >
             <UploadCloud className="mr-2 h-4 w-4" />
             {uploading ? "Uploading..." : `Upload ${imageFiles.length} Image(s)`}
           </Button>
@@ -341,6 +348,7 @@ export default function AircraftImageManager({ aircraftId, tenantId, onImagesUpd
                   className="w-full h-24 object-cover rounded"
                 />
                 <Button
+                  type="button"
                   size="sm"
                   variant="destructive"
                   className="absolute top-1 right-1 h-6 w-6 p-0"
@@ -399,10 +407,11 @@ export default function AircraftImageManager({ aircraftId, tenantId, onImagesUpd
             </div>
             
             <div className="flex justify-end space-x-2">
-              <Button variant="outline" onClick={() => setCropOpen(false)}>
+              <Button type="button" variant="outline" onClick={() => setCropOpen(false)}>
                 Cancel
               </Button>
               <Button 
+                type="button"
                 onClick={handleCropConfirm} 
                 disabled={!imageLoaded}
                 title={!imageLoaded ? "Waiting for image to load..." : "Ready to crop"}
