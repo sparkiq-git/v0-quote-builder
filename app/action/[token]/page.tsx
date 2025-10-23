@@ -37,12 +37,12 @@ export default function ActionPage({ params }: { params: { token: string } }) {
     console.error("Missing NEXT_PUBLIC_TURNSTILE_SITE_KEY environment variable")
   }
 
-  // --- Safe fetch with clone for dual parsing ---
+  // --- Safe fetch with proper response handling ---
   async function safeFetchJSON(url: string, options: RequestInit) {
     const res = await fetch(url, options)
     
-    // Only clone if we need to parse as text (for error cases)
-    let cloned: Response | null = null
+    // Clone the response before consuming it
+    const cloned = res.clone()
     
     try {
       const json = await res.json()
@@ -52,10 +52,7 @@ export default function ActionPage({ params }: { params: { token: string } }) {
       }
       return json
     } catch (jsonErr) {
-      // Only clone if JSON parsing failed
-      if (!cloned) {
-        cloned = res.clone()
-      }
+      // If JSON parsing failed, try to get text from the cloned response
       try {
         const text = await cloned.text()
         console.error(`Non-JSON response from ${url}:`, text)
