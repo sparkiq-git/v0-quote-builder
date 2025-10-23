@@ -121,6 +121,8 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
     setValue,
     watch,
     control,
+    getValues,
+    getFieldState,
     formState: { errors, isSubmitting },
   } = useForm<TailFormData>({
     resolver: zodResolver(TailFormSchema),
@@ -226,7 +228,10 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
 
   const onSubmit = async (data: TailFormData) => {
     try {
+      console.log("🚀 Form submission started:", { data, isEditing, existingTail: !!existingTail })
+      
       if (!tenantId) {
+        console.error("❌ No tenant ID found")
         toast({
           title: "Error",
           description: "Tenant ID not found. Please refresh and try again.",
@@ -648,6 +653,7 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
                         setExistingTail(data)
                         
                         // Update the form with the refreshed data
+                        console.log("🔄 Resetting form with refreshed data:", data)
                         reset({
                           modelId: data.model_id,
                           tailNumber: data.tail_number,
@@ -661,6 +667,14 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
                           speedKnotsOverride: data.cruising_speed,
                           images: [],
                         })
+                        console.log("✅ Form reset completed")
+                        
+                        // Check form validity after reset
+                        setTimeout(() => {
+                          const formState = getValues()
+                          const formErrors = getFieldState("modelId").error || getFieldState("tailNumber").error
+                          console.log("📋 Form state after reset:", { formState, formErrors })
+                        }, 100)
                       } catch (error) {
                         console.error("Error refreshing tail data:", error)
                       }
