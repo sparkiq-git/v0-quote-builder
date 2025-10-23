@@ -15,7 +15,14 @@ export async function GET() {
     .select(`
       id, tail_number, model_id, manufacturer_id, operator_id,
       type_rating_id, status, home_base, capacity_pax, year_of_manufacture,
-      serial_number, range_nm, mtow_kg, notes, created_at, updated_at,
+      serial_number, range_nm, mtow_kg, notes, year_of_refurbish,
+      cruising_speed, created_at, updated_at,
+      operator!operator_id (
+        id,
+        name,
+        icao_code,
+        iata_code
+      ),
       aircraft_model!model_id (
         id,
         name,

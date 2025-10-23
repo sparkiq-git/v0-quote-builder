@@ -286,6 +286,8 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
         })
       }
 
+      // Refresh the page to update the aircraft list
+      window.location.reload()
       setOpen(false)
     } catch (error: any) {
       console.error("Error in form submission:", error)
@@ -613,7 +615,7 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
           </div>
 
           {/* Image Management Section */}
-          {tenantId && (isEditing ? existingTail : true) && (
+          {tenantId && (
             <div className="mt-8 border-t pt-6">
               <h3 className="text-lg font-semibold mb-4">Aircraft Images</h3>
               {isEditing && existingTail ? (

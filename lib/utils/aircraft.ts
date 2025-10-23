@@ -1,13 +1,20 @@
-import type { AircraftModel, AircraftTail, EffectiveTail } from "@/lib/types"
+export interface EffectiveTail {
+  capacity: number
+  rangeNm: number
+  speedKnots: number
+  isCapOverridden: boolean
+  isRangeOverridden: boolean
+  isSpeedOverridden: boolean
+}
 
-export function computeEffectiveTail(model: AircraftModel, tail: AircraftTail): EffectiveTail {
+export function computeEffectiveTail(model: any, tail: any): EffectiveTail {
   return {
-    capacity: tail.capacityOverride ?? model.defaultCapacity ?? 0,
-    rangeNm: tail.rangeNmOverride ?? model.defaultRangeNm ?? 0,
-    speedKnots: tail.speedKnotsOverride ?? model.defaultSpeedKnots ?? 0,
-    isCapOverridden: tail.capacityOverride !== undefined,
-    isRangeOverridden: tail.rangeNmOverride !== undefined,
-    isSpeedOverridden: tail.speedKnotsOverride !== undefined,
+    capacity: tail.capacityPax ?? model?.defaultCapacity ?? 0,
+    rangeNm: tail.rangeNm ?? model?.defaultRangeNm ?? 0,
+    speedKnots: tail.cruisingSpeed ?? model?.defaultSpeedKnots ?? 0,
+    isCapOverridden: tail.capacityPax !== null && tail.capacityPax !== undefined,
+    isRangeOverridden: tail.rangeNm !== null && tail.rangeNm !== undefined,
+    isSpeedOverridden: tail.cruisingSpeed !== null && tail.cruisingSpeed !== undefined,
   }
 }
 

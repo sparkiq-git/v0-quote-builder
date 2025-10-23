@@ -37,7 +37,7 @@ export const TailFormSchema = z.object({
     .min(1900)
     .max(new Date().getFullYear() + 5)
     .optional(),
-  status: z.enum(["active", "mx", "inactive", "sold"]).default("active"),
+  status: z.enum(["active", "inactive"]).default("active"),
   capacityOverride: z.number().int().nonnegative().optional(),
   rangeNmOverride: z.number().int().nonnegative().optional(),
   speedKnotsOverride: z.number().nonnegative().optional(),
