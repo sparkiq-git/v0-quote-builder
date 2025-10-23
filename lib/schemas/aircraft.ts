@@ -36,6 +36,7 @@ export const TailFormSchema = z.object({
     .int()
     .min(1900)
     .max(new Date().getFullYear() + 5)
+    .nullable()
     .optional(),
   status: z.enum(["active", "inactive"]).default("active"),
   capacityOverride: z.number().int().nonnegative().optional(),

@@ -151,7 +151,7 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
         operator: existingTail.operator_id || "",
         amenities: existingTail.notes || "",
         year: existingTail.year_of_manufacture,
-        yearOfRefurbishment: existingTail.year_of_refurbish,
+        yearOfRefurbishment: existingTail.year_of_refurbish || undefined,
         status: existingTail.status?.toLowerCase() || "active",
         capacityOverride: existingTail.capacity_pax,
         rangeNmOverride: existingTail.range_nm,
@@ -274,9 +274,11 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
           description: "The aircraft tail has been updated successfully.",
         })
       } else {
-        const { error } = await supabase
+        const { data: newTail, error } = await supabase
           .from("aircraft")
           .insert(aircraftData)
+          .select()
+          .single()
 
         if (error) throw error
 
@@ -284,6 +286,11 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
           title: "Tail created",
           description: "The aircraft tail has been created successfully.",
         })
+
+        // Set the new tail data to allow image management
+        setExistingTail(newTail)
+        // Don't close the dialog, allow user to add images
+        return
       }
 
       // Refresh the page to update the aircraft list
@@ -618,7 +625,7 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
           {tenantId && (
             <div className="mt-8 border-t pt-6">
               <h3 className="text-lg font-semibold mb-4">Aircraft Images</h3>
-              {isEditing && existingTail ? (
+              {isEditing && existingTail && tenantId ? (
                 <AircraftImageManager 
                   aircraftId={existingTail.id} 
                   tenantId={tenantId} 
@@ -634,9 +641,16 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
                   }}
                 />
               ) : (
-                <p className="text-sm text-muted-foreground">
-                  Save the aircraft first to manage images.
-                </p>
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">
+                    {!isEditing ? "Save the aircraft first to manage images." : "Loading..."}
+                  </p>
+                  {!tenantId && (
+                    <p className="text-sm text-destructive">
+                      Unable to load tenant information. Please refresh the page.
+                    </p>
+                  )}
+                </div>
               )}
             </div>
           )}
