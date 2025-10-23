@@ -11,8 +11,8 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
-import { Search, Eye, Trash2, Plus, FileText } from "lucide-react"
-import { formatCurrency, formatDate, formatTimeAgo } from "@/lib/utils/format"
+import { Eye, Trash2, Search, Plus } from "lucide-react"
+import { formatDate, formatTimeAgo, formatCurrency } from "@/lib/utils/format"
 import { useToast } from "@/hooks/use-toast"
 import {
   Dialog,
@@ -54,7 +54,7 @@ export default function InvoicesPage() {
             status,
             aircraft_label,
             summary_itinerary,
-            quote:quote_id(contact_name, contact_company, contact_email)
+            quote:quote_id(contact_name, contact_company)
           `)
           .eq("tenant_id", tenantId)
           .order("issued_at", { ascending: false })
@@ -73,7 +73,6 @@ export default function InvoicesPage() {
           customer: {
             name: inv.quote?.contact_name || "—",
             company: inv.quote?.contact_company || "",
-            email: inv.quote?.contact_email || "",
           },
         }))
         setInvoices(mapped)
@@ -92,35 +91,33 @@ export default function InvoicesPage() {
     fetchInvoices()
   }, [toast])
 
-  /* ---------------------- Filtering ---------------------- */
-  const filteredInvoices = invoices.filter((invoice) => {
-    if (statusFilter !== "all" && invoice.status !== statusFilter) return false
-
+  // 🔍 Filter logic
+  const filteredInvoices = invoices.filter((inv) => {
+    if (statusFilter !== "all" && inv.status !== statusFilter) return false
     if (searchQuery) {
-      const query = searchQuery.toLowerCase()
-      const matchesName = invoice.customer.name.toLowerCase().includes(query)
-      const matchesEmail = invoice.customer.email.toLowerCase().includes(query)
-      const matchesCompany = invoice.customer.company?.toLowerCase().includes(query)
-      const matchesNumber = invoice.number?.toLowerCase().includes(query)
-      if (!matchesName && !matchesEmail && !matchesCompany && !matchesNumber) return false
+      const q = searchQuery.toLowerCase()
+      const matches =
+        inv.number?.toLowerCase().includes(q) ||
+        inv.customer.name.toLowerCase().includes(q) ||
+        inv.customer.company.toLowerCase().includes(q)
+      return matches
     }
-
     return true
   })
 
-  /* ---------------------- Delete Invoice ---------------------- */
-  const handleDeleteInvoice = (id: string) => {
+  // 🗑️ Delete handling
+  const handleDelete = (id: string) => {
     setInvoiceToDelete(id)
     setDeleteDialogOpen(true)
   }
 
-  const confirmDeleteInvoice = async () => {
+  const confirmDelete = async () => {
     if (!invoiceToDelete) return
     try {
       const { error } = await supabase.from("invoice").delete().eq("id", invoiceToDelete)
       if (error) throw error
       setInvoices((prev) => prev.filter((i) => i.id !== invoiceToDelete))
-      toast({ title: "Invoice deleted", description: "The invoice has been removed successfully." })
+      toast({ title: "Invoice deleted", description: "The invoice was removed successfully." })
     } catch (err: any) {
       toast({
         title: "Delete failed",
@@ -133,7 +130,7 @@ export default function InvoicesPage() {
     }
   }
 
-  /* ---------------------- Loading / Empty ---------------------- */
+  // 🕒 Loading
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -142,20 +139,18 @@ export default function InvoicesPage() {
     )
   }
 
-  /* ---------------------- Render ---------------------- */
+  // 🧾 UI Layout
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Invoices</h1>
-          <p className="text-muted-foreground text-sm">
-            Manage and track issued invoices for your quotes.
-          </p>
+          <p className="text-sm text-muted-foreground">Review and manage issued invoices</p>
         </div>
         <Button asChild>
           <Link href="/quotes">
-            <FileText className="mr-2 h-4 w-4" />
-            Back to Quotes
+            <Plus className="mr-2 h-4 w-4" />
+            Create from Quote
           </Link>
         </Button>
       </div>
@@ -165,26 +160,21 @@ export default function InvoicesPage() {
           <div className="flex items-center justify-between">
             <div>
               <CardTitle>All Invoices</CardTitle>
-              <CardDescription>View and manage billing documents</CardDescription>
+              <CardDescription>Track payment status and issued documents</CardDescription>
             </div>
-            <Button asChild variant="outline">
-              <Link href="/quotes">
-                <Plus className="mr-2 h-4 w-4" />
-                New Invoice
-              </Link>
-            </Button>
           </div>
 
           <div className="flex gap-2 mt-4">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search by number, name, email, or company..."
+                placeholder="Search by number, name, or company..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
               />
             </div>
+
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Status" />
@@ -205,7 +195,7 @@ export default function InvoicesPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Invoice</TableHead>
+                  <TableHead>Details</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Amount</TableHead>
                   <TableHead>Issued</TableHead>
@@ -214,13 +204,13 @@ export default function InvoicesPage() {
               </TableHeader>
 
               <TableBody>
-                {filteredInvoices.map((invoice) => (
-                  <TableRow key={invoice.id}>
+                {filteredInvoices.map((inv) => (
+                  <TableRow key={inv.id}>
                     <TableCell>
                       <div className="flex items-center space-x-3">
                         <Avatar className="h-8 w-8">
                           <AvatarFallback>
-                            {invoice.customer.name
+                            {inv.customer.name
                               ?.split(" ")
                               .map((n: string) => n[0])
                               .join("")}
@@ -228,13 +218,13 @@ export default function InvoicesPage() {
                         </Avatar>
                         <div>
                           <div className="font-medium">
-                            {invoice.customer.name}{" "}
+                            {inv.customer.name}{" "}
                             <span className="text-muted-foreground text-xs ml-1">
-                              #{invoice.number}
+                              #{inv.number}
                             </span>
                           </div>
                           <div className="text-sm text-muted-foreground">
-                            {invoice.customer.company || "—"}
+                            {inv.customer.company || "—"}
                           </div>
                         </div>
                       </div>
@@ -243,39 +233,37 @@ export default function InvoicesPage() {
                     <TableCell>
                       <Badge
                         variant={
-                          invoice.status === "paid"
+                          inv.status === "paid"
                             ? "default"
-                            : invoice.status === "issued"
+                            : inv.status === "issued"
                             ? "secondary"
-                            : invoice.status === "void"
+                            : inv.status === "void"
                             ? "destructive"
                             : "outline"
                         }
                       >
-                        {invoice.status}
+                        {inv.status}
                       </Badge>
                     </TableCell>
 
                     <TableCell>
                       <div className="text-sm font-medium">
-                        {formatCurrency(invoice.amount, invoice.currency)}
+                        {formatCurrency(inv.amount, inv.currency)}
                       </div>
-                      <div className="text-xs text-muted-foreground">{invoice.aircraft}</div>
+                      <div className="text-xs text-muted-foreground">{inv.aircraft}</div>
                     </TableCell>
 
                     <TableCell>
-                      <div className="text-sm">
-                        {formatDate(invoice.issuedAt)}
-                        <div className="text-muted-foreground text-xs">
-                          {formatTimeAgo(invoice.issuedAt)}
-                        </div>
+                      <div className="text-sm">{formatDate(inv.issuedAt)}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {formatTimeAgo(inv.issuedAt)}
                       </div>
                     </TableCell>
 
                     <TableCell>
                       <div className="flex items-center space-x-2">
                         <Button asChild variant="outline" size="sm">
-                          <Link href={`/invoices/${invoice.id}`}>
+                          <Link href={`/invoices/${inv.id}`}>
                             <Eye className="mr-2 h-4 w-4" />
                             View
                           </Link>
@@ -283,7 +271,7 @@ export default function InvoicesPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleDeleteInvoice(invoice.id)}
+                          onClick={() => handleDelete(inv.id)}
                           className="text-red-600 hover:text-red-700 hover:bg-red-50"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -295,11 +283,14 @@ export default function InvoicesPage() {
               </TableBody>
             </Table>
           ) : (
-            <div className="py-8 text-center text-muted-foreground">No invoices found.</div>
+            <div className="py-8 text-center text-muted-foreground">
+              No invoices found.
+            </div>
           )}
         </CardContent>
       </Card>
 
+      {/* Delete Confirmation */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -312,7 +303,7 @@ export default function InvoicesPage() {
             <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
               Cancel
             </Button>
-            <Button variant="destructive" onClick={confirmDeleteInvoice}>
+            <Button variant="destructive" onClick={confirmDelete}>
               Delete Invoice
             </Button>
           </DialogFooter>
