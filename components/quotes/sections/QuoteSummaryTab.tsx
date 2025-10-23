@@ -203,7 +203,7 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
 
         {/* Quote Options */}
         <div>
-          <h3 className="text-lg font-semibold mb-2">Flight Options</h3>
+          <h3 className="text-lg font-semibold mb-2">Aircraft Options</h3>
           {quote.options?.length ? (
             <ul className="space-y-2 text-sm">
               {quote.options.map((o, i) => (
@@ -225,7 +225,7 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
             </ul>
           ) : (
             <p className="text-muted-foreground text-sm">
-              No flight options added.
+              No aircraft options added.
             </p>
           )}
         </div>
