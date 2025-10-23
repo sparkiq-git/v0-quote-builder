@@ -36,7 +36,7 @@ CREATE POLICY "Service role only" ON action_link
 CREATE OR REPLACE FUNCTION audit_action_link_changes()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO audit_log (
+  INSERT INTO action_link_audit_log (
     tenant_id,
     actor_user_id,
     action,

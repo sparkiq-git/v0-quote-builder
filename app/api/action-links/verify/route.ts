@@ -86,7 +86,7 @@ export async function POST(req: Request) {
           .from("action_link")
           .update({ last_verified_at: now.toISOString() })
           .eq("id", link.id),
-        supabase.from("audit_log").insert({
+        supabase.from("action_link_audit_log").insert({
           tenant_id: link.tenant_id,
           actor_user_id: null,
           action: "action_link.verify",

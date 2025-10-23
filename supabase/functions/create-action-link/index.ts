@@ -255,7 +255,7 @@ Deno.serve(async (req) => {
     const linkId = insertRes?.id;
     
     // Enhanced audit logging
-    await supabase.from("audit_log").insert({
+    await supabase.from("action_link_audit_log").insert({
       tenant_id,
       actor_user_id: created_by || null,
       action: "action_link.create",
@@ -314,7 +314,7 @@ Deno.serve(async (req) => {
     }
     
     // Enhanced audit logging for email
-    await supabase.from("audit_log").insert({
+    await supabase.from("action_link_audit_log").insert({
       tenant_id,
       actor_user_id: created_by || null,
       action: "email.send",
@@ -348,7 +348,7 @@ Deno.serve(async (req) => {
     // Enhanced error audit logging
     try {
       const body = await req.clone().text();
-      await supabase.from("audit_log").insert({
+      await supabase.from("action_link_audit_log").insert({
         tenant_id: null,
         actor_user_id: null,
         action: "action_link.create.error",

@@ -66,7 +66,7 @@ export async function POST(req: Request) {
   if (upErr) return NextResponse.json({ error: upErr.message }, { status: 500 })
 
   // audit
-  await supabase.from("audit_log").insert({
+  await supabase.from("action_link_audit_log").insert({
     tenant_id: link.tenant_id,
     actor_user_id: null,
     action: "action_link.consume",
