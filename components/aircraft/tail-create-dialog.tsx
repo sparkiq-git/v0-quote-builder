@@ -58,6 +58,23 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
 
   const isEditing = !!tailId
 
+  // Debug form state
+  useEffect(() => {
+    if (open) {
+      console.log("🔍 Dialog opened - Form state:", {
+        isEditing,
+        tailId,
+        existingTail: !!existingTail,
+        tenantId,
+        defaultTypeRatingId,
+        modelsLoading,
+        operatorsLoading,
+        loading,
+        isSubmitting
+      })
+    }
+  }, [open, isEditing, tailId, existingTail, tenantId, defaultTypeRatingId, modelsLoading, operatorsLoading, loading, isSubmitting])
+
   // Fetch tenant ID and default type rating
   useEffect(() => {
     if (typeof window === "undefined") return
@@ -334,7 +351,10 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
               : "Add a new aircraft tail with specific tail number and optional overrides."}
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6" onInvalid={(e) => {
+          console.log("❌ Form validation failed:", e)
+          console.log("Form errors:", errors)
+        }}>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <Label className="text-base font-semibold">Step 1: Select Aircraft Model</Label>
@@ -700,7 +720,21 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting || loading || modelsLoading || operatorsLoading || !defaultTypeRatingId}>
+            <Button 
+              type="submit" 
+              disabled={isSubmitting || loading || modelsLoading || operatorsLoading || !defaultTypeRatingId}
+              onClick={() => {
+                console.log("🔘 Update Tail button clicked")
+                console.log("Button disabled state:", {
+                  isSubmitting,
+                  loading,
+                  modelsLoading,
+                  operatorsLoading,
+                  defaultTypeRatingId,
+                  disabled: isSubmitting || loading || modelsLoading || operatorsLoading || !defaultTypeRatingId
+                })
+              }}
+            >
               {isSubmitting ? "Saving..." : isEditing ? "Update Tail" : "Create Tail"}
             </Button>
           </DialogFooter>
