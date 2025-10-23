@@ -186,8 +186,6 @@ if (existingIds.length > 0) {
       return NextResponse.json({ error: optionError.message }, { status: 500 })
   }
 
-  return NextResponse.json({ success: true })
-}
 
 /* ---------------- 💼 Upsert quote services (quote_item) ---------------- */
 if (services && Array.isArray(services)) {
@@ -238,4 +236,7 @@ if (services && Array.isArray(services)) {
 
   if (deleteError)
     return NextResponse.json({ error: deleteError.message }, { status: 500 })
+}
+
+  return NextResponse.json({ success: true })
 }
