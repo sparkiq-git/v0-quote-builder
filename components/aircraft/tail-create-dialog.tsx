@@ -244,6 +244,7 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
   }
 
   const onSubmit = async (data: TailFormData) => {
+    console.log("🎯 onSubmit function called!")
     try {
       console.log("🚀 Form submission started:", { data, isEditing, existingTail: !!existingTail })
       
@@ -351,7 +352,12 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
               : "Add a new aircraft tail with specific tail number and optional overrides."}
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6" onInvalid={(e) => {
+        <form onSubmit={(e) => {
+          console.log("📝 Form onSubmit event triggered")
+          console.log("Form event:", e)
+          console.log("Form errors before submission:", errors)
+          handleSubmit(onSubmit)(e)
+        }} className="space-y-6" onInvalid={(e) => {
           console.log("❌ Form validation failed:", e)
           console.log("Form errors:", errors)
         }}>
@@ -723,17 +729,6 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
             <Button 
               type="submit" 
               disabled={isSubmitting || loading || modelsLoading || operatorsLoading || !defaultTypeRatingId}
-              onClick={() => {
-                console.log("🔘 Update Tail button clicked")
-                console.log("Button disabled state:", {
-                  isSubmitting,
-                  loading,
-                  modelsLoading,
-                  operatorsLoading,
-                  defaultTypeRatingId,
-                  disabled: isSubmitting || loading || modelsLoading || operatorsLoading || !defaultTypeRatingId
-                })
-              }}
             >
               {isSubmitting ? "Saving..." : isEditing ? "Update Tail" : "Create Tail"}
             </Button>
