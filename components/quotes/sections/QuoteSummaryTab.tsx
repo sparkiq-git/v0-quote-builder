@@ -291,7 +291,7 @@ const totalOptions = useMemo(() => {
         {/* Totals */}
         <div className="text-right space-y-1">
           <p className="text-sm text-muted-foreground">
-            Flight Options Total: {formatCurrency(totalOptions)}
+            Aircraft Options Total: {formatCurrency(totalOptions)}
           </p>
           <p className="text-sm text-muted-foreground">
             Additional Services Total: {formatCurrency(totalServices)}
