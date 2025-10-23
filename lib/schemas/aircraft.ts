@@ -24,7 +24,6 @@ export const TailFormSchema = z.object({
   modelId: z.string().min(1, "Model is required"),
   tailNumber: z.string().min(1, "Tail number is required"),
   operator: z.string().optional(),
-  amenities: z.string().optional(),
   year: z
     .number()
     .int()

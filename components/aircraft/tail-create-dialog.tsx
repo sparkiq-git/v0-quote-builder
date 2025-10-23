@@ -187,7 +187,6 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
         modelId: existingTail.model_id,
         tailNumber: existingTail.tail_number,
         operator: existingTail.operator_id || "",
-        amenities: existingTail.notes || "",
         year: existingTail.year_of_manufacture,
         yearOfRefurbishment: existingTail.year_of_refurbish || undefined,
         status: existingTail.status?.toLowerCase() || "active",
@@ -204,7 +203,6 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
         modelId: "",
         tailNumber: "",
         operator: "",
-        amenities: "",
         year: undefined,
         yearOfRefurbishment: undefined,
         status: "active",
@@ -301,7 +299,7 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
         status: data.status.toUpperCase(), // Convert to uppercase to match enum
         capacity_pax: useDefaultCapacity ? null : data.capacityOverride || null,
         range_nm: useDefaultRange ? null : data.rangeNmOverride || null,
-        notes: data.amenities || null,
+        notes: null, // Notes field is now handled separately from amenities
         cruising_speed: useDefaultSpeed ? null : data.speedKnotsOverride || null,
       }
 
@@ -524,14 +522,6 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
                 />
               </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="amenities">Amenities</Label>
-              <Input
-                id="amenities"
-                {...register("amenities")}
-                placeholder="e.g., WiFi, Entertainment System, Refreshment Center"
-              />
-            </div>
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="year">Year</Label>
@@ -730,7 +720,6 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
                           modelId: data.model_id,
                           tailNumber: data.tail_number,
                           operator: data.operator_id || "",
-                          amenities: data.notes || "",
                           year: data.year_of_manufacture,
                           yearOfRefurbishment: data.year_of_refurbish || undefined,
                           status: data.status?.toLowerCase() || "active",
