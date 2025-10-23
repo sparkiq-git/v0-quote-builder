@@ -158,7 +158,10 @@ export function ModelCreateDialog({
                   id="defaultCapacity"
                   type="number"
                   min="1"
-                  {...register("defaultCapacity", { valueAsNumber: true })}
+                  {...register("defaultCapacity", { 
+                    valueAsNumber: true,
+                    setValueAs: (value) => isNaN(value) ? undefined : value
+                  })}
                 />
               </div>
               <div>
@@ -167,7 +170,10 @@ export function ModelCreateDialog({
                   id="defaultRangeNm"
                   type="number"
                   min="1"
-                  {...register("defaultRangeNm", { valueAsNumber: true })}
+                  {...register("defaultRangeNm", { 
+                    valueAsNumber: true,
+                    setValueAs: (value) => isNaN(value) ? undefined : value
+                  })}
                 />
               </div>
             </div>
@@ -178,7 +184,10 @@ export function ModelCreateDialog({
                 id="defaultSpeedKnots"
                 type="number"
                 min="1"
-                {...register("defaultSpeedKnots", { valueAsNumber: true })}
+                {...register("defaultSpeedKnots", { 
+                  valueAsNumber: true,
+                  setValueAs: (value) => isNaN(value) ? undefined : value
+                })}
               />
             </div>
 

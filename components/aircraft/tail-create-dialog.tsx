@@ -464,7 +464,10 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
                   type="number"
                   min="1900"
                   max={new Date().getFullYear() + 5}
-                  {...register("year", { valueAsNumber: true })}
+                  {...register("year", { 
+                    valueAsNumber: true,
+                    setValueAs: (value) => isNaN(value) ? undefined : value
+                  })}
                   placeholder="2020"
                 />
                 {errors.year && <p className="text-sm text-destructive">{errors.year.message}</p>}
@@ -476,7 +479,10 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
                   type="number"
                   min="1900"
                   max={new Date().getFullYear() + 5}
-                  {...register("yearOfRefurbishment", { valueAsNumber: true })}
+                  {...register("yearOfRefurbishment", { 
+                    valueAsNumber: true,
+                    setValueAs: (value) => isNaN(value) ? undefined : value
+                  })}
                   placeholder="2022"
                 />
                 {errors.yearOfRefurbishment && (
@@ -531,7 +537,10 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
                   <Input
                     type="number"
                     min="1"
-                    {...register("capacityOverride", { valueAsNumber: true })}
+                    {...register("capacityOverride", { 
+                      valueAsNumber: true,
+                      setValueAs: (value) => isNaN(value) ? undefined : value
+                    })}
                     placeholder={selectedModel?.defaultCapacity?.toString() || "8"}
                   />
                   {selectedModel?.defaultCapacity && (
@@ -556,7 +565,10 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
                   <Input
                     type="number"
                     min="1"
-                    {...register("rangeNmOverride", { valueAsNumber: true })}
+                    {...register("rangeNmOverride", { 
+                      valueAsNumber: true,
+                      setValueAs: (value) => isNaN(value) ? undefined : value
+                    })}
                     placeholder={selectedModel?.defaultRangeNm?.toString() || "2000"}
                   />
                   {selectedModel?.defaultRangeNm && (
@@ -584,7 +596,10 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
                     type="number"
                     min="0"
                     step="1"
-                    {...register("speedKnotsOverride", { valueAsNumber: true })}
+                    {...register("speedKnotsOverride", { 
+                      valueAsNumber: true,
+                      setValueAs: (value) => isNaN(value) ? undefined : value
+                    })}
                     placeholder={selectedModel?.defaultSpeedKnots?.toString() || "450"}
                   />
                   {selectedModel?.defaultSpeedKnots && (

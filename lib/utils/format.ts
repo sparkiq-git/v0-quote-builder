@@ -1,6 +1,11 @@
 import { format, formatDistanceToNow, isValid, parseISO } from "date-fns"
 
 export function formatCurrency(amount: number): string {
+  // Handle NaN, undefined, or null values
+  if (isNaN(amount) || amount == null) {
+    return "$0"
+  }
+  
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",

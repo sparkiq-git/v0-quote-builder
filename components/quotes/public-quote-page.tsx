@@ -389,13 +389,21 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
   }
 
   // REAL DATA (from store) wired into props/sections
-  const servicesTotal = quote.services?.reduce((sum, s) => sum + s.amount, 0) || 0
+  const servicesTotal = quote.services?.reduce((sum, s) => {
+    const amount = s.amount || 0
+    return sum + (isNaN(amount) ? 0 : amount)
+  }, 0) || 0
+  
   const selectedOptionTotal = selectedOption
-    ? selectedOption.operatorCost +
-      selectedOption.commission +
-      (selectedOption.feesEnabled ? selectedOption.fees.reduce((sum, fee) => sum + fee.amount, 0) : 0)
+    ? (selectedOption.operatorCost || 0) +
+      (selectedOption.commission || 0) +
+      (selectedOption.feesEnabled ? (selectedOption.fees?.reduce((sum, fee) => {
+        const amount = fee.amount || 0
+        return sum + (isNaN(amount) ? 0 : amount)
+      }, 0) || 0) : 0)
     : 0
-  const grandTotal = selectedOptionTotal + servicesTotal
+    
+  const grandTotal = (selectedOptionTotal || 0) + (servicesTotal || 0)
 
   const displayOptions =
     (["client_accepted", "availability_confirmed", "payment_received", "itinerary_created"] as const).includes(
