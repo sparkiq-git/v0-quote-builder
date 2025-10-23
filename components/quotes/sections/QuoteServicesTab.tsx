@@ -1,7 +1,13 @@
 "use client"
 
 import { useState, useMemo } from "react"
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
@@ -15,23 +21,14 @@ export function QuoteServicesTab({ quote, onNext, onBack }: any) {
   const { toast } = useToast()
   const [saving, setSaving] = useState(false)
   const [services, setServices] = useState(
-    quote.services?.length
-      ? quote.services
-      : [
-          {
-            id: crypto.randomUUID(),
-            item_id: null,
-            description: "",
-            amount: 0,
-            taxable: false,
-          },
-        ]
+    Array.isArray(quote.services) ? quote.services : []
   )
 
   /* ---------------- Handlers ---------------- */
+
   const handleAddService = () => {
-    setServices([
-      ...services,
+    setServices((prev) => [
+      ...prev,
       {
         id: crypto.randomUUID(),
         item_id: null,
@@ -61,7 +58,8 @@ export function QuoteServicesTab({ quote, onNext, onBack }: any) {
     try {
       setSaving(true)
 
-      if (services.some((s) => !s.item_id)) {
+      // ✅ Allow empty list — that triggers full wipe
+      if (services.some((s) => !s.item_id && services.length > 0)) {
         toast({
           title: "Missing information",
           description: "Please select a service item before continuing.",
@@ -79,7 +77,7 @@ export function QuoteServicesTab({ quote, onNext, onBack }: any) {
           notes: quote.notes,
           valid_until: quote.valid_until,
         },
-        services,
+        services, // ✅ can be empty — backend now supports full delete
       }
 
       const res = await fetch(`/api/quotes/${quote.id}`, {
@@ -91,10 +89,17 @@ export function QuoteServicesTab({ quote, onNext, onBack }: any) {
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || "Failed to save services")
 
-      toast({ title: "Services saved", description: "Quote services updated successfully." })
+      toast({
+        title: "Services saved",
+        description: "Quote services updated successfully.",
+      })
       direction === "next" ? onNext() : onBack()
     } catch (err: any) {
-      toast({ title: "Error saving services", description: err.message, variant: "destructive" })
+      toast({
+        title: "Error saving services",
+        description: err.message,
+        variant: "destructive",
+      })
     } finally {
       setSaving(false)
     }
@@ -114,89 +119,108 @@ export function QuoteServicesTab({ quote, onNext, onBack }: any) {
       </CardHeader>
 
       <CardContent className="space-y-6">
-        {services.map((s) => (
-          <div
-            key={s.id}
-            className="border rounded-lg p-4 bg-background/50 relative"
-          >
-            <div className="flex justify-between items-start mb-3">
-              <div className="font-medium text-sm">Service Item</div>
-              {services.length > 1 && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => handleRemoveService(s.id)}
-                  className="text-muted-foreground hover:text-foreground"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Service Name */}
-              <div>
-                <Label className="text-sm mb-1 block">Service Name</Label>
-                <ItemCombobox
-                  tenantId={quote.tenant_id}
-                  value={s.item_id}
-                  onSelect={(item) => handleUpdate(s.id, "item_id", item.id)}
-                />
-              </div>
-
-              {/* Description */}
-              <div>
-                <Label className="text-sm mb-1 block">Description</Label>
-                <Input
-                  placeholder="Enter service description"
-                  value={s.description}
-                  onChange={(e) =>
-                    handleUpdate(s.id, "description", e.target.value)
-                  }
-                />
-              </div>
-
-              {/* Amount */}
-              <div>
-                <Label className="text-sm mb-1 block">Amount</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={s.amount}
-                  onChange={(e) =>
-                    handleUpdate(s.id, "amount", parseFloat(e.target.value) || 0)
-                  }
-                />
-              </div>
-            </div>
-
-            {/* Taxable toggle */}
-            <div className="flex items-center gap-2 mt-4">
-              <Switch
-                checked={s.taxable}
-                onCheckedChange={(val) => handleUpdate(s.id, "taxable", val)}
-              />
-              <Label>Taxable</Label>
-            </div>
+        {/* If no services, show Add Service button */}
+        {services.length === 0 ? (
+          <div className="flex justify-center py-16">
+            <Button variant="outline" onClick={handleAddService}>
+              <Plus className="h-4 w-4 mr-2" /> Add Service
+            </Button>
           </div>
-        ))}
+        ) : (
+          <>
+            {services.map((s) => (
+              <div
+                key={s.id}
+                className="border rounded-lg p-4 bg-background/50 relative"
+              >
+                <div className="flex justify-between items-start mb-3">
+                  <div className="font-medium text-sm">Service Item</div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleRemoveService(s.id)}
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
 
-        <Button
-          variant="default"
-          className="w-fit ml-auto flex items-center gap-2"
-          onClick={handleAddService}
-        >
-          <Plus className="h-4 w-4" /> Add Service
-        </Button>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Service Name */}
+                  <div>
+                    <Label className="text-sm mb-1 block">Service Name</Label>
+                    <ItemCombobox
+                      tenantId={quote.tenant_id}
+                      value={s.item_id}
+                      onSelect={(item) =>
+                        handleUpdate(s.id, "item_id", item.id)
+                      }
+                    />
+                  </div>
+
+                  {/* Description */}
+                  <div>
+                    <Label className="text-sm mb-1 block">Description</Label>
+                    <Input
+                      placeholder="Enter service description"
+                      value={s.description}
+                      onChange={(e) =>
+                        handleUpdate(s.id, "description", e.target.value)
+                      }
+                    />
+                  </div>
+
+                  {/* Amount */}
+                  <div>
+                    <Label className="text-sm mb-1 block">Amount</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={s.amount}
+                      onChange={(e) =>
+                        handleUpdate(
+                          s.id,
+                          "amount",
+                          parseFloat(e.target.value) || 0
+                        )
+                      }
+                    />
+                  </div>
+                </div>
+
+                {/* Taxable toggle */}
+                <div className="flex items-center gap-2 mt-4">
+                  <Switch
+                    checked={s.taxable}
+                    onCheckedChange={(val) =>
+                      handleUpdate(s.id, "taxable", val)
+                    }
+                  />
+                  <Label>Taxable</Label>
+                </div>
+              </div>
+            ))}
+
+            {/* Add Service Button */}
+            <div className="flex justify-center">
+              <Button variant="outline" onClick={handleAddService}>
+                <Plus className="h-4 w-4 mr-2" /> Add Service
+              </Button>
+            </div>
+          </>
+        )}
 
         {/* Total Section */}
         <div className="border-t pt-4 text-right text-sm font-medium">
           Total Services:{" "}
-          <span className="text-base font-semibold">${total.toFixed(2)}</span>
+          <span className="text-base font-semibold">
+            ${total.toFixed(2)}
+          </span>
         </div>
 
         <Separator />
 
+        {/* Navigation */}
         <div className="flex justify-between pt-4">
           <Button
             variant="outline"
