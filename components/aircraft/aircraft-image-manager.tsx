@@ -150,70 +150,69 @@ export default function AircraftImageManager({ aircraftId, tenantId, onImagesUpd
   }
 
   const uploadImages = async () => {
-    if (imageFiles.length === 0) return
+    if (imageFiles.length === 0) {
+      toast({ title: "No images selected", variant: "destructive" })
+      return
+    }
 
-    setUploading(true)
     try {
-      console.log("🚀 Starting aircraft image upload:", {
-        aircraftId,
-        tenantId,
-        fileCount: imageFiles.length
-      })
+      setUploading(true)
+      toast({ title: "Uploading images..." })
 
-      const uploadPromises = imageFiles.map(async (file, index) => {
-        const fileExt = file.name.split('.').pop()
-        const fileName = `${aircraftId}-${Date.now()}-${index}.${fileExt}`
-        const filePath = `tenant/${tenantId}/aircraft/${aircraftId}/${fileName}`
+      // Check authentication first
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      if (authError || !user) {
+        console.error("Auth error:", authError)
+        throw new Error("Please sign in to upload images")
+      }
+      
+      console.log("User authenticated:", user.id)
 
-        console.log(`📤 Uploading file ${index + 1}:`, {
-          fileName,
-          filePath,
+      // Use server-side API to bypass RLS restrictions
+      for (let i = 0; i < imageFiles.length; i++) {
+        const file = imageFiles[i]
+        
+        console.log("Uploading file via server API:", {
+          fileName: file.name,
           fileSize: file.size,
-          fileType: file.type
+          contentType: file.type
         })
 
-        const { error: uploadError } = await supabase.storage
-          .from('aircraft-media')
-          .upload(filePath, file, {
-            cacheControl: "3600",
-            upsert: true,
-            contentType: file.type || "image/jpeg",
-          })
+        // Create FormData for server upload
+        const formData = new FormData()
+        formData.append("file", file)
+        formData.append("aircraftId", aircraftId)
+        formData.append("tenantId", tenantId)
+        formData.append("userId", user.id)
 
-        if (uploadError) {
-          console.error(`❌ Upload error for file ${index + 1}:`, uploadError)
-          throw uploadError
+        // Upload via server-side API
+        console.log("🚀 Calling server API...")
+        const response = await fetch("/api/upload-aircraft-image", {
+          method: "POST",
+          body: formData,
+        })
+
+        console.log("📡 Server response status:", response.status)
+        
+        if (!response.ok) {
+          const errorText = await response.text()
+          console.error("❌ Server response error:", errorText)
+          throw new Error(`Server upload failed: ${response.status} ${errorText}`)
         }
 
-        console.log(`✅ File ${index + 1} uploaded successfully`)
+        const result = await response.json()
+        console.log("📦 Server response data:", result)
 
-        const { data: { publicUrl } } = supabase.storage
-          .from('aircraft-media')
-          .getPublicUrl(filePath)
-
-        return {
-          aircraft_id: aircraftId,
-          tenant_id: tenantId,
-          storage_path: filePath,
-          public_url: publicUrl,
-          is_primary: index === 0,
-          display_order: index,
+        if (!result.success) {
+          console.error("Server upload error:", result.error)
+          throw new Error(`Server upload failed: ${result.error}`)
         }
-      })
 
-      const imageData = await Promise.all(uploadPromises)
-      console.log("💾 Saving to database:", imageData)
-
-      const { error: insertError } = await supabase
-        .from('aircraft_image')
-        .insert(imageData)
-
-      if (insertError) {
-        console.error("❌ Database insert error:", insertError)
-        throw insertError
+        console.log("✅ Server upload successful:", result.data)
+        setImages((prev) => [...prev, { url: result.data.url, id: result.data.id }])
       }
 
-      console.log("✅ All images uploaded and saved successfully")
+      console.log("✅ All images uploaded successfully")
       toast({ title: "Success", description: `${imageFiles.length} image(s) uploaded successfully` })
       setImageFiles([])
       setImagePreviews([])
@@ -222,7 +221,7 @@ export default function AircraftImageManager({ aircraftId, tenantId, onImagesUpd
       console.error("❌ Upload failed:", error)
       toast({ 
         title: "Upload failed", 
-        description: error.message || "Failed to upload images. Please check your storage configuration.", 
+        description: error.message || "Failed to upload images. Please try again.", 
         variant: "destructive" 
       })
     } finally {
