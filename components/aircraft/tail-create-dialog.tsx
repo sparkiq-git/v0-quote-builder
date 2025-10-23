@@ -24,6 +24,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { TailFormSchema, type TailFormData } from "@/lib/schemas/aircraft"
 import { useToast } from "@/hooks/use-toast"
 import { useAircraftModels } from "@/hooks/use-aircraft-models"
+import { useOperators } from "@/hooks/use-operators"
 import { ModelCreateDialog } from "./model-create-dialog"
 import AircraftImageManager from "./aircraft-image-manager"
 import { Check, ChevronsUpDown, Plus } from "lucide-react"
@@ -39,34 +40,49 @@ interface TailCreateDialogProps {
 
 export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpenChange }: TailCreateDialogProps) {
   const { models, loading: modelsLoading } = useAircraftModels()
+  const { operators, loading: operatorsLoading } = useOperators()
   const { toast } = useToast()
   const [internalOpen, setInternalOpen] = useState(false)
   const [modelComboOpen, setModelComboOpen] = useState(false)
+  const [operatorComboOpen, setOperatorComboOpen] = useState(false)
   const [useDefaultCapacity, setUseDefaultCapacity] = useState(true)
   const [useDefaultRange, setUseDefaultRange] = useState(true)
   const [useDefaultSpeed, setUseDefaultSpeed] = useState(true)
   const [tenantId, setTenantId] = useState<string | null>(null)
   const [existingTail, setExistingTail] = useState<any>(null)
   const [loading, setLoading] = useState(false)
+  const [defaultTypeRatingId, setDefaultTypeRatingId] = useState<string | null>(null)
 
   const open = controlledOpen !== undefined ? controlledOpen : internalOpen
   const setOpen = onOpenChange || setInternalOpen
 
   const isEditing = !!tailId
 
-  // Fetch tenant ID
+  // Fetch tenant ID and default type rating
   useEffect(() => {
     if (typeof window === "undefined") return
-    async function loadTenant() {
+    async function loadTenantAndTypeRating() {
       try {
         const { data } = await supabase.auth.getUser()
         const tenantId = data?.user?.app_metadata?.tenant_id ?? null
         setTenantId(tenantId)
+        
+        // Get a default type rating (first available)
+        if (tenantId) {
+          const { data: typeRatings, error } = await supabase
+            .from("type_ratings")
+            .select("id")
+            .limit(1)
+          
+          if (!error && typeRatings && typeRatings.length > 0) {
+            setDefaultTypeRatingId(typeRatings[0].id)
+          }
+        }
       } catch (err) {
         console.error("Error loading tenant ID:", err)
       }
     }
-    loadTenant()
+    loadTenantAndTypeRating()
   }, [])
 
   // Fetch existing tail data for editing
@@ -136,15 +152,15 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
         amenities: existingTail.notes || "",
         year: existingTail.year_of_manufacture,
         yearOfRefurbishment: existingTail.year_of_refurbish,
-        status: existingTail.status,
+        status: existingTail.status?.toLowerCase() || "active",
         capacityOverride: existingTail.capacity_pax,
         rangeNmOverride: existingTail.range_nm,
-        speedKnotsOverride: null, // Not stored in database yet
+        speedKnotsOverride: existingTail.cruising_speed,
         images: [],
       })
       setUseDefaultCapacity(existingTail.capacity_pax === null)
       setUseDefaultRange(existingTail.range_nm === null)
-      setUseDefaultSpeed(true) // Always use default for now
+      setUseDefaultSpeed(existingTail.cruising_speed === null)
     } else if (open && !existingTail) {
       reset({
         modelId: "",
@@ -183,6 +199,31 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
     }
   }, [useDefaultSpeed, setValue])
 
+  // Validate tail number uniqueness
+  const validateTailNumber = async (tailNumber: string, excludeId?: string) => {
+    if (!tenantId) return false
+    
+    try {
+      let query = supabase
+        .from("aircraft")
+        .select("id")
+        .eq("tenant_id", tenantId)
+        .eq("tail_number", tailNumber)
+      
+      if (excludeId) {
+        query = query.neq("id", excludeId)
+      }
+      
+      const { data, error } = await query
+      if (error) throw error
+      
+      return data.length === 0
+    } catch (error) {
+      console.error("Error validating tail number:", error)
+      return false
+    }
+  }
+
   const onSubmit = async (data: TailFormData) => {
     try {
       if (!tenantId) {
@@ -194,17 +235,30 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
         return
       }
 
+      // Validate tail number uniqueness
+      const isTailNumberValid = await validateTailNumber(data.tailNumber, existingTail?.id)
+      if (!isTailNumberValid) {
+        toast({
+          title: "Tail number already exists",
+          description: "Please choose a different tail number.",
+          variant: "destructive",
+        })
+        return
+      }
+
       const aircraftData = {
         tenant_id: tenantId,
         tail_number: data.tailNumber,
         model_id: data.modelId,
         operator_id: data.operator || null,
+        type_rating_id: defaultTypeRatingId, // Required field
         year_of_manufacture: data.year || null,
         year_of_refurbish: data.yearOfRefurbishment || null,
-        status: data.status,
+        status: data.status.toUpperCase(), // Convert to uppercase to match enum
         capacity_pax: useDefaultCapacity ? null : data.capacityOverride || null,
         range_nm: useDefaultRange ? null : data.rangeNmOverride || null,
         notes: data.amenities || null,
+        cruising_speed: useDefaultSpeed ? null : data.speedKnotsOverride || null,
       }
 
       if (isEditing && existingTail) {
@@ -246,6 +300,11 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
   const handleModelSelect = (modelId: string) => {
     setValue("modelId", modelId)
     setModelComboOpen(false)
+  }
+
+  const handleOperatorSelect = (operatorId: string) => {
+    setValue("operator", operatorId)
+    setOperatorComboOpen(false)
   }
 
   const activeModels = models.filter((model) => !model.isArchived)
@@ -334,7 +393,59 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
               </div>
               <div className="space-y-2">
                 <Label htmlFor="operator">Operator</Label>
-                <Input id="operator" {...register("operator")} placeholder="e.g., ABC Aviation" />
+                <Controller
+                  name="operator"
+                  control={control}
+                  render={({ field }) => (
+                    <Popover open={operatorComboOpen} onOpenChange={setOperatorComboOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={operatorComboOpen}
+                          className="w-full justify-between bg-transparent"
+                        >
+                          {field.value ? operators.find((op) => op.id === field.value)?.name : "Select operator..."}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-full p-0">
+                        <Command>
+                          <CommandInput placeholder="Search operators..." />
+                          <CommandList>
+                            <CommandEmpty>No operators found.</CommandEmpty>
+                            <CommandGroup>
+                              <CommandItem value="" onSelect={() => handleOperatorSelect("")}>
+                                <Check
+                                  className={cn("mr-2 h-4 w-4", field.value === "" ? "opacity-100" : "opacity-0")}
+                                />
+                                <span>No operator</span>
+                              </CommandItem>
+                              {operators.map((operator) => (
+                                <CommandItem key={operator.id} value={operator.name} onSelect={() => handleOperatorSelect(operator.id)}>
+                                  <Check
+                                    className={cn("mr-2 h-4 w-4", field.value === operator.id ? "opacity-100" : "opacity-0")}
+                                  />
+                                  <div className="flex flex-col">
+                                    <span>{operator.name}</span>
+                                    {(operator.icao_code || operator.iata_code) && (
+                                      <span className="text-sm text-muted-foreground">
+                                        {operator.icao_code && operator.iata_code 
+                                          ? `${operator.icao_code} / ${operator.iata_code}`
+                                          : operator.icao_code || operator.iata_code
+                                        }
+                                      </span>
+                                    )}
+                                  </div>
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  )}
+                />
               </div>
             </div>
             <div className="space-y-2">
@@ -517,7 +628,7 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting || loading || modelsLoading}>
+            <Button type="submit" disabled={isSubmitting || loading || modelsLoading || operatorsLoading || !defaultTypeRatingId}>
               {isSubmitting ? "Saving..." : isEditing ? "Update Tail" : "Create Tail"}
             </Button>
           </DialogFooter>
