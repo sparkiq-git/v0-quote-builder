@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { z } from "zod"
 import { createActionLinkClient } from "@/lib/supabase/action-links"
 import { sha256Base64url } from "@/lib/security/token"
+import { verifyTurnstile } from "@/lib/supabase/turnstile"
 
 const VerifySchema = z.object({
   token: z.string().min(20),
@@ -11,7 +12,7 @@ const VerifySchema = z.object({
 
 export async function POST(req: Request) {
   try {
-    console.log("🔍 No-CAPTCHA verify route started")
+    console.log("🔍 Simple verify route started")
     
     // Parse & validate body
     const body = await req.json()
@@ -22,7 +23,19 @@ export async function POST(req: Request) {
 
     const { token, email, captchaToken } = parsed.data
     console.log("✅ Request validation passed")
-    console.log("⏭️ Skipping CAPTCHA verification for testing")
+
+    // --- Verify CAPTCHA (skip rate limiting for now) ---
+    try {
+      console.log("🔐 Verifying CAPTCHA...")
+      await verifyTurnstile(captchaToken)
+      console.log("✅ CAPTCHA verification passed")
+    } catch (err: any) {
+      console.error("❌ CAPTCHA verification failed:", err)
+      return NextResponse.json(
+        { ok: false, error: `Turnstile verification failed: ${err.message}` },
+        { status: 400 }
+      )
+    }
 
     const tokenHash = sha256Base64url(token)
     console.log("🔑 Token hash created:", tokenHash.substring(0, 10) + "...")
@@ -57,7 +70,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: "Database query failed" }, { status: 500 })
     }
 
-    // --- Validate link ---
+    // --- Validate link (skip rate limiting) ---
     const now = new Date()
     if (link.status !== "active")
       return NextResponse.json({ ok: false, error: "Link not active" }, { status: 400 })
@@ -68,7 +81,7 @@ export async function POST(req: Request) {
     if (link.email.toLowerCase() !== email.toLowerCase())
       return NextResponse.json({ ok: false, error: "Email mismatch" }, { status: 400 })
 
-    // --- Update link ---
+    // --- Update + audit (simplified) ---
     try {
       await supabase
         .from("action_link")
@@ -94,7 +107,7 @@ export async function POST(req: Request) {
       },
     })
   } catch (err: any) {
-    console.error("❌ No-CAPTCHA verify route crash:", err)
+    console.error("❌ Simple verify route crash:", err)
     return NextResponse.json(
       { ok: false, error: `Internal failure: ${err.message || String(err)}` },
       { status: 500 }
