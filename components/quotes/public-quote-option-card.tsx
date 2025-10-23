@@ -65,14 +65,14 @@ export function PublicQuoteOptionCard({
     ? option.overrideImages
     : aircraftTail?.images?.length
       ? aircraftTail.images
-      : aircraftModel.images?.length
+      : aircraftModel?.images?.length
         ? aircraftModel.images
-        : [`/placeholder.svg?height=600&width=1000&query=${encodeURIComponent(`${aircraftModel.name} aircraft`)}`]
+        : [`/placeholder.svg?height=600&width=1000&query=${encodeURIComponent(`${aircraftModel?.name || 'Aircraft'} aircraft`)}`]
 
   const getImageSrc = (image: string) =>
     failedImages.includes(image)
       ? `/placeholder.svg?height=600&width=1000&query=${encodeURIComponent(
-          `${aircraftModel.name} aircraft placeholder`,
+          `${aircraftModel?.name || 'Aircraft'} aircraft placeholder`,
         )}`
       : image
 
@@ -88,7 +88,7 @@ export function PublicQuoteOptionCard({
   const scrollTo = useCallback((index: number) => api?.scrollTo(index), [api])
 
   const amenities = option.selectedAmenities || []
-  const capacity = aircraftTail?.capacityOverride || aircraftModel.defaultCapacity
+  const capacity = aircraftTail?.capacityOverride || aircraftModel?.defaultCapacity || 0
 
   return (
     <div className="mx-auto w-full max-w-screen-md sm:max-w-screen-lg lg:max-w-screen-xl px-4 sm:px-6 lg:px-8 pb-3">
@@ -117,7 +117,7 @@ export function PublicQuoteOptionCard({
                           <div className="h-28 sm:h-32 w-full grid place-items-center">
                             <img
                               src={getImageSrc(img) || "/placeholder.svg"}
-                              alt={`${aircraftModel.name} - Image ${i + 1}`}
+                              alt={`${aircraftModel?.name || 'Aircraft'} - Image ${i + 1}`}
                               className="max-w-full max-h-full place-items-center object-cover md:object-contain w-full h-28 sm:h-32"
                               loading={i === 0 ? "eager" : "lazy"}
                               decoding="async"
@@ -163,7 +163,7 @@ export function PublicQuoteOptionCard({
               <div className="flex-1 px-4 md:px-6">
                 <div className="flex items-start justify-between gap-3">
                   <h3 className="text-base font-semibold tracking-tight text-gray-900 leading-tight">
-                    {aircraftModel.name}
+                    {aircraftModel?.name || 'Aircraft Model'}
                   </h3>
                   <span className="text-xs font-medium text-gray-900 whitespace-nowrap">{capacity} passengers</span>
                 </div>
