@@ -154,19 +154,41 @@ export default function AircraftImageManager({ aircraftId, tenantId, onImagesUpd
 
     setUploading(true)
     try {
+      console.log("🚀 Starting aircraft image upload:", {
+        aircraftId,
+        tenantId,
+        fileCount: imageFiles.length
+      })
+
       const uploadPromises = imageFiles.map(async (file, index) => {
         const fileExt = file.name.split('.').pop()
         const fileName = `${aircraftId}-${Date.now()}-${index}.${fileExt}`
         const filePath = `tenant/${tenantId}/aircraft/${aircraftId}/${fileName}`
 
-        const { error: uploadError } = await supabase.storage
-          .from('aircraft-images')
-          .upload(filePath, file)
+        console.log(`📤 Uploading file ${index + 1}:`, {
+          fileName,
+          filePath,
+          fileSize: file.size,
+          fileType: file.type
+        })
 
-        if (uploadError) throw uploadError
+        const { error: uploadError } = await supabase.storage
+          .from('aircraft-media')
+          .upload(filePath, file, {
+            cacheControl: "3600",
+            upsert: true,
+            contentType: file.type || "image/jpeg",
+          })
+
+        if (uploadError) {
+          console.error(`❌ Upload error for file ${index + 1}:`, uploadError)
+          throw uploadError
+        }
+
+        console.log(`✅ File ${index + 1} uploaded successfully`)
 
         const { data: { publicUrl } } = supabase.storage
-          .from('aircraft-images')
+          .from('aircraft-media')
           .getPublicUrl(filePath)
 
         return {
@@ -180,19 +202,29 @@ export default function AircraftImageManager({ aircraftId, tenantId, onImagesUpd
       })
 
       const imageData = await Promise.all(uploadPromises)
+      console.log("💾 Saving to database:", imageData)
 
       const { error: insertError } = await supabase
         .from('aircraft_image')
         .insert(imageData)
 
-      if (insertError) throw insertError
+      if (insertError) {
+        console.error("❌ Database insert error:", insertError)
+        throw insertError
+      }
 
+      console.log("✅ All images uploaded and saved successfully")
       toast({ title: "Success", description: `${imageFiles.length} image(s) uploaded successfully` })
       setImageFiles([])
       setImagePreviews([])
       onImagesUpdated?.()
     } catch (error: any) {
-      toast({ title: "Upload failed", description: error.message, variant: "destructive" })
+      console.error("❌ Upload failed:", error)
+      toast({ 
+        title: "Upload failed", 
+        description: error.message || "Failed to upload images. Please check your storage configuration.", 
+        variant: "destructive" 
+      })
     } finally {
       setUploading(false)
     }
@@ -226,14 +258,44 @@ export default function AircraftImageManager({ aircraftId, tenantId, onImagesUpd
           onChange={handleImageChange}
           className="hidden"
         />
-        <Button
-          onClick={() => inputRef.current?.click()}
-          variant="outline"
-          className="mb-2"
-        >
-          <ImagePlus className="mr-2 h-4 w-4" />
-          Add Images
-        </Button>
+        <div className="flex gap-2 mb-2">
+          <Button
+            onClick={() => inputRef.current?.click()}
+            variant="outline"
+          >
+            <ImagePlus className="mr-2 h-4 w-4" />
+            Add Images
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={async () => {
+              console.log("🧪 Aircraft Image Debug Info:")
+              console.log("Aircraft ID:", aircraftId)
+              console.log("Tenant ID:", tenantId)
+              const { data: { user } } = await supabase.auth.getUser()
+              console.log("User:", user?.id)
+              const { data: buckets } = await supabase.storage.listBuckets()
+              console.log("Available buckets:", buckets?.map(b => b.name))
+              
+              // Test bucket access
+              const possibleBuckets = ["aircraft-media", "aircraft", "aircraft-images", "images", "uploads"]
+              for (const bucketName of possibleBuckets) {
+                try {
+                  const { data: files, error } = await supabase.storage
+                    .from(bucketName)
+                    .list("", { limit: 1 })
+                  console.log(`Bucket ${bucketName}:`, error ? `❌ ${error.message}` : "✅ Accessible")
+                } catch (error) {
+                  console.log(`Bucket ${bucketName}: ❌ Error`)
+                }
+              }
+            }}
+          >
+            Debug Storage
+          </Button>
+        </div>
         <p className="text-sm text-gray-500">Click to select images or drag and drop</p>
       </div>
 
