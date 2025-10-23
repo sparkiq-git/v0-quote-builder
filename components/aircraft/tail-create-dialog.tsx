@@ -179,9 +179,9 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
         year: existingTail.year_of_manufacture,
         yearOfRefurbishment: existingTail.year_of_refurbish || undefined,
         status: existingTail.status?.toLowerCase() || "active",
-        capacityOverride: existingTail.capacity_pax,
-        rangeNmOverride: existingTail.range_nm,
-        speedKnotsOverride: existingTail.cruising_speed,
+        capacityOverride: existingTail.capacity_pax || undefined,
+        rangeNmOverride: existingTail.range_nm || undefined,
+        speedKnotsOverride: existingTail.cruising_speed || undefined,
         images: [],
       })
       setUseDefaultCapacity(existingTail.capacity_pax === null)
@@ -692,9 +692,9 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
                           year: data.year_of_manufacture,
                           yearOfRefurbishment: data.year_of_refurbish || undefined,
                           status: data.status?.toLowerCase() || "active",
-                          capacityOverride: data.capacity_pax,
-                          rangeNmOverride: data.range_nm,
-                          speedKnotsOverride: data.cruising_speed,
+                          capacityOverride: data.capacity_pax || undefined,
+                          rangeNmOverride: data.range_nm || undefined,
+                          speedKnotsOverride: data.cruising_speed || undefined,
                           images: [],
                         })
                         console.log("✅ Form reset completed")

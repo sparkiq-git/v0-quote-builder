@@ -39,9 +39,9 @@ export const TailFormSchema = z.object({
     .nullable()
     .optional(),
   status: z.enum(["active", "inactive"]).default("active"),
-  capacityOverride: z.number().int().nonnegative().optional(),
-  rangeNmOverride: z.number().int().nonnegative().optional(),
-  speedKnotsOverride: z.number().nonnegative().optional(),
+  capacityOverride: z.number().int().nonnegative().nullable().optional(),
+  rangeNmOverride: z.number().int().nonnegative().nullable().optional(),
+  speedKnotsOverride: z.number().nonnegative().nullable().optional(),
   images: z
     .array(
       z
