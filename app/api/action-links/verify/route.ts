@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server"
 import { z } from "zod"
-import { createSupabaseServerClient } from "@/lib/supabase/server"
+import { createActionLinkClient } from "@/lib/supabase/action-links"
 import { sha256Base64url } from "@/lib/security/token"
 import { rlPerIp, rlPerToken } from "@/lib/redis"
-import { verifyTurnstile } from "@/lib/turnstile"
+import { verifyTurnstile } from "@/lib/supabase/turnstile"
 
 const VerifySchema = z.object({
   token: z.string().min(20),
@@ -48,7 +48,7 @@ export async function POST(req: Request) {
     }
 
     const tokenHash = sha256Base64url(token)
-    const supabase = createSupabaseServerClient(true)
+    const supabase = await createActionLinkClient(true)
 
     // --- Fetch link record ---
     const { data: link, error: linkError } = await supabase

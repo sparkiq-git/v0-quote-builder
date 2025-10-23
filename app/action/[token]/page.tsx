@@ -85,7 +85,11 @@ export default function ActionPage({ params }: { params: { token: string } }) {
           "content-type": "application/json",
           "idempotency-key": uuid(),
         },
-        body: JSON.stringify({ token: params.token, email, result }),
+        body: JSON.stringify({ 
+          token: params.token, 
+          email, 
+          payload: { result } // Enhanced payload structure
+        }),
       })
 
       console.log("Consume response:", json)

@@ -1,7 +1,7 @@
 // app/api/action-links/consume/route.ts
 import { NextResponse } from "next/server"
 import { z } from "zod"
-import { createSupabaseServerClient } from "@/lib/supabase/server"
+import { createActionLinkClient } from "@/lib/supabase/action-links"
 import { sha256Base64url } from "@/lib/security/token"
 import { ensureIdempotency } from "@/lib/idempotency"
 import { rlPerIp } from "@/lib/redis"
@@ -35,7 +35,7 @@ export async function POST(req: Request) {
   const { token, email, payload } = parsed.data
   const tokenHash = sha256Base64url(token)
 
-  const supabase = createSupabaseServerClient(true)
+  const supabase = await createActionLinkClient(true)
 
   const { data: link, error } = await supabase
     .from("action_link")

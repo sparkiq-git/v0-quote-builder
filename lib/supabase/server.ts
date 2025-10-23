@@ -29,6 +29,7 @@ export async function createClient() {
   })
 }
 
+
 export async function getServerUser() {
   const supabase = await createClient()
 
