@@ -189,7 +189,6 @@ if (existingIds.length > 0) {
 
 /* ---------------- 💼 Upsert quote services (quote_item) ---------------- */
 if (services && Array.isArray(services)) {
-  // Fetch item names from item table for each item_id
   const itemIds = services.map((s) => s.item_id).filter(Boolean)
 
   let itemMap: Record<string, string> = {}
@@ -207,7 +206,7 @@ if (services && Array.isArray(services)) {
 
   const validServices = services.map((s) => ({
     id: s.id || crypto.randomUUID(),
-    quote_id: s.quote_id,
+    quote_id: id, // ✅ always use the quote_id from params
     item_id: s.item_id || null,
     name: s.item_id ? itemMap[s.item_id] || "Unnamed item" : s.description || "Custom item",
     description: s.description || itemMap[s.item_id] || "Service item",
@@ -220,6 +219,7 @@ if (services && Array.isArray(services)) {
     created_at: s.created_at || new Date().toISOString(),
   }))
 
+  // 🔹 Upsert
   const { error: upsertError } = await supabase
     .from("quote_item")
     .upsert(validServices, { onConflict: "id" })
@@ -227,16 +227,24 @@ if (services && Array.isArray(services)) {
   if (upsertError)
     return NextResponse.json({ error: upsertError.message }, { status: 500 })
 
-  const existingIds = validServices.map((s) => s.id)
-  const { error: deleteError } = await supabase
-    .from("quote_item")
-    .delete()
-    .eq("quote_id", id)
-    .not("id", "in", `(${existingIds.join(",")})`)
+  // 🔹 Safe delete cleanup
+  const existingIds = validServices.map((s) => s.id).filter(Boolean)
 
-  if (deleteError)
-    return NextResponse.json({ error: deleteError.message }, { status: 500 })
+  if (existingIds.length > 0) {
+    const idList = `(${existingIds.join(",")})`
+    const { error: deleteError } = await supabase
+      .from("quote_item")
+      .delete()
+      .eq("quote_id", id)
+      .not("id", "in", idList)
+
+    if (deleteError)
+      return NextResponse.json({ error: deleteError.message }, { status: 500 })
+  }
+
+  console.log("💾 Saved services:", JSON.stringify(validServices, null, 2))
 }
+
 
   return NextResponse.json({ success: true })
 }
