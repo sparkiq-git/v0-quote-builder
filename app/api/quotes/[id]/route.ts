@@ -81,36 +81,39 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       console.error("Services fetch error:", servicesError)
     }
 
-    // Fetch aircraft models and tails for the options
-    const aircraftModelIds = (options || []).map(opt => opt.aircraft_id).filter(Boolean)
-    const aircraftTailIds = (options || []).map(opt => opt.aircraft_tail_id).filter(Boolean)
+    // Fetch aircraft data for the options
+    const aircraftIds = (options || []).map(opt => opt.aircraft_id).filter(Boolean)
     
-    let aircraftModels = []
-    let aircraftTails = []
+    let aircraftData = []
     
-    if (aircraftModelIds.length > 0) {
-      const { data: models, error: modelsError } = await supabase
-        .from("aircraft_model")
-        .select("*")
-        .in("id", aircraftModelIds)
-      
-      if (modelsError) {
-        console.error("Aircraft models fetch error:", modelsError)
-      } else {
-        aircraftModels = models || []
-      }
-    }
-    
-    if (aircraftTailIds.length > 0) {
-      const { data: tails, error: tailsError } = await supabase
+    if (aircraftIds.length > 0) {
+      const { data: aircraft, error: aircraftError } = await supabase
         .from("aircraft")
-        .select("*")
-        .in("id", aircraftTailIds)
+        .select(`
+          *,
+          aircraft_model!model_id (
+            id,
+            name,
+            manufacturer_id,
+            size_code,
+            aircraft_manufacturer!manufacturer_id (
+              id,
+              name
+            ),
+            aircraft_model_image (
+              id,
+              public_url,
+              is_primary,
+              display_order
+            )
+          )
+        `)
+        .in("id", aircraftIds)
       
-      if (tailsError) {
-        console.error("Aircraft tails fetch error:", tailsError)
+      if (aircraftError) {
+        console.error("Aircraft fetch error:", aircraftError)
       } else {
-        aircraftTails = tails || []
+        aircraftData = aircraft || []
       }
     }
 
@@ -119,8 +122,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     console.log("Raw legs data:", JSON.stringify(legs, null, 2))
     console.log("Raw options data:", JSON.stringify(options, null, 2))
     console.log("Raw services data:", JSON.stringify(services, null, 2))
-    console.log("Aircraft models data:", JSON.stringify(aircraftModels, null, 2))
-    console.log("Aircraft tails data:", JSON.stringify(aircraftTails, null, 2))
+    console.log("Aircraft data:", JSON.stringify(aircraftData, null, 2))
 
     // Transform the data to match the expected format
     const transformedQuote = {
@@ -144,8 +146,8 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       })),
       // Transform options from quote_option to expected format
       options: (options || []).map((option: any) => {
-        const aircraftModel = aircraftModels.find(m => m.id === option.aircraft_id)
-        const aircraftTail = aircraftTails.find(t => t.id === option.aircraft_tail_id)
+        const aircraft = aircraftData.find(a => a.id === option.aircraft_id)
+        const aircraftModel = aircraft?.aircraft_model
         
         return {
           id: option.id,
@@ -165,22 +167,29 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
           aircraftModel: aircraftModel ? {
             id: aircraftModel.id,
             name: aircraftModel.name,
-            manufacturer: aircraftModel.manufacturer_id,
+            manufacturer: aircraftModel.aircraft_manufacturer?.name || 'Unknown',
             defaultCapacity: aircraftModel.size_code ? parseInt(aircraftModel.size_code) : 8,
             defaultRangeNm: 2000, // Default range
             defaultSpeedKnots: 400, // Default speed
-            images: aircraftModel.images || [],
+            images: aircraftModel.aircraft_model_image
+              ?.sort((a: any, b: any) => {
+                if (a.is_primary && !b.is_primary) return -1
+                if (!a.is_primary && b.is_primary) return 1
+                return a.display_order - b.display_order
+              })
+              .map((img: any) => img.public_url)
+              .filter(Boolean) || [],
           } : null,
           // Include aircraft tail data for the component
-          aircraftTail: aircraftTail ? {
-            id: aircraftTail.id,
-            tailNumber: aircraftTail.tail_number,
-            operator: aircraftTail.operator_id,
-            year: aircraftTail.year_of_manufacture,
-            amenities: aircraftTail.notes || '',
+          aircraftTail: aircraft ? {
+            id: aircraft.id,
+            tailNumber: aircraft.tail_number,
+            operator: aircraft.operator_id,
+            year: aircraft.year_of_manufacture,
+            amenities: aircraft.notes || '',
             images: [], // TODO: Add tail images support
-            capacityOverride: aircraftTail.capacity_pax,
-            rangeNmOverride: aircraftTail.range_nm,
+            capacityOverride: aircraft.capacity_pax,
+            rangeNmOverride: aircraft.range_nm,
             speedKnotsOverride: null,
           } : null,
         }
