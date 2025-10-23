@@ -38,17 +38,17 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
     publishedUrl ?? `${process.env.NEXT_PUBLIC_APP_URL}/q/${quote.magic_link_slug}`
 
   /* ---------------- 💰 Totals ---------------- */
-  const totalOptions = useMemo(() => {
-    if (!quote.options?.length) return 0
-    return quote.options.reduce((sum, o) => {
-      const base =
-        (Number(o.cost_operator) ||
-          Number(o.price_base) ||
-          Number(o.price_commission) ||
-          0) + 0
-      return sum + base
-    }, 0)
-  }, [quote.options])
+const totalOptions = useMemo(() => {
+  if (!quote.options?.length) return 0
+  return quote.options.reduce((sum, o) => {
+    const total =
+      (Number(o.cost_operator) || 0) +
+      (Number(o.price_commission) || 0) +
+      (Number(o.price_taxes) || 0)
+    return sum + total
+  }, 0)
+}, [quote.options])
+
 
   const totalServices = useMemo(() => {
     if (!quote.services?.length) return 0
