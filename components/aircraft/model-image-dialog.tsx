@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { ModelImageManager } from "./model-image-manager"
+import ModelImageManager from "./model-image-manager"
 import { useToast } from "@/hooks/use-toast"
 
 interface ModelImageDialogProps {
