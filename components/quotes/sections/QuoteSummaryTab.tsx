@@ -1,10 +1,23 @@
 "use client"
 
-import { useState } from "react"
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
+import { useState, useMemo } from "react"
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
-import { Clipboard, ExternalLink, Check, FileText, ChevronRight, Send } from "lucide-react"
+import {
+  Clipboard,
+  ExternalLink,
+  Check,
+  FileText,
+  ChevronRight,
+  Send,
+} from "lucide-react"
 import { formatCurrency } from "@/lib/utils/format"
 import { useToast } from "@/hooks/use-toast"
 import type { Quote } from "@/lib/types"
@@ -20,24 +33,34 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
   const [publishing, setPublishing] = useState(false)
   const [publishedUrl, setPublishedUrl] = useState<string | null>(null)
 
-  // ✅ Fallback to static slug until published link returned
-  const quoteUrl = publishedUrl ?? `${process.env.NEXT_PUBLIC_APP_URL}/q/${quote.magic_link_slug}`
+  // ✅ Fallback URL
+  const quoteUrl =
+    publishedUrl ?? `${process.env.NEXT_PUBLIC_APP_URL}/q/${quote.magic_link_slug}`
 
-  // --- COMPUTE TOTALS ---
-  const totalOptions = quote.options?.length
-    ? quote.options.reduce((sum, o) => {
-        const base =
-          (o.operatorCost || 0) +
-          (o.commission || 0) +
-          (o.feesEnabled ? o.fees?.reduce((s, f) => s + (f.amount || 0), 0) : 0)
-        return sum + base
-      }, 0)
-    : 0
+  /* ---------------- 💰 Totals ---------------- */
+  const totalOptions = useMemo(() => {
+    if (!quote.options?.length) return 0
+    return quote.options.reduce((sum, o) => {
+      const base =
+        (Number(o.price_total) ||
+          Number(o.price_base) ||
+          Number(o.price_commission) ||
+          0) + 0
+      return sum + base
+    }, 0)
+  }, [quote.options])
 
-  const totalServices = quote.services?.reduce((s, v) => s + (v.amount || 0), 0) || 0
+  const totalServices = useMemo(() => {
+    if (!quote.services?.length) return 0
+    return quote.services.reduce(
+      (sum, s) => sum + (Number(s.amount) || Number(s.unit_price) || 0),
+      0
+    )
+  }, [quote.services])
+
   const grandTotal = totalOptions + totalServices
 
-  // --- COPY LINK ---
+  /* ---------------- 📋 Copy link ---------------- */
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(quoteUrl)
@@ -53,12 +76,12 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
     }
   }
 
-  // --- OPEN QUOTE ---
+  /* ---------------- 🌐 Open link ---------------- */
   const handleOpen = () => {
     window.open(quoteUrl, "_blank", "noopener,noreferrer")
   }
 
-  // --- PUBLISH QUOTE (calls Edge Function) ---
+  /* ---------------- 🚀 Publish quote ---------------- */
   const handlePublish = async () => {
     setPublishing(true)
     try {
@@ -66,20 +89,21 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
       const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
       if (!anonKey) throw new Error("Missing NEXT_PUBLIC_SUPABASE_ANON_KEY")
-      if (!process.env.NEXT_PUBLIC_SUPABASE_URL) throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL")
+      if (!process.env.NEXT_PUBLIC_SUPABASE_URL)
+        throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL")
 
       const res = await fetch(fnUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           apikey: anonKey,
-          Authorization: `Bearer ${anonKey}`, // 🔐 required for Supabase Edge Functions
+          Authorization: `Bearer ${anonKey}`,
         },
         body: JSON.stringify({
           action_type: "quote",
           email: quote.contact_email,
           tenant_id: quote.tenant_id,
-          created_by: quote.created_by_user_id, 
+          created_by: quote.created_by_user_id,
           metadata: { quote_id: quote.id, quote_ref: quote.reference_code },
         }),
       })
@@ -93,7 +117,8 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
       setPublishedUrl(json.link || json.link_url || null)
       toast({
         title: "Quote Published!",
-        description: "Your client has been emailed a secure link to view and confirm the quote.",
+        description:
+          "Your client has been emailed a secure link to view and confirm the quote.",
       })
     } catch (err: any) {
       console.error("Publish error:", err)
@@ -107,6 +132,7 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
     }
   }
 
+  /* ---------------- 🧾 Render ---------------- */
   return (
     <Card>
       <CardHeader>
@@ -114,11 +140,13 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
           <FileText className="h-5 w-5" />
           Summary & Publish
         </CardTitle>
-        <CardDescription>Review all details before publishing your quote.</CardDescription>
+        <CardDescription>
+          Review all quote details before publishing.
+        </CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-8">
-        {/* Contact Info */}
+        {/* Contact */}
         <div>
           <h3 className="text-lg font-semibold mb-2">Contact</h3>
           <div className="grid md:grid-cols-2 gap-2 text-sm">
@@ -143,27 +171,93 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
 
         <Separator />
 
-        {/* Trip Legs */}
+        {/* Trip Itinerary */}
         <div>
           <h3 className="text-lg font-semibold mb-2">Trip Itinerary</h3>
           {quote.legs?.length ? (
             <ul className="space-y-2 text-sm">
               {quote.legs.map((leg, i) => (
-                <li key={i} className="border p-3 rounded-md bg-muted/30">
-                  <p>
-                    <span className="font-medium">
-                      {leg.origin || "?"} → {leg.destination || "?"}
-                    </span>
+                <li
+                  key={leg.id || i}
+                  className="border p-3 rounded-md bg-muted/30"
+                >
+                  <p className="font-medium">
+                    {leg.origin || "?"} → {leg.destination || "?"}
                   </p>
                   <p className="text-muted-foreground text-xs">
-                    {leg.departureDate || "No date"} at {leg.departureTime || "No time"} —{" "}
-                    {leg.passengers || 0} pax
+                    {leg.depart_dt || leg.departureDate || "No date"} at{" "}
+                    {leg.depart_time || leg.departureTime || "No time"} —{" "}
+                    {leg.pax_count || leg.passengers || 0} pax
                   </p>
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="text-muted-foreground text-sm">No trip legs defined.</p>
+            <p className="text-muted-foreground text-sm">
+              No trip legs defined.
+            </p>
+          )}
+        </div>
+
+        <Separator />
+
+        {/* Quote Options */}
+        <div>
+          <h3 className="text-lg font-semibold mb-2">Flight Options</h3>
+          {quote.options?.length ? (
+            <ul className="space-y-2 text-sm">
+              {quote.options.map((o, i) => (
+                <li
+                  key={o.id || i}
+                  className="border p-3 rounded-md bg-muted/30 flex justify-between"
+                >
+                  <span>
+                    <span className="font-medium">{o.label || `Option ${i + 1}`}</span>
+                    {o.notes && (
+                      <span className="text-muted-foreground block text-xs">
+                        {o.notes}
+                      </span>
+                    )}
+                  </span>
+                  <span>{formatCurrency(o.price_total || 0)}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-muted-foreground text-sm">
+              No flight options added.
+            </p>
+          )}
+        </div>
+
+        <Separator />
+
+        {/* Services */}
+        <div>
+          <h3 className="text-lg font-semibold mb-2">Additional Services</h3>
+          {quote.services?.length ? (
+            <ul className="space-y-2 text-sm">
+              {quote.services.map((s, i) => (
+                <li
+                  key={s.id || i}
+                  className="border p-3 rounded-md bg-muted/30 flex justify-between"
+                >
+                  <span>
+                    <span className="font-medium">
+                      {s.description || "Service"}
+                    </span>
+                    {s.taxable && (
+                      <span className="text-xs text-muted-foreground block">
+                        Taxable
+                      </span>
+                    )}
+                  </span>
+                  <span>{formatCurrency(s.amount || 0)}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-muted-foreground text-sm">No services added.</p>
           )}
         </div>
 
@@ -172,10 +266,10 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
         {/* Totals */}
         <div className="text-right space-y-1">
           <p className="text-sm text-muted-foreground">
-            Options Total: {formatCurrency(totalOptions)}
+            Flight Options Total: {formatCurrency(totalOptions)}
           </p>
           <p className="text-sm text-muted-foreground">
-            Services Total: {formatCurrency(totalServices)}
+            Additional Services Total: {formatCurrency(totalServices)}
           </p>
           <p className="text-lg font-semibold">
             Grand Total: {formatCurrency(grandTotal)}
@@ -191,7 +285,6 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
           </Button>
 
           <div className="flex items-center gap-3">
-            {/* Copy Link */}
             <Button variant="outline" onClick={handleCopy}>
               {copied ? (
                 <>
@@ -204,12 +297,10 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
               )}
             </Button>
 
-            {/* Open Quote */}
             <Button onClick={handleOpen}>
               <ExternalLink className="mr-2 h-4 w-4" /> Open Quote
             </Button>
 
-            {/* Publish Quote */}
             <Button onClick={handlePublish} disabled={publishing}>
               <Send className="mr-2 h-4 w-4" />
               {publishing ? "Publishing..." : "Publish Quote"}
