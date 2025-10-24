@@ -125,6 +125,7 @@ const totalOptions = useMemo(() => {
       setPublishedUrl(json.link || json.link_url || null)
       
       // Show success toast with status update confirmation
+      console.log("🎉 Showing success toast for quote publish")
       toast({
         title: "Quote Published Successfully!",
         description: statusUpdated 

@@ -6,6 +6,7 @@ import { MockStoreProvider } from "@/lib/mock/store"
 
 // ✅ Sonner + Realtime
 import { Toaster } from "sonner"
+import { Toaster as CustomToaster } from "@/components/ui/toaster"
 import { LeadListener } from "@/components/realtime/lead-listener"
 import { getServerUser } from "@/lib/supabase/server" // server-side only
 
@@ -54,6 +55,9 @@ export default async function RootLayout({
 
           {/* ✅ Global Sonner toaster */}
           <Toaster richColors position="top-right" closeButton />
+          
+          {/* ✅ Custom toast system for useToast hook */}
+          <CustomToaster />
 
           {/* ✅ Global listener; runs safely client-side only */}
           <LeadListener tenantId={tenantId} />
