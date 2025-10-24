@@ -480,9 +480,9 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:bg-gray-900 lg:h-screen lg:overflow-hidden overflow-x-hidden">
-      {/* ========================= MOBILE (REORDERED) ========================= */}
-      <div className="lg:hidden">
-        <div className="p-4 space-y-3">
+      {/* ========================= MOBILE & TABLET (REORDERED) ========================= */}
+      <div className="xl:hidden">
+        <div className="p-3 sm:p-4 md:p-6 space-y-3 sm:space-y-4 md:space-y-6">
           <SectionCard>
             {/* Branding */}
             <div className="flex items-center gap-2">
@@ -558,29 +558,31 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
           </SectionCard>
 
           {/* Enhanced Aircraft Options */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between bg-white/80 backdrop-blur-sm p-4 rounded-xl border border-gray-200/50">
+          <div className="space-y-3 sm:space-y-4 md:space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white/80 backdrop-blur-sm p-4 md:p-6 rounded-xl border border-gray-200/50">
               <div className="flex items-center gap-2">
                 <Plane className="h-5 w-5 text-blue-600" />
-                <p className="text-gray-800 font-semibold">Aircraft Options</p>
+                <p className="text-gray-800 font-semibold text-sm sm:text-base">Aircraft Options</p>
               </div>
-              <Badge variant={statusDisplay.variant} className="text-xs flex items-center gap-1 px-3 py-1">
+              <Badge variant={statusDisplay.variant} className="text-xs flex items-center gap-1 px-3 py-1 self-start sm:self-auto">
                 <StatusIcon className="h-3 w-3" />
                 {statusDisplay.text}
               </Badge>
             </div>
-            {displayOptions.map((option) => (
-              <div key={option.id} className="w-full">
-                <PublicQuoteOptionCard
-                  option={option}
-                  isSelected={option.id === selectedOptionId}
-                  isLocked={isLocked}
-                  onSelect={() => handleSelectOption(option.id)}
-                  primaryColor={quote.branding?.primaryColor}
-                  hasSelectedOption={!!selectedOptionId}
-                />
-              </div>
-            ))}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+              {displayOptions.map((option) => (
+                <div key={option.id} className="w-full">
+                  <PublicQuoteOptionCard
+                    option={option}
+                    isSelected={option.id === selectedOptionId}
+                    isLocked={isLocked}
+                    onSelect={() => handleSelectOption(option.id)}
+                    primaryColor={quote.branding?.primaryColor}
+                    hasSelectedOption={!!selectedOptionId}
+                  />
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* Mobile Terms (visible on phones) */}
@@ -695,12 +697,12 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
       </div>
 
       {/* ========================= DESKTOP ========================= */}
-      <div className="hidden lg:block h-screen overflow-hidden overflow-x-hidden">
+      <div className="hidden xl:block h-screen overflow-hidden overflow-x-hidden">
         <div className="absolute inset-0 z-10">
           <div className="h-full flex">
             {/* LEFT PANE (full height scroll) */}
-            <div className="w-1/4 h-full overflow-y-auto overflow-x-hidden">
-              <div className="relative h-full p-6 pb-28 space-y-3">
+            <div className="w-1/4 xl:w-1/3 h-full overflow-y-auto overflow-x-hidden">
+              <div className="relative h-full p-4 xl:p-6 pb-28 space-y-3">
                 <SectionCard>
                   {/* Branding */}
                   <div className="flex items-center gap-2 mb-5">
@@ -882,11 +884,11 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
         </div>
 
         {/* Right pane: options (full height scroll) */}
-        <div className="absolute top-0 right-0 bottom-1 left-1/4 z-20 overflow-x-hidden">
-          <div className="h-full pt-6 pb-6 px-3">
+        <div className="absolute top-0 right-0 bottom-1 left-1/4 xl:left-1/3 z-20 overflow-x-hidden">
+          <div className="h-full pt-4 xl:pt-6 pb-4 xl:pb-6 px-2 xl:px-3">
             <div className="h-full overflow-y-auto overflow-x-hidden bg-white/95 backdrop-blur-sm border border-gray-200/50 rounded-2xl shadow-xl p-0">
               <div className="p-0">
-                <div className="px-6 py-4 border-b border-gray-200/50 bg-gradient-to-r from-white/90 to-blue-50/50 backdrop-blur-sm mb-4">
+                <div className="px-4 xl:px-6 py-3 xl:py-4 border-b border-gray-200/50 bg-gradient-to-r from-white/90 to-blue-50/50 backdrop-blur-sm mb-3 xl:mb-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -901,7 +903,7 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
                   </div>
                 </div>
 
-                <div className="px-4 space-y-4">
+                <div className="px-3 xl:px-4 space-y-3 xl:space-y-4">
                   {displayOptions.map((option) => (
                     <div key={option.id} className="w-full">
                       <PublicQuoteOptionCard
