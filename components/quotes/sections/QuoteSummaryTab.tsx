@@ -93,32 +93,43 @@ const totalOptions = useMemo(() => {
       }
 
       // If publish is successful (200 status), update quote status to 'awaiting response'
+      let statusUpdated = false
       if (res.status === 200) {
         try {
           const updateRes = await fetch(`/api/quotes/${quote.id}`, {
-            method: "PATCH",
+            method: "PUT",
             headers: {
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
-              status: "awaiting response",
+              quote: {
+                ...quote,
+                status: "awaiting response",
+              },
             }),
           })
 
-          if (!updateRes.ok) {
-            console.warn("Failed to update quote status:", updateRes.status)
+          if (updateRes.ok) {
+            statusUpdated = true
+            console.log("✅ Quote status updated to 'awaiting response'")
+          } else {
+            const errorData = await updateRes.json().catch(() => ({}))
+            console.error("❌ Failed to update quote status:", updateRes.status, errorData)
           }
         } catch (updateErr) {
-          console.warn("Error updating quote status:", updateErr)
+          console.error("❌ Error updating quote status:", updateErr)
           // Don't throw here - the publish was successful
         }
       }
 
       setPublishedUrl(json.link || json.link_url || null)
+      
+      // Show success toast with status update confirmation
       toast({
         title: "Quote Published Successfully!",
-        description:
-          "Your client has been emailed a secure link to view and confirm the quote. Quote status updated to 'awaiting response'.",
+        description: statusUpdated 
+          ? "Your client has been emailed a secure link to view and confirm the quote. Quote status updated to 'awaiting response'."
+          : "Your client has been emailed a secure link to view and confirm the quote. Status update pending.",
       })
     } catch (err: any) {
       console.error("Publish error:", err)

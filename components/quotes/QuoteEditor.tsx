@@ -238,9 +238,25 @@ const normalizeLegs = useCallback((legs: any[]) => {
         onLegsChange={handleUpdateLegs}
         onNavigate={async () => {
           // Save any pending changes before navigation
-          if (pendingChanges && localUpdates) {
+          if (pendingChanges) {
             try {
-              await saveQuoteAll(quote.id, { ...quote, ...localUpdates })
+              // Prepare the complete quote object with all data
+              const completeQuote = {
+                ...quote,
+                ...localUpdates,
+                legs: Array.isArray(quoteDetails) ? quoteDetails : [],
+                options: Array.isArray(quote.options) ? quote.options : [],
+                services: Array.isArray(quote.services) ? quote.services : [],
+              }
+              
+              console.log("💾 Saving complete quote before navigation:", {
+                quoteId: completeQuote.id,
+                legs: completeQuote.legs?.length || 0,
+                options: completeQuote.options?.length || 0,
+                services: completeQuote.services?.length || 0,
+              })
+              
+              await saveQuoteAll(completeQuote)
               setPendingChanges(false)
               setLastSaved(new Date())
             } catch (error) {

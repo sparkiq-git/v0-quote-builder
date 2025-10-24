@@ -125,7 +125,7 @@ export async function saveQuoteAll(quote: any) {
   }
 
   const res = await fetch(`/api/quotes/${quote.id}`, {
-    method: "PATCH",
+    method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   })
