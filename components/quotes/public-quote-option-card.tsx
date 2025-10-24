@@ -66,12 +66,23 @@ export function PublicQuoteOptionCard({
         ? aircraftModel.images
         : [`/placeholder.svg?height=600&width=1000&query=${encodeURIComponent(`${aircraftModel?.name || 'Aircraft'} aircraft`)}`]
 
-  const getImageSrc = (image: string) =>
-    failedImages.includes(image)
-      ? `/placeholder.svg?height=600&width=1000&query=${encodeURIComponent(
-          `${aircraftModel?.name || 'Aircraft'} aircraft placeholder`,
-        )}`
-      : image
+  const getImageSrc = (image: string) => {
+    // If image has already failed, use placeholder
+    if (failedImages.includes(image)) {
+      return `/placeholder.svg?height=600&width=1000&query=${encodeURIComponent(
+        `${aircraftModel?.name || 'Aircraft'} aircraft placeholder`,
+      )}`
+    }
+    
+    // If image URL looks invalid or is missing required path components, use placeholder
+    if (!image || !image.includes('/aircraft/') || image.includes('undefined')) {
+      return `/placeholder.svg?height=600&width=1000&query=${encodeURIComponent(
+        `${aircraftModel?.name || 'Aircraft'} aircraft placeholder`,
+      )}`
+    }
+    
+    return image
+  }
 
   useEffect(() => {
     if (!api) return
@@ -118,7 +129,10 @@ export function PublicQuoteOptionCard({
                               className="max-w-full max-h-full place-items-center object-cover md:object-contain w-full h-28 sm:h-32"
                               loading={i === 0 ? "eager" : "lazy"}
                               decoding="async"
-                              onError={() => setFailedImages((p) => (p.includes(img) ? p : [...p, img]))}
+                              onError={(e) => {
+                                console.warn(`Failed to load image: ${img}`, e)
+                                setFailedImages((p) => (p.includes(img) ? p : [...p, img]))
+                              }}
                               onLoad={() => setFailedImages((p) => p.filter((f) => f !== img))}
                             />
                           </div>

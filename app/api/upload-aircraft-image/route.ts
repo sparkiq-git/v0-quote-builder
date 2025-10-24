@@ -61,12 +61,13 @@ export async function POST(req: NextRequest) {
     }
 
 
-    // Get public URL
+    // Get public URL - ensure correct path structure
     const { data: publicData } = supabase.storage
       .from("aircraft-media")
       .getPublicUrl(storagePath)
     
     const publicUrl = publicData.publicUrl
+    
 
     // Save to database using service role client (bypasses RLS)
     const { data: dbData, error: dbError } = await supabase

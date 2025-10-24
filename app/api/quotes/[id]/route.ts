@@ -183,7 +183,16 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
                 if (!a.is_primary && b.is_primary) return 1
                 return a.display_order - b.display_order
               })
-              .map((img: any) => img.public_url)
+              .map((img: any) => {
+                // If the URL is malformed, try to regenerate it
+                if (img.public_url && !img.public_url.includes('/models/')) {
+                  // Try to reconstruct the correct path
+                  const fileName = img.public_url.split('/').pop()
+                  const reconstructedUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/aircraft-media/tenant/${aircraftModel.created_by}/models/${aircraftModel.id}/${fileName}`
+                  return reconstructedUrl
+                }
+                return img.public_url
+              })
               .filter(Boolean) || [],
           } : null,
           // Include aircraft tail data for the component
@@ -199,7 +208,16 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
                 if (!a.is_primary && b.is_primary) return 1
                 return a.display_order - b.display_order
               })
-              .map((img: any) => img.public_url)
+              .map((img: any) => {
+                // If the URL is malformed, try to regenerate it
+                if (img.public_url && !img.public_url.includes('/aircraft/')) {
+                  // Try to reconstruct the correct path
+                  const fileName = img.public_url.split('/').pop()
+                  const reconstructedUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/aircraft-media/tenant/${aircraft.tenant_id}/aircraft/${aircraft.id}/${fileName}`
+                  return reconstructedUrl
+                }
+                return img.public_url
+              })
               .filter(Boolean) || [],
             capacityOverride: aircraft.capacity_pax,
             rangeNmOverride: aircraft.range_nm,
@@ -235,7 +253,6 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       },
     }
 
-    console.log("Transformed quote data:", JSON.stringify(transformedQuote, null, 2))
     return NextResponse.json(transformedQuote)
   } catch (error) {
     console.error("Unexpected error fetching quote:", error)
