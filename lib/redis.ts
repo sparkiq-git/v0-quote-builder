@@ -14,7 +14,16 @@ function getRedisClient(): Redis {
       throw new Error("Missing KV_REST_API_URL / KV_REST_API_TOKEN");
     }
     
-    redis = new Redis({ url, token });
+    // Fix: Use the correct Upstash Redis configuration
+    redis = new Redis({ 
+      url, 
+      token,
+      // Add these options for Upstash compatibility
+      retry: {
+        retries: 3,
+        delay: 1000
+      }
+    });
   }
   return redis;
 }
