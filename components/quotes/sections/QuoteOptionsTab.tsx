@@ -80,19 +80,56 @@ useEffect(() => {
 
     if (ids.length === 0) return
 
-    // Fetch all aircraft for tenant
-    const res = await fetch("/api/aircraft-full")
-    const json = await res.json()
-    if (!res.ok) return
+    try {
+      // Fetch all aircraft for tenant
+      const res = await fetch("/api/aircraft-full")
+      const json = await res.json()
+      
+      if (!res.ok) {
+        console.warn("Failed to fetch aircraft data:", json.error || "Unknown error")
+        return
+      }
 
-    // Build dictionary by aircraft_id
-    const byId = Object.fromEntries(
-      json.data
-        .filter((a) => ids.includes(a.aircraft_id))
-        .map((a) => [a.aircraft_id, a])
-    )
+      // Build dictionary by aircraft_id, only for aircraft that exist
+      const byId = Object.fromEntries(
+        json.data
+          .filter((a) => ids.includes(a.aircraft_id))
+          .map((a) => [a.aircraft_id, a])
+      )
 
-    setAircraftCache((prev) => ({ ...prev, ...byId }))
+      // Log missing aircraft IDs for debugging
+      const foundIds = Object.keys(byId)
+      const missingIds = ids.filter(id => !foundIds.includes(id))
+      if (missingIds.length > 0) {
+        console.warn("⚠️ Aircraft not found for IDs:", missingIds)
+        
+        // Clean up options with invalid aircraft IDs
+        const cleanedOptions = options.map(option => {
+          if (missingIds.includes(option.aircraft_id)) {
+            console.log(`🧹 Cleaning up option ${option.id} with invalid aircraft_id: ${option.aircraft_id}`)
+            return {
+              ...option,
+              aircraft_id: "",
+              aircraft_tail_number: "",
+              aircraft_model: "",
+              aircraft_manufacturer: "",
+              aircraft_capacity: null,
+              aircraft_range: null,
+            }
+          }
+          return option
+        })
+        
+        // Update options if any were cleaned
+        if (JSON.stringify(cleanedOptions) !== JSON.stringify(options)) {
+          onUpdate({ options: cleanedOptions })
+        }
+      }
+
+      setAircraftCache((prev) => ({ ...prev, ...byId }))
+    } catch (error) {
+      console.error("Error fetching aircraft data:", error)
+    }
   }
 
   fetchAircraftForOptions()
@@ -239,6 +276,13 @@ const handleNext = () => {
     aircraft={aircraftCache[option.aircraft_id]}
     onEdit={() => setEditOpenFor(option.aircraft_id!)}
   />
+)}
+                 {option.aircraft_id && !aircraftCache[option.aircraft_id] && (
+  <div className="p-3 border border-yellow-200 bg-yellow-50 rounded-lg">
+    <p className="text-sm text-yellow-800">
+      ⚠️ Aircraft data not found. Please select a different aircraft.
+    </p>
+  </div>
 )}
 
                   </div>
