@@ -13,7 +13,7 @@ export function AircraftSummaryCard({
     model_name?: string | null
     operator_name?: string | null
     primary_image_url?: string | null
-    model_images?: string[] // Add model images array
+    aircraft_images?: string[] // Add aircraft images array
     capacity_pax?: number | null
     cruising_speed?: number | null // add this if you have it in your view
     amenities?: string[]
@@ -22,10 +22,10 @@ export function AircraftSummaryCard({
 }) {
   if (!aircraft) return null
 
-  // Get the best available image (primary > first model image > placeholder)
+  // Get the best available image (primary > first aircraft image > placeholder)
   const getThumbnailUrl = () => {
     if (aircraft.primary_image_url) return aircraft.primary_image_url
-    if (aircraft.model_images?.length) return aircraft.model_images[0]
+    if (aircraft.aircraft_images?.length) return aircraft.aircraft_images[0]
     return null
   }
 

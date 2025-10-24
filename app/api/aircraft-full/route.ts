@@ -12,19 +12,7 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from("aircraft_full_view")
-    .select(`
-      *,
-      aircraft_model!model_id (
-        id,
-        name,
-        aircraft_model_image (
-          id,
-          public_url,
-          is_primary,
-          display_order
-        )
-      )
-    `)
+    .select("*")
     .eq("tenant_id", tenantId)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
