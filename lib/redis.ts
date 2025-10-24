@@ -2,34 +2,16 @@
 import { Redis } from "@upstash/redis";
 import { Ratelimit } from "@upstash/ratelimit";
 
-// --- Lazy configuration to avoid build-time errors ---
-let redis: Redis | null = null;
+// --- Existing configuration ---
+const url = process.env.KV_REST_API_URL;
+const token = process.env.KV_REST_API_TOKEN; // RW token for writers; readers may use RO token elsewhere
 
-function getRedisClient(): Redis {
-  if (!redis) {
-    const url = process.env.KV_REST_API_URL;
-    const token = process.env.KV_REST_API_TOKEN;
-    
-    if (!url || !token) {
-      throw new Error("Missing KV_REST_API_URL / KV_REST_API_TOKEN");
-    }
-    
-    // Fix: Use the correct Upstash Redis configuration
-    redis = new Redis({ 
-      url, 
-      token,
-      // Add these options for Upstash compatibility
-      retry: {
-        retries: 3,
-        delay: 1000
-      }
-    });
-  }
-  return redis;
+if (!url || !token) {
+  throw new Error("Missing KV_REST_API_URL / KV_REST_API_TOKEN");
 }
 
-// ✅ Lazy Redis client (used by both existing features & new rate limiting)
-export { getRedisClient as redis };
+// ✅ Shared Redis client (used by both existing features & new rate limiting)
+export const redis = new Redis({ url, token });
 
 // --- Existing exports (unchanged) ---
 export const AIRPORTS_INDEX_KEY =
@@ -52,17 +34,17 @@ export const splitWords = (s?: string | null) => {
 // --- 🔹 New: Rate limiting & idempotency utilities --- //
 
 /**
- * Global rate limiters using lazy Redis client.
+ * Global rate limiters using shared Redis client.
  * Adjust per-IP or per-token limits as needed.
  */
 export const rlPerIp = new Ratelimit({
-  redis: getRedisClient,
+  redis,
   limiter: Ratelimit.fixedWindow(20, "1 m"), // 20 req/min per IP
   analytics: true,
 });
 
 export const rlPerToken = new Ratelimit({
-  redis: getRedisClient,
+  redis,
   limiter: Ratelimit.fixedWindow(10, "10 m"), // 10 req/10min per token
   analytics: true,
 });
