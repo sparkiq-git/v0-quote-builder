@@ -46,35 +46,9 @@ export function QuoteDetailsTab({ quote, onUpdate, onNext }: Props) {
     }
   }
 
-  // 🔄 Save + navigate
-  const handleNext = async () => {
-    try {
-      setSaving(true)
-      const res = await fetch(`/api/quotes/${quote.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          quote: {
-            contact_id: quote.contact_id,
-            contact_name: quote.contact_name,
-            contact_email: quote.contact_email,
-            contact_phone: quote.contact_phone,
-            contact_company: quote.contact_company,
-            valid_until: quote.valid_until,
-            notes: quote.notes,
-          },
-        }),
-      })
-      const json = await res.json()
-      if (!res.ok) throw new Error(json.error || "Failed to save quote details")
-
-      toast({ title: "Quote saved", description: "Contact details saved successfully." })
-      onNext()
-    } catch (err: any) {
-      toast({ title: "Error saving", description: err.message, variant: "destructive" })
-    } finally {
-      setSaving(false)
-    }
+  // 🔄 Navigate (save handled by parent)
+  const handleNext = () => {
+    onNext()
   }
 
   return (
@@ -210,8 +184,8 @@ export function QuoteDetailsTab({ quote, onUpdate, onNext }: Props) {
 
         {/* Navigation */}
         <div className="flex justify-end pt-4 border-t">
-          <Button onClick={handleNext} disabled={saving}>
-            {saving ? "Saving..." : "Next: Trip Legs"}
+          <Button onClick={handleNext}>
+            Next: Trip Legs
             <ChevronRight className="ml-2 h-4 w-4" />
           </Button>
         </div>

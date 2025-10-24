@@ -54,55 +54,8 @@ export function QuoteServicesTab({ quote, onNext, onBack }: any) {
     [services]
   )
 
-  const handleSaveAndNavigate = async (direction: "next" | "back") => {
-    try {
-      setSaving(true)
-
-      // ✅ Allow empty list — that triggers full wipe
-      if (services.some((s) => !s.item_id && services.length > 0)) {
-        toast({
-          title: "Missing information",
-          description: "Please select a service item before continuing.",
-          variant: "destructive",
-        })
-        setSaving(false)
-        return
-      }
-
-      const payload = {
-        quote: {
-          title: quote.title,
-          contact_id: quote.contact_id,
-          status: quote.status,
-          notes: quote.notes,
-          valid_until: quote.valid_until,
-        },
-        services, // ✅ can be empty — backend now supports full delete
-      }
-
-      const res = await fetch(`/api/quotes/${quote.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      })
-
-      const json = await res.json()
-      if (!res.ok) throw new Error(json.error || "Failed to save services")
-
-      toast({
-        title: "Services saved",
-        description: "Quote services updated successfully.",
-      })
-      direction === "next" ? onNext() : onBack()
-    } catch (err: any) {
-      toast({
-        title: "Error saving services",
-        description: err.message,
-        variant: "destructive",
-      })
-    } finally {
-      setSaving(false)
-    }
+  const handleSaveAndNavigate = (direction: "next" | "back") => {
+    direction === "next" ? onNext() : onBack()
   }
 
   /* ---------------- UI ---------------- */
@@ -225,15 +178,13 @@ export function QuoteServicesTab({ quote, onNext, onBack }: any) {
           <Button
             variant="outline"
             onClick={() => handleSaveAndNavigate("back")}
-            disabled={saving}
           >
             ← Back: Aircraft
           </Button>
           <Button
             onClick={() => handleSaveAndNavigate("next")}
-            disabled={saving}
           >
-            {saving ? "Saving..." : "Next: Summary →"}
+            Next: Summary →
           </Button>
         </div>
       </CardContent>

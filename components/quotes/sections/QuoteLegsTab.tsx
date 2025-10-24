@@ -79,99 +79,9 @@ export function QuoteLegsTab({ quote, onUpdate, onLegsChange, onNext, onBack }: 
         ]
   )
 
-  /* ------------------ ✈️ Save & Navigate ------------------ */
-  const handleSaveAndNavigate = async (direction: "next" | "back") => {
-    try {
-      setSaving(true)
-
-      // Build legs to save based on type
-      let legsToSave: Leg[] = []
-
-      if (tripType === "one-way") {
-        legsToSave = [
-          {
-            id: crypto.randomUUID(),
-            origin: formState.origin,
-            origin_code: formState.origin_code,
-            destination: formState.destination,
-            destination_code: formState.destination_code,
-            departureDate: formState.departureDate,
-            departureTime: formState.departureTime,
-            passengers: formState.passengers,
-      origin_lat: formState.origin_lat ?? legs[0]?.origin_lat ?? null,
-      origin_long: formState.origin_long ?? legs[0]?.origin_long ?? null,
-      destination_lat: formState.destination_lat ?? legs[0]?.destination_lat ?? null,
-      destination_long: formState.destination_long ?? legs[0]?.destination_long ?? null,
-          },
-        ]
-      } else if (tripType === "round-trip") {
-        legsToSave = [
-          {
-            id: crypto.randomUUID(),
-            origin: formState.origin,
-            origin_code: formState.origin_code,
-            destination: formState.destination,
-            destination_code: formState.destination_code,
-            departureDate: formState.departureDate,
-            departureTime: formState.departureTime,
-            passengers: formState.passengers,
-      origin_lat: formState.origin_lat ?? legs[0]?.origin_lat ?? null,
-      origin_long: formState.origin_long ?? legs[0]?.origin_long ?? null,
-      destination_lat: formState.destination_lat ?? legs[0]?.destination_lat ?? null,
-      destination_long: formState.destination_long ?? legs[0]?.destination_long ?? null,
-          },
-          {
-            id: crypto.randomUUID(),
-            origin: formState.destination,
-            origin_code: formState.destination_code,
-            destination: formState.origin,
-            destination_code: formState.origin_code,
-            departureDate: formState.returnDate,
-            departureTime: formState.returnTime,
-            passengers: formState.passengers,
-      origin_lat: formState.destination_lat,
-      origin_long: formState.destination_long,
-      destination_lat: formState.origin_lat,
-      destination_long: formState.origin_long,
-          },
-        ]
-      } else {
-        legsToSave = multiLegs
-      }
-
-      const payload = {
-        quote: {
-          contact_id: quote.contact_id,
-          contact_name: quote.contact_name,
-          contact_email: quote.contact_email,
-          contact_phone: quote.contact_phone,
-          contact_company: quote.contact_company,
-          valid_until: quote.valid_until,
-          notes: quote.notes,
-          title: quote.title,
-          status: quote.status,
-        },
-        legs: legsToSave,
-      }
-
-      console.log("🧩 Saving legs payload:", JSON.stringify(payload, null, 2))
-
-      const res = await fetch(`/api/quotes/${quote.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      })
-
-      const json = await res.json()
-      if (!res.ok) throw new Error(json.error || "Failed to save legs")
-
-      toast({ title: "Legs saved", description: "Trip legs updated successfully." })
-      direction === "next" ? onNext() : onBack()
-    } catch (err: any) {
-      toast({ title: "Error saving legs", description: err.message, variant: "destructive" })
-    } finally {
-      setSaving(false)
-    }
+  /* ------------------ ✈️ Navigate (save handled by parent) ------------------ */
+  const handleSaveAndNavigate = (direction: "next" | "back") => {
+    direction === "next" ? onNext() : onBack()
   }
 
   /* ------------------ 🧱 Multi-leg Handlers ------------------ */
@@ -465,11 +375,11 @@ const handleAddLeg = () => {
 
         {/* Navigation */}
         <div className="flex justify-between pt-4">
-          <Button variant="outline" onClick={() => handleSaveAndNavigate("back")} disabled={saving}>
+          <Button variant="outline" onClick={() => handleSaveAndNavigate("back")}>
             <ChevronRight className="mr-2 h-4 w-4 rotate-180" /> Back: Details
           </Button>
-          <Button onClick={() => handleSaveAndNavigate("next")} disabled={saving}>
-            {saving ? "Saving..." : "Next: Aircraft Options"} <ChevronRight className="ml-2 h-4 w-4" />
+          <Button onClick={() => handleSaveAndNavigate("next")}>
+            Next: Aircraft Options <ChevronRight className="ml-2 h-4 w-4" />
           </Button>
         </div>
       </CardContent>

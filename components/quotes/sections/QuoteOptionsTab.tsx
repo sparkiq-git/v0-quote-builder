@@ -154,25 +154,9 @@ const handleUpdateOption = (id: string, updates: Partial<QuoteOption>) => {
   const total = options.reduce((sum, o) => sum + calculateOptionTotal(o), 0)
   const isOptionsValid = options.length > 0
 
-// 🧩 Save quote options before moving to next tab
-const handleNext = async () => {
-  try {
-    setSaving(true)
-    const res = await fetch(`/api/quotes/${quote.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ quote, options }),
-    })
-    const json = await res.json()
-    if (!res.ok) throw new Error(json.error || "Failed to save quote options")
-
-    toast({ title: "Quote Saved", description: "Aircraft options saved successfully." })
-    onNext()
-  } catch (err: any) {
-    toast({ title: "Error saving", description: err.message, variant: "destructive" })
-  } finally {
-    setSaving(false)
-  }
+// 🧩 Navigate (save handled by parent)
+const handleNext = () => {
+  onNext()
 }
 
 
@@ -416,9 +400,9 @@ const handleNext = async () => {
           <Button variant="outline" onClick={onBack}>
             <ChevronRight className="mr-2 h-4 w-4 rotate-180" /> Back: Trip Legs
           </Button>
-<Button onClick={handleNext} disabled={!isOptionsValid || saving}>
-  {saving ? "Saving..." : "Next: Services"} <ChevronRight className="ml-2 h-4 w-4" />
-</Button>
+          <Button onClick={handleNext} disabled={!isOptionsValid}>
+            Next: Services <ChevronRight className="ml-2 h-4 w-4" />
+          </Button>
 
 
         </div>

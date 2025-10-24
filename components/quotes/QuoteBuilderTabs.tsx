@@ -34,6 +34,7 @@ export function QuoteBuilderTabs({
           await onNavigate()
         } catch (e) {
           console.error("⚠️ Save before navigation failed:", e)
+          return // Don't navigate if save fails
         }
       }
       setCurrentTab(nextTab)
