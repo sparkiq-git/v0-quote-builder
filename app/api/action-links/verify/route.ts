@@ -61,7 +61,7 @@ export async function POST(req: Request) {
       )
     }
 
-    const tokenHash = sha256Base64url(token)
+    const tokenHash = await sha256Base64url(token)
     console.log("🔑 Token hash created:", tokenHash.substring(0, 10) + "...")
     
     // --- Create Supabase client ---

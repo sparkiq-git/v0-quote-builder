@@ -1,17 +1,19 @@
 // lib/security/token.ts
-import { createHash } from 'crypto'
 
 /**
  * Creates a SHA-256 hash of the input and returns it as a base64url-encoded string.
  * This is used for securely storing token hashes in the database.
+ * Uses Web Crypto API for browser compatibility.
  */
-export function sha256Base64url(input: string): string {
-  const hash = createHash('sha256')
-  hash.update(input)
-  const digest = hash.digest('base64')
+export async function sha256Base64url(input: string): Promise<string> {
+  const encoder = new TextEncoder()
+  const data = encoder.encode(input)
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data)
+  const hashArray = new Uint8Array(hashBuffer)
+  const hashBase64 = btoa(String.fromCharCode(...hashArray))
   
   // Convert to base64url format (RFC 4648)
-  return digest
+  return hashBase64
     .replace(/\+/g, '-')
     .replace(/\//g, '_')
     .replace(/=/g, '')

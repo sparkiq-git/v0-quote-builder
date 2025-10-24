@@ -34,7 +34,7 @@ export async function POST(req: Request) {
     const { token, email, captchaToken } = parsed.data
     console.log("✅ Request validation passed")
 
-    const tokenHash = sha256Base64url(token)
+    const tokenHash = await sha256Base64url(token)
     console.log("🔑 Token hash created:", tokenHash.substring(0, 10) + "...")
     
     // --- Create Supabase client ---
