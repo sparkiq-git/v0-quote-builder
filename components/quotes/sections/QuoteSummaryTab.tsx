@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useMemo, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import {
   Card,
   CardHeader,
@@ -10,10 +11,13 @@ import {
 } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
+import { Label } from "@/components/ui/label"
+import { DateTimePicker } from "@/components/ui/date-time-picker"
 import {
   FileText,
   ChevronRight,
   Send,
+  Clock,
 } from "lucide-react"
 import { formatCurrency } from "@/lib/utils/format"
 import { useToast } from "@/hooks/use-toast"
@@ -25,10 +29,13 @@ interface Props {
 }
 
 export function QuoteSummaryTab({ quote, onBack }: Props) {
+  const router = useRouter()
   const { toast } = useToast()
   const [publishing, setPublishing] = useState(false)
   const [publishedUrl, setPublishedUrl] = useState<string | null>(null)
   const [aircraftMap, setAircraftMap] = useState<Record<string, any>>({})
+  const [expirationDate, setExpirationDate] = useState<string>("")
+  const [expirationTime, setExpirationTime] = useState<string>("")
 
 
   // ✅ Fallback URL
@@ -58,9 +65,21 @@ const totalOptions = useMemo(() => {
 
   const grandTotal = totalOptions + totalServices
 
+  // ✅ Validate expiration date/time
+  const isExpirationValid = expirationDate && expirationTime
+  const expirationDateTime = isExpirationValid ? `${expirationDate}T${expirationTime}:00.000Z` : null
 
   /* ---------------- 🚀 Publish quote ---------------- */
   const handlePublish = async () => {
+    // Validate expiration date/time before publishing
+    if (!isExpirationValid) {
+      toast({
+        title: "Expiration Required",
+        description: "Please set an expiration date and time before publishing the quote.",
+        variant: "destructive",
+      })
+      return
+    }
     setPublishing(true)
     try {
       const fnUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/create-action-link`
@@ -82,7 +101,11 @@ const totalOptions = useMemo(() => {
           email: quote.contact_email,
           tenant_id: quote.tenant_id,
           created_by: quote.created_by_user_id,
-          metadata: { quote_id: quote.id, quote_ref: quote.reference_code },
+          metadata: { 
+            quote_id: quote.id, 
+            quote_ref: quote.reference_code,
+            expiration_date: expirationDateTime
+          },
         }),
       })
 
@@ -132,6 +155,11 @@ const totalOptions = useMemo(() => {
           ? "Your client has been emailed a secure link to view and confirm the quote. Quote status updated to 'awaiting response'."
           : "Your client has been emailed a secure link to view and confirm the quote. Status update pending.",
       })
+
+      // Redirect to leads page after successful publish
+      setTimeout(() => {
+        router.push("/leads")
+      }, 2000) // Give user time to see the success message
     } catch (err: any) {
       console.error("Publish error:", err)
       toast({
@@ -328,6 +356,39 @@ useEffect(() => {
 
         <Separator />
 
+        {/* Expiration Settings */}
+        <div>
+          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <Clock className="h-5 w-5" />
+            Quote Expiration
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border rounded-lg bg-muted/30">
+            <div className="space-y-2">
+              <Label htmlFor="expiration-date">Expiration Date *</Label>
+              <DateTimePicker
+                date={expirationDate}
+                onDateChange={setExpirationDate}
+                showOnlyDate
+                placeholder="Select expiration date"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="expiration-time">Expiration Time *</Label>
+              <DateTimePicker
+                time={expirationTime}
+                onTimeChange={setExpirationTime}
+                showOnlyTime
+                placeholder="Select expiration time"
+              />
+            </div>
+          </div>
+          <p className="text-sm text-muted-foreground mt-2">
+            The quote will expire and become invalid after this date and time.
+          </p>
+        </div>
+
+        <Separator />
+
         {/* Totals */}
         <div className="text-right space-y-1">
           <p className="text-sm text-muted-foreground">
@@ -350,7 +411,10 @@ useEffect(() => {
           </Button>
 
           <div className="flex items-center gap-3">
-            <Button onClick={handlePublish} disabled={publishing}>
+            <Button 
+              onClick={handlePublish} 
+              disabled={publishing || !isExpirationValid}
+            >
               <Send className="mr-2 h-4 w-4" />
               {publishing ? "Publishing..." : "Publish Quote"}
             </Button>
