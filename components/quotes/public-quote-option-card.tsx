@@ -14,7 +14,23 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import type { QuoteOption } from "@/lib/types"
 import { formatCurrency } from "@/lib/utils/format"
-import { Wifi, Coffee, Tv, Utensils, Bed, Headphones, Zap, Shield, Star, CheckCircle, Users, Plane, Clock, MapPin, Gauge, Calendar, Route } from "lucide-react"
+import {
+  Wifi,
+  Coffee,
+  Tv,
+  Utensils,
+  Bed,
+  Headphones,
+  Zap,
+  Shield,
+  Star,
+  CheckCircle,
+  Users,
+  Clock,
+  Gauge,
+  Calendar,
+  Route,
+} from "lucide-react"
 
 interface PublicQuoteOptionCardProps {
   option: QuoteOption
@@ -64,23 +80,25 @@ export function PublicQuoteOptionCard({
       ? aircraftTail.images
       : aircraftModel?.images?.length
         ? aircraftModel.images
-        : [`/placeholder.svg?height=600&width=1000&query=${encodeURIComponent(`${aircraftModel?.name || 'Aircraft'} aircraft`)}`]
+        : [
+            `/placeholder.svg?height=600&width=1000&query=${encodeURIComponent(`${aircraftModel?.name || "Aircraft"} aircraft`)}`,
+          ]
 
   const getImageSrc = (image: string) => {
     // If image has already failed, use placeholder
     if (failedImages.includes(image)) {
       return `/placeholder.svg?height=600&width=1000&query=${encodeURIComponent(
-        `${aircraftModel?.name || 'Aircraft'} aircraft placeholder`,
+        `${aircraftModel?.name || "Aircraft"} aircraft placeholder`,
       )}`
     }
-    
+
     // If image URL looks invalid or is missing required path components, use placeholder
-    if (!image || !image.includes('/aircraft/') || image.includes('undefined')) {
+    if (!image || !image.includes("/aircraft/") || image.includes("undefined")) {
       return `/placeholder.svg?height=600&width=1000&query=${encodeURIComponent(
-        `${aircraftModel?.name || 'Aircraft'} aircraft placeholder`,
+        `${aircraftModel?.name || "Aircraft"} aircraft placeholder`,
       )}`
     }
-    
+
     return image
   }
 
@@ -99,29 +117,29 @@ export function PublicQuoteOptionCard({
   const capacity = aircraftTail?.capacityOverride || aircraftModel?.defaultCapacity || 0
 
   return (
-    <div className="mx-auto w-full max-w-screen-md sm:max-w-screen-lg lg:max-w-screen-xl px-2 sm:px-4 lg:px-8 pb-3">
+    <div className="mx-auto w-full max-w-screen-xl px-4 sm:px-6 lg:px-12 pb-8">
       <style>{`
         .carousel-container .carousel-previous,
         .carousel-container .carousel-next,
         .carousel-container [aria-label="Previous image"],
-        .carousel-container [aria-label="Next image"] { opacity:0; transition:opacity .2s ease-in-out;}
+        .carousel-container [aria-label="Next image"] { opacity:0; transition:opacity .3s ease;}
         .carousel-container:hover .carousel-previous,
         .carousel-container:hover .carousel-next,
         .carousel-container:hover [aria-label="Previous image"],
         .carousel-container:hover [aria-label="Next image"] { opacity:1; }
         @media (max-width: 768px) {
           .carousel-container .carousel-previous,
-          .carousel-container .carousel-next { opacity: 0.7; }
+          .carousel-container .carousel-next { opacity: 0.6; }
         }
       `}</style>
 
       {aircraftModel ? (
-        <Card className="relative rounded-2xl sm:rounded-3xl bg-white shadow-lg sm:shadow-xl hover:shadow-xl sm:hover:shadow-2xl transition-all duration-300 overflow-hidden p-0 border-0">
+        <Card className="relative rounded-2xl sm:rounded-3xl bg-white shadow-sm border border-gray-100 hover:shadow-md transition-all duration-500 overflow-hidden p-0">
           <div className="flex flex-col lg:flex-row">
-            {/* STUNNING IMAGE CAROUSEL */}
-            <div className="order-1 lg:order-2 relative w-full lg:w-[60%] overflow-hidden">
+            {/* MINIMALIST IMAGE CAROUSEL */}
+            <div className="order-1 lg:order-2 relative w-full lg:w-[58%] overflow-hidden">
               <div className="carousel-container w-full">
-                <div className="w-full h-48 sm:h-56 md:h-64 lg:h-80 bg-gradient-to-br from-gray-50 to-gray-100">
+                <div className="w-full h-56 sm:h-64 md:h-72 lg:h-96 bg-gray-50">
                   <Carousel className="w-full h-full" setApi={setApi}>
                     <CarouselContent className="h-full">
                       {images.map((img, i) => (
@@ -129,8 +147,8 @@ export function PublicQuoteOptionCard({
                           <div className="w-full h-full relative overflow-hidden">
                             <img
                               src={getImageSrc(img) || "/placeholder.svg"}
-                              alt={`${aircraftModel?.name || 'Aircraft'} - Image ${i + 1}`}
-                              className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                              alt={`${aircraftModel?.name || "Aircraft"} - Image ${i + 1}`}
+                              className="w-full h-full object-cover transition-transform duration-700 hover:scale-[1.02]"
                               loading={i === 0 ? "eager" : "lazy"}
                               decoding="async"
                               onError={(e) => {
@@ -139,8 +157,7 @@ export function PublicQuoteOptionCard({
                               }}
                               onLoad={() => setFailedImages((p) => p.filter((f) => f !== img))}
                             />
-                            {/* Gradient overlay for better text readability */}
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-transparent" />
                           </div>
                         </CarouselItem>
                       ))}
@@ -149,19 +166,19 @@ export function PublicQuoteOptionCard({
                     {images.length > 1 && (
                       <>
                         <CarouselPrevious
-                          className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-white/90 text-gray-800 backdrop-blur-md border-0 shadow-lg sm:shadow-xl hover:bg-white hover:scale-110 transition-all duration-200 touch-manipulation"
+                          className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 h-9 w-9 sm:h-10 sm:w-10 rounded-full bg-white/95 text-gray-700 backdrop-blur-sm border border-gray-200/50 shadow-sm hover:bg-white hover:shadow-md hover:scale-105 transition-all duration-300 touch-manipulation"
                           aria-label="Previous image"
                         />
                         <CarouselNext
-                          className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-white/90 text-gray-800 backdrop-blur-md border-0 shadow-lg sm:shadow-xl hover:bg-white hover:scale-110 transition-all duration-200 touch-manipulation"
+                          className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 h-9 w-9 sm:h-10 sm:w-10 rounded-full bg-white/95 text-gray-700 backdrop-blur-sm border border-gray-200/50 shadow-sm hover:bg-white hover:shadow-md hover:scale-105 transition-all duration-300 touch-manipulation"
                           aria-label="Next image"
                         />
-                        <div className="absolute bottom-3 sm:bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 sm:gap-2">
+                        <div className="absolute bottom-4 sm:bottom-5 left-1/2 -translate-x-1/2 flex gap-2">
                           {Array.from({ length: count }).map((_, index) => (
                             <button
                               key={index}
-                              className={`h-2 w-2 sm:h-2.5 sm:w-2.5 rounded-full transition-all duration-200 touch-manipulation ${
-                                index === current ? "bg-white scale-125 shadow-lg" : "bg-white/60 hover:bg-white/80"
+                              className={`h-1.5 rounded-full transition-all duration-300 touch-manipulation ${
+                                index === current ? "w-8 bg-white shadow-sm" : "w-1.5 bg-white/50 hover:bg-white/70"
                               }`}
                               onClick={() => scrollTo(index)}
                               aria-label={`Go to slide ${index + 1}`}
@@ -175,74 +192,68 @@ export function PublicQuoteOptionCard({
               </div>
             </div>
 
-            {/* ENHANCED INFO SECTION */}
-            <div className="order-2 lg:order-1 flex flex-col w-full lg:w-[40%] bg-white">
-              <div className="p-4 sm:p-6 lg:p-8 flex-1">
-                {/* Aircraft Header */}
-                <div className="mb-4 sm:mb-6">
-                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-3">
-                    <div className="flex-1">
-                      <h3 className="text-lg sm:text-xl font-bold text-gray-900 leading-tight mb-1">
-                        {aircraftModel?.name || 'Aircraft Model'}
+            {/* REFINED INFO SECTION */}
+            <div className="order-2 lg:order-1 flex flex-col w-full lg:w-[42%] bg-white">
+              <div className="p-6 sm:p-8 lg:p-10 flex-1 space-y-6 sm:space-y-8">
+                <div>
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
+                    <div className="flex-1 space-y-1">
+                      <h3 className="text-xl sm:text-2xl font-light text-gray-900 tracking-tight leading-tight">
+                        {aircraftModel?.name || "Aircraft Model"}
                       </h3>
-                      <p className="text-sm text-gray-600 font-medium">
-                        {aircraftModel?.manufacturer || 'Aircraft Manufacturer'}
+                      <p className="text-sm text-gray-500 font-light tracking-wide">
+                        {aircraftModel?.manufacturer || "Aircraft Manufacturer"}
                       </p>
                     </div>
-                    <div className="flex items-center gap-2 bg-blue-50 px-3 py-1.5 rounded-full self-start sm:self-auto">
-                      <Users className="h-4 w-4 text-blue-600" />
-                      <span className="text-sm font-semibold text-blue-700">{capacity} passengers</span>
+                    <div className="flex items-center gap-2 border border-gray-200 px-3 py-1.5 rounded-full self-start sm:self-auto">
+                      <Users className="h-3.5 w-3.5 text-gray-600" />
+                      <span className="text-sm font-light text-gray-700">{capacity}</span>
                     </div>
                   </div>
 
-                  {/* Aircraft Details */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 mb-4">
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-3 pt-4 border-t border-gray-100">
                     {aircraftTail?.year && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <Calendar className="h-4 w-4 text-blue-500" />
-                        <span className="text-gray-700 font-medium">{aircraftTail.year}</span>
+                      <div className="flex items-center gap-2.5 text-sm">
+                        <Calendar className="h-3.5 w-3.5 text-gray-400" />
+                        <span className="text-gray-600 font-light">{aircraftTail.year}</span>
                       </div>
                     )}
                     {aircraftTail?.yearOfRefurbishment && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <Clock className="h-4 w-4 text-green-500" />
-                        <span className="text-gray-700 font-medium">Refurb: {aircraftTail.yearOfRefurbishment}</span>
+                      <div className="flex items-center gap-2.5 text-sm">
+                        <Clock className="h-3.5 w-3.5 text-gray-400" />
+                        <span className="text-gray-600 font-light">Refurb {aircraftTail.yearOfRefurbishment}</span>
                       </div>
                     )}
                     {aircraftTail?.speedKnotsOverride && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <Gauge className="h-4 w-4 text-purple-500" />
-                        <span className="text-gray-700 font-medium">{aircraftTail.speedKnotsOverride} kts</span>
+                      <div className="flex items-center gap-2.5 text-sm">
+                        <Gauge className="h-3.5 w-3.5 text-gray-400" />
+                        <span className="text-gray-600 font-light">{aircraftTail.speedKnotsOverride} kts</span>
                       </div>
                     )}
                     {aircraftTail?.rangeNmOverride && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <Route className="h-4 w-4 text-orange-500" />
-                        <span className="text-gray-700 font-medium">{aircraftTail.rangeNmOverride} nm</span>
+                      <div className="flex items-center gap-2.5 text-sm">
+                        <Route className="h-3.5 w-3.5 text-gray-400" />
+                        <span className="text-gray-600 font-light">{aircraftTail.rangeNmOverride} nm</span>
                       </div>
                     )}
                   </div>
                 </div>
 
-                {/* Enhanced Amenities */}
                 {amenities.length > 0 && (
-                  <div className="mb-4 sm:mb-6">
-                    <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                      <Star className="h-4 w-4 text-amber-500" />
-                      Amenities & Features
-                    </h4>
+                  <div>
+                    <h4 className="text-xs uppercase tracking-wider text-gray-500 font-light mb-4">Amenities</h4>
                     <TooltipProvider delayDuration={150}>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                         {amenities.slice(0, 6).map((amenity, i) => {
                           const Icon = getAmenityIcon(amenity)
                           return (
                             <Tooltip key={i}>
                               <TooltipTrigger asChild>
-                                <div className="flex items-center gap-2 sm:gap-3 p-2 sm:p-2.5 rounded-lg hover:bg-gray-50 transition-colors touch-manipulation">
-                                  <div className="flex-shrink-0 w-7 h-7 sm:w-8 sm:h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                                    <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-blue-600" />
+                                <div className="flex items-center gap-3 p-2.5 rounded-lg border border-gray-100 hover:border-gray-200 hover:bg-gray-50/50 transition-all duration-200 touch-manipulation">
+                                  <div className="flex-shrink-0 w-7 h-7 bg-gray-50 rounded-md flex items-center justify-center">
+                                    <Icon className="h-3.5 w-3.5 text-gray-600" />
                                   </div>
-                                  <span className="text-xs sm:text-sm font-medium text-gray-700 truncate">{amenity}</span>
+                                  <span className="text-xs font-light text-gray-700 truncate">{amenity}</span>
                                 </div>
                               </TooltipTrigger>
                               <TooltipContent side="top" align="start" className="max-w-xs break-words">
@@ -252,9 +263,8 @@ export function PublicQuoteOptionCard({
                           )
                         })}
                         {amenities.length > 6 && (
-                          <div className="col-span-1 sm:col-span-2 flex items-center gap-2 text-xs sm:text-sm text-gray-500 bg-gray-50 p-2.5 sm:p-3 rounded-lg">
-                            <Star className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-amber-500" />
-                            <span>+{amenities.length - 6} more amenities</span>
+                          <div className="col-span-1 sm:col-span-2 flex items-center gap-2 text-xs text-gray-500 border border-gray-100 p-3 rounded-lg">
+                            <span className="font-light">+{amenities.length - 6} more</span>
                           </div>
                         )}
                       </div>
@@ -262,54 +272,54 @@ export function PublicQuoteOptionCard({
                   </div>
                 )}
 
-                {/* Special Notes */}
                 {option.conditions?.trim() && (
-                  <div className="mb-6">
-                    <h4 className="text-sm font-semibold text-gray-900 mb-2">Special Notes</h4>
-                    <div className="text-sm text-gray-700 bg-amber-50 border border-amber-200 p-4 rounded-lg">
+                  <div>
+                    <h4 className="text-xs uppercase tracking-wider text-gray-500 font-light mb-3">Special Notes</h4>
+                    <div className="text-sm text-gray-600 font-light leading-relaxed bg-amber-50/50 border border-amber-100 p-4 rounded-lg">
                       {option.conditions}
                     </div>
                   </div>
                 )}
               </div>
 
-              {/* Enhanced Pricing & CTA */}
-              <div className="border-t border-gray-200 bg-gradient-to-r from-gray-50 to-white p-4 sm:p-6 lg:p-8">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-                  <div>
-                    <span className="text-sm text-gray-600">Total Cost</span>
-                    <div className="text-xl sm:text-2xl font-bold text-gray-900">{formatCurrency(total)}</div>
+              <div className="border-t border-gray-100 bg-gray-50/30 p-6 sm:p-8 lg:p-10">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-5">
+                  <div className="space-y-1">
+                    <span className="text-xs uppercase tracking-wider text-gray-500 font-light">Total</span>
+                    <div className="text-2xl sm:text-3xl font-light text-gray-900 tracking-tight">
+                      {formatCurrency(total)}
+                    </div>
                   </div>
                   {isSelected && (
-                    <div className="flex items-center gap-2 bg-green-100 text-green-700 px-3 py-1.5 rounded-full self-start sm:self-auto">
-                      <CheckCircle className="h-4 w-4" />
-                      <span className="text-sm font-semibold">Selected</span>
+                    <div className="flex items-center gap-2 border border-green-200 bg-green-50 text-green-700 px-3 py-1.5 rounded-full self-start sm:self-auto">
+                      <CheckCircle className="h-3.5 w-3.5" />
+                      <span className="text-xs font-light tracking-wide">Selected</span>
                     </div>
                   )}
                 </div>
-                
+
                 <Button
-                  className={`w-full font-semibold text-sm sm:text-base py-3 sm:py-3.5 transition-all duration-200 touch-manipulation ${
+                  className={`w-full font-light tracking-wide text-sm py-3.5 rounded-lg transition-all duration-300 touch-manipulation ${
                     isSelected
-                      ? "!bg-green-600 hover:!bg-green-700 !text-white shadow-lg"
+                      ? "!bg-green-600 hover:!bg-green-700 !text-white border-0 shadow-sm"
                       : hasSelectedOption && !isSelected
-                        ? "!bg-gray-400 hover:!bg-gray-500 !text-white !border-gray-400"
-                        : "!bg-blue-600 hover:!bg-blue-700 !text-white shadow-lg hover:shadow-xl"
+                        ? "!bg-gray-300 hover:!bg-gray-400 !text-gray-600 !border-gray-300"
+                        : "!bg-gray-900 hover:!bg-gray-800 !text-white border-0 shadow-sm hover:shadow-md"
                   }`}
                   onClick={onSelect}
                   disabled={isLocked}
                 >
-                  {isSelected ? "✓ Selected" : "Select This Option"}
+                  {isSelected ? "Selected" : "Select Option"}
                 </Button>
               </div>
             </div>
           </div>
         </Card>
       ) : (
-        <div className="mx-auto w-full max-w-screen-md sm:max-w-screen-lg lg:max-w-screen-xl px-4 sm:px-6 lg:px-8 pb-8">
-          <Card className="rounded-3xl bg-white shadow-xl">
+        <div className="mx-auto w-full max-w-screen-xl px-6 sm:px-8 lg:px-12 pb-8">
+          <Card className="rounded-2xl sm:rounded-3xl bg-white shadow-sm border border-gray-100">
             <div className="flex items-center justify-center h-48">
-              <p className="text-gray-500">Aircraft model not found</p>
+              <p className="text-gray-400 font-light text-sm">Aircraft model not found</p>
             </div>
           </Card>
         </div>
