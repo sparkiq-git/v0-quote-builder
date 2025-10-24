@@ -1,6 +1,7 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
+import { Plane } from "lucide-react"
 
 export function AircraftSummaryCard({
   aircraft,
@@ -12,6 +13,7 @@ export function AircraftSummaryCard({
     model_name?: string | null
     operator_name?: string | null
     primary_image_url?: string | null
+    model_images?: string[] // Add model images array
     capacity_pax?: number | null
     cruising_speed?: number | null // add this if you have it in your view
     amenities?: string[]
@@ -20,18 +22,27 @@ export function AircraftSummaryCard({
 }) {
   if (!aircraft) return null
 
+  // Get the best available image (primary > first model image > placeholder)
+  const getThumbnailUrl = () => {
+    if (aircraft.primary_image_url) return aircraft.primary_image_url
+    if (aircraft.model_images?.length) return aircraft.model_images[0]
+    return null
+  }
+
+  const thumbnailUrl = getThumbnailUrl()
+
   return (
     <div className="flex items-start gap-3 p-3 border rounded-lg bg-muted/30">
       {/* Image */}
-      {aircraft.primary_image_url ? (
+      {thumbnailUrl ? (
         <img
-          src={aircraft.primary_image_url}
+          src={thumbnailUrl}
           alt={aircraft.tail_number || ""}
           className="w-20 h-16 rounded-md object-cover"
         />
       ) : (
         <div className="w-20 h-16 rounded-md bg-muted flex items-center justify-center text-xs text-muted-foreground">
-          No Img
+          <Plane className="h-6 w-6" />
         </div>
       )}
 

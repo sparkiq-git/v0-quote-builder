@@ -94,7 +94,23 @@ useEffect(() => {
       const byId = Object.fromEntries(
         json.data
           .filter((a) => ids.includes(a.aircraft_id))
-          .map((a) => [a.aircraft_id, a])
+          .map((a) => {
+            // Process model images if available
+            const modelImages = a.aircraft_model?.aircraft_model_image
+              ?.sort((img1: any, img2: any) => {
+                // Sort by primary first, then by display_order
+                if (img1.is_primary && !img2.is_primary) return -1
+                if (!img1.is_primary && img2.is_primary) return 1
+                return img1.display_order - img2.display_order
+              })
+              .map((img: any) => img.public_url)
+              .filter(Boolean) || []
+
+            return [a.aircraft_id, {
+              ...a,
+              model_images: modelImages
+            }]
+          })
       )
 
       // Log missing aircraft IDs for debugging
