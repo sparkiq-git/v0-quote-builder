@@ -47,7 +47,7 @@ function SectionCard({
   contentClassName?: string
 }) {
   return (
-    <Card className={`shadow-sm ${className}`}>
+    <Card className={`shadow-lg border-0 bg-white/80 backdrop-blur-sm ${className}`}>
       <CardContent className={`pt-0 ${contentClassName}`}>{children}</CardContent>
     </Card>
   )
@@ -479,7 +479,7 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 lg:h-screen lg:overflow-hidden overflow-x-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:bg-gray-900 lg:h-screen lg:overflow-hidden overflow-x-hidden">
       {/* ========================= MOBILE (REORDERED) ========================= */}
       <div className="lg:hidden">
         <div className="p-4 space-y-3">
@@ -557,11 +557,14 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
             </div>
           </SectionCard>
 
-          {/* Aircraft Options (moved AFTER totals on mobile) */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <p className="text-gray-600 text-xs">Aircraft Options</p>
-              <Badge variant={statusDisplay.variant} className="text-xs flex items-center gap-1">
+          {/* Enhanced Aircraft Options */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between bg-white/80 backdrop-blur-sm p-4 rounded-xl border border-gray-200/50">
+              <div className="flex items-center gap-2">
+                <Plane className="h-5 w-5 text-blue-600" />
+                <p className="text-gray-800 font-semibold">Aircraft Options</p>
+              </div>
+              <Badge variant={statusDisplay.variant} className="text-xs flex items-center gap-1 px-3 py-1">
                 <StatusIcon className="h-3 w-3" />
                 {statusDisplay.text}
               </Badge>
@@ -874,28 +877,33 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
             </div>
 
             {/* Right spacer */}
-            <div className="flex-1 bg-gray-50 dark:bg-gray-900" />
+            <div className="flex-1 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:bg-gray-900" />
           </div>
         </div>
 
         {/* Right pane: options (full height scroll) */}
         <div className="absolute top-0 right-0 bottom-1 left-1/4 z-20 overflow-x-hidden">
           <div className="h-full pt-6 pb-6 px-3">
-            <div className="h-full overflow-y-auto overflow-x-hidden bg-white/95 border border-gray-200 rounded-lg p-0">
+            <div className="h-full overflow-y-auto overflow-x-hidden bg-white/95 backdrop-blur-sm border border-gray-200/50 rounded-2xl shadow-xl p-0">
               <div className="p-0">
-                <div className="px-4 py-3 border-b border-gray-200 bg-white/80 mb-3">
+                <div className="px-6 py-4 border-b border-gray-200/50 bg-gradient-to-r from-white/90 to-blue-50/50 backdrop-blur-sm mb-4">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-medium text-gray-900">Aircraft Options</h3>
-                    <Badge variant={statusDisplay.variant} className="text-xs flex items-center gap-1">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <Plane className="h-4 w-4 text-blue-600" />
+                      </div>
+                      <h3 className="text-lg font-semibold text-gray-900">Aircraft Options</h3>
+                    </div>
+                    <Badge variant={statusDisplay.variant} className="text-xs flex items-center gap-1 px-3 py-1">
                       <StatusIcon className="h-3 w-3" />
                       {statusDisplay.text}
                     </Badge>
                   </div>
                 </div>
 
-                <div className="-mx-2 space-y-2">
+                <div className="px-4 space-y-4">
                   {displayOptions.map((option) => (
-                    <div key={option.id} className="w-full px-2">
+                    <div key={option.id} className="w-full">
                       <PublicQuoteOptionCard
                         option={option}
                         isSelected={option.id === selectedOptionId}
