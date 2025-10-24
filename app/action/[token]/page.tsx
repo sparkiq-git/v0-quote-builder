@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast"
 
 // Configuration constants
 const API_ENDPOINTS = {
-  VERIFY: "/api/action-links/verify-no-captcha", // Using no-CAPTCHA endpoint (bypasses rate limiting)
+  VERIFY: "/api/action-links/verify",
   CONSUME: "/api/action-links/consume",
   QUOTES: "/api/quotes"
 } as const
