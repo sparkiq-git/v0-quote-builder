@@ -11,9 +11,6 @@ import {
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import {
-  Clipboard,
-  ExternalLink,
-  Check,
   FileText,
   ChevronRight,
   Send,
@@ -29,7 +26,6 @@ interface Props {
 
 export function QuoteSummaryTab({ quote, onBack }: Props) {
   const { toast } = useToast()
-  const [copied, setCopied] = useState(false)
   const [publishing, setPublishing] = useState(false)
   const [publishedUrl, setPublishedUrl] = useState<string | null>(null)
   const [aircraftMap, setAircraftMap] = useState<Record<string, any>>({})
@@ -62,26 +58,6 @@ const totalOptions = useMemo(() => {
 
   const grandTotal = totalOptions + totalServices
 
-  /* ---------------- 📋 Copy link ---------------- */
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(quoteUrl)
-      setCopied(true)
-      toast({ title: "Copied!", description: "Quote link copied to clipboard." })
-      setTimeout(() => setCopied(false), 2000)
-    } catch {
-      toast({
-        title: "Failed to copy",
-        description: "Please copy manually.",
-        variant: "destructive",
-      })
-    }
-  }
-
-  /* ---------------- 🌐 Open link ---------------- */
-  const handleOpen = () => {
-    window.open(quoteUrl, "_blank", "noopener,noreferrer")
-  }
 
   /* ---------------- 🚀 Publish quote ---------------- */
   const handlePublish = async () => {
@@ -116,11 +92,33 @@ const totalOptions = useMemo(() => {
         throw new Error(json.error || `Failed (${res.status})`)
       }
 
+      // If publish is successful (200 status), update quote status to 'awaiting response'
+      if (res.status === 200) {
+        try {
+          const updateRes = await fetch(`/api/quotes/${quote.id}`, {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              status: "awaiting response",
+            }),
+          })
+
+          if (!updateRes.ok) {
+            console.warn("Failed to update quote status:", updateRes.status)
+          }
+        } catch (updateErr) {
+          console.warn("Error updating quote status:", updateErr)
+          // Don't throw here - the publish was successful
+        }
+      }
+
       setPublishedUrl(json.link || json.link_url || null)
       toast({
-        title: "Quote Published!",
+        title: "Quote Published Successfully!",
         description:
-          "Your client has been emailed a secure link to view and confirm the quote.",
+          "Your client has been emailed a secure link to view and confirm the quote. Quote status updated to 'awaiting response'.",
       })
     } catch (err: any) {
       console.error("Publish error:", err)
@@ -340,22 +338,6 @@ useEffect(() => {
           </Button>
 
           <div className="flex items-center gap-3">
-            <Button variant="outline" onClick={handleCopy}>
-              {copied ? (
-                <>
-                  <Check className="mr-2 h-4 w-4" /> Copied
-                </>
-              ) : (
-                <>
-                  <Clipboard className="mr-2 h-4 w-4" /> Copy Link
-                </>
-              )}
-            </Button>
-
-            <Button onClick={handleOpen}>
-              <ExternalLink className="mr-2 h-4 w-4" /> Open Quote
-            </Button>
-
             <Button onClick={handlePublish} disabled={publishing}>
               <Send className="mr-2 h-4 w-4" />
               {publishing ? "Publishing..." : "Publish Quote"}
