@@ -10,7 +10,7 @@ import { formatTimeAgo } from "@/lib/utils/format"
 import { getAirportCoordinates } from "@/lib/data/airports"
 import type { Event, Leg } from "@/lib/types"
 
-type FilterType = "leads" | "quotes" | "unpaid" | "paid" | "upcoming"
+type FilterType = "leads" | "quotes" | "unpaid" | "upcoming"
 
 interface RouteData {
   id: string
@@ -77,17 +77,6 @@ export function RouteMap() {
         createdAt: quote.createdAt,
       }))
 
-    const paid = state.quotes
-      .filter((quote) => quote.status === "paid")
-      .map((quote) => ({
-        id: quote.id,
-        type: "paid" as FilterType,
-        legs: quote.legs,
-        customerName: quote.customer.name,
-        status: "Paid",
-        createdAt: quote.createdAt,
-      }))
-
     const upcoming = state.quotes
       .filter((quote) => {
         if (quote.status !== "paid") return false
@@ -107,7 +96,7 @@ export function RouteMap() {
         createdAt: quote.createdAt,
       }))
 
-    return { leads, quotes, unpaid, paid, upcoming }
+    return { leads, quotes, unpaid, upcoming }
   }, [state.leads, state.quotes])
 
   // Get routes for active filter (max 10, most recent first)
@@ -317,8 +306,8 @@ export function RouteMap() {
                   </div>
                 `,
                 className: "airport-pointer-container",
-                iconSize: [24, 32],
-                iconAnchor: [12, 32],
+                iconSize: [24, 24],
+                iconAnchor: [12, 24],
               }),
             }).addTo(map.current)
 
@@ -356,8 +345,8 @@ export function RouteMap() {
                   </div>
                 `,
                 className: "airport-pointer-container",
-                iconSize: [24, 32],
-                iconAnchor: [12, 32],
+                iconSize: [24, 24],
+                iconAnchor: [12, 24],
               }),
             }).addTo(map.current)
 
@@ -552,7 +541,7 @@ export function RouteMap() {
           <div className="relative w-full h-[460px] lg:h-[520px] bg-slate-50">
             {/* Filter Controls */}
             <div className="absolute top-4 left-4 z-[1000] flex items-center gap-2 bg-white/10  rounded-lg p-2 shadow-lg border border-white/10">
-              {(["leads", "quotes", "unpaid", "paid", "upcoming"] as FilterType[]).map((filter) => {
+              {(["leads", "quotes", "unpaid", "upcoming"] as FilterType[]).map((filter) => {
                 const count = Math.min(10, filterData[filter].length)
                 const isActive = activeFilter === filter
                 return (

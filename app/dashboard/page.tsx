@@ -2,22 +2,18 @@
 
 import Link from "next/link"
 import { useMemo } from "react"
-import { getServerUser } from "@/lib/supabase/server"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { Users, FileText, Clock, Plus, Calendar, Plane } from "lucide-react"
+import { Tooltip, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { Users, FileText, Clock, Plus, Plane } from "lucide-react"
 import { useMockStore } from "@/lib/mock/store"
 import { formatTimeAgo } from "@/lib/utils/format"
 import { RouteMap } from "@/components/dashboard/route-map"
 
-
-
 /* ---------------------------------- page ---------------------------------- */
 export default function DashboardPage() {
- 
   const { state, getMetrics, loading } = useMockStore()
 
   const metrics = getMetrics()
@@ -39,7 +35,6 @@ export default function DashboardPage() {
   const pendingConversionLeads = state.leads.filter((l) => l.status === "new").length
   const quotesAwaitingAcceptance = state.quotes.filter((q) => q.status === "pending_acceptance").length
   const unpaidQuotes = state.quotes.filter((q) => q.status === "awaiting_payment").length
-  const paidQuotes = state.quotes.filter((q) => q.status === "paid").length
 
   const upcomingTrips = useMemo(() => {
     const now = new Date()
@@ -85,9 +80,8 @@ export default function DashboardPage() {
           <p className="text-muted-foreground text-sm sm:text-base">Loading your dashboard...</p>
         </div>
 
-        {/* Loading skeleton for KPI cards */}
-        <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-6">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
+        <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5">
+          {[1, 2, 3, 4, 5].map((i) => (
             <Card key={i} className="col-span-1 h-full flex flex-col">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1">
                 <div className="h-4 bg-muted rounded animate-pulse w-16" />
@@ -148,7 +142,7 @@ export default function DashboardPage() {
         <p className="text-muted-foreground text-xs sm:text-base">Here's what's happening today.</p>
       </div>
 
-      <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-6">
+      <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5">
         <MetricCard
           title="Leads"
           icon={Users}
@@ -162,7 +156,6 @@ export default function DashboardPage() {
           description="Awaiting client acceptance"
         />
         <MetricCard title="Unpaid" icon={Clock} currentValue={unpaidQuotes} description="Still awaiting payment" />
-        <MetricCard title="Paid" icon={Calendar} currentValue={paidQuotes} description="Quotes already paid" />
         <MetricCard
           title="Upcoming"
           icon={Plane}
@@ -320,66 +313,6 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
-
-      <Card>
-        <CardHeader>
-          <div className="flex items-center space-x-2">
-            <div>
-              <CardTitle className="text-base sm:text-lg">Quick Actions</CardTitle>
-              <CardDescription className="text-xs sm:text-sm">Common tasks to get you started</CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col sm:flex-row flex-wrap gap-2">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button asChild variant="outline" className="justify-start bg-transparent">
-                    <Link href="/leads">
-                      <Users className="mr-2 h-4 w-4" />
-                      View All Leads
-                    </Link>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Manage all customer inquiries and lead pipeline</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button asChild variant="outline" className="justify-start bg-transparent">
-                    <Link href="/quotes">
-                      <FileText className="mr-2 h-4 w-4" />
-                      Manage Quotes
-                    </Link>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>View and manage all customer quotes and proposals</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button asChild variant="outline" className="justify-start bg-transparent">
-                    <Link href="/aircraft">
-                      <Plus className="mr-2 h-4 w-4" />
-                      Add Aircraft
-                    </Link>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Add new aircraft to your fleet inventory</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   )
 }
