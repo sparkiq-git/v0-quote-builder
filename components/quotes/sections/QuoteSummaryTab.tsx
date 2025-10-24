@@ -115,7 +115,7 @@ const totalOptions = useMemo(() => {
         throw new Error(json.error || `Failed (${res.status})`)
       }
 
-      // If publish is successful (200 status), update quote status to 'awaiting response'
+      // If publish is successful (200 status), update quote status and timestamps
       let statusUpdated = false
       if (res.status === 200) {
         try {
@@ -128,6 +128,8 @@ const totalOptions = useMemo(() => {
               quote: {
                 ...quote,
                 status: "awaiting response",
+                sent_at: new Date().toISOString(), // Set sent_at to current timestamp
+                valid_until: expirationDateTime, // Set valid_until to the expiration date/time
               },
             }),
           })
@@ -135,6 +137,7 @@ const totalOptions = useMemo(() => {
           if (updateRes.ok) {
             statusUpdated = true
             console.log("✅ Quote status updated to 'awaiting response'")
+            console.log("✅ Quote sent_at and valid_until updated")
           } else {
             const errorData = await updateRes.json().catch(() => ({}))
             console.error("❌ Failed to update quote status:", updateRes.status, errorData)
@@ -385,6 +388,12 @@ useEffect(() => {
           <p className="text-sm text-muted-foreground mt-2">
             The quote will expire and become invalid after this date and time.
           </p>
+          {!isExpirationValid && (
+            <p className="text-sm text-amber-600 mt-2 flex items-center gap-1">
+              <Clock className="h-4 w-4" />
+              Please set both date and time to enable publishing.
+            </p>
+          )}
         </div>
 
         <Separator />
@@ -414,9 +423,10 @@ useEffect(() => {
             <Button 
               onClick={handlePublish} 
               disabled={publishing || !isExpirationValid}
+              title={!isExpirationValid ? "Please set an expiration date and time before publishing" : ""}
             >
               <Send className="mr-2 h-4 w-4" />
-              {publishing ? "Publishing..." : "Publish Quote"}
+              {publishing ? "Publishing..." : !isExpirationValid ? "Set Expiration First" : "Publish Quote"}
             </Button>
           </div>
         </div>

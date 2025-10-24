@@ -160,26 +160,14 @@ export function QuoteDetailsTab({ quote, onUpdate, onNext }: Props) {
 
         <Separator />
 
-        {/* Expiration */}
-        <div className="grid md:grid-cols-2 gap-4">
-          <div className="grid gap-2">
-            <Label>Valid Until *</Label>
-            <DateTimePicker
-              date={quote.valid_until || ""}
-              onDateChange={(d) =>
-                onUpdate({ valid_until: d instanceof Date ? d.toISOString() : d })
-              }
-              showOnlyDate
-            />
-          </div>
-          <div className="grid gap-2">
-            <Label>Notes</Label>
-            <Textarea
-              value={quote.notes || ""}
-              onChange={(e) => onUpdate({ notes: e.target.value })}
-              placeholder="Internal notes or additional comments"
-            />
-          </div>
+        {/* Notes */}
+        <div className="grid gap-2">
+          <Label>Notes</Label>
+          <Textarea
+            value={quote.notes || ""}
+            onChange={(e) => onUpdate({ notes: e.target.value })}
+            placeholder="Internal notes or additional comments"
+          />
         </div>
 
         {/* Navigation */}
