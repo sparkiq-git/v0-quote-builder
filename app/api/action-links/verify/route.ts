@@ -36,17 +36,18 @@ export async function POST(req: Request) {
     const { token, email, captchaToken } = parsed.data
     console.log("✅ Request validation passed")
 
-    // --- Rate limit by IP ---
-    try {
-      const ipRes = await rlPerIp.limit(`verify:ip:${ip}`)
-      console.log("📊 IP rate limit result:", ipRes)
-      if (!ipRes.success) {
-        return NextResponse.json({ ok: false, error: "Too many requests" }, { status: 429 })
-      }
-    } catch (err) {
-      console.error("❌ IP rate limit error:", err)
-      return NextResponse.json({ ok: false, error: "Rate limiting failed" }, { status: 500 })
-    }
+    // --- Rate limit by IP (temporarily disabled due to Redis issues) ---
+    console.log("⏭️ Skipping IP rate limiting due to Redis issues")
+    // try {
+    //   const ipRes = await rlPerIp.limit(`verify:ip:${ip}`)
+    //   console.log("📊 IP rate limit result:", ipRes)
+    //   if (!ipRes.success) {
+    //     return NextResponse.json({ ok: false, error: "Too many requests" }, { status: 429 })
+    //   }
+    // } catch (err) {
+    //   console.error("❌ IP rate limit error:", err)
+    //   return NextResponse.json({ ok: false, error: "Rate limiting failed" }, { status: 500 })
+    // }
 
     // --- Verify CAPTCHA ---
     try {
@@ -94,11 +95,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: "Database query failed" }, { status: 500 })
     }
 
-    // --- Rate limit per token ---
-    const tokenRes = await rlPerToken.limit(`verify:token:${tokenHash}`)
-    if (!tokenRes.success) {
-      return NextResponse.json({ ok: false, error: "Too many requests" }, { status: 429 })
-    }
+    // --- Rate limit per token (temporarily disabled due to Redis issues) ---
+    console.log("⏭️ Skipping token rate limiting due to Redis issues")
+    // const tokenRes = await rlPerToken.limit(`verify:token:${tokenHash}`)
+    // if (!tokenRes.success) {
+    //   return NextResponse.json({ ok: false, error: "Too many requests" }, { status: 429 })
+    // }
 
     // --- Validate link ---
     const now = new Date()
