@@ -599,7 +599,16 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
 
           {/* Enhanced Aircraft Options */}
           <div className="space-y-2 sm:space-y-3 md:space-y-4 lg:space-y-6">
-            
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 bg-white/80 backdrop-blur-sm p-3 sm:p-4 md:p-5 lg:p-6 rounded-xl border border-gray-200/50">
+              <div className="flex items-center gap-2">
+                <Plane className="h-5 w-5 text-blue-600" />
+                <p className="text-gray-800 font-semibold text-sm sm:text-base">Aircraft Options</p>
+              </div>
+              <Badge variant={statusDisplay.variant} className="text-xs flex items-center gap-1 px-3 py-1 self-start sm:self-auto">
+                <StatusIcon className="h-3 w-3" />
+                {statusDisplay.text}
+              </Badge>
+            </div>
             <div className={layoutClasses.grid}>
               {displayOptions.map((option) => (
                 <div key={option.id} className="w-full">
