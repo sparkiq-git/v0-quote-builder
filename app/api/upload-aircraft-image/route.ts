@@ -30,11 +30,9 @@ export async function POST(req: NextRequest) {
 
     let supabase
     if (serviceRoleKey) {
-      console.log("🔑 Using service role client for aircraft image upload")
       // Use service role client to bypass RLS
       supabase = createClient(supabaseUrl, serviceRoleKey)
     } else {
-      console.log("⚠️ Service role key not found, using regular server client")
       // Fallback to regular server client (may still have RLS issues)
       const { createClient: createServerClient } = await import("@/lib/supabase/server")
       supabase = await createServerClient()
@@ -44,16 +42,8 @@ export async function POST(req: NextRequest) {
     const fileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`
     const storagePath = `tenant/${tenantId}/aircraft/${aircraftId}/${fileName}`
 
-    console.log("🚀 Server-side aircraft image upload starting:", {
-      fileName,
-      storagePath,
-      fileSize: file.size,
-      aircraftId,
-      tenantId
-    })
 
     // Upload to storage using server-side client (bypasses RLS)
-    console.log("📤 Uploading to Supabase storage...")
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from("aircraft-media")
       .upload(storagePath, file, {
@@ -70,7 +60,6 @@ export async function POST(req: NextRequest) {
       }, { status: 500 })
     }
 
-    console.log("✅ Storage upload successful:", uploadData)
 
     // Get public URL
     const { data: publicData } = supabase.storage
@@ -101,7 +90,6 @@ export async function POST(req: NextRequest) {
       }, { status: 500 })
     }
 
-    console.log("✅ Database insert successful:", dbData)
 
     return NextResponse.json({ 
       success: true, 

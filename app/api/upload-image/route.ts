@@ -3,7 +3,6 @@ import { createClient } from "@supabase/supabase-js"
 
 export async function POST(req: NextRequest) {
   try {
-    console.log("🔧 Server API called - upload-image")
     
     const formData = await req.formData()
     const file = formData.get("file") as File
@@ -11,14 +10,6 @@ export async function POST(req: NextRequest) {
     const tenantId = formData.get("tenantId") as string
     const userId = formData.get("userId") as string
 
-    console.log("📋 Form data received:", {
-      hasFile: !!file,
-      fileName: file?.name,
-      fileSize: file?.size,
-      modelId,
-      tenantId,
-      userId
-    })
 
     if (!file || !modelId || !tenantId || !userId) {
       console.error("❌ Missing required fields")
@@ -32,12 +23,6 @@ export async function POST(req: NextRequest) {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-    console.log("🔑 Environment check:", {
-      hasSupabaseUrl: !!supabaseUrl,
-      hasServiceRoleKey: !!serviceRoleKey,
-      supabaseUrlLength: supabaseUrl?.length,
-      serviceRoleKeyLength: serviceRoleKey?.length
-    })
 
     if (!supabaseUrl) {
       console.error("❌ Missing Supabase URL")
@@ -49,11 +34,9 @@ export async function POST(req: NextRequest) {
 
     let supabase
     if (serviceRoleKey) {
-      console.log("🔑 Using service role client")
       // Use service role client to bypass RLS
       supabase = createClient(supabaseUrl, serviceRoleKey)
     } else {
-      console.log("⚠️ Service role key not found, using regular server client")
       // Fallback to regular server client (may still have RLS issues)
       const { createClient: createServerClient } = await import("@/lib/supabase/server")
       supabase = await createServerClient()
@@ -63,16 +46,8 @@ export async function POST(req: NextRequest) {
     const fileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`
     const storagePath = `tenant/${tenantId}/models/${modelId}/${fileName}`
 
-    console.log("🚀 Server-side upload starting:", {
-      fileName,
-      storagePath,
-      fileSize: file.size,
-      modelId,
-      tenantId
-    })
 
     // Upload to storage using server-side client (bypasses RLS)
-    console.log("📤 Uploading to Supabase storage...")
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from("aircraft-media")
       .upload(storagePath, file, {
@@ -89,7 +64,6 @@ export async function POST(req: NextRequest) {
       }, { status: 500 })
     }
 
-    console.log("✅ Storage upload successful:", uploadData)
 
     // Get public URL
     const { data: publicData } = supabase.storage
@@ -122,7 +96,6 @@ export async function POST(req: NextRequest) {
       }, { status: 500 })
     }
 
-    console.log("✅ Server upload successful:", dbData)
 
     return NextResponse.json({ 
       success: true, 

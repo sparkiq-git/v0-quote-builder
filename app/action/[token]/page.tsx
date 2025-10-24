@@ -92,7 +92,6 @@ export default function ActionPage({ params }: { params: { token: string } }) {
         }),
       })
 
-      console.log("Verification response:", json.data)
       setVerified(json.data)
       
       // Fetch the actual quote data
@@ -148,7 +147,6 @@ export default function ActionPage({ params }: { params: { token: string } }) {
         }),
       })
 
-      console.log("Consume response:", json)
 
       toast({
         title: result === "accept" ? "Quote accepted" : "Quote declined",

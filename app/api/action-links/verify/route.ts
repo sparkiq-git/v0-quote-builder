@@ -13,16 +13,13 @@ const VerifySchema = z.object({
 
 export async function POST(req: Request) {
   try {
-    console.log("🔍 Action link verify route started")
     const ip = req.headers.get("x-forwarded-for") ?? "unknown"
     const ua = req.headers.get("user-agent") ?? "unknown"
-    console.log("📊 Request details:", { ip, ua })
 
     // Parse & validate body
     let body: any
     try {
       body = await req.json()
-      console.log("📦 Request body parsed successfully")
     } catch (err) {
       console.error("❌ JSON parse error:", err)
       return NextResponse.json({ ok: false, error: "Invalid JSON body" }, { status: 400 })
@@ -34,12 +31,10 @@ export async function POST(req: Request) {
     }
 
     const { token, email, captchaToken } = parsed.data
-    console.log("✅ Request validation passed")
 
     // --- Rate limit by IP ---
     try {
       const ipRes = await rlPerIp.limit(`verify:ip:${ip}`)
-      console.log("📊 IP rate limit result:", ipRes)
       if (!ipRes.success) {
         return NextResponse.json({ ok: false, error: "Too many requests" }, { status: 429 })
       }
@@ -50,9 +45,7 @@ export async function POST(req: Request) {
 
     // --- Verify CAPTCHA ---
     try {
-      console.log("🔐 Verifying CAPTCHA...")
       await verifyTurnstile(captchaToken)
-      console.log("✅ CAPTCHA verification passed")
     } catch (err: any) {
       console.error("❌ CAPTCHA verification failed:", err)
       return NextResponse.json(
@@ -62,13 +55,11 @@ export async function POST(req: Request) {
     }
 
     const tokenHash = await sha256Base64url(token)
-    console.log("🔑 Token hash created:", tokenHash.substring(0, 10) + "...")
     
     // --- Create Supabase client ---
     let supabase
     try {
       supabase = await createActionLinkClient(true)
-      console.log("✅ Supabase client created")
     } catch (err) {
       console.error("❌ Supabase client creation failed:", err)
       return NextResponse.json({ ok: false, error: "Database connection failed" }, { status: 500 })
@@ -88,7 +79,6 @@ export async function POST(req: Request) {
         return NextResponse.json({ ok: false, error: "Invalid or missing link" }, { status: 400 })
       }
       link = linkData
-      console.log("✅ Link found:", link.id)
     } catch (err) {
       console.error("❌ Database query error:", err)
       return NextResponse.json({ ok: false, error: "Database query failed" }, { status: 500 })
