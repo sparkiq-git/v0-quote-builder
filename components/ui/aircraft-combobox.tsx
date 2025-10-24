@@ -78,16 +78,37 @@ export function AircraftCombobox({ value, onSelect, onClickAdd }: Props) {
     )
   }, [list, search])
 
-  const selectedLabel = value
-    ? list.find((a) => a.aircraft_id === value)?.tail_number ??
-      "Select aircraft"
-    : "Select aircraft"
+  const selectedAircraft = value ? list.find((a) => a.aircraft_id === value) : null
+  const selectedLabel = selectedAircraft?.tail_number ?? "Select aircraft"
+  
+  // Get thumbnail for selected aircraft
+  const getSelectedThumbnail = () => {
+    if (!selectedAircraft) return null
+    if (selectedAircraft.primary_image_url) return selectedAircraft.primary_image_url
+    if (selectedAircraft.aircraft_images?.length) return selectedAircraft.aircraft_images[0]
+    return null
+  }
+  
+  const selectedThumbnail = getSelectedThumbnail()
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button variant="outline" className="justify-between w-full">
-          {selectedLabel}
+          <div className="flex items-center gap-2 min-w-0">
+            {selectedThumbnail ? (
+              <img
+                src={selectedThumbnail}
+                className="w-6 h-5 rounded object-cover shrink-0"
+                alt=""
+              />
+            ) : selectedAircraft ? (
+              <div className="w-6 h-5 rounded bg-muted flex items-center justify-center shrink-0">
+                <Plane className="h-3 w-3" />
+              </div>
+            ) : null}
+            <span className="truncate">{selectedLabel}</span>
+          </div>
           <Plane className="ml-2 h-4 w-4 opacity-50" />
         </Button>
       </PopoverTrigger>
@@ -120,27 +141,37 @@ export function AircraftCombobox({ value, onSelect, onClickAdd }: Props) {
               </div>
             </CommandEmpty>
 
-            {filtered.map((a) => (
-              <CommandItem
-                key={a.aircraft_id}
-                className="py-2"
-                onSelect={() => {
-                  onSelect(a)
-                  setOpen(false)
-                }}
-              >
-                <div className="flex items-center gap-3">
-                  {a.primary_image_url ? (
-                    <img
-                      src={a.primary_image_url}
-                      className="w-12 h-10 rounded object-cover"
-                      alt=""
-                    />
-                  ) : (
-                    <div className="w-12 h-10 rounded bg-muted flex items-center justify-center text-xs">
-                      No Img
-                    </div>
-                  )}
+            {filtered.map((a) => {
+              // Get the best available image (primary > first aircraft image > placeholder)
+              const getThumbnailUrl = () => {
+                if (a.primary_image_url) return a.primary_image_url
+                if (a.aircraft_images?.length) return a.aircraft_images[0]
+                return null
+              }
+              
+              const thumbnailUrl = getThumbnailUrl()
+              
+              return (
+                <CommandItem
+                  key={a.aircraft_id}
+                  className="py-2"
+                  onSelect={() => {
+                    onSelect(a)
+                    setOpen(false)
+                  }}
+                >
+                  <div className="flex items-center gap-3">
+                    {thumbnailUrl ? (
+                      <img
+                        src={thumbnailUrl}
+                        className="w-12 h-10 rounded object-cover"
+                        alt=""
+                      />
+                    ) : (
+                      <div className="w-12 h-10 rounded bg-muted flex items-center justify-center text-xs">
+                        <Plane className="h-4 w-4" />
+                      </div>
+                    )}
                   <div className="min-w-0">
                     <div className="font-medium truncate">
                       {a.tail_number} •{" "}
@@ -161,7 +192,8 @@ export function AircraftCombobox({ value, onSelect, onClickAdd }: Props) {
                   </div>
                 </div>
               </CommandItem>
-            ))}
+              )
+            })}
           </CommandList>
 
           {onClickAdd && (
