@@ -19,7 +19,8 @@ import { Plane, Info, Mail, Phone, CheckCircle, Clock, CreditCard, FileText } fr
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Badge } from "@/components/ui/badge"
 
-import { PublicQuoteOptionCard } from "@/components/quotes/public-quote-option-card"
+import { AdaptiveQuoteCard } from "@/components/quotes/adaptive-quote-card"
+import { useDeviceDetection } from "@/hooks/use-device-detection"
 import { formatDate, formatCurrency } from "@/lib/utils/format"
 import { useToast } from "@/hooks/use-toast"
 
@@ -218,6 +219,7 @@ function LegRow({ leg, index }: { leg: any; index: number }) {
 
 export default function PublicQuotePage({ params, onAccept, onDecline, verifiedEmail, quote }: PublicQuotePageProps) {
   const { toast } = useToast()
+  const deviceInfo = useDeviceDetection()
   const [hasViewed, setHasViewed] = useState(false)
   const [isDeclineModalOpen, setIsDeclineModalOpen] = useState(false)
   const [declineReason, setDeclineReason] = useState("")
@@ -478,10 +480,48 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
     }
   }
 
+  // Device-specific layout logic
+  const getLayoutClasses = () => {
+    switch (deviceInfo.type) {
+      case 'mobile':
+        return {
+          container: "min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:bg-gray-900",
+          content: "p-2 sm:p-3 space-y-2 sm:space-y-3",
+          grid: "grid grid-cols-1 gap-3 sm:gap-4"
+        }
+      case 'tablet':
+        return {
+          container: "min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:bg-gray-900",
+          content: "p-3 sm:p-4 md:p-5 space-y-3 sm:space-y-4 md:space-y-5",
+          grid: "grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5"
+        }
+      case 'desktop':
+        return {
+          container: "min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:bg-gray-900 lg:h-screen lg:overflow-hidden overflow-x-hidden",
+          content: "p-4 sm:p-5 lg:p-6 space-y-4 sm:space-y-5 lg:space-y-6",
+          grid: "grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-5 lg:gap-6"
+        }
+      case 'large-desktop':
+        return {
+          container: "min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:bg-gray-900 xl:h-screen xl:overflow-hidden overflow-x-hidden",
+          content: "p-5 sm:p-6 xl:p-8 space-y-5 sm:space-y-6 xl:space-y-8",
+          grid: "grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-6 xl:gap-8"
+        }
+      default:
+        return {
+          container: "min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:bg-gray-900",
+          content: "p-3 sm:p-4 space-y-3 sm:space-y-4",
+          grid: "grid grid-cols-1 md:grid-cols-2 gap-4"
+        }
+    }
+  }
+
+  const layoutClasses = getLayoutClasses()
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:bg-gray-900 lg:h-screen lg:overflow-hidden overflow-x-hidden">
-      {/* ========================= MOBILE & TABLET (REORDERED) ========================= */}
-      <div className="lg:hidden">
+    <div className={layoutClasses.container}>
+      {/* ========================= MOBILE & TABLET ========================= */}
+      <div className={deviceInfo.type === 'mobile' || deviceInfo.type === 'tablet' ? 'block' : 'hidden'}>
         <div className="p-2 sm:p-3 md:p-4 lg:p-6 space-y-2 sm:space-y-3 md:space-y-4 lg:space-y-6">
           <SectionCard>
             {/* Branding */}
@@ -569,10 +609,10 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
                 {statusDisplay.text}
               </Badge>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-3 sm:gap-4 md:gap-5 lg:gap-6">
+            <div className={layoutClasses.grid}>
               {displayOptions.map((option) => (
                 <div key={option.id} className="w-full">
-                  <PublicQuoteOptionCard
+                  <AdaptiveQuoteCard
                     option={option}
                     isSelected={option.id === selectedOptionId}
                     isLocked={isLocked}
@@ -697,7 +737,7 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
       </div>
 
       {/* ========================= DESKTOP ========================= */}
-      <div className="hidden lg:block h-screen overflow-hidden overflow-x-hidden">
+      <div className={deviceInfo.type === 'desktop' || deviceInfo.type === 'large-desktop' ? 'block' : 'hidden'}>
         <div className="absolute inset-0 z-10">
           <div className="h-full flex">
             {/* LEFT PANE (full height scroll) */}
@@ -906,7 +946,7 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
                 <div className="px-2 lg:px-3 xl:px-4 space-y-2 lg:space-y-3 xl:space-y-4">
                   {displayOptions.map((option) => (
                     <div key={option.id} className="w-full">
-                      <PublicQuoteOptionCard
+                      <AdaptiveQuoteCard
                         option={option}
                         isSelected={option.id === selectedOptionId}
                         isLocked={isLocked}
