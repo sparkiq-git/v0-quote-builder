@@ -236,6 +236,19 @@ const normalizeLegs = useCallback((legs: any[]) => {
         }}
         onUpdate={handleUpdate}
         onLegsChange={handleUpdateLegs}
+        onNavigate={async () => {
+          // Save any pending changes before navigation
+          if (pendingChanges && localUpdates) {
+            try {
+              await saveQuoteAll(quote.id, { ...quote, ...localUpdates })
+              setPendingChanges(false)
+              setLastSaved(new Date())
+            } catch (error) {
+              console.error("Failed to save before navigation:", error)
+              throw error
+            }
+          }
+        }}
       />
 
       {/* Delete Modal */}
