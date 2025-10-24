@@ -14,7 +14,7 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import type { QuoteOption } from "@/lib/types"
 import { formatCurrency } from "@/lib/utils/format"
-import { Wifi, Coffee, Tv, Utensils, Bed, Headphones, Zap, Shield, Star, CheckCircle, Users, Plane, Clock, MapPin } from "lucide-react"
+import { Wifi, Coffee, Tv, Utensils, Bed, Headphones, Zap, Shield, Star, CheckCircle, Users, Plane, Clock, MapPin, Gauge, Calendar, Route } from "lucide-react"
 
 interface PublicQuoteOptionCardProps {
   option: QuoteOption
@@ -117,7 +117,7 @@ export function PublicQuoteOptionCard({
             {/* STUNNING IMAGE CAROUSEL */}
             <div className="order-1 lg:order-2 relative w-full lg:w-[60%] overflow-hidden">
               <div className="carousel-container w-full">
-                <div className="w-full aspect-[16/10] lg:aspect-[4/3] bg-gradient-to-br from-gray-50 to-gray-100">
+                <div className="w-full h-64 lg:h-80 bg-gradient-to-br from-gray-50 to-gray-100">
                   <Carousel className="w-full h-full" setApi={setApi}>
                     <CarouselContent className="h-full">
                       {images.map((img, i) => (
@@ -192,23 +192,29 @@ export function PublicQuoteOptionCard({
                   </div>
 
                   {/* Aircraft Details */}
-                  <div className="grid grid-cols-2 gap-4 mb-4">
-                    {aircraftTail?.tailNumber && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <Plane className="h-4 w-4 text-gray-500" />
-                        <span className="text-gray-700 font-medium">Tail: {aircraftTail.tailNumber}</span>
-                      </div>
-                    )}
+                  <div className="grid grid-cols-2 gap-3 mb-4">
                     {aircraftTail?.year && (
                       <div className="flex items-center gap-2 text-sm">
-                        <Clock className="h-4 w-4 text-gray-500" />
-                        <span className="text-gray-700 font-medium">Year: {aircraftTail.year}</span>
+                        <Calendar className="h-4 w-4 text-blue-500" />
+                        <span className="text-gray-700 font-medium">{aircraftTail.year}</span>
                       </div>
                     )}
-                    {aircraftTail?.homeBase && (
-                      <div className="flex items-center gap-2 text-sm col-span-2">
-                        <MapPin className="h-4 w-4 text-gray-500" />
-                        <span className="text-gray-700 font-medium">Base: {aircraftTail.homeBase}</span>
+                    {aircraftTail?.yearOfRefurbishment && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Clock className="h-4 w-4 text-green-500" />
+                        <span className="text-gray-700 font-medium">Refurb: {aircraftTail.yearOfRefurbishment}</span>
+                      </div>
+                    )}
+                    {aircraftTail?.speedKnotsOverride && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Gauge className="h-4 w-4 text-purple-500" />
+                        <span className="text-gray-700 font-medium">{aircraftTail.speedKnotsOverride} kts</span>
+                      </div>
+                    )}
+                    {aircraftTail?.rangeNmOverride && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Route className="h-4 w-4 text-orange-500" />
+                        <span className="text-gray-700 font-medium">{aircraftTail.rangeNmOverride} nm</span>
                       </div>
                     )}
                   </div>

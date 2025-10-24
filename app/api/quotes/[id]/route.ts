@@ -201,6 +201,9 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
             tailNumber: aircraft.tail_number,
             operator: aircraft.operator_id,
             year: aircraft.year_of_manufacture,
+            yearOfRefurbish: aircraft.year_of_refurbish,
+            cruisingSpeed: aircraft.cruising_speed,
+            rangeNm: aircraft.range_nm,
             amenities: aircraft.notes || '',
             images: aircraft.aircraft_image
               ?.sort((a: any, b: any) => {
@@ -221,7 +224,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
               .filter(Boolean) || [],
             capacityOverride: aircraft.capacity_pax,
             rangeNmOverride: aircraft.range_nm,
-            speedKnotsOverride: null,
+            speedKnotsOverride: aircraft.cruising_speed,
             status: aircraft.status,
             homeBase: aircraft.home_base,
             serialNumber: aircraft.serial_number,
