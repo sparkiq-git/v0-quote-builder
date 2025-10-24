@@ -35,11 +35,22 @@ export async function POST(req: Request) {
     if (!quote_id) return NextResponse.json({ error: "Missing quote_id" }, { status: 400 })
 
     // 🔁 Call your Supabase Edge Function
-    const { data, error } = await supabase.functions.invoke("quote-to-invoice", {
-      body: { quote_id },
-    })
+const { data, error } = await supabase.functions.invoke("quote-to-invoice", {
+  body: { quote_id },
+})
 
-    if (error) throw error
+console.log("🧾 quote-to-invoice response:", { data, error })
+
+if (error) {
+  console.error("❌ Edge Function error:", error)
+  throw error
+}
+
+if (data?.error) {
+  console.error("❌ Edge Function internal error:", data.error)
+  throw new Error(data.error)
+}
+
     return NextResponse.json({ success: true, data })
   } catch (err: any) {
     console.error("❌ Invoice creation error:", err)

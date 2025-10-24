@@ -11,10 +11,21 @@ const VerifySchema = z.object({
 
 export async function POST(req: Request) {
   try {
-    console.log("🔍 No-CAPTCHA verify route started")
-    
+    console.log("🔍 Action link verify route started (no CAPTCHA)")
+    const ip = req.headers.get("x-forwarded-for") ?? "unknown"
+    const ua = req.headers.get("user-agent") ?? "unknown"
+    console.log("📊 Request details:", { ip, ua })
+
     // Parse & validate body
-    const body = await req.json()
+    let body: any
+    try {
+      body = await req.json()
+      console.log("📦 Request body parsed successfully")
+    } catch (err) {
+      console.error("❌ JSON parse error:", err)
+      return NextResponse.json({ ok: false, error: "Invalid JSON body" }, { status: 400 })
+    }
+
     const parsed = VerifySchema.safeParse(body)
     if (!parsed.success) {
       return NextResponse.json({ ok: false, error: parsed.error.message }, { status: 400 })
@@ -22,7 +33,6 @@ export async function POST(req: Request) {
 
     const { token, email, captchaToken } = parsed.data
     console.log("✅ Request validation passed")
-    console.log("⏭️ Skipping CAPTCHA verification for testing")
 
     const tokenHash = sha256Base64url(token)
     console.log("🔑 Token hash created:", tokenHash.substring(0, 10) + "...")
@@ -68,21 +78,29 @@ export async function POST(req: Request) {
     if (link.email.toLowerCase() !== email.toLowerCase())
       return NextResponse.json({ ok: false, error: "Email mismatch" }, { status: 400 })
 
-    // --- Update link ---
+    // --- Update + audit ---
     try {
-      await supabase
-        .from("action_link")
-        .update({ last_verified_at: now.toISOString() })
-        .eq("id", link.id)
-      
-      console.log("✅ Link updated successfully")
+      await Promise.all([
+        supabase
+          .from("action_link")
+          .update({ last_verified_at: now.toISOString() })
+          .eq("id", link.id),
+        supabase.from("action_link_audit_log").insert({
+          tenant_id: link.tenant_id,
+          actor_user_id: null,
+          action: "action_link.verify",
+          target_id: link.id,
+          details: { email },
+          ip,
+          user_agent: ua,
+        }),
+      ])
     } catch (auditErr: any) {
-      console.error("❌ Update failed:", auditErr)
-      return NextResponse.json({ ok: false, error: "Failed to update link" }, { status: 500 })
+      console.error("Audit insert failed:", auditErr)
+      return NextResponse.json({ ok: false, error: "Failed to log verification" }, { status: 500 })
     }
 
     // --- Success ---
-    console.log("🎉 Verification successful")
     return NextResponse.json({
       ok: true,
       data: {
@@ -94,7 +112,7 @@ export async function POST(req: Request) {
       },
     })
   } catch (err: any) {
-    console.error("❌ No-CAPTCHA verify route crash:", err)
+    console.error("Verify route crash:", err)
     return NextResponse.json(
       { ok: false, error: `Internal failure: ${err.message || String(err)}` },
       { status: 500 }

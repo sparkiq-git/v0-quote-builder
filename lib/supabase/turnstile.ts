@@ -1,10 +1,6 @@
 // lib/turnstile.ts
 export async function verifyTurnstile(responseToken: string, remoteip?: string) {
-  const secret = process.env.TURNSTILE_SECRET_KEY
-  if (!secret) {
-    throw new Error("TURNSTILE_SECRET_KEY environment variable is not set")
-  }
-  
+  const secret = process.env.TURNSTILE_SECRET_KEY!
   const res = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
     method: "POST",
     headers: { "content-type": "application/x-www-form-urlencoded" },
