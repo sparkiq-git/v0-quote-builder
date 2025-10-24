@@ -117,7 +117,7 @@ export function PublicQuoteOptionCard({
   const capacity = aircraftTail?.capacityOverride || aircraftModel?.defaultCapacity || 0
 
   return (
-    <div className="mx-auto w-full max-w-screen-xl px-3 sm:px-4 lg:px-8 pb-4 sm:pb-6">
+    <div className="mx-auto w-full max-w-screen-xl px-2 sm:px-3 md:px-4 lg:px-6 xl:px-8 pb-3 sm:pb-4 md:pb-5 lg:pb-6">
       <style>{`
         .carousel-container .carousel-previous,
         .carousel-container .carousel-next,
@@ -134,9 +134,9 @@ export function PublicQuoteOptionCard({
       `}</style>
 
       {aircraftModel ? (
-        <Card className="relative rounded-xl sm:rounded-2xl bg-white shadow-sm border border-gray-100/80 hover:shadow-lg transition-all duration-500 overflow-hidden p-0">
-          <div className="flex flex-col lg:flex-row min-h-[500px] sm:min-h-[550px] lg:min-h-[600px]">
-            <div className="order-1 lg:order-2 relative w-full lg:w-[55%] flex-shrink-0">
+        <Card className="relative rounded-xl md:rounded-2xl bg-white shadow-sm border border-gray-100/80 hover:shadow-lg transition-all duration-500 overflow-hidden p-0">
+          <div className="flex flex-col md:flex-row min-h-[450px] sm:min-h-[500px] md:min-h-[550px] lg:min-h-[600px]">
+            <div className="order-1 md:order-2 relative w-full md:w-[55%] flex-shrink-0">
               <div className="carousel-container w-full h-full">
                 <div className="w-full h-full bg-gray-50">
                   <Carousel className="w-full h-full" setApi={setApi}>
@@ -165,11 +165,11 @@ export function PublicQuoteOptionCard({
                     {images.length > 1 && (
                       <>
                         <CarouselPrevious
-                          className="absolute left-2.5 sm:left-3 top-1/2 -translate-y-1/2 h-9 w-9 sm:h-10 sm:w-10 rounded-full bg-white/90 text-gray-700 backdrop-blur-sm border-0 shadow-md hover:bg-white hover:shadow-lg hover:scale-110 transition-all duration-300 touch-manipulation"
+                          className="absolute left-2 sm:left-2.5 md:left-3 top-1/2 -translate-y-1/2 h-8 w-8 sm:h-9 sm:w-9 md:h-10 md:w-10 rounded-full bg-white/90 text-gray-700 backdrop-blur-sm border-0 shadow-md hover:bg-white hover:shadow-lg hover:scale-110 transition-all duration-300 touch-manipulation"
                           aria-label="Previous image"
                         />
                         <CarouselNext
-                          className="absolute right-2.5 sm:right-3 top-1/2 -translate-y-1/2 h-9 w-9 sm:h-10 sm:w-10 rounded-full bg-white/90 text-gray-700 backdrop-blur-sm border-0 shadow-md hover:bg-white hover:shadow-lg hover:scale-110 transition-all duration-300 touch-manipulation"
+                          className="absolute right-2 sm:right-2.5 md:right-3 top-1/2 -translate-y-1/2 h-8 w-8 sm:h-9 sm:w-9 md:h-10 md:w-10 rounded-full bg-white/90 text-gray-700 backdrop-blur-sm border-0 shadow-md hover:bg-white hover:shadow-lg hover:scale-110 transition-all duration-300 touch-manipulation"
                           aria-label="Next image"
                         />
                         <div className="absolute bottom-3 sm:bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5">
@@ -191,8 +191,8 @@ export function PublicQuoteOptionCard({
               </div>
             </div>
 
-            <div className="order-2 lg:order-1 flex flex-col w-full lg:w-[45%] bg-white">
-              <div className="p-4 sm:p-5 lg:p-7 flex-1 space-y-4 sm:space-y-5">
+            <div className="order-2 md:order-1 flex flex-col w-full md:w-[45%] bg-white">
+              <div className="p-3 sm:p-4 md:p-5 lg:p-6 xl:p-7 flex-1 space-y-3 sm:space-y-4 md:space-y-5">
                 <div>
                   <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-3">
                     <div className="flex-1 space-y-0.5">
@@ -209,7 +209,7 @@ export function PublicQuoteOptionCard({
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-x-3 gap-y-2 pt-3 border-t border-gray-100/80">
+                  <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-2 gap-x-2 sm:gap-x-3 gap-y-1.5 sm:gap-y-2 pt-3 border-t border-gray-100/80">
                     {aircraftTail?.year && (
                       <div className="flex items-center gap-2 text-xs">
                         <Calendar className="h-3 w-3 text-gray-400" />
@@ -243,7 +243,7 @@ export function PublicQuoteOptionCard({
                       Amenities
                     </h4>
                     <TooltipProvider delayDuration={150}>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 gap-1.5 sm:gap-2">
                         {amenities.slice(0, 6).map((amenity, i) => {
                           const Icon = getAmenityIcon(amenity)
                           return (
@@ -286,7 +286,7 @@ export function PublicQuoteOptionCard({
                 )}
               </div>
 
-              <div className="border-t border-gray-100/80 bg-gray-50/20 p-4 sm:p-5 lg:p-7">
+              <div className="border-t border-gray-100/80 bg-gray-50/20 p-3 sm:p-4 md:p-5 lg:p-6 xl:p-7">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
                   <div className="space-y-0.5">
                     <span className="text-[10px] sm:text-xs uppercase tracking-wider text-gray-500 font-light">
@@ -305,7 +305,7 @@ export function PublicQuoteOptionCard({
                 </div>
 
                 <Button
-                  className={`w-full font-light tracking-wide text-xs sm:text-sm py-3 sm:py-3.5 rounded-lg transition-all duration-300 touch-manipulation ${
+                  className={`w-full font-light tracking-wide text-xs sm:text-sm md:text-sm py-2.5 sm:py-3 md:py-3.5 rounded-lg transition-all duration-300 touch-manipulation ${
                     isSelected
                       ? "!bg-green-600 hover:!bg-green-700 !text-white border-0 shadow-sm hover:shadow-md"
                       : hasSelectedOption && !isSelected
