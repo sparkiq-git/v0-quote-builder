@@ -16,6 +16,7 @@ import LeadsMetricCard from "./LeadsMetricCard";
 /* ---------------------------------- page ---------------------------------- */
 export default function DashboardPage() {
 
+
   const { state, getMetrics, loading } = useMockStore()
 
   const metrics = getMetrics()
