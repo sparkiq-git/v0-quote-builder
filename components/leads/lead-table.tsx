@@ -1,7 +1,6 @@
-"use client"
+"use client";
 
-
-import { useState, useEffect } from "react"
+import { useEffect, useState } from "react";
 import {
   type ColumnDef,
   type ColumnFiltersState,
@@ -12,11 +11,11 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
-} from "@tanstack/react-table"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
-import { LeadDetailModal } from "@/components/leads/lead-detail-modal"
+} from "@tanstack/react-table";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { LeadDetailModal } from "@/components/leads/lead-detail-modal";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,40 +23,39 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { MoreHorizontal, Eye, FileText, Trash2, ArrowUpDown, Search, Filter } from "lucide-react"
-import { useRouter } from "next/navigation"
-import { useToast } from "@/hooks/use-toast"
-import { createClient } from "@/lib/supabase/client"
-import type { Lead } from "@/lib/types"
-import { formatDate, formatTimeAgo } from "@/lib/utils/format"
-
+} from "@/components/ui/dropdown-menu";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { MoreHorizontal, Eye, FileText, Trash2, ArrowUpDown, Search, Filter } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useToast } from "@/hooks/use-toast";
+import { createClient } from "@/lib/supabase/client";
+import type { Lead } from "@/lib/types";
+import { formatDate, formatTimeAgo } from "@/lib/utils/format";
 
 interface LeadTableProps {
-  data: Lead[]
-  setLeads?: React.Dispatch<React.SetStateAction<Lead[]>>
-  onOpenNewCountChange?: (count: number) => void  
+  data: Lead[];
+  setLeads?: React.Dispatch<React.SetStateAction<Lead[]>>;
+  onOpenNewCountChange?: (count: number) => void; // added prop
 }
 
 export function LeadTable({ data, setLeads, onOpenNewCountChange }: LeadTableProps) {
-  const [sorting, setSorting] = useState<SortingState>([])
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
-  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null)
-  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const router = useRouter()
-  const { toast } = useToast()
-  const supabase = createClient()
+  const router = useRouter();
+  const { toast } = useToast();
+  const supabase = createClient();
 
-
+  //  compute "opened" | "new" count whenever the incoming table data changes
   useEffect(() => {
-    const count =
-      Array.isArray(data)
-        ? data.filter(l => l && (l.status === "opened" || l.status === "new")).length
-        : 0;
+    const count = Array.isArray(data)
+      ? data.filter((l) => l && (l.status === "opened" || l.status === "new")).length
+      : 0;
     onOpenNewCountChange?.(count);
   }, [data, onOpenNewCountChange]);
+
 
 
   const handleRowClick = async (leadId: string) => {
