@@ -33,42 +33,43 @@ CREATE POLICY "Service role only" ON action_link
   FOR ALL USING (auth.role() = 'service_role');
 
 -- 6. Create audit trigger for action_link changes
+-- ONLY log INSERT and DELETE, NOT updates (to avoid noise)
 CREATE OR REPLACE FUNCTION audit_action_link_changes()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO action_link_audit_log (
-    tenant_id,
-    actor_user_id,
-    action,
-    target_id,
-    details,
-    ip,
-    user_agent
-  ) VALUES (
-    COALESCE(NEW.tenant_id, OLD.tenant_id),
-    COALESCE(NEW.created_by, OLD.created_by),
-    CASE 
-      WHEN TG_OP = 'INSERT' THEN 'action_link.create'
-      WHEN TG_OP = 'UPDATE' THEN 'action_link.update'
-      WHEN TG_OP = 'DELETE' THEN 'action_link.delete'
-    END,
-    COALESCE(NEW.id, OLD.id),
-    jsonb_build_object(
-      'operation', TG_OP,
-      'old_data', CASE WHEN TG_OP = 'DELETE' THEN to_jsonb(OLD) ELSE NULL END,
-      'new_data', CASE WHEN TG_OP = 'INSERT' THEN to_jsonb(NEW) ELSE NULL END
-    ),
-    'system',
-    'system'
-  );
+  -- Only log INSERT operations (link creation)
+  -- Updates are handled manually in application code with meaningful details
+  IF TG_OP = 'INSERT' THEN
+    INSERT INTO action_link_audit_log (
+      tenant_id,
+      actor_user_id,
+      action,
+      target_id,
+      details,
+      ip,
+      user_agent
+    ) VALUES (
+      NEW.tenant_id,
+      NEW.created_by,
+      'action_link.create',
+      NEW.id,
+      jsonb_build_object(
+        'email', NEW.email,
+        'action_type', NEW.action_type,
+        'expires_at', NEW.expires_at
+      ),
+      'system',
+      'system'
+    );
+  END IF;
   
   RETURN COALESCE(NEW, OLD);
 END;
 $$ LANGUAGE plpgsql;
 
--- Create trigger
+-- Create trigger - ONLY on INSERT
 CREATE TRIGGER audit_action_link_trigger
-  AFTER INSERT OR UPDATE OR DELETE ON action_link
+  AFTER INSERT ON action_link
   FOR EACH ROW EXECUTE FUNCTION audit_action_link_changes();
 
 -- 7. Add rate limiting table for additional protection

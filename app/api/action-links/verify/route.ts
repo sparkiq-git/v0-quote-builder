@@ -101,26 +101,48 @@ export async function POST(req: Request) {
     if (link.email.toLowerCase() !== email.toLowerCase())
       return NextResponse.json({ ok: false, error: "Email mismatch" }, { status: 400 })
 
-    // --- Update + audit ---
+    // --- Update last verified timestamp (no audit log - too noisy) ---
     try {
-      await Promise.all([
-        supabase
-          .from("action_link")
-          .update({ last_verified_at: now.toISOString() })
-          .eq("id", link.id),
-        supabase.from("action_link_audit_log").insert({
-          tenant_id: link.tenant_id,
-          actor_user_id: null,
-          action: "action_link.verify",
-          target_id: link.id,
-          details: { email },
-          ip,
-          user_agent: ua,
-        }),
-      ])
-    } catch (auditErr: any) {
-      console.error("Audit insert failed:", auditErr)
-      return NextResponse.json({ ok: false, error: "Failed to log verification" }, { status: 500 })
+      await supabase
+        .from("action_link")
+        .update({ last_verified_at: now.toISOString() })
+        .eq("id", link.id)
+    } catch (updateErr: any) {
+      console.error("Update failed:", updateErr)
+      // Non-critical, continue
+    }
+
+    // --- Update quote status and open tracking ---
+    if (link.metadata?.quote_id) {
+      try {
+        const { data: quoteData } = await supabase
+          .from("quote")
+          .select("status, first_opened_at, open_count")
+          .eq("id", link.metadata.quote_id)
+          .single()
+
+        if (quoteData) {
+          const isFirstOpen = !quoteData.first_opened_at
+          const quoteUpdates: any = {
+            status: "opened",
+            last_opened_at: now.toISOString(),
+            open_count: (quoteData.open_count || 0) + 1,
+          }
+
+          // Only set first_opened_at on the very first open
+          if (isFirstOpen) {
+            quoteUpdates.first_opened_at = now.toISOString()
+          }
+
+          await supabase
+            .from("quote")
+            .update(quoteUpdates)
+            .eq("id", link.metadata.quote_id)
+        }
+      } catch (quoteErr: any) {
+        console.error("Quote update failed:", quoteErr)
+        // Non-critical, continue even if quote update fails
+      }
     }
 
     // --- Success ---

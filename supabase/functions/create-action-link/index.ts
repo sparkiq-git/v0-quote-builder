@@ -254,22 +254,7 @@ Deno.serve(async (req) => {
     
     const linkId = insertRes?.id;
     
-    // Enhanced audit logging
-    await supabase.from("action_link_audit_log").insert({
-      tenant_id,
-      actor_user_id: created_by || null,
-      action: "action_link.create",
-      target_id: linkId,
-      details: {
-        email,
-        action_type,
-        metadata: metadata || {},
-        ip,
-        user_agent: req.headers.get("user-agent") ?? "unknown"
-      },
-      ip,
-      user_agent: req.headers.get("user-agent") ?? "unknown"
-    });
+    // Note: INSERT is already logged by database trigger
     
     // Get tenant branding with error handling
     const { data: brand } = await supabase
