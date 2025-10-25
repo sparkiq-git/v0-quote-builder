@@ -8,6 +8,15 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogAction,
+} from "@/components/ui/alert-dialog"
 
 // Configuration constants
 const API_ENDPOINTS = {
@@ -32,36 +41,90 @@ export default function ActionPage({ params }: { params: { token: string } }) {
   const [verified, setVerified] = useState<any | null>(null)
   const [quote, setQuote] = useState<any | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [errorDialog, setErrorDialog] = useState<{ open: boolean; title: string; message: string }>({
+    open: false,
+    title: "",
+    message: "",
+  })
   const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY
   if (!siteKey) {
     console.error("Missing NEXT_PUBLIC_TURNSTILE_SITE_KEY environment variable")
+  }
+
+  // Helper function to get user-friendly error messages
+  function getUserFriendlyError(errorMessage: string): { title: string; message: string } {
+    const lowerError = errorMessage.toLowerCase()
+    
+    if (lowerError.includes("link expired") || lowerError.includes("expired")) {
+      return {
+        title: "Quote Expired",
+        message: "This quote link has expired. Please contact us for a new quote or updated pricing."
+      }
+    }
+    
+    if (lowerError.includes("email mismatch") || lowerError.includes("email")) {
+      return {
+        title: "Email Mismatch",
+        message: "The email address you entered doesn't match the one this quote was sent to. Please check and try again."
+      }
+    }
+    
+    if (lowerError.includes("max uses exceeded") || lowerError.includes("already used")) {
+      return {
+        title: "Link Already Used",
+        message: "This link has already been used. For security reasons, each link can only be used once."
+      }
+    }
+    
+    if (lowerError.includes("link not active") || lowerError.includes("not active")) {
+      return {
+        title: "Link Not Active",
+        message: "This link is no longer active. Please contact us for assistance."
+      }
+    }
+    
+    if (lowerError.includes("rate limit") || lowerError.includes("too many requests")) {
+      return {
+        title: "Too Many Attempts",
+        message: "You've made too many requests. Please wait a moment and try again."
+      }
+    }
+    
+    if (lowerError.includes("captcha") || lowerError.includes("turnstile")) {
+      return {
+        title: "Verification Failed",
+        message: "CAPTCHA verification failed. Please try again."
+      }
+    }
+    
+    // Generic error
+    return {
+      title: "Verification Error",
+      message: errorMessage || "An unexpected error occurred. Please try again."
+    }
   }
 
   // --- Safe fetch with proper response handling ---
   async function safeFetchJSON(url: string, options: RequestInit) {
     const res = await fetch(url, options)
     
-    // Clone the response before consuming it
-    const cloned = res.clone()
-    
+    let json
     try {
-      const json = await res.json()
-      if (!res.ok || json?.ok === false) {
-        console.error(`Request to ${url} failed:`, json)
-        throw new Error(json?.error || `Request failed (${res.status})`)
-      }
-      return json
+      json = await res.json()
     } catch (jsonErr) {
-      // If JSON parsing failed, try to get text from the cloned response
-      try {
-        const text = await cloned.text()
-        console.error(`Non-JSON response from ${url}:`, text)
-        throw new Error(`Unexpected ${res.status} response: ${text.slice(0, 120)}`)
-      } catch (textErr) {
-        console.error(`Failed to parse response from ${url}:`, textErr)
-        throw new Error(`Failed to parse response (${res.status})`)
-      }
+      // If JSON parsing failed, get text from response
+      const text = await res.text()
+      console.error(`Non-JSON response from ${url}:`, text)
+      throw new Error(text.slice(0, 200))
     }
+    
+    if (!res.ok || json?.ok === false) {
+      console.error(`Request to ${url} failed:`, json)
+      const errorMsg = json?.error || `Request failed (${res.status})`
+      throw new Error(errorMsg)
+    }
+    
+    return json
   }
 
   async function handleVerify() {
@@ -122,6 +185,15 @@ export default function ActionPage({ params }: { params: { token: string } }) {
     } catch (e: any) {
       console.error("Verification error:", e)
       setError(e.message)
+      
+      // Show error dialog with user-friendly message
+      const friendlyError = getUserFriendlyError(e.message)
+      setErrorDialog({
+        open: true,
+        title: friendlyError.title,
+        message: friendlyError.message,
+      })
+      
       toast({
         title: "Verification failed",
         description: e.message,
@@ -165,60 +237,94 @@ export default function ActionPage({ params }: { params: { token: string } }) {
   // --- UI ---
   if (!verified) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
-        <Card className="max-w-sm w-full p-6 shadow-lg">
-          <CardContent className="space-y-5">
-            <div className="text-center">
-              <h1 className="text-lg font-semibold">Verify Your Email</h1>
-              <p className="text-sm text-muted-foreground mt-1">
-                Enter the email this quote was sent to and complete the CAPTCHA to continue.
+      <>
+        {/* Error Dialog */}
+        <AlertDialog open={errorDialog.open} onOpenChange={(open) => setErrorDialog({ ...errorDialog, open })}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{errorDialog.title}</AlertDialogTitle>
+              <AlertDialogDescription>{errorDialog.message}</AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogAction onClick={() => setErrorDialog({ ...errorDialog, open: false })}>
+                Close
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
+          <Card className="max-w-sm w-full p-6 shadow-lg">
+            <CardContent className="space-y-5">
+              <div className="text-center">
+                <h1 className="text-lg font-semibold">Verify Your Email</h1>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Enter the email this quote was sent to and complete the CAPTCHA to continue.
+                </p>
+              </div>
+
+              <Input
+                id="email-input"
+                type="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+
+              <div className="flex justify-center pt-2">
+                {siteKey ? (
+                  <Turnstile sitekey={siteKey} onVerify={(t) => setCaptcha(t)} />
+                ) : (
+                  <div className="text-sm text-red-500">
+                    CAPTCHA not configured. Please contact support.
+                  </div>
+                )}
+              </div>
+
+              {error && <p className="text-sm text-red-500">{error}</p>}
+
+              <Button
+                disabled={!email || !captcha || verifying}
+                onClick={handleVerify}
+                className="w-full font-semibold"
+              >
+                {verifying ? "Verifying..." : "View Your Quote"}
+              </Button>
+
+              <p className="text-[11px] text-center text-muted-foreground">
+                This secure link will expire automatically for security.
               </p>
-            </div>
-
-            <Input
-              id="email-input"
-              type="email"
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-
-            <div className="flex justify-center pt-2">
-              {siteKey ? (
-                <Turnstile sitekey={siteKey} onVerify={(t) => setCaptcha(t)} />
-              ) : (
-                <div className="text-sm text-red-500">
-                  CAPTCHA not configured. Please contact support.
-                </div>
-              )}
-            </div>
-
-            {error && <p className="text-sm text-red-500">{error}</p>}
-
-            <Button
-              disabled={!email || !captcha || verifying}
-              onClick={handleVerify}
-              className="w-full font-semibold"
-            >
-              {verifying ? "Verifying..." : "View Your Quote"}
-            </Button>
-
-            <p className="text-[11px] text-center text-muted-foreground">
-              This secure link will expire automatically for security.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+            </CardContent>
+          </Card>
+        </div>
+      </>
     )
   }
 
   return (
-    <PublicQuotePage
-      params={{ token: params.token }}
-      verifiedEmail={email}
-      quote={quote}
-      onAccept={() => handleConsume("accept")}
-      onDecline={() => handleConsume("decline")}
-    />
+    <>
+      {/* Error Dialog */}
+      <AlertDialog open={errorDialog.open} onOpenChange={(open) => setErrorDialog({ ...errorDialog, open })}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{errorDialog.title}</AlertDialogTitle>
+            <AlertDialogDescription>{errorDialog.message}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setErrorDialog({ ...errorDialog, open: false })}>
+              Close
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <PublicQuotePage
+        params={{ token: params.token }}
+        verifiedEmail={email}
+        quote={quote}
+        onAccept={() => handleConsume("accept")}
+        onDecline={() => handleConsume("decline")}
+      />
+    </>
   )
 }
