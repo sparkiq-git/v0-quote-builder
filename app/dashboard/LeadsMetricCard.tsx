@@ -1,11 +1,9 @@
-export const dynamic = "force-dynamic"; // ensure it isn't statically baked
-
+import { getLeadCount } from "@/lib/data/getLeadCount";
 import { Users } from "lucide-react";
 import MetricCard from "@/components/MetricCard";
-import { getLeadCount } from "@/lib/data/getLeadCount";
 
 export default async function LeadsMetricCard() {
-  const count = await getLeadCount(); // always returns a number (0 on error)
+  const count = await getLeadCount();
   return (
     <MetricCard
       title="Leads activos"
