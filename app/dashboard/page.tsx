@@ -11,6 +11,7 @@ import { Users, FileText, Clock, Plus, Plane } from "lucide-react"
 import { useMockStore } from "@/lib/mock/store"
 import { formatTimeAgo } from "@/lib/utils/format"
 import { RouteMap } from "@/components/dashboard/route-map"
+import LeadsMetricCard from "./LeadsMetricCard";
 
 /* ---------------------------------- page ---------------------------------- */
 export default function DashboardPage() {
