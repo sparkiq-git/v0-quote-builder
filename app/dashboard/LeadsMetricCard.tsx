@@ -9,7 +9,7 @@ export default async function LeadsMetricCard() {
       title="Leads activos"
       icon={Users}
       currentValue={count}
-      description="Status: opened o new"
+      description="Pending conversion to quote"
     />
   );
 }
