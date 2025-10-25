@@ -1,5 +1,6 @@
 "use client"
 
+
 import { useState, useEffect } from "react"
 import {
   type ColumnDef,
@@ -32,12 +33,14 @@ import { createClient } from "@/lib/supabase/client"
 import type { Lead } from "@/lib/types"
 import { formatDate, formatTimeAgo } from "@/lib/utils/format"
 
+
 interface LeadTableProps {
   data: Lead[]
   setLeads?: React.Dispatch<React.SetStateAction<Lead[]>>
+  onOpenNewCountChange?: (count: number) => void  
 }
 
-export function LeadTable({ data, setLeads }: LeadTableProps) {
+export function LeadTable({ data, setLeads, onOpenNewCountChange }: LeadTableProps) {
   const [sorting, setSorting] = useState<SortingState>([])
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null)
@@ -46,6 +49,16 @@ export function LeadTable({ data, setLeads }: LeadTableProps) {
   const router = useRouter()
   const { toast } = useToast()
   const supabase = createClient()
+
+
+  useEffect(() => {
+    const count =
+      Array.isArray(data)
+        ? data.filter(l => l && (l.status === "opened" || l.status === "new")).length
+        : 0;
+    onOpenNewCountChange?.(count);
+  }, [data, onOpenNewCountChange]);
+
 
   const handleRowClick = async (leadId: string) => {
     try {
