@@ -4,6 +4,7 @@ import { createActionLinkClient } from "@/lib/supabase/action-links"
 import { sha256Base64url } from "@/lib/security/token"
 import { rlPerIp, rlPerToken } from "@/lib/redis"
 import { verifyTurnstile } from "@/lib/supabase/turnstile"
+import { getQuoteData, invalidateQuoteCache } from "@/lib/cache/quote-cache"
 
 const VerifySchema = z.object({
   token: z.string().min(20),
@@ -112,14 +113,21 @@ export async function POST(req: Request) {
       // Non-critical, continue
     }
 
-    // --- Update quote status and open tracking ---
+    // --- Update quote status and open tracking (with caching) ---
     if (link.metadata?.quote_id) {
       try {
-        const { data: quoteData } = await supabase
-          .from("quote")
-          .select("status, first_opened_at, open_count")
-          .eq("id", link.metadata.quote_id)
-          .single()
+        // Get quote data from cache or database
+        const quoteData = await getQuoteData(
+          link.metadata.quote_id,
+          async () => {
+            const { data } = await supabase
+              .from("quote")
+              .select("status, first_opened_at, open_count, last_opened_at")
+              .eq("id", link.metadata.quote_id)
+              .single()
+            return data
+          }
+        )
 
         if (quoteData) {
           const isFirstOpen = !quoteData.first_opened_at
@@ -134,10 +142,14 @@ export async function POST(req: Request) {
             quoteUpdates.first_opened_at = now.toISOString()
           }
 
+          // Update database
           await supabase
             .from("quote")
             .update(quoteUpdates)
             .eq("id", link.metadata.quote_id)
+
+          // Invalidate cache so next read is fresh
+          await invalidateQuoteCache(link.metadata.quote_id)
         }
       } catch (quoteErr: any) {
         console.error("Quote update failed:", quoteErr)
