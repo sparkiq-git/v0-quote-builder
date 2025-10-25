@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useMemo } from "react"
+import { useMemo, useState, useEffect, useCallback } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -12,9 +12,36 @@ import { useMockStore } from "@/lib/mock/store"
 import { formatTimeAgo } from "@/lib/utils/format"
 import { RouteMap } from "@/components/dashboard/route-map"
 import LeadsMetricCard from "./LeadsMetricCard";
+import { createClient } from "@/lib/supabase/client"   
 
 /* ---------------------------------- page ---------------------------------- */
 export default function DashboardPage() {
+
+  const supabase = createClient()
+  const [leadCount, setLeadCount] = useState(0) 
+
+ const refreshLeadCount = useCallback(async () => {              
+    const { count, error } = await supabase
+      .from("lead")
+      .select("*", { count: "exact", head: true })
+      .in("status", ["opened", "new"])
+    if (!error) setLeadCount(count ?? 0)
+    else console.error("Lead count error:", error)
+  }, [supabase])
+
+  useEffect(() => {                                                
+    refreshLeadCount()
+    // optional realtime updates:
+    const channel = supabase
+      .channel("realtime-leads-count")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "lead" },
+        () => refreshLeadCount()
+      )
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [refreshLeadCount, supabase])
 
 
   const { state, getMetrics, loading } = useMockStore()
@@ -111,16 +138,8 @@ export default function DashboardPage() {
     )
   }
 
-  function MetricCard({
-    title,
-    icon: Icon,
-    currentValue,
-    description,
-  }: {
-    title: string
-    icon: any
-    currentValue: number
-    description: string
+   function MetricCard({ title, icon: Icon, currentValue, description }: {
+    title: string; icon: any; currentValue: number; description: string;
   }) {
     return (
       <Card className="col-span-1 h-full flex flex-col">
@@ -149,7 +168,7 @@ export default function DashboardPage() {
         <MetricCard
           title="Leads"
           icon={Users}
-          currentValue={pendingConversionLeads}
+          currentValue={leadCount} 
           description="Pending conversion to quote"
         />
         <MetricCard
