@@ -1,19 +1,17 @@
-// app/dashboard/LeadsMetricCard.tsx
-export const dynamic = "force-dynamic";
-export const runtime = "nodejs"; // ensure Node runtime, not Edge
+import { createClient } from '@supabase/supabase-js';
 
-import { getLeadCount } from "@/lib/data/getLeadCount";
-import { Users } from "lucide-react";
-import MetricCard from "@/components/MetricCard";
+const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!);
 
-export default async function LeadsMetricCard() {
-  const count = await getLeadCount();
-  return (
-    <MetricCard
-      title="Leads activos"
-      icon={Users}
-      currentValue={count}
-      description="Status: opened o new"
-    />
-  );
+export async function getLeadCount(): Promise<number> {
+  const { count, error } = await supabase
+    .from('lead')
+    .select('*', { count: 'exact', head: true })
+    .in('status', ['opened', 'new']);
+
+  if (error) {
+    console.error('Error fetching lead count:', error);
+    return 0;
+  }
+
+  return count ?? 0;
 }
