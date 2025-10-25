@@ -170,18 +170,9 @@ export default function ActionPage({ params }: { params: { token: string } }) {
           setQuote(quoteRes)
         } catch (quoteErr) {
           console.error("Failed to fetch quote:", quoteErr)
-          toast({
-            title: "Warning",
-            description: "Quote data could not be loaded, but you can still view the summary.",
-            variant: "destructive",
-          })
         }
       }
       
-      toast({
-        title: "Verified successfully",
-        description: "Your quote is now unlocked.",
-      })
     } catch (e: any) {
       console.error("Verification error:", e)
       setError(e.message)
@@ -192,12 +183,6 @@ export default function ActionPage({ params }: { params: { token: string } }) {
         open: true,
         title: friendlyError.title,
         message: friendlyError.message,
-      })
-      
-      toast({
-        title: "Verification failed",
-        description: e.message,
-        variant: "destructive",
       })
     } finally {
       setVerifying(false)
@@ -220,16 +205,21 @@ export default function ActionPage({ params }: { params: { token: string } }) {
       })
 
 
-      toast({
-        title: result === "accept" ? "Quote accepted" : "Quote declined",
-        description: "Your response has been securely recorded.",
+      // Show success dialog
+      setErrorDialog({
+        open: true,
+        title: result === "accept" ? "Quote Accepted" : "Quote Declined",
+        message: "Your response has been securely recorded.",
       })
     } catch (e: any) {
       console.error("Consume error:", e)
-      toast({
-        title: "Error",
-        description: e.message,
-        variant: "destructive",
+      
+      // Show error dialog
+      const friendlyError = getUserFriendlyError(e.message)
+      setErrorDialog({
+        open: true,
+        title: friendlyError.title,
+        message: friendlyError.message,
       })
     }
   }
