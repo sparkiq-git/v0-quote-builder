@@ -198,7 +198,7 @@ export default function DashboardPage() {
           title="Leads"
           icon={Users}
           currentValue={leadCount}
-          description='Status: "opened" or "new"'
+          description='Pending conversion to quote'
         />
         <MetricCard
           title="Quotes"
