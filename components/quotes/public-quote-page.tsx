@@ -15,13 +15,13 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
-import { Plane, Info, Mail, Phone, CheckCircle, Clock, CreditCard, FileText } from "lucide-react"
+import { Plane, Info, Mail, Phone, CheckCircle, Clock, CreditCard, FileText, XCircle, AlertCircle } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Badge } from "@/components/ui/badge"
 
 import { AdaptiveQuoteCard } from "@/components/quotes/adaptive-quote-card"
 import { useDeviceDetection } from "@/hooks/use-device-detection"
-import { formatDate, formatCurrency } from "@/lib/utils/format"
+import { formatDate, formatCurrency, formatDateTime } from "@/lib/utils/format"
 import { useToast } from "@/hooks/use-toast"
 
 interface PublicQuotePageProps {
@@ -227,6 +227,7 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
   const [showValidationAlert, setShowValidationAlert] = useState(false)
   const [isLocked, setIsLocked] = useState(false)
   const [selectedOptionId, setSelectedOptionId] = useState<string | null>(quote?.selectedOptionId || null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   useEffect(() => {
     if (quote && !hasViewed) {
@@ -271,10 +272,7 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
         throw new Error("Failed to update selection")
       }
       
-      toast({
-        title: "Option selected",
-        description: "Your selection has been recorded. We'll be in touch soon to finalize your booking.",
-      })
+      // Don't show toast for selection, only for final action
     } catch (error) {
       console.error("Failed to update selection:", error)
       toast({
@@ -285,7 +283,7 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
     }
   }
 
-  // ======= MODIFIED =======
+  // Updated accept handler with token revocation
   const handleSubmitQuote = async () => {
     if (onAccept) return onAccept()
     if (!selectedOptionId) {
@@ -299,6 +297,7 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
       return
     }
     
+    setIsSubmitting(true)
     try {
       const response = await fetch(`/api/quotes/${quote.id}`, {
         method: "PATCH",
@@ -308,7 +307,7 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
         },
         body: JSON.stringify({ 
           selectedOptionId,
-          status: "client_accepted"
+          status: "accepted"
         }),
       })
       
@@ -328,6 +327,8 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
         description: "Failed to accept quote. Please try again.",
         variant: "destructive",
       })
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -342,6 +343,7 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
       return
     }
     
+    setIsSubmitting(true)
     try {
       const response = await fetch(`/api/quotes/${quote.id}`, {
         method: "PATCH",
@@ -374,6 +376,8 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
         description: "Failed to decline quote. Please try again.",
         variant: "destructive",
       })
+    } finally {
+      setIsSubmitting(false)
     }
   }
   // =========================
@@ -443,11 +447,11 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
 
   const getButtonText = () => {
     if (!isLocked) {
-      return selectedOptionId ? "Confirm availability" : "Select an aircraft to accept"
+      return selectedOptionId ? "Confirm & Request Availability" : "Select an aircraft to accept"
     }
     switch (quote.status) {
-      case "client_accepted":
-        return "Checking Availability"
+      case "accepted":
+        return "Quote Accepted - Awaiting Availability"
       case "availability_confirmed":
         return "Contract Being Prepared"
       case "payment_received":
@@ -518,8 +522,36 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
 
   const layoutClasses = getLayoutClasses()
 
+  // Check if quote is expired
+  const isExpired = quote?.validUntil && new Date(quote.validUntil) < new Date()
+  const expirationDate = quote?.validUntil ? formatDateTime(quote.validUntil) : null
+
   return (
     <div className={layoutClasses.container}>
+      {/* Expiration Alert Banner */}
+      {expirationDate && (
+        <div className={`mx-2 sm:mx-3 md:mx-4 lg:mx-6 mb-3 sm:mb-4 md:mb-5 lg:mb-6 ${deviceInfo.type === 'desktop' || deviceInfo.type === 'large-desktop' ? 'mt-3 xl:mt-4' : ''}`}>
+          <Card className={`border-l-4 ${isExpired ? 'border-red-500 bg-red-50' : 'border-amber-500 bg-amber-50'}`}>
+            <CardContent className="pt-4 pb-4">
+              <div className="flex items-start gap-3">
+                <AlertCircle className={`h-5 w-5 ${isExpired ? 'text-red-600' : 'text-amber-600'} mt-0.5 flex-shrink-0`} />
+                <div className="flex-1">
+                  <p className={`font-medium text-sm ${isExpired ? 'text-red-900' : 'text-amber-900'}`}>
+                    {isExpired ? 'This quote has expired' : 'Quote expires soon'}
+                  </p>
+                  <p className={`text-xs mt-1 ${isExpired ? 'text-red-700' : 'text-amber-700'}`}>
+                    {isExpired 
+                      ? 'This quote is no longer valid. Please contact us for updated pricing.'
+                      : `Valid until ${expirationDate}. Please respond before this date.`
+                    }
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {/* ========================= MOBILE & TABLET ========================= */}
       <div className={deviceInfo.type === 'mobile' || deviceInfo.type === 'tablet' ? 'block' : 'hidden'}>
         <div className="p-2 sm:p-3 md:p-4 lg:p-6 space-y-2 sm:space-y-3 md:space-y-4 lg:space-y-6">
@@ -731,6 +763,72 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
                   </DialogContent>
                 </Dialog>
               )}
+
+              {/* Decline button - always show for "not interested" */}
+              {!isLocked && quote.status === "pending_response" && (
+                <Button
+                  variant="outline"
+                  className="w-full border-gray-300 text-gray-700 hover:bg-gray-100"
+                  onClick={() => setIsDeclineModalOpen(true)}
+                >
+                  Not Interested
+                </Button>
+              )}
+
+              {/* Decline dialog */}
+              <Dialog open={isDeclineModalOpen} onOpenChange={setIsDeclineModalOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="ghost" className="hidden" />
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[425px] mx-4">
+                  <DialogHeader>
+                    <DialogTitle>Not Interested</DialogTitle>
+                    <DialogDescription>
+                      We'd love to know why this quote isn't right for you. This helps us improve our service.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="grid gap-4 py-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="reason">Reason *</Label>
+                      <Select value={declineReason} onValueChange={setDeclineReason}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a reason" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="pricing">Pricing concerns</SelectItem>
+                          <SelectItem value="timing">Timing not right</SelectItem>
+                          <SelectItem value="aircraft">Aircraft preferences</SelectItem>
+                          <SelectItem value="found_alternative">Found alternative option</SelectItem>
+                          <SelectItem value="cancelled">Trip cancelled</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="notes">Additional feedback (optional)</Label>
+                      <Textarea
+                        id="notes"
+                        placeholder="Any additional feedback..."
+                        value={declineNotes}
+                        onChange={(e) => setDeclineNotes(e.target.value)}
+                        rows={3}
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsDeclineModalOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      onClick={handleDeclineQuote}
+                      disabled={isSubmitting || !declineReason}
+                    >
+                      {isSubmitting ? "Submitting..." : "Submit"}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </div>
           </div>
         </div>
@@ -912,6 +1010,17 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
                           </DialogFooter>
                         </DialogContent>
                       </Dialog>
+                    )}
+
+                    {/* Decline button - desktop */}
+                    {!isLocked && quote.status === "pending_response" && (
+                      <Button
+                        variant="outline"
+                        className="w-full border-gray-300 text-gray-700 hover:bg-gray-100"
+                        onClick={() => setIsDeclineModalOpen(true)}
+                      >
+                        Not Interested
+                      </Button>
                     )}
                   </div>
                 </div>

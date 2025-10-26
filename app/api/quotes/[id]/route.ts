@@ -301,6 +301,32 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
       return NextResponse.json({ error: "Failed to update quote" }, { status: 500 })
     }
 
+    // If quote was accepted, revoke the action link token
+    if (status === "accepted") {
+      try {
+        // Find the action link associated with this quote
+        const { data: actionLinks } = await supabase
+          .from("action_link")
+          .select("id, status")
+          .eq("metadata->>quote_id", id)
+          .eq("status", "active")
+
+        // Revoke all active action links for this quote
+        if (actionLinks && actionLinks.length > 0) {
+          await supabase
+            .from("action_link")
+            .update({ 
+              status: "consumed",
+              consumed_at: new Date().toISOString()
+            })
+            .in("id", actionLinks.map(link => link.id))
+        }
+      } catch (revokeError) {
+        console.error("Failed to revoke action link:", revokeError)
+        // Non-critical, continue even if revocation fails
+      }
+    }
+
     // Log the action in audit log
     await supabase.from("action_link_audit_log").insert({
       action_type: "quote_updated",
