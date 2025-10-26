@@ -133,6 +133,9 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     // Transform the data to match the expected format
     const transformedQuote = {
       ...quote,
+      // Map database fields to client-friendly names
+      validUntil: quote.valid_until,
+      selectedOptionId: quote.selected_option_id,
       // Transform legs from quote_detail to expected format
       legs: (legs || []).map((leg: any) => ({
         id: leg.id,
@@ -327,18 +330,42 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
       }
     }
 
-    // Log the action in audit log
-    await supabase.from("action_link_audit_log").insert({
-      action_type: "quote_updated",
-      quote_id: id,
-      metadata: {
-        selectedOptionId,
-        status,
-        declineReason,
-        declineNotes,
-        timestamp: new Date().toISOString(),
-      },
-    })
+    // Log the action in audit log (if from action link)
+    try {
+      const referer = req.headers.get("referer") || ""
+      const isPublicAccess = referer?.includes("/action/") || referer?.includes("/q/")
+      
+      if (isPublicAccess) {
+        // Get action link info for audit
+        const { data: actionLink } = await supabase
+          .from("action_link")
+          .select("id, tenant_id, action_type")
+          .eq("metadata->>quote_id", id)
+          .eq("status", "active")
+          .maybeSingle()
+        
+        if (actionLink) {
+          await supabase.from("action_link_audit_log").insert({
+            tenant_id: actionLink.tenant_id,
+            actor_user_id: null,
+            action: `quote.${status || 'updated'}`,
+            target_id: actionLink.id,
+            action_type: actionLink.action_type,
+            details: {
+              quote_id: id,
+              selectedOptionId,
+              status,
+              declineReason,
+              declineNotes,
+            },
+            ip: req.headers.get("x-forwarded-for") || "unknown",
+            user_agent: req.headers.get("user-agent") || "unknown",
+          })
+        }
+      }
+    } catch (auditErr) {
+      console.error("Audit log failed (non-critical):", auditErr)
+    }
 
     return NextResponse.json({ success: true, quote: updatedQuote })
   } catch (error) {
