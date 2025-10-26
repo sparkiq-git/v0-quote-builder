@@ -12,6 +12,7 @@ import {
   type CarouselApi,
 } from "@/components/ui/carousel"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { AmenityIcon } from "@/components/ui/amenity-icon"
 import type { QuoteOption } from "@/lib/types"
 import { formatCurrency } from "@/lib/utils/format"
 import {
@@ -41,19 +42,6 @@ interface PublicQuoteOptionCardProps {
   hasSelectedOption?: boolean
 }
 
-const getAmenityIcon = (amenity: string) => {
-  const a = amenity.toLowerCase()
-  if (a.includes("wifi") || a.includes("internet")) return Wifi
-  if (a.includes("coffee") || a.includes("beverage")) return Coffee
-  if (a.includes("tv") || a.includes("entertainment") || a.includes("screen")) return Tv
-  if (a.includes("catering") || a.includes("meal") || a.includes("food")) return Utensils
-  if (a.includes("bed") || a.includes("sleep") || a.includes("rest")) return Bed
-  if (a.includes("headphone") || a.includes("audio")) return Headphones
-  if (a.includes("power") || a.includes("charging") || a.includes("outlet")) return Zap
-  if (a.includes("security") || a.includes("safe")) return Shield
-  if (a.includes("premium") || a.includes("luxury") || a.includes("vip")) return Star
-  return CheckCircle
-}
 
 export function PublicQuoteOptionCard({
   option,
@@ -72,7 +60,7 @@ export function PublicQuoteOptionCard({
   const aircraftModel = option.aircraftModel
   const aircraftTail = option.aircraftTail
 
-  const total = option.operatorCost + option.commission + option.tax
+  const total = option.operatorCost + option.commission + (option.tax || 0)
 
   const images = option.overrideImages?.length
     ? option.overrideImages
@@ -157,6 +145,35 @@ export function PublicQuoteOptionCard({
                               onLoad={() => setFailedImages((p) => p.filter((f) => f !== img))}
                             />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/5 via-transparent to-transparent" />
+                            
+                            {/* Amenities Overlay */}
+                            {amenities.length > 0 && (
+                              <div className="absolute top-2 right-2 z-20">
+                                <div className="flex flex-wrap gap-1 max-w-[100px] justify-end">
+                                  {amenities.slice(0, 4).map((amenity, i) => (
+                                    <Tooltip key={i}>
+                                      <TooltipTrigger asChild>
+                                        <div className="flex items-center justify-center w-6 h-6 bg-white/90 backdrop-blur-sm rounded-full shadow-md border border-white/50 hover:bg-white hover:shadow-lg transition-all duration-200">
+                                          <AmenityIcon 
+                                            amenity={amenity} 
+                                            size={12} 
+                                            className="text-gray-700"
+                                          />
+                                        </div>
+                                      </TooltipTrigger>
+                                      <TooltipContent side="left" className="max-w-xs text-xs">
+                                        {amenity.name}
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  ))}
+                                  {amenities.length > 4 && (
+                                    <div className="flex items-center justify-center w-6 h-6 bg-white/90 backdrop-blur-sm rounded-full shadow-md border border-white/50">
+                                      <span className="text-xs font-medium text-gray-700">+{amenities.length - 4}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            )}
                           </div>
                         </CarouselItem>
                       ))}
@@ -209,70 +226,8 @@ export function PublicQuoteOptionCard({
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-2 gap-x-2 sm:gap-x-3 gap-y-1.5 sm:gap-y-2 pt-3 border-t border-gray-100/80">
-                    {aircraftTail?.year && (
-                      <div className="flex items-center gap-2 text-xs">
-                        <Calendar className="h-3 w-3 text-gray-400" />
-                        <span className="text-gray-600 font-light">{aircraftTail.year}</span>
-                      </div>
-                    )}
-                    {aircraftTail?.yearOfRefurbishment && (
-                      <div className="flex items-center gap-2 text-xs">
-                        <Clock className="h-3 w-3 text-gray-400" />
-                        <span className="text-gray-600 font-light">Refurb {aircraftTail.yearOfRefurbishment}</span>
-                      </div>
-                    )}
-                    {aircraftTail?.speedKnotsOverride && (
-                      <div className="flex items-center gap-2 text-xs">
-                        <Gauge className="h-3 w-3 text-gray-400" />
-                        <span className="text-gray-600 font-light">{aircraftTail.speedKnotsOverride} kts</span>
-                      </div>
-                    )}
-                    {aircraftTail?.rangeNmOverride && (
-                      <div className="flex items-center gap-2 text-xs">
-                        <Route className="h-3 w-3 text-gray-400" />
-                        <span className="text-gray-600 font-light">{aircraftTail.rangeNmOverride} nm</span>
-                      </div>
-                    )}
-                  </div>
                 </div>
 
-                {amenities.length > 0 && (
-                  <div>
-                    <h4 className="text-[10px] sm:text-xs uppercase tracking-wider text-gray-500 font-light mb-3">
-                      Amenities
-                    </h4>
-                    <TooltipProvider delayDuration={150}>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 gap-1.5 sm:gap-2">
-                        {amenities.slice(0, 6).map((amenity, i) => {
-                          const Icon = getAmenityIcon(amenity)
-                          return (
-                            <Tooltip key={i}>
-                              <TooltipTrigger asChild>
-                                <div className="flex items-center gap-2.5 p-2 rounded-lg border border-gray-100/80 hover:border-gray-200 hover:bg-gray-50/50 transition-all duration-200 touch-manipulation">
-                                  <div className="flex-shrink-0 w-6 h-6 bg-gray-50 rounded-md flex items-center justify-center">
-                                    <Icon className="h-3 w-3 text-gray-600" />
-                                  </div>
-                                  <span className="text-[11px] sm:text-xs font-light text-gray-700 truncate">
-                                    {amenity}
-                                  </span>
-                                </div>
-                              </TooltipTrigger>
-                              <TooltipContent side="top" align="start" className="max-w-xs break-words text-xs">
-                                {amenity}
-                              </TooltipContent>
-                            </Tooltip>
-                          )
-                        })}
-                        {amenities.length > 6 && (
-                          <div className="col-span-1 sm:col-span-2 flex items-center gap-2 text-[11px] sm:text-xs text-gray-500 border border-gray-100/80 p-2.5 rounded-lg">
-                            <span className="font-light">+{amenities.length - 6} more</span>
-                          </div>
-                        )}
-                      </div>
-                    </TooltipProvider>
-                  </div>
-                )}
 
                 {option.conditions?.trim() && (
                   <div>
@@ -287,6 +242,51 @@ export function PublicQuoteOptionCard({
               </div>
 
               <div className="border-t border-gray-100/80 bg-gray-50/20 p-3 sm:p-4 md:p-5 lg:p-6 xl:p-7">
+                {/* Aircraft Specifications */}
+                <div className="mb-4">
+                  <h4 className="text-[10px] sm:text-xs uppercase tracking-wider text-gray-500 font-light mb-3 text-center">
+                    Aircraft Specifications
+                  </h4>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+                    {aircraftTail?.year && (
+                      <div className="flex items-center gap-1.5 p-2 rounded-lg bg-white border border-gray-100/80">
+                        <Calendar className="h-3 w-3 text-gray-400 flex-shrink-0" />
+                        <div className="min-w-0">
+                          <div className="text-[10px] text-gray-500 font-medium uppercase tracking-wide">Year</div>
+                          <div className="text-xs text-gray-900 font-semibold">{aircraftTail.year}</div>
+                        </div>
+                      </div>
+                    )}
+                    {aircraftTail?.yearOfRefurbishment && (
+                      <div className="flex items-center gap-1.5 p-2 rounded-lg bg-white border border-gray-100/80">
+                        <Clock className="h-3 w-3 text-gray-400 flex-shrink-0" />
+                        <div className="min-w-0">
+                          <div className="text-[10px] text-gray-500 font-medium uppercase tracking-wide">Refurb</div>
+                          <div className="text-xs text-gray-900 font-semibold">{aircraftTail.yearOfRefurbishment}</div>
+                        </div>
+                      </div>
+                    )}
+                    {aircraftTail?.rangeNmOverride && (
+                      <div className="flex items-center gap-1.5 p-2 rounded-lg bg-white border border-gray-100/80">
+                        <Route className="h-3 w-3 text-gray-400 flex-shrink-0" />
+                        <div className="min-w-0">
+                          <div className="text-[10px] text-gray-500 font-medium uppercase tracking-wide">Range</div>
+                          <div className="text-xs text-gray-900 font-semibold">{aircraftTail.rangeNmOverride} nm</div>
+                        </div>
+                      </div>
+                    )}
+                    {aircraftTail?.speedKnotsOverride && (
+                      <div className="flex items-center gap-1.5 p-2 rounded-lg bg-white border border-gray-100/80">
+                        <Gauge className="h-3 w-3 text-gray-400 flex-shrink-0" />
+                        <div className="min-w-0">
+                          <div className="text-[10px] text-gray-500 font-medium uppercase tracking-wide">Speed</div>
+                          <div className="text-xs text-gray-900 font-semibold">{aircraftTail.speedKnotsOverride} kts</div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
                   <div className="space-y-0.5">
                     <span className="text-[10px] sm:text-xs uppercase tracking-wider text-gray-500 font-light">
