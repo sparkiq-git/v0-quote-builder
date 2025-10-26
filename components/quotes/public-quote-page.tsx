@@ -15,7 +15,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
-import { Plane, Info, Mail, Phone, CheckCircle, Clock, CreditCard, FileText, XCircle, AlertCircle } from "lucide-react"
+import { Plane, Info, Mail, Phone, CheckCircle, Clock, CreditCard, FileText } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Badge } from "@/components/ui/badge"
 
@@ -257,7 +257,7 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
     if (isLocked) return
     setShowValidationAlert(false)
     setSelectedOptionId(optionId)
-    
+
     try {
       const response = await fetch(`/api/quotes/${quote.id}`, {
         method: "PATCH",
@@ -267,11 +267,11 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
         },
         body: JSON.stringify({ selectedOptionId: optionId }),
       })
-      
+
       if (!response.ok) {
         throw new Error("Failed to update selection")
       }
-      
+
       // Don't show toast for selection, only for final action
     } catch (error) {
       console.error("Failed to update selection:", error)
@@ -296,7 +296,7 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
       setTimeout(() => setShowValidationAlert(false), 5000)
       return
     }
-    
+
     setIsSubmitting(true)
     try {
       const response = await fetch(`/api/quotes/${quote.id}`, {
@@ -305,12 +305,12 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
           "Content-Type": "application/json",
           "x-public-quote": "true",
         },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           selectedOptionId,
-          status: "accepted"
+          status: "accepted",
         }),
       })
-      
+
       // Parse response
       let json
       try {
@@ -320,11 +320,11 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
         const text = await response.text()
         throw new Error(text || "Server returned invalid response")
       }
-      
+
       if (!response.ok) {
         throw new Error(json?.error || "Failed to accept quote")
       }
-      
+
       toast({
         title: "Quote accepted successfully!",
         description:
@@ -352,7 +352,7 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
       })
       return
     }
-    
+
     setIsSubmitting(true)
     try {
       const response = await fetch(`/api/quotes/${quote.id}`, {
@@ -361,13 +361,13 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
           "Content-Type": "application/json",
           "x-public-quote": "true",
         },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           status: "declined",
           declineReason,
-          declineNotes
+          declineNotes,
         }),
       })
-      
+
       // Parse response
       let json
       try {
@@ -377,11 +377,11 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
         const text = await response.text()
         throw new Error(text || "Server returned invalid response")
       }
-      
+
       if (!response.ok) {
         throw new Error(json?.error || "Failed to decline quote")
       }
-      
+
       toast({
         title: "Quote declined",
         description: "Your decline has been recorded and the broker has been notified. Thank you for your time.",
@@ -415,20 +415,23 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
   }
 
   // REAL DATA (from store) wired into props/sections
-  const servicesTotal = quote.services?.reduce((sum, s) => {
-    const amount = s.amount || 0
-    return sum + (isNaN(amount) ? 0 : amount)
-  }, 0) || 0
-  
+  const servicesTotal =
+    quote.services?.reduce((sum, s) => {
+      const amount = s.amount || 0
+      return sum + (isNaN(amount) ? 0 : amount)
+    }, 0) || 0
+
   const selectedOptionTotal = selectedOption
     ? (selectedOption.operatorCost || 0) +
       (selectedOption.commission || 0) +
-      (selectedOption.feesEnabled ? (selectedOption.fees?.reduce((sum, fee) => {
-        const amount = fee.amount || 0
-        return sum + (isNaN(amount) ? 0 : amount)
-      }, 0) || 0) : 0)
+      (selectedOption.feesEnabled
+        ? selectedOption.fees?.reduce((sum, fee) => {
+            const amount = fee.amount || 0
+            return sum + (isNaN(amount) ? 0 : amount)
+          }, 0) || 0
+        : 0)
     : 0
-    
+
   const grandTotal = (selectedOptionTotal || 0) + (servicesTotal || 0)
 
   const displayOptions =
@@ -507,35 +510,37 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
   // Device-specific layout logic
   const getLayoutClasses = () => {
     switch (deviceInfo.type) {
-      case 'mobile':
+      case "mobile":
         return {
           container: "min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:bg-gray-900",
           content: "p-2 sm:p-3 space-y-2 sm:space-y-3",
-          grid: "grid grid-cols-1 gap-3 sm:gap-4"
+          grid: "grid grid-cols-1 gap-3 sm:gap-4",
         }
-      case 'tablet':
+      case "tablet":
         return {
           container: "min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:bg-gray-900",
           content: "p-3 sm:p-4 md:p-5 space-y-3 sm:space-y-4 md:space-y-5",
-          grid: "grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5"
+          grid: "grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5",
         }
-      case 'desktop':
+      case "desktop":
         return {
-          container: "min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:bg-gray-900 lg:h-screen lg:overflow-hidden overflow-x-hidden",
+          container:
+            "min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:bg-gray-900 lg:h-screen lg:overflow-hidden overflow-x-hidden",
           content: "p-4 sm:p-5 lg:p-6 space-y-4 sm:space-y-5 lg:space-y-6",
-          grid: "grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-5 lg:gap-6"
+          grid: "grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-5 lg:gap-6",
         }
-      case 'large-desktop':
+      case "large-desktop":
         return {
-          container: "min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:bg-gray-900 xl:h-screen xl:overflow-hidden overflow-x-hidden",
+          container:
+            "min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:bg-gray-900 xl:h-screen xl:overflow-hidden overflow-x-hidden",
           content: "p-5 sm:p-6 xl:p-8 space-y-5 sm:space-y-6 xl:space-y-8",
-          grid: "grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-6 xl:gap-8"
+          grid: "grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-6 xl:gap-8",
         }
       default:
         return {
           container: "min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:bg-gray-900",
           content: "p-3 sm:p-4 space-y-3 sm:space-y-4",
-          grid: "grid grid-cols-1 md:grid-cols-2 gap-4"
+          grid: "grid grid-cols-1 md:grid-cols-2 gap-4",
         }
     }
   }
@@ -549,7 +554,7 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
   return (
     <div className={layoutClasses.container}>
       {/* ========================= MOBILE & TABLET ========================= */}
-      <div className={deviceInfo.type === 'mobile' || deviceInfo.type === 'tablet' ? 'block' : 'hidden'}>
+      <div className={deviceInfo.type === "mobile" || deviceInfo.type === "tablet" ? "block" : "hidden"}>
         <div className="p-2 sm:p-3 md:p-4 lg:p-6 space-y-2 sm:space-y-3 md:space-y-4 lg:space-y-6">
           <SectionCard>
             {/* Branding */}
@@ -562,12 +567,10 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
               {/* Expiration date in top right */}
               {expirationDate && (
                 <div className="absolute top-0 right-0 text-right">
-                  <p className={`text-xs ${isExpired ? 'text-red-600 font-medium' : 'text-amber-600 font-medium'}`}>
-                    {isExpired ? 'Expired' : 'Expires'}
+                  <p className={`text-xs ${isExpired ? "text-red-600 font-medium" : "text-amber-600 font-medium"}`}>
+                    {isExpired ? "Expired" : "Expires"}
                   </p>
-                  <p className={`text-xs ${isExpired ? 'text-red-500' : 'text-amber-600'}`}>
-                    {expirationDate}
-                  </p>
+                  <p className={`text-xs ${isExpired ? "text-red-500" : "text-amber-600"}`}>{expirationDate}</p>
                 </div>
               )}
               <div>
@@ -643,7 +646,10 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
                 <Plane className="h-5 w-5 text-blue-600" />
                 <p className="text-gray-800 font-semibold text-sm sm:text-base">Aircraft Options</p>
               </div>
-              <Badge variant={statusDisplay.variant} className="text-xs flex items-center gap-1 px-3 py-1 self-start sm:self-auto">
+              <Badge
+                variant={statusDisplay.variant}
+                className="text-xs flex items-center gap-1 px-3 py-1 self-start sm:self-auto"
+              >
                 <StatusIcon className="h-3 w-3" />
                 {statusDisplay.text}
               </Badge>
@@ -708,15 +714,18 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
               </Button>
 
               {/* Not Interested button - show below confirm button */}
-              {!isLocked && (quote.status === "pending_response" || quote.status === "opened" || quote.status === "awaiting response") && (
-                <Button
-                  variant="outline"
-                  className="w-full border-gray-300 text-gray-700 hover:bg-gray-100"
-                  onClick={() => setIsDeclineModalOpen(true)}
-                >
-                  Not Interested
-                </Button>
-              )}
+              {!isLocked &&
+                (quote.status === "pending_response" ||
+                  quote.status === "opened" ||
+                  quote.status === "awaiting response") && (
+                  <Button
+                    variant="outline"
+                    className="w-full border-gray-300 text-gray-700 hover:bg-gray-100 bg-transparent"
+                    onClick={() => setIsDeclineModalOpen(true)}
+                  >
+                    Not Interested
+                  </Button>
+                )}
 
               {/* Decline dialog */}
               <Dialog open={isDeclineModalOpen} onOpenChange={setIsDeclineModalOpen}>
@@ -778,95 +787,97 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
       </div>
 
       {/* ========================= DESKTOP ========================= */}
-      <div className={deviceInfo.type === 'desktop' || deviceInfo.type === 'large-desktop' ? 'block' : 'hidden'}>
+      <div className={deviceInfo.type === "desktop" || deviceInfo.type === "large-desktop" ? "block" : "hidden"}>
         <div className="absolute inset-0 z-10">
           <div className="h-full flex">
             {/* LEFT PANE (full height scroll) */}
             <div className="w-1/4 xl:w-1/3 h-full overflow-y-auto overflow-x-hidden">
-              <div className="relative h-full p-4 xl:p-6 pb-28 space-y-3">
-                <SectionCard>
-                  {/* Branding */}
-                  <div className="flex items-center gap-2 mb-5">
-                    <img src="/images/aero-iq-logo.png" alt="Aero IQ" className="h-5 w-auto" />
-                  </div>
+              <div className="relative h-full p-4 xl:p-6 pb-28">
+                <Card className="shadow-xl border-0 bg-white/90 backdrop-blur-sm">
+                  <CardContent className="p-5 xl:p-7 space-y-5 xl:space-y-6">
+                    {/* Branding */}
+                    <div className="flex items-center gap-2">
+                      <img src="/images/aero-iq-logo.png" alt="Aero IQ" className="h-5 w-auto" />
+                    </div>
 
-                  {/* Customer with Expiration Date */}
-                  <div className="space-y-0 relative">
-                    {/* Expiration date in top right */}
-                    {expirationDate && (
-                      <div className="absolute top-0 right-0 text-right">
-                        <p className={`text-xs ${isExpired ? 'text-red-600 font-medium' : 'text-amber-600 font-medium'}`}>
-                          {isExpired ? 'Expired' : 'Expires'}
-                        </p>
-                        <p className={`text-xs ${isExpired ? 'text-red-500' : 'text-amber-600'}`}>
-                          {expirationDate}
-                        </p>
+                    {/* Customer with Expiration Date */}
+                    <div className="space-y-2 relative pb-4 border-b border-gray-200/50">
+                      {/* Expiration date in top right */}
+                      {expirationDate && (
+                        <div className="absolute top-0 right-0 text-right">
+                          <p
+                            className={`text-xs ${isExpired ? "text-red-600 font-medium" : "text-amber-600 font-medium"}`}
+                          >
+                            {isExpired ? "Expired" : "Expires"}
+                          </p>
+                          <p className={`text-xs ${isExpired ? "text-red-500" : "text-amber-600"}`}>{expirationDate}</p>
+                        </div>
+                      )}
+                      <div>
+                        <p className="font-medium text-sm">{quote.customer?.name ?? "Fernando Arriaga"}</p>
+                        <p className="text-xs text-gray-600">{quote.customer?.company ?? "Spark IQ"}</p>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <Mail className="h-4 w-4 text-gray-500" />
+                          <span className="text-xs">{quote.customer?.email ?? "farriaga@sparkiq.io"}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Phone className="h-4 w-4 text-gray-500" />
+                          <span className="text-xs">{quote.customer?.phone ?? "619-606-1123"}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Trip Summary */}
+                    <div className="pb-4 border-b border-gray-200/50">
+                      <p className="font-medium text-sm mb-3">Trip Summary</p>
+                      <div className="divide-y divide-gray-200">
+                        {quote.legs?.map((leg, index) => (
+                          <LegRow key={index} leg={leg} index={index} />
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Additional Services */}
+                    {quote.services?.length > 0 && (
+                      <div className="pb-4 border-b border-gray-200/50">
+                        <p className="font-medium text-sm mb-3">Additional Services</p>
+                        <ul className="space-y-1 text-xs">
+                          {quote.services.map((service) => (
+                            <li key={service.id} className="text-gray-700">
+                              <span className="font-medium">{service.name}</span>
+                              {service.description && <span className="text-gray-500"> — {service.description}</span>}
+                            </li>
+                          ))}
+                        </ul>
                       </div>
                     )}
+
+                    {/* Total Trip Cost */}
                     <div>
-                      <p className="font-medium text-sm">{quote.customer?.name ?? "Fernando Arriaga"}</p>
-                      <p className="text-xs text-gray-600">{quote.customer?.company ?? "Spark IQ"}</p>
-                    </div>
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <Mail className="h-4 w-4 text-gray-500" />
-                        <span className="text-xs">{quote.customer?.email ?? "farriaga@sparkiq.io"}</span>
+                      <p className="font-medium text-sm mb-3">Total Trip Cost</p>
+                      <div className="space-y-1">
+                        <div className="grid grid-cols-2 items-center">
+                          <span className="text-gray-700 text-xs">Selected Aircraft</span>
+                          <span className="font-medium text-right text-xs">{formatCurrency(selectedOptionTotal)}</span>
+                        </div>
+
+                        {quote.services?.map((s) => (
+                          <div key={s.id} className="grid grid-cols-2 items-center text-xs">
+                            <span className="text-gray-600">{s.name}</span>
+                            <span className="text-right">{formatCurrency(s.amount)}</span>
+                          </div>
+                        ))}
+
+                        <div className="grid grid-cols-2 items-center font-bold text-sm pt-3 border-t border-gray-200">
+                          <span>Grand Total</span>
+                          <span className="text-right">{formatCurrency(grandTotal)}</span>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Phone className="h-4 w-4 text-gray-500" />
-                        <span className="text-xs">{quote.customer?.phone ?? "619-606-1123"}</span>
-                      </div>
                     </div>
-                  </div>
-                </SectionCard>
-
-                {/* Trip Summary */}
-                <SectionCard>
-                  <p className="font-medium text-sm mb-2">Trip Summary</p>
-                  <div className="divide-y divide-gray-200">
-                    {quote.legs?.map((leg, index) => (
-                      <LegRow key={index} leg={leg} index={index} />
-                    ))}
-                  </div>
-                </SectionCard>
-
-                {/* Additional Services */}
-                {quote.services?.length > 0 && (
-                  <SectionCard>
-                    <p className="font-medium text-sm mb-2">Additional Services</p>
-                    <ul className="space-y-0 text-xs">
-                      {quote.services.map((service) => (
-                        <li key={service.id} className="text-gray-700">
-                          <span className="font-medium">{service.name}</span>
-                          {service.description && <span className="text-gray-500"> — {service.description}</span>}
-                        </li>
-                      ))}
-                    </ul>
-                  </SectionCard>
-                )}
-
-                {/* Total Trip Cost */}
-                <SectionCard>
-                  <div className="space-y-0">
-                    <p className="font-medium text-sm mb-2">Total Trip Cost</p>
-                    <div className="grid grid-cols-2 items-center">
-                      <span className="text-gray-700 text-xs">Selected Aircraft</span>
-                      <span className="font-medium text-right text-xs">{formatCurrency(selectedOptionTotal)}</span>
-                    </div>
-
-                    {quote.services?.map((s) => (
-                      <div key={s.id} className="grid grid-cols-2 items-center text-xs">
-                        <span className="text-gray-600">{s.name}</span>
-                        <span className="text-right">{formatCurrency(s.amount)}</span>
-                      </div>
-                    ))}
-
-                    <div className="grid grid-cols-2 items-center font-bold text-sm pt-3 border-t border-gray-200">
-                      <span>Grand Total</span>
-                      <span className="text-right">{formatCurrency(grandTotal)}</span>
-                    </div>
-                  </div>
-                </SectionCard>
+                  </CardContent>
+                </Card>
 
                 {/* FULL-BLEED STICKY ACTIONS */}
                 <div
@@ -884,11 +895,7 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
                   <div className="space-y-3">
                     {quote.status === "itinerary_created" && (
                       <Button asChild className="w-full !bg-blue-600 hover:!bg-blue-700 !text-white !font-semibold">
-                        <a
-                          href={`/itineraries/${quote.id}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
+                        <a href={`/itineraries/${quote.id}`} target="_blank" rel="noopener noreferrer">
                           View Your Itinerary
                         </a>
                       </Button>
@@ -909,15 +916,18 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
                     </Button>
 
                     {/* Not Interested button - show below confirm button */}
-                    {!isLocked && (quote.status === "pending_response" || quote.status === "opened" || quote.status === "awaiting response") && (
-                      <Button
-                        variant="outline"
-                        className="w-full border-gray-300 text-gray-700 hover:bg-gray-100"
-                        onClick={() => setIsDeclineModalOpen(true)}
-                      >
-                        Not Interested
-                      </Button>
-                    )}
+                    {!isLocked &&
+                      (quote.status === "pending_response" ||
+                        quote.status === "opened" ||
+                        quote.status === "awaiting response") && (
+                        <Button
+                          variant="outline"
+                          className="w-full border-gray-300 text-gray-700 hover:bg-gray-100 bg-transparent"
+                          onClick={() => setIsDeclineModalOpen(true)}
+                        >
+                          Not Interested
+                        </Button>
+                      )}
                   </div>
                 </div>
               </div>
