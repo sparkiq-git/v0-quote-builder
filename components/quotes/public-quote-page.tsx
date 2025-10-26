@@ -528,30 +528,6 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
 
   return (
     <div className={layoutClasses.container}>
-      {/* Expiration Alert Banner */}
-      {expirationDate && (
-        <div className={`mx-2 sm:mx-3 md:mx-4 lg:mx-6 mb-3 sm:mb-4 md:mb-5 lg:mb-6 ${deviceInfo.type === 'desktop' || deviceInfo.type === 'large-desktop' ? 'mt-3 xl:mt-4' : ''}`}>
-          <Card className={`border-l-4 ${isExpired ? 'border-red-500 bg-red-50' : 'border-amber-500 bg-amber-50'}`}>
-            <CardContent className="pt-4 pb-4">
-              <div className="flex items-start gap-3">
-                <AlertCircle className={`h-5 w-5 ${isExpired ? 'text-red-600' : 'text-amber-600'} mt-0.5 flex-shrink-0`} />
-                <div className="flex-1">
-                  <p className={`font-medium text-sm ${isExpired ? 'text-red-900' : 'text-amber-900'}`}>
-                    {isExpired ? 'This quote has expired' : 'Quote expires soon'}
-                  </p>
-                  <p className={`text-xs mt-1 ${isExpired ? 'text-red-700' : 'text-amber-700'}`}>
-                    {isExpired 
-                      ? 'This quote is no longer valid. Please contact us for updated pricing.'
-                      : `Valid until ${expirationDate}. Please respond before this date.`
-                    }
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
       {/* ========================= MOBILE & TABLET ========================= */}
       <div className={deviceInfo.type === 'mobile' || deviceInfo.type === 'tablet' ? 'block' : 'hidden'}>
         <div className="p-2 sm:p-3 md:p-4 lg:p-6 space-y-2 sm:space-y-3 md:space-y-4 lg:space-y-6">
@@ -561,8 +537,19 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
               <img src="/images/aero-iq-logo.png" alt="Aero IQ" className="h-5 w-auto mb-3" />
             </div>
 
-            {/* Customer */}
-            <div className="space-y-0">
+            {/* Customer with Expiration Date */}
+            <div className="space-y-0 relative">
+              {/* Expiration date in top right */}
+              {expirationDate && (
+                <div className="absolute top-0 right-0 text-right">
+                  <p className={`text-xs ${isExpired ? 'text-red-600 font-medium' : 'text-amber-600 font-medium'}`}>
+                    {isExpired ? 'Expired' : 'Expires'}
+                  </p>
+                  <p className={`text-xs ${isExpired ? 'text-red-500' : 'text-amber-600'}`}>
+                    {expirationDate}
+                  </p>
+                </div>
+              )}
               <div>
                 <p className="font-medium text-sm">{quote.customer?.name ?? "Fernando Arriaga"}</p>
                 <p className="text-xs text-gray-600">{quote.customer?.company ?? "Spark IQ"}</p>
@@ -700,71 +687,7 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
                 {getButtonText()}
               </Button>
 
-              {/* Decline dialog (mobile) */}
-              {quote.status === "pending_response" && (
-                <Dialog open={isDeclineModalOpen} onOpenChange={setIsDeclineModalOpen}>
-                  <DialogTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="w-full border-red-400 text-red-600 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950 bg-transparent"
-                    >
-                      Decline Quote
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-[425px] mx-4">
-                    <DialogHeader>
-                      <DialogTitle>Decline Quote</DialogTitle>
-                      <DialogDescription>
-                        Please let us know why you're declining this quote. This helps us improve our service.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="grid gap-4 py-4">
-                      <div className="grid gap-2">
-                        <Label htmlFor="reason">Reason for declining *</Label>
-                        <Select value={declineReason} onValueChange={setDeclineReason}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a reason" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="too_expensive">Too expensive</SelectItem>
-                            <SelectItem value="wrong_dates">Wrong dates or timing</SelectItem>
-                            <SelectItem value="wrong_info">Incorrect information</SelectItem>
-                            <SelectItem value="found_alternative">Found alternative option</SelectItem>
-                            <SelectItem value="trip_cancelled">Trip cancelled</SelectItem>
-                            <SelectItem value="other">Other</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="grid gap-2">
-                        <Label htmlFor="notes">Special notes (optional)</Label>
-                        <Textarea
-                          id="notes"
-                          placeholder="Any additional feedback..."
-                          value={declineNotes}
-                          onChange={(e) => setDeclineNotes(e.target.value)}
-                          rows={3}
-                        />
-                      </div>
-                    </div>
-                    <DialogFooter>
-                      <Button variant="outline" onClick={() => setIsDeclineModalOpen(false)}>
-                        Cancel
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        onClick={() => {
-                          if (!declineReason) return
-                          setIsDeclineModalOpen(false)
-                        }}
-                      >
-                        Decline Quote
-                      </Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
-              )}
-
-              {/* Decline button - always show for "not interested" */}
+              {/* Not Interested button - show below confirm button */}
               {!isLocked && quote.status === "pending_response" && (
                 <Button
                   variant="outline"
@@ -847,8 +770,19 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
                     <img src="/images/aero-iq-logo.png" alt="Aero IQ" className="h-5 w-auto" />
                   </div>
 
-                  {/* Customer */}
-                  <div className="space-y-0">
+                  {/* Customer with Expiration Date */}
+                  <div className="space-y-0 relative">
+                    {/* Expiration date in top right */}
+                    {expirationDate && (
+                      <div className="absolute top-0 right-0 text-right">
+                        <p className={`text-xs ${isExpired ? 'text-red-600 font-medium' : 'text-amber-600 font-medium'}`}>
+                          {isExpired ? 'Expired' : 'Expires'}
+                        </p>
+                        <p className={`text-xs ${isExpired ? 'text-red-500' : 'text-amber-600'}`}>
+                          {expirationDate}
+                        </p>
+                      </div>
+                    )}
                     <div>
                       <p className="font-medium text-sm">{quote.customer?.name ?? "Fernando Arriaga"}</p>
                       <p className="text-xs text-gray-600">{quote.customer?.company ?? "Spark IQ"}</p>
@@ -954,65 +888,7 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
                       {getButtonText()}
                     </Button>
 
-                    {/* Desktop Decline Quote */}
-                    {quote.status === "pending_response" && (
-                      <Dialog open={isDeclineModalOpen} onOpenChange={setIsDeclineModalOpen}>
-                        <DialogTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className="w-full border-red-400 text-red-600 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950 bg-transparent"
-                          >
-                            Decline Quote
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="sm:max-w-[425px] mx-4">
-                          <DialogHeader>
-                            <DialogTitle>Decline Quote</DialogTitle>
-                            <DialogDescription>
-                              Please let us know why you're declining this quote. This helps us improve our service.
-                            </DialogDescription>
-                          </DialogHeader>
-                          <div className="grid gap-4 py-4">
-                            <div className="grid gap-2">
-                              <Label htmlFor="reason">Reason for declining *</Label>
-                              <Select value={declineReason} onValueChange={setDeclineReason}>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select a reason" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="too_expensive">Too expensive</SelectItem>
-                                  <SelectItem value="wrong_dates">Wrong dates or timing</SelectItem>
-                                  <SelectItem value="wrong_info">Incorrect information</SelectItem>
-                                  <SelectItem value="found_alternative">Found alternative option</SelectItem>
-                                  <SelectItem value="trip_cancelled">Trip cancelled</SelectItem>
-                                  <SelectItem value="other">Other</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div className="grid gap-2">
-                              <Label htmlFor="notes">Special notes (optional)</Label>
-                              <Textarea
-                                id="notes"
-                                placeholder="Any additional feedback..."
-                                value={declineNotes}
-                                onChange={(e) => setDeclineNotes(e.target.value)}
-                                rows={3}
-                              />
-                            </div>
-                          </div>
-                          <DialogFooter>
-                            <Button variant="outline" onClick={() => setIsDeclineModalOpen(false)}>
-                              Cancel
-                            </Button>
-                            <Button variant="destructive" onClick={handleDeclineQuote}>
-                              Decline Quote
-                            </Button>
-                          </DialogFooter>
-                        </DialogContent>
-                      </Dialog>
-                    )}
-
-                    {/* Decline button - desktop */}
+                    {/* Not Interested button - show below confirm button */}
                     {!isLocked && quote.status === "pending_response" && (
                       <Button
                         variant="outline"

@@ -191,7 +191,8 @@ export default function ActionPage({ params }: { params: { token: string } }) {
 
   async function handleConsume(result: "accept" | "decline") {
     try {
-      const json = await safeFetchJSON(API_ENDPOINTS.CONSUME, {
+      // Clone the response to prevent "body already read" error
+      const res = await fetch(API_ENDPOINTS.CONSUME, {
         method: "POST",
         headers: {
           "content-type": "application/json",
@@ -204,6 +205,13 @@ export default function ActionPage({ params }: { params: { token: string } }) {
         }),
       })
 
+      // Read response once
+      const text = await res.text()
+      const json = JSON.parse(text)
+
+      if (!res.ok || json?.ok === false) {
+        throw new Error(json?.error || `Request failed (${res.status})`)
+      }
 
       // Show success dialog
       setErrorDialog({
