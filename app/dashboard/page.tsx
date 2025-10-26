@@ -204,7 +204,7 @@ export default function DashboardPage() {
           title="Quotes"
           icon={FileText}
           currentValue={quotesAwaitingResponse}
-          description='Status: "awaiting response"'
+          description='Awaiting client response"'
         />
         <MetricCard
           title="Unpaid"
