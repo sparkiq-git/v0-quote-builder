@@ -160,6 +160,7 @@ export default function QuotesPage() {
     }
   }
 
+  // Invoice & Contract handler
   const handleOpenInvoiceContractModal = async (quote: any) => {
     setSelectedQuote(quote)
     setInvoiceContractOpen(true)
@@ -171,9 +172,11 @@ export default function QuotesPage() {
     try {
       setSending(true)
       
+      // Check authentication
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) throw new Error("Not authenticated")
 
+      // Call Edge Function
       const { data, error } = await supabase.functions.invoke("send-contract", {
         body: { quote_id: selectedQuote.id },
       })
@@ -181,16 +184,18 @@ export default function QuotesPage() {
       if (error) throw error
       if (!data.success) throw new Error(data.error || "Failed to send")
 
+      // Show success message
       toast({
         title: "Invoice & Contract sent",
         description: `Invoice ${data.invoice?.number} and contract sent successfully.`,
       })
 
-      // Update quote status
+      // Update quote status in UI
       setQuotes((prev) =>
         prev.map((q) => (q.id === selectedQuote.id ? { ...q, status: "invoiced" } : q))
       )
 
+      // Close modal and reset
       setInvoiceContractOpen(false)
       setSelectedQuote(null)
     } catch (err: any) {
@@ -203,6 +208,11 @@ export default function QuotesPage() {
     } finally {
       setSending(false)
     }
+  }
+
+  // Check if quote can send invoice & contract
+  const canSendInvoiceContract = (quote: any) => {
+    return quote.status === "accepted"
   }
 
   const filteredQuotes = quotes.filter((quote) => {
@@ -335,8 +345,9 @@ export default function QuotesPage() {
     <Button
       variant="default"
       size="sm"
-      disabled={quote.status !== "accepted"}
+      disabled={!canSendInvoiceContract(quote)}
       onClick={() => handleOpenInvoiceContractModal(quote)}
+      title={!canSendInvoiceContract(quote) ? "Quote must be accepted to send invoice & contract" : ""}
     >
       <FileSignature className="mr-2 h-4 w-4" />
       Invoice & Contract
@@ -427,11 +438,19 @@ export default function QuotesPage() {
                 <p className="text-sm text-muted-foreground">{selectedQuote.customer.company}</p>
               </div>
 
-              <div className="border rounded-lg p-4">
-                <h4 className="font-semibold mb-2">Quote Summary</h4>
-                <p className="text-sm text-muted-foreground">
-                  This will create an invoice and send a DocuSign contract with the quote details.
-                </p>
+              <div className="border rounded-lg p-4 space-y-2">
+                <h4 className="font-semibold mb-2">Quote Details</h4>
+                <div className="text-sm space-y-1">
+                  <p className="text-muted-foreground">
+                    <span className="font-medium">Status:</span> {selectedQuote.status}
+                  </p>
+                  <p className="text-muted-foreground">
+                    <span className="font-medium">Created:</span> {formatDate(selectedQuote.createdAt)}
+                  </p>
+                  <p className="text-muted-foreground">
+                    <span className="font-medium">Expires:</span> {formatDate(selectedQuote.expiresAt)}
+                  </p>
+                </div>
               </div>
 
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
