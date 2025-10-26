@@ -621,7 +621,7 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
 
           {/* Total Trip Cost */}
           <SectionCard>
-            <div className="space-y-0">
+            <div className="space-y-0 py-1.5">
               <p className="font-semibold text-sm mb-2">Total Trip Cost</p>
 
               <div className="grid grid-cols-2 items-center">
