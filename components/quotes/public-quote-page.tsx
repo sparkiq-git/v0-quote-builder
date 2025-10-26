@@ -968,7 +968,7 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
                   </div>
                 </div>
 
-                <div className="px-2 lg:px-3 xl:px-4 space-y-2 lg:space-y-3 xl:space-y-4">
+                <div className="px-2 xl:px-4 space-y-2 lg:space-y-3 xl:space-y-4 lg:px-0">
                   {displayOptions.map((option) => (
                     <div key={option.id} className="w-full">
                       <AdaptiveQuoteCard
