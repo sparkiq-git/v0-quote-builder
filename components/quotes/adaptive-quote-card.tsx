@@ -251,7 +251,7 @@ export function AdaptiveQuoteCard({
           <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-3 lg:p-4 z-20">
             <div className="flex items-end justify-between gap-3 flex-wrap">
               <div className="flex-1 min-w-0 space-y-1">
-                <h3
+                <h4
                   className={`font-light text-white tracking-tight leading-tight drop-shadow-2xl ${
                     deviceInfo.type === "mobile"
                       ? "text-2xl sm:text-3xl"
@@ -261,7 +261,7 @@ export function AdaptiveQuoteCard({
                   }`}
                 >
                   {aircraftModel?.name || "Aircraft Model"}
-                </h3>
+                </h4>
                 <p
                   className={`text-white/95 font-light tracking-wide drop-shadow-lg ${
                     deviceInfo.type === "mobile"
