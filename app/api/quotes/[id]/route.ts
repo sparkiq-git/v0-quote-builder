@@ -304,31 +304,32 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
       return NextResponse.json({ error: "Failed to update quote" }, { status: 500 })
     }
 
+    // NOTE: Token revocation disabled for now - handle later
     // If quote was accepted, revoke the action link token
-    if (status === "accepted") {
-      try {
-        // Find the action link associated with this quote
-        const { data: actionLinks } = await supabase
-          .from("action_link")
-          .select("id, status")
-          .eq("metadata->>quote_id", id)
-          .eq("status", "active")
+    // if (status === "accepted") {
+    //   try {
+    //     // Find the action link associated with this quote
+    //     const { data: actionLinks } = await supabase
+    //       .from("action_link")
+    //       .select("id, status")
+    //       .eq("metadata->>quote_id", id)
+    //       .eq("status", "active")
 
-        // Revoke all active action links for this quote
-        if (actionLinks && actionLinks.length > 0) {
-          await supabase
-            .from("action_link")
-            .update({ 
-              status: "consumed",
-              consumed_at: new Date().toISOString()
-            })
-            .in("id", actionLinks.map(link => link.id))
-        }
-      } catch (revokeError) {
-        console.error("Failed to revoke action link:", revokeError)
-        // Non-critical, continue even if revocation fails
-      }
-    }
+    //     // Revoke all active action links for this quote
+    //     if (actionLinks && actionLinks.length > 0) {
+    //       await supabase
+    //         .from("action_link")
+    //         .update({ 
+    //           status: "consumed",
+    //           consumed_at: new Date().toISOString()
+    //         })
+    //         .in("id", actionLinks.map(link => link.id))
+    //     }
+    //   } catch (revokeError) {
+    //     console.error("Failed to revoke action link:", revokeError)
+    //     // Non-critical, continue even if revocation fails
+    //   }
+    // }
 
     // Log the action in audit log (if from action link)
     try {
@@ -336,12 +337,12 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
       const isPublicAccess = referer?.includes("/action/") || referer?.includes("/q/")
       
       if (isPublicAccess) {
-        // Get action link info for audit
+        // Get action link info for audit - look for any status (active or consumed)
         const { data: actionLink } = await supabase
           .from("action_link")
-          .select("id, tenant_id, action_type")
+          .select("id, tenant_id, action_type, status")
           .eq("metadata->>quote_id", id)
-          .eq("status", "active")
+          .order("created_at", { ascending: false })
           .maybeSingle()
         
         if (actionLink) {
@@ -357,6 +358,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
               status,
               declineReason,
               declineNotes,
+              link_status: actionLink.status, // track if link was active/consumed
             },
             ip: req.headers.get("x-forwarded-for") || "unknown",
             user_agent: req.headers.get("user-agent") || "unknown",
@@ -365,6 +367,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
       }
     } catch (auditErr) {
       console.error("Audit log failed (non-critical):", auditErr)
+      // Don't throw - this is non-critical
     }
 
     return NextResponse.json({ success: true, quote: updatedQuote })
@@ -373,7 +376,6 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     console.error("Error details:", {
       message: error?.message,
       stack: error?.stack,
-      body
     })
     return NextResponse.json({ 
       error: error?.message || "Internal server error",

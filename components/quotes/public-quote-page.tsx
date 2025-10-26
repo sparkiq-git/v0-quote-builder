@@ -311,8 +311,18 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
         }),
       })
       
+      // Parse response
+      let json
+      try {
+        json = await response.json()
+      } catch (parseError) {
+        // If JSON parsing fails, get text
+        const text = await response.text()
+        throw new Error(text || "Server returned invalid response")
+      }
+      
       if (!response.ok) {
-        throw new Error("Failed to accept quote")
+        throw new Error(json?.error || "Failed to accept quote")
       }
       
       toast({
@@ -320,11 +330,11 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
         description:
           "We've received your acceptance. We'll now check availability and send you the contract and payment details shortly.",
       })
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to accept quote:", error)
       toast({
         title: "Error",
-        description: "Failed to accept quote. Please try again.",
+        description: error?.message || "Failed to accept quote. Please try again.",
         variant: "destructive",
       })
     } finally {
@@ -358,8 +368,18 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
         }),
       })
       
+      // Parse response
+      let json
+      try {
+        json = await response.json()
+      } catch (parseError) {
+        // If JSON parsing fails, get text
+        const text = await response.text()
+        throw new Error(text || "Server returned invalid response")
+      }
+      
       if (!response.ok) {
-        throw new Error("Failed to decline quote")
+        throw new Error(json?.error || "Failed to decline quote")
       }
       
       toast({
@@ -369,11 +389,11 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
       setIsDeclineModalOpen(false)
       setDeclineReason("")
       setDeclineNotes("")
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to decline quote:", error)
       toast({
         title: "Error",
-        description: "Failed to decline quote. Please try again.",
+        description: error?.message || "Failed to decline quote. Please try again.",
         variant: "destructive",
       })
     } finally {
