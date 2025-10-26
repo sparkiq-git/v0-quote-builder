@@ -7,14 +7,14 @@ export async function GET() {
   try {
     // 2) Quotes: status = 'awaiting response'
     const { count: quotesAwaitingResponse, error: q1 } = await supabase
-      .from("quote") // ⬅️ change to "quotes" if your table is plural
+      .from("quote") // 
       .select("*", { count: "exact", head: true })
       .eq("status", "awaiting response");
     if (q1) console.error("quotesAwaitingResponse error:", q1);
 
     // 3) Unpaid: payment_status = 'unpaid'
     const { count: unpaidQuotes, error: q2 } = await supabase
-      .from("quote") // ⬅️ change to "quotes" if needed
+      .from("quote") // 
       .select("*", { count: "exact", head: true })
       .eq("payment_status", "unpaid");
     if (q2) console.error("unpaidQuotes error:", q2);
