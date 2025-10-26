@@ -254,10 +254,10 @@ export function AdaptiveQuoteCard({
                 <h2
                   className={`font-light text-white tracking-tight leading-tight drop-shadow-2xl ${
                     deviceInfo.type === "mobile"
-                      ? "text-2xl sm:text-3xl"
+                      ? "text-xl sm:text-2xl"
                       : deviceInfo.type === "tablet"
-                        ? "text-3xl sm:text-4xl"
-                        : "text-4xl lg:text-5xl"
+                        ? "text-2xl sm:text-3xl"
+                        : "text-3xl lg:text-4xl"
                   }`}
                 >
                   {aircraftModel?.name || "Aircraft Model"}
