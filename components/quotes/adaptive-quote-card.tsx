@@ -252,7 +252,7 @@ export function AdaptiveQuoteCard({
             <div className="flex items-end justify-between gap-3 flex-wrap">
               <div className="flex-1 min-w-0 space-y-1">
                 <h2
-                  className={`font-light text-white tracking-tight leading-tight drop-shadow-2xl ${
+                  className={`font-light text-white tracking-tight leading-tight drop-shadow-2xl py-[-4px] py-[-4px] my-[-4px] ${
                     deviceInfo.type === "mobile"
                       ? "text-xl sm:text-2xl"
                       : deviceInfo.type === "tablet"
