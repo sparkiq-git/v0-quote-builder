@@ -139,15 +139,15 @@ export function AdaptiveQuoteCard({
   const getImageClasses = () => {
     switch (deviceInfo.type) {
       case "mobile":
-        return "w-full h-[280px] sm:h-[320px]"
+        return "w-full h-[196px] sm:h-[224px]"
       case "tablet":
-        return "w-full h-[350px] md:h-[380px]"
+        return "w-full h-[245px] md:h-[266px]"
       case "desktop":
-        return "w-full h-[400px]"
+        return "w-full h-[280px]"
       case "large-desktop":
-        return "w-full h-[480px]"
+        return "w-full h-[336px]"
       default:
-        return "w-full h-[350px]"
+        return "w-full h-[245px]"
     }
   }
 
@@ -164,7 +164,7 @@ export function AdaptiveQuoteCard({
   }
 
   return (
-    <div className="mx-auto w-full max-w-screen-xl px-3 sm:px-4 md:px-6 lg:px-8 pb-4 sm:pb-6 md:pb-8">
+    <div className="mx-auto w-full max-w-[1344px] px-2 sm:px-3 md:px-4 lg:px-5 xl:px-6 pb-3 sm:pb-4 md:pb-5 lg:pb-6">
       <style>{`
         .carousel-container .carousel-previous,
         .carousel-container .carousel-next,
@@ -249,9 +249,9 @@ export function AdaptiveQuoteCard({
             )}
           </Carousel>
 
-          <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-5 lg:p-6 z-10">
+          <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-3 lg:p-4 z-10">
             <div className="flex items-end justify-between gap-3 flex-wrap">
-              <div className="flex-1 min-w-0 space-y-1.5">
+              <div className="flex-1 min-w-0 space-y-1">
                 <h2
                   className={`font-light text-white tracking-tight leading-tight drop-shadow-2xl ${
                     deviceInfo.type === "mobile"
@@ -305,7 +305,7 @@ export function AdaptiveQuoteCard({
           </div>
         </div>
 
-        <div className="p-4 sm:p-5 lg:p-6 space-y-5">
+        <div className="p-3 sm:p-3 lg:p-4 space-y-3">
           {/* Pricing Section */}
           <div className="space-y-1">
             <span className="uppercase tracking-widest text-gray-500 font-medium text-[10px]">Total Charter Price</span>
@@ -325,7 +325,7 @@ export function AdaptiveQuoteCard({
 
           {/* Amenities Section */}
           {amenities.length > 0 && (
-            <div className="space-y-2.5">
+            <div className="space-y-2">
               <h3 className="uppercase tracking-widest text-gray-500 font-medium text-[10px]">Featured Amenities</h3>
               <TooltipProvider delayDuration={150}>
                 <div className="flex flex-wrap gap-2">
@@ -356,9 +356,9 @@ export function AdaptiveQuoteCard({
           )}
 
           {/* Specifications Grid */}
-          <div className="space-y-2.5">
+          <div className="space-y-2">
             <h3 className="uppercase tracking-widest text-gray-500 font-medium text-[10px]">Aircraft Specifications</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
               {aircraftTail?.year && (
                 <div className="flex items-center gap-2.5 p-3 rounded-lg bg-gray-50 border border-gray-200">
                   <div className="flex-shrink-0 w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center">
@@ -406,14 +406,14 @@ export function AdaptiveQuoteCard({
           )}
         </div>
 
-        <div className="border-t border-gray-200 bg-gradient-to-b from-gray-50 to-white p-4 sm:p-5 lg:p-6">
+        <div className="border-t border-gray-200 bg-gradient-to-b from-gray-50 to-white p-3 sm:p-3 lg:p-4">
           <Button
             className={`w-full font-semibold tracking-wide rounded-xl transition-all duration-300 touch-manipulation shadow-lg hover:shadow-2xl active:scale-[0.98] ${
               deviceInfo.type === "mobile"
-                ? "text-base py-3"
+                ? "text-base py-2"
                 : deviceInfo.type === "tablet"
-                  ? "text-lg py-4"
-                  : "text-lg py-5"
+                  ? "text-lg py-3"
+                  : "text-lg py-3"
             } ${
               isSelected
                 ? "!bg-green-600 hover:!bg-green-700 !text-white border-0"
