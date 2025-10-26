@@ -36,7 +36,7 @@
 
 ### 4. Flow Implementation
 
-```
+\`\`\`
 User clicks "Invoice & Contract" button
   ↓
 Modal opens showing quote summary
@@ -51,15 +51,15 @@ Edge Function:
   3. Updates quote status
   ↓
 UI updates to show success
-```
+\`\`\`
 
 ## 🔄 Current Button Logic
 
-```typescript
+\`\`\`typescript
 const canSendInvoiceContract = (quote: any) => {
   return quote.status === "accepted" || quote.status === "opened"
 }
-```
+\`\`\`
 
 **Button is enabled when:**
 - Quote status is "accepted" ✅

@@ -31,7 +31,7 @@ The audit log was too noisy with:
 
 Run this SQL to update the trigger:
 
-```sql
+\`\`\`sql
 -- Drop old trigger
 DROP TRIGGER IF EXISTS audit_action_link_trigger ON action_link;
 
@@ -72,7 +72,7 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER audit_action_link_trigger
   AFTER INSERT ON action_link
   FOR EACH ROW EXECUTE FUNCTION audit_action_link_changes();
-```
+\`\`\`
 
 ## Result
 

@@ -54,7 +54,7 @@ When a user opens a quote through an action link, the system now tracks detailed
 ## Use Cases
 
 ### Dashboard Analytics
-```sql
+\`\`\`sql
 SELECT 
   COUNT(*) as total_quotes,
   COUNT(CASE WHEN status = 'opened' THEN 1 END) as opened_quotes,
@@ -62,10 +62,10 @@ SELECT
   MAX(open_count) as max_opens
 FROM quote
 WHERE created_at > NOW() - INTERVAL '30 days'
-```
+\`\`\`
 
 ### Recent Activity
-```sql
+\`\`\`sql
 SELECT 
   id,
   reference_code,
@@ -78,7 +78,7 @@ FROM quote
 WHERE status = 'opened'
 ORDER BY last_opened_at DESC
 LIMIT 20
-```
+\`\`\`
 
 ### Quote Engagement
 - **Cold**: `status != 'opened'` (never opened)
@@ -98,10 +98,10 @@ Your `quote` table already has these columns! ✅
 
 Add this index if you plan to query by recent activity:
 
-```sql
+\`\`\`sql
 -- Add index for performance (if not already exists)
 CREATE INDEX IF NOT EXISTS idx_quote_last_opened_at ON quote(last_opened_at DESC);
-```
+\`\`\`
 
 This index will help with queries like:
 - "Show me quotes opened in the last 7 days"

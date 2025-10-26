@@ -18,22 +18,22 @@
 ### How It Works
 
 #### Read Flow (Optimized)
-```
+\`\`\`
 1. User requests quote verification
 2. Check Redis cache first
 3. If found: Return immediately (fast!)
 4. If not found: Query database
 5. Store in cache for 5 minutes
 6. Return data
-```
+\`\`\`
 
 #### Update Flow (Cache-aware)
-```
+\`\`\`
 1. Get quote data (from cache if available)
 2. Update database
 3. Invalidate cache
 4. Next read will fetch fresh data
-```
+\`\`\`
 
 ### Performance Impact
 
@@ -59,10 +59,10 @@
 
 To check cache performance:
 
-```bash
+\`\`\`bash
 # Check cache hit rate in Redis
 redis-cli INFO stats
-```
+\`\`\`
 
 ### Benefits
 
@@ -83,7 +83,7 @@ If you need even more scale:
 
 ### Testing
 
-```typescript
+\`\`\`typescript
 // First request - cache miss
 // Time: ~80ms
 
@@ -92,7 +92,7 @@ If you need even more scale:
 
 // After update - cache invalidated
 // Next request - cache miss (fresh data)
-```
+\`\`\`
 
 ## Summary
 

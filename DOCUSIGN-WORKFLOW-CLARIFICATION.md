@@ -29,7 +29,7 @@
 
 ## How It Works
 
-```
+\`\`\`
 ┌─────────────────────────────────────┐
 │  YOUR DOCUSIGN ACCOUNT              │
 │  - You have Integration credentials │
@@ -51,7 +51,7 @@
 │  They click "Sign"                  │
 │  They don't need an account         │
 └─────────────────────────────────────┘
-```
+\`\`\`
 
 ## Template Approach
 
@@ -69,7 +69,7 @@ Create **ONE** generic contract template in YOUR account:
 - `aircraftType` - What plane they'll use
 
 **In Your Edge Function:**
-```typescript
+\`\`\`typescript
 // You populate these fields from your quote data
 const tabs = {
   textTabs: [
@@ -79,7 +79,7 @@ const tabs = {
     // ... etc
   ]
 }
-```
+\`\`\`
 
 ## Setup Steps (You Only)
 

@@ -1,21 +1,21 @@
 # DocuSign Integration - Simple Flow
 
 ## Your Workflow
-```
+\`\`\`
 Customer accepts quote → Contract sent via email → Customer signs → Done
-```
+\`\`\`
 
 No complex tracking (yet). Just send it and store the envelope ID for later.
 
 ## Setup (5 minutes)
 
 ### 1. Install DocuSign SDK
-```bash
+\`\`\`bash
 pnpm add docusign-esign
-```
+\`\`\`
 
 ### 2. Add Environment Variables
-```env
+\`\`\`env
 # .env.local
 DOCUSIGN_CLIENT_ID=your-integration-key
 DOCUSIGN_CLIENT_SECRET=your-client-secret
@@ -23,7 +23,7 @@ DOCUSIGN_ACCOUNT_ID=your-account-id
 DOCUSIGN_USER_ID=your-email@example.com
 DOCUSIGN_BASE_URL=https://demo.docusign.net  # Use https://www.docusign.net for production
 DOCUSIGN_TEMPLATE_ID=your-template-id
-```
+\`\`\`
 
 ### 3. Run Database Schema
 Run `lib/docusign/schema.sql` in Supabase SQL Editor.
@@ -33,7 +33,7 @@ Run `lib/docusign/schema.sql` in Supabase SQL Editor.
 ### API Route: Send Contract
 `app/api/contracts/send/route.ts`
 
-```typescript
+\`\`\`typescript
 import { NextResponse } from "next/server"
 import { createActionLinkClient } from "@/lib/supabase/action-links"
 import docusign from "docusign-esign"
@@ -122,13 +122,13 @@ async function getDocusignToken() {
   // This is a simplified version - implement proper JWT auth
   return "YOUR_ACCESS_TOKEN"
 }
-```
+\`\`\`
 
 ### When to Send?
 
 Add this to your quote acceptance flow:
 
-```typescript
+\`\`\`typescript
 // In public-quote-page.tsx or wherever quote is accepted
 if (quote.status === "accepted") {
   // Send contract
@@ -137,7 +137,7 @@ if (quote.status === "accepted") {
     body: JSON.stringify({ quoteId: quote.id })
   })
 }
-```
+\`\`\`
 
 ## What's Stored
 

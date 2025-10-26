@@ -22,7 +22,7 @@ Both `QuoteOptionsTab` and `QuoteSummaryTab` were making unnecessary client-side
 
 The quote API (`app/api/quotes/[id]/route.ts`) already returns aircraft data embedded in the options:
 
-```typescript
+\`\`\`typescript
 options: (options || []).map((option: any) => {
   const aircraft = aircraftData.find(a => a.id === option.aircraft_id)
   
@@ -41,7 +41,7 @@ options: (options || []).map((option: any) => {
     },
   }
 })
-```
+\`\`\`
 
 So components should use `option.aircraftModel` and `option.aircraftTail` directly instead of fetching separately.
 

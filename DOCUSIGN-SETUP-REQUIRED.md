@@ -69,13 +69,13 @@ In your DocuSign template, add these text fields (with these exact names):
 ## Once You Have Everything
 
 Share these values with me (preferably via secure channel):
-```
+\`\`\`
 DOCUSIGN_CLIENT_ID=<integration-key>
 DOCUSIGN_CLIENT_SECRET=<secret>
 DOCUSIGN_ACCOUNT_ID=<account-id>
 DOCUSIGN_USER_ID=<your-email>
 DOCUSIGN_BASE_URL=<https://demo.docusign.net or https://www.docusign.net>
 DOCUSIGN_TEMPLATE_ID=<template-id>
-```
+\`\`\`
 
 Then I'll add the DocuSign integration code to your Edge Function!
