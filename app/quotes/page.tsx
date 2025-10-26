@@ -23,7 +23,9 @@ import {
   Calendar,
   CheckCircle,
   FileCheck,
-  Loader2
+  Loader2,
+  Send,
+  FileSignature
 } from "lucide-react"
 import { formatDate, formatTimeAgo, formatCurrency } from "@/lib/utils/format"
 import { useToast } from "@/hooks/use-toast"
@@ -54,6 +56,9 @@ export default function QuotesPage() {
   const [totalFilter, setTotalFilter] = useState("all")
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [quoteToDelete, setQuoteToDelete] = useState<string | null>(null)
+  const [invoiceContractOpen, setInvoiceContractOpen] = useState(false)
+  const [selectedQuote, setSelectedQuote] = useState<any | null>(null)
+  const [sending, setSending] = useState(false)
 
   // ✅ Fetch quotes from Supabase
   useEffect(() => {
@@ -125,8 +130,7 @@ export default function QuotesPage() {
     }
   }
 
-//aqui!
-    const [converting, setConverting] = useState<string | null>(null)
+  const [converting, setConverting] = useState<string | null>(null)
 
   const handleConvertToInvoice = async (quoteId: string) => {
     try {
@@ -155,7 +159,51 @@ export default function QuotesPage() {
       setConverting(null)
     }
   }
-//hasta aqui
+
+  const handleOpenInvoiceContractModal = async (quote: any) => {
+    setSelectedQuote(quote)
+    setInvoiceContractOpen(true)
+  }
+
+  const handleSendInvoiceContract = async () => {
+    if (!selectedQuote) return
+
+    try {
+      setSending(true)
+      
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) throw new Error("Not authenticated")
+
+      const { data, error } = await supabase.functions.invoke("send-contract", {
+        body: { quote_id: selectedQuote.id },
+      })
+
+      if (error) throw error
+      if (!data.success) throw new Error(data.error || "Failed to send")
+
+      toast({
+        title: "Invoice & Contract sent",
+        description: `Invoice ${data.invoice?.number} and contract sent successfully.`,
+      })
+
+      // Update quote status
+      setQuotes((prev) =>
+        prev.map((q) => (q.id === selectedQuote.id ? { ...q, status: "invoiced" } : q))
+      )
+
+      setInvoiceContractOpen(false)
+      setSelectedQuote(null)
+    } catch (err: any) {
+      console.error("Failed to send invoice & contract:", err)
+      toast({
+        title: "Failed to send",
+        description: err.message || "Something went wrong.",
+        variant: "destructive",
+      })
+    } finally {
+      setSending(false)
+    }
+  }
 
   const filteredQuotes = quotes.filter((quote) => {
     if (statusFilter !== "all" && quote.status !== statusFilter) return false
@@ -284,6 +332,16 @@ export default function QuotesPage() {
                     </TableCell>
 <TableCell>
   <div className="flex items-center space-x-2">
+    <Button
+      variant="default"
+      size="sm"
+      disabled={quote.status !== "accepted"}
+      onClick={() => handleOpenInvoiceContractModal(quote)}
+    >
+      <FileSignature className="mr-2 h-4 w-4" />
+      Invoice & Contract
+    </Button>
+
     <Button asChild variant="outline" size="sm">
       <Link href={`/quotes/${quote.id}`}>
         <Eye className="mr-2 h-4 w-4" />
@@ -345,6 +403,65 @@ export default function QuotesPage() {
             </Button>
             <Button variant="destructive" onClick={confirmDeleteQuote}>
               Delete Quote
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Invoice & Contract Modal */}
+      <Dialog open={invoiceContractOpen} onOpenChange={setInvoiceContractOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Send Invoice & Contract</DialogTitle>
+            <DialogDescription>
+              Review the quote details and send invoice and contract to the customer.
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedQuote && (
+            <div className="space-y-4 py-4">
+              <div className="border rounded-lg p-4 space-y-3">
+                <h4 className="font-semibold">Customer</h4>
+                <p className="text-sm">{selectedQuote.customer.name}</p>
+                <p className="text-sm text-muted-foreground">{selectedQuote.customer.email}</p>
+                <p className="text-sm text-muted-foreground">{selectedQuote.customer.company}</p>
+              </div>
+
+              <div className="border rounded-lg p-4">
+                <h4 className="font-semibold mb-2">Quote Summary</h4>
+                <p className="text-sm text-muted-foreground">
+                  This will create an invoice and send a DocuSign contract with the quote details.
+                </p>
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-sm text-blue-900">
+                  <strong>Note:</strong> The customer will receive an email with:
+                </p>
+                <ul className="list-disc list-inside text-sm text-blue-900 mt-2 space-y-1">
+                  <li>Invoice for the accepted quote</li>
+                  <li>DocuSign contract to sign electronically</li>
+                </ul>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setInvoiceContractOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSendInvoiceContract} disabled={sending}>
+              {sending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <Send className="mr-2 h-4 w-4" />
+                  Send Invoice & Contract
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
