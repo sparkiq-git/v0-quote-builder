@@ -1,47 +1,93 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import { useMemo, useState, useEffect, useCallback } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Tooltip, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { Users, FileText, Clock, Plus, Plane } from "lucide-react"
-import { useMockStore } from "@/lib/mock/store"
-import { formatTimeAgo } from "@/lib/utils/format"
-import { RouteMap } from "@/components/dashboard/route-map"
-import { createClient } from "@/lib/supabase/client"
+import Link from "next/link";
+import { useMemo, useState, useEffect } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Tooltip, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Users, FileText, Clock, Plus, Plane } from "lucide-react";
+import { useMockStore } from "@/lib/mock/store";
+import { formatTimeAgo } from "@/lib/utils/format";
+import { RouteMap } from "@/components/dashboard/route-map";
+import { createClient } from "@/lib/supabase/client";
 
 /* ---------------------------------- page ---------------------------------- */
 export default function DashboardPage() {
-  const supabase = createClient()
-  const [leadCount, setLeadCount] = useState(0)
+  const supabase = createClient();
 
-  const refreshLeadCount = useCallback(async () => {
-    const { count, error } = await supabase
-      .from("lead")
-      .select("*", { count: "exact", head: true })
-      .in("status", ["opened", "new"])
-    if (!error) setLeadCount(count ?? 0)
-    else console.error("Lead count error:", error)
-  }, [supabase])
+  // Counts shown in MetricCards
+  const [leadCount, setLeadCount] = useState(0);
+  const [quotesAwaitingResponse, setQuotesAwaitingResponse] = useState(0);
+  const [unpaidQuotes, setUnpaidQuotes] = useState(0);
+  const [upcomingDepartures, setUpcomingDepartures] = useState(0);
 
+  // Load LEADS (status IN ['opened','new']) — client Supabase, NO realtime
   useEffect(() => {
-    refreshLeadCount()
-    // optional realtime updates:
-    const channel = supabase
-      .channel("realtime-leads-count")
-      .on("postgres_changes", { event: "*", schema: "public", table: "lead" }, () => refreshLeadCount())
-      .subscribe()
+    let cancelled = false;
+
+    const loadLeadCount = async () => {
+      try {
+        const { count, error } = await supabase
+          .from("lead")
+          .select("*", { count: "exact", head: true })
+          .in("status", ["opened", "new"]);
+        if (!cancelled) {
+          if (error) {
+            console.error("Lead count error:", error);
+            setLeadCount(0);
+          } else {
+            setLeadCount(count ?? 0);
+          }
+        }
+      } catch (e) {
+        if (!cancelled) {
+          console.error("Lead count exception:", e);
+          setLeadCount(0);
+        }
+      }
+    };
+
+    loadLeadCount();
+    // Optional light polling; remove if not desired
+    const id = setInterval(loadLeadCount, 15000);
     return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [refreshLeadCount, supabase])
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [supabase]);
 
-  const { state, getMetrics, loading } = useMockStore()
+  // Load Quotes/Unpaid/Upcoming from SERVER API (no browser Supabase)
+  useEffect(() => {
+    let cancelled = false;
 
-  const metrics = getMetrics()
+    const loadMetrics = async () => {
+      try {
+        const res = await fetch("/api/metrics", { cache: "no-store" });
+        if (!res.ok) throw new Error(`metrics ${res.status}`);
+        const j = await res.json();
+        if (cancelled) return;
+        setQuotesAwaitingResponse(j.quotesAwaitingResponse ?? 0);
+        setUnpaidQuotes(j.unpaidQuotes ?? 0);
+        setUpcomingDepartures(j.upcomingDepartures ?? 0);
+      } catch (e) {
+        if (!cancelled) console.error("Failed to load metrics:", e);
+      }
+    };
+
+    loadMetrics();
+    // Optional light polling; remove if not desired
+    const id = setInterval(loadMetrics, 15000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, []);
+
+  // Existing mock store bits (kept intact for your Recent sections)
+  const { state, getMetrics, loading } = useMockStore();
+  const metrics = getMetrics();
 
   const recentLeads = useMemo(
     () =>
@@ -49,53 +95,33 @@ export default function DashboardPage() {
         .filter((l) => l.status !== "deleted")
         .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))
         .slice(0, 3),
-    [state.leads],
-  )
+    [state.leads]
+  );
 
   const recentQuotes = useMemo(
     () => state.quotes.sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)).slice(0, 3),
-    [state.quotes],
-  )
-
-  const pendingConversionLeads = state.leads.filter((l) => l.status === "new").length
-  const quotesAwaitingAcceptance = state.quotes.filter((q) => q.status === "pending_acceptance").length
-  const unpaidQuotes = state.quotes.filter((q) => q.status === "awaiting_payment").length
-
-  const upcomingTrips = useMemo(() => {
-    const now = new Date()
-    const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
-
-    return state.quotes.filter((quote) => {
-      if (quote.status !== "paid") return false
-
-      // Check if any leg has a departure date within the next 7 days
-      return quote.legs.some((leg) => {
-        if (!leg.departureDate) return false
-        const departureDate = new Date(leg.departureDate)
-        return departureDate >= now && departureDate <= sevenDaysFromNow
-      })
-    }).length
-  }, [state.quotes])
+    [state.quotes]
+  );
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
       case "new":
-        return "default"
+        return "default";
       case "converted":
-        return "secondary"
+        return "secondary";
       case "pending_acceptance":
-        return "outline"
+        return "outline";
       case "accepted_by_requester":
       case "accepted":
-        return "default"
+        return "default";
       case "declined":
-        return "destructive"
+        return "destructive";
       case "expired":
-        return "secondary"
+        return "secondary";
       default:
-        return "outline"
+        return "outline";
     }
-  }
+  };
 
   if (loading) {
     return (
@@ -130,7 +156,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
-    )
+    );
   }
 
   function MetricCard({
@@ -139,10 +165,10 @@ export default function DashboardPage() {
     currentValue,
     description,
   }: {
-    title: string
-    icon: any
-    currentValue: number
-    description: string
+    title: string;
+    icon: any;
+    currentValue: number;
+    description: string;
   }) {
     return (
       <Card className="col-span-1 h-full flex flex-col">
@@ -157,7 +183,7 @@ export default function DashboardPage() {
           <p className="text-xs text-muted-foreground mb-0 min-h-4 truncate">{description}</p>
         </CardContent>
       </Card>
-    )
+    );
   }
 
   return (
@@ -168,19 +194,29 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5">
-        <MetricCard title="Leads" icon={Users} currentValue={leadCount} description="Pending conversion to quote" />
+        <MetricCard
+          title="Leads"
+          icon={Users}
+          currentValue={leadCount}
+          description='Status: "opened" or "new"'
+        />
         <MetricCard
           title="Quotes"
           icon={FileText}
-          currentValue={quotesAwaitingAcceptance}
-          description="Awaiting client acceptance"
+          currentValue={quotesAwaitingResponse}
+          description='Status: "awaiting response"'
         />
-        <MetricCard title="Unpaid" icon={Clock} currentValue={unpaidQuotes} description="Still awaiting payment" />
+        <MetricCard
+          title="Unpaid"
+          icon={Clock}
+          currentValue={unpaidQuotes}
+          description="Still awaiting payment"
+        />
         <MetricCard
           title="Upcoming"
           icon={Plane}
-          currentValue={upcomingTrips}
-          description="Paid trips in next 7 days"
+          currentValue={upcomingDepartures}
+          description="Departures in next 7 days"
         />
       </div>
 
@@ -244,7 +280,7 @@ export default function DashboardPage() {
                 <div className="text-center py-6">
                   <Users className="mx-auto h-8 w-8 sm:h-12 sm:w-12 text-muted-foreground" />
                   <h3 className="mt-2 text-sm font-semibold">No leads yet</h3>
-                  <p className="mt-1 text-xs sm:text-sm text-muted-foreground">
+                  <p className="text-xs sm:text-sm text-muted-foreground">
                     Get started by adding your first lead.
                   </p>
                   <div className="mt-4 sm:mt-6">
@@ -316,7 +352,7 @@ export default function DashboardPage() {
                 <div className="text-center py-6">
                   <FileText className="mx-auto h-8 w-8 sm:h-12 sm:w-12 text-muted-foreground" />
                   <h3 className="mt-2 text-sm font-semibold">No quotes yet</h3>
-                  <p className="mt-1 text-xs sm:text-sm text-muted-foreground">
+                  <p className="text-xs sm:text-sm text-muted-foreground">
                     Get started by generating your first quote.
                   </p>
                   <div className="mt-4 sm:mt-6">
@@ -334,5 +370,5 @@ export default function DashboardPage() {
         </Card>
       </div>
     </div>
-  )
+  );
 }
