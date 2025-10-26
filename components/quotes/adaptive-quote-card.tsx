@@ -12,7 +12,6 @@ import {
   type CarouselApi,
 } from "@/components/ui/carousel"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { AmenityIcon } from "@/components/ui/amenity-icon"
 import type { QuoteOption } from "@/lib/types"
 import { formatCurrency } from "@/lib/utils/format"
 import { useDeviceDetection, deviceLayouts } from "@/hooks/use-device-detection"
@@ -43,6 +42,19 @@ interface AdaptiveQuoteCardProps {
   hasSelectedOption?: boolean
 }
 
+const getAmenityIcon = (amenity: string) => {
+  const a = amenity.toLowerCase()
+  if (a.includes("wifi") || a.includes("internet")) return Wifi
+  if (a.includes("coffee") || a.includes("beverage")) return Coffee
+  if (a.includes("tv") || a.includes("entertainment") || a.includes("screen")) return Tv
+  if (a.includes("catering") || a.includes("meal") || a.includes("food")) return Utensils
+  if (a.includes("bed") || a.includes("sleep") || a.includes("rest")) return Bed
+  if (a.includes("headphone") || a.includes("audio")) return Headphones
+  if (a.includes("power") || a.includes("charging") || a.includes("outlet")) return Zap
+  if (a.includes("security") || a.includes("safe")) return Shield
+  if (a.includes("premium") || a.includes("luxury") || a.includes("vip")) return Star
+  return CheckCircle
+}
 
 export function AdaptiveQuoteCard({
   option,
@@ -195,35 +207,6 @@ export function AdaptiveQuoteCard({
                       onLoad={() => setFailedImages((p) => p.filter((f) => f !== img))}
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent z-10" />
-                    
-                    {/* Amenities Overlay */}
-                    {amenities.length > 0 && (
-                      <div className="absolute top-3 right-3 z-20">
-                        <div className="flex flex-wrap gap-1.5 max-w-[120px] justify-end">
-                          {amenities.slice(0, 6).map((amenity, i) => (
-                            <Tooltip key={i}>
-                              <TooltipTrigger asChild>
-                                <div className="flex items-center justify-center w-7 h-7 bg-white/90 backdrop-blur-sm rounded-full shadow-lg border border-white/50 hover:bg-white hover:shadow-xl transition-all duration-200">
-                                  <AmenityIcon 
-                                    amenity={amenity} 
-                                    size={14} 
-                                    className="text-gray-700"
-                                  />
-                                </div>
-                              </TooltipTrigger>
-                              <TooltipContent side="left" className="max-w-xs text-xs">
-                                {amenity.name}
-                              </TooltipContent>
-                            </Tooltip>
-                          ))}
-                          {amenities.length > 6 && (
-                            <div className="flex items-center justify-center w-7 h-7 bg-white/90 backdrop-blur-sm rounded-full shadow-lg border border-white/50">
-                              <span className="text-xs font-medium text-gray-700">+{amenities.length - 6}</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
                   </div>
                 </CarouselItem>
               ))}
@@ -322,25 +305,101 @@ export function AdaptiveQuoteCard({
         </div>
 
         <div className="p-3 sm:p-3 lg:p-4 space-y-3">
-          {/* Pricing Section */}
-          <div className="text-center space-y-1">
-            <span className="uppercase tracking-widest text-gray-500 font-medium text-[10px]">
-              Total Charter Price
-            </span>
-            <div
-              className={`font-light text-gray-900 tracking-tight ${
-                deviceInfo.type === "mobile"
-                  ? "text-3xl sm:text-4xl"
-                  : deviceInfo.type === "tablet"
-                    ? "text-4xl sm:text-5xl"
-                    : "text-5xl lg:text-6xl"
-              }`}
-            >
-              {formatCurrency(total)}
+          {/* Pricing and Specifications Grid - Side by Side on Desktop */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+            {/* Pricing Section - Left Column on Desktop */}
+            <div className="space-y-1">
+              <span className="uppercase tracking-widest text-gray-500 font-medium text-[10px]">
+                Total Charter Price
+              </span>
+              <div
+                className={`font-light text-gray-900 tracking-tight ${
+                  deviceInfo.type === "mobile"
+                    ? "text-3xl sm:text-4xl"
+                    : deviceInfo.type === "tablet"
+                      ? "text-4xl sm:text-5xl"
+                      : "text-5xl lg:text-6xl"
+                }`}
+              >
+                {formatCurrency(total)}
+              </div>
+              <p className="text-xs text-gray-600 font-light">All-inclusive pricing with taxes and fees</p>
             </div>
-            <p className="text-xs text-gray-600 font-light">All-inclusive pricing with taxes and fees</p>
+
+            {/* Specifications Grid - Right Column on Desktop */}
+            <div className="space-y-2">
+              <h3 className="uppercase tracking-widest text-gray-500 font-medium text-[10px]">
+                Aircraft Specifications
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-2">
+                {aircraftTail?.year && (
+                  <div className="flex items-center gap-2.5 p-3 rounded-lg bg-gray-50 border border-gray-200">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center">
+                      <Calendar className="h-4 w-4 text-gray-600" aria-hidden="true" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-[10px] text-gray-500 font-medium uppercase tracking-wide">Year</div>
+                      <div className="text-sm text-gray-900 font-semibold">{aircraftTail.year}</div>
+                    </div>
+                  </div>
+                )}
+                {aircraftTail?.yearOfRefurbishment && (
+                  <div className="flex items-center gap-2.5 p-3 rounded-lg bg-gray-50 border border-gray-200">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center">
+                      <Clock className="h-4 w-4 text-gray-600" aria-hidden="true" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-[10px] text-gray-500 font-medium uppercase tracking-wide">Refurbished</div>
+                      <div className="text-sm text-gray-900 font-semibold">{aircraftTail.yearOfRefurbishment}</div>
+                    </div>
+                  </div>
+                )}
+                {aircraftTail?.rangeNmOverride && (
+                  <div className="flex items-center gap-2.5 p-3 rounded-lg bg-gray-50 border border-gray-200">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center">
+                      <Route className="h-4 w-4 text-gray-600" aria-hidden="true" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-[10px] text-gray-500 font-medium uppercase tracking-wide">Range</div>
+                      <div className="text-sm text-gray-900 font-semibold">{aircraftTail.rangeNmOverride} nm</div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
 
+          {/* Amenities Section */}
+          {amenities.length > 0 && (
+            <div className="space-y-2">
+              <h3 className="uppercase tracking-widest text-gray-500 font-medium text-[10px]">Featured Amenities</h3>
+              <TooltipProvider delayDuration={150}>
+                <div className="flex flex-wrap gap-2">
+                  {amenities.slice(0, 8).map((amenity, i) => {
+                    const Icon = getAmenityIcon(amenity)
+                    return (
+                      <Tooltip key={i}>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-50 border border-gray-200 hover:border-gray-300 hover:bg-gray-100 hover:shadow-sm transition-all duration-200 touch-manipulation">
+                            <Icon className="h-3.5 w-3.5 text-gray-600 flex-shrink-0" aria-hidden="true" />
+                            <span className="text-xs font-light text-gray-700 truncate max-w-[120px]">{amenity}</span>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-xs text-xs">
+                          {amenity}
+                        </TooltipContent>
+                      </Tooltip>
+                    )
+                  })}
+                  {amenities.length > 8 && (
+                    <div className="flex items-center px-3 py-1.5 text-xs text-gray-500 font-light">
+                      +{amenities.length - 8} more
+                    </div>
+                  )}
+                </div>
+              </TooltipProvider>
+            </div>
+          )}
 
           {/* Special Notes */}
           {option.conditions?.trim() && (
@@ -354,51 +413,6 @@ export function AdaptiveQuoteCard({
         </div>
 
         <div className="border-t border-gray-200 bg-gradient-to-b from-gray-50 to-white p-3 sm:p-3 lg:p-4">
-          {/* Aircraft Specifications */}
-          <div className="mb-4">
-            <h3 className="uppercase tracking-widest text-gray-500 font-medium text-[10px] mb-3 text-center">
-              Aircraft Specifications
-            </h3>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {aircraftTail?.year && (
-                <div className="flex items-center gap-2 p-2 rounded-lg bg-white border border-gray-200">
-                  <Calendar className="h-4 w-4 text-gray-600 flex-shrink-0" />
-                  <div className="min-w-0">
-                    <div className="text-[10px] text-gray-500 font-medium uppercase tracking-wide">Year</div>
-                    <div className="text-sm text-gray-900 font-semibold">{aircraftTail.year}</div>
-                  </div>
-                </div>
-              )}
-              {aircraftTail?.yearOfRefurbishment && (
-                <div className="flex items-center gap-2 p-2 rounded-lg bg-white border border-gray-200">
-                  <Clock className="h-4 w-4 text-gray-600 flex-shrink-0" />
-                  <div className="min-w-0">
-                    <div className="text-[10px] text-gray-500 font-medium uppercase tracking-wide">Refurb</div>
-                    <div className="text-sm text-gray-900 font-semibold">{aircraftTail.yearOfRefurbishment}</div>
-                  </div>
-                </div>
-              )}
-              {aircraftTail?.rangeNmOverride && (
-                <div className="flex items-center gap-2 p-2 rounded-lg bg-white border border-gray-200">
-                  <Route className="h-4 w-4 text-gray-600 flex-shrink-0" />
-                  <div className="min-w-0">
-                    <div className="text-[10px] text-gray-500 font-medium uppercase tracking-wide">Range</div>
-                    <div className="text-sm text-gray-900 font-semibold">{aircraftTail.rangeNmOverride} nm</div>
-                  </div>
-                </div>
-              )}
-              {aircraftTail?.speedKnotsOverride && (
-                <div className="flex items-center gap-2 p-2 rounded-lg bg-white border border-gray-200">
-                  <Gauge className="h-4 w-4 text-gray-600 flex-shrink-0" />
-                  <div className="min-w-0">
-                    <div className="text-[10px] text-gray-500 font-medium uppercase tracking-wide">Speed</div>
-                    <div className="text-sm text-gray-900 font-semibold">{aircraftTail.speedKnotsOverride} kts</div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
           <Button
             className={`w-full font-semibold tracking-wide rounded-xl transition-all duration-300 touch-manipulation shadow-lg hover:shadow-2xl active:scale-[0.98] ${
               deviceInfo.type === "mobile"

@@ -143,7 +143,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     console.log("Aircraft data with amenities:", JSON.stringify(aircraftData.map(a => ({
       id: a.id,
       tail_number: a.tail_number,
-      amenities: a.aircraft_amenity?.map((amenity: any) => amenity.amenity)
+      amenities: a.aircraft_amenity?.map((amenity: any) => amenity.amenity?.name)
     })), null, 2))
     console.log("Raw services data:", JSON.stringify(services, null, 2))
     console.log("Aircraft data:", JSON.stringify(aircraftData, null, 2))
@@ -186,7 +186,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
           tax: option.price_base || 0,
           fees: [], // TODO: Add fees support if needed
           feesEnabled: false,
-          selectedAmenities: aircraft?.aircraft_amenity?.map((amenity: any) => amenity.amenity).filter(Boolean) || [],
+          selectedAmenities: aircraft?.aircraft_amenity?.map((amenity: any) => amenity.amenity?.name).filter(Boolean) || [],
           notes: option.notes,
           conditions: option.conditions,
           additionalNotes: option.additional_notes,
@@ -225,7 +225,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
             yearOfRefurbish: aircraft.year_of_refurbish,
             cruisingSpeed: aircraft.cruising_speed,
             rangeNm: aircraft.range_nm,
-            amenities: aircraft.aircraft_amenity?.map((amenity: any) => amenity.amenity).filter(Boolean) || [],
+            amenities: aircraft.aircraft_amenity?.map((amenity: any) => amenity.amenity?.name).filter(Boolean) || [],
             images: aircraft.aircraft_image
               ?.sort((a: any, b: any) => {
                 if (a.is_primary && !b.is_primary) return -1
