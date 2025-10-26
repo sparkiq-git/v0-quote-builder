@@ -33,7 +33,6 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
   const { toast } = useToast()
   const [publishing, setPublishing] = useState(false)
   const [publishedUrl, setPublishedUrl] = useState<string | null>(null)
-  const [aircraftMap, setAircraftMap] = useState<Record<string, any>>({})
   const [expirationDate, setExpirationDate] = useState<string>("")
   const [expirationTime, setExpirationTime] = useState<string>("")
 
@@ -177,23 +176,8 @@ const totalOptions = useMemo(() => {
 
 useEffect(() => {
   if (!quote?.options?.length) return
-  const needsAircraft = quote.options.some(o => !!o.aircraft_id)
-  if (!needsAircraft) return
-
-  let cancelled = false
-  ;(async () => {
-    try {
-      const res = await fetch("/api/aircraft-full", { cache: "no-store" })
-      const json = await res.json()
-      if (!res.ok) throw new Error(json?.error || "Failed to load aircraft")
-      if (cancelled) return
-      const map = Object.fromEntries((json?.data || []).map((a: any) => [a.id, a]))
-      setAircraftMap(map)
-    } catch (e) {
-      console.error("Aircraft fetch failed:", e)
-    }
-  })()
-  return () => { cancelled = true }
+// Note: Aircraft data is already in quote options
+// No need to fetch separately
 }, [quote?.options])
 
 
@@ -283,13 +267,12 @@ useEffect(() => {
           (Number(o?.price_commission) || 0) +
           (Number(o?.price_taxes) || 0)
 
-        const ac = o?.aircraft_id ? aircraftMap[o.aircraft_id] : null
-        const line1 =
-          ac
-            ? `${ac.manufacturer ?? "—"} ${ac.model ?? ""}`.trim()
-            : "—"
-        const tail = ac?.tail ? `(${ac.tail})` : ""
-        const operatorLine = ac?.operator_name ? `Operated by ${ac.operator_name}` : ""
+        // Use aircraft data from the option (embedded by API)
+        const aircraftModel = o?.aircraftModel
+        const aircraftTail = o?.aircraftTail
+        const line1 = aircraftModel?.name ? `${aircraftModel.name}`.trim() : "—"
+        const tail = aircraftTail?.tailNumber ? `(${aircraftTail.tailNumber})` : ""
+        const operatorLine = aircraftTail?.operator ? `Operated by ${aircraftTail.operator}` : ""
 
         return (
           <li

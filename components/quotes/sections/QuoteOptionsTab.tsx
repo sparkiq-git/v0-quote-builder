@@ -71,79 +71,8 @@ useEffect(() => {
 
 
 
-useEffect(() => {
-  const fetchAircraftForOptions = async () => {
-    // Get all aircraft_ids from quote options
-    const ids = options
-      .map((o) => o.aircraft_id)
-      .filter((id): id is string => !!id)
-
-    if (ids.length === 0) return
-
-    try {
-      // Fetch all aircraft for tenant
-      const res = await fetch("/api/aircraft-full")
-      const json = await res.json()
-      
-      if (!res.ok) {
-        console.warn("Failed to fetch aircraft data:", json.error || "Unknown error")
-        return
-      }
-
-      // Build dictionary by aircraft_id, only for aircraft that exist
-      const byId = Object.fromEntries(
-        json.data
-          .filter((a) => ids.includes(a.aircraft_id))
-          .map((a) => {
-            // Process aircraft images (already sorted by the view)
-            const aircraftImages = Array.isArray(a.aircraft_images) 
-              ? a.aircraft_images.filter(Boolean) 
-              : []
-
-            return [a.aircraft_id, {
-              ...a,
-              aircraft_images: aircraftImages
-            }]
-          })
-      )
-
-      // Log missing aircraft IDs for debugging
-      const foundIds = Object.keys(byId)
-      const missingIds = ids.filter(id => !foundIds.includes(id))
-      if (missingIds.length > 0) {
-        console.warn("⚠️ Aircraft not found for IDs:", missingIds)
-        
-        // Clean up options with invalid aircraft IDs
-        const cleanedOptions = options.map(option => {
-          if (missingIds.includes(option.aircraft_id)) {
-            console.log(`🧹 Cleaning up option ${option.id} with invalid aircraft_id: ${option.aircraft_id}`)
-            return {
-              ...option,
-              aircraft_id: "",
-              aircraft_tail_number: "",
-              aircraft_model: "",
-              aircraft_manufacturer: "",
-              aircraft_capacity: null,
-              aircraft_range: null,
-            }
-          }
-          return option
-        })
-        
-        // Update options if any were cleaned
-        if (JSON.stringify(cleanedOptions) !== JSON.stringify(options)) {
-          onUpdate({ options: cleanedOptions })
-        }
-      }
-
-      setAircraftCache((prev) => ({ ...prev, ...byId }))
-    } catch (error) {
-      console.error("Error fetching aircraft data:", error)
-    }
-  }
-
-  fetchAircraftForOptions()
-}, [options])
+// Note: Aircraft data is already provided in the quote prop
+// No need to fetch separately
 
   const handleAddOption = () => {
     const newOption: QuoteOption = {
