@@ -139,15 +139,15 @@ export function AdaptiveQuoteCard({
   const getImageClasses = () => {
     switch (deviceInfo.type) {
       case "mobile":
-        return "w-full h-[400px] sm:h-[450px]"
+        return "w-full h-[280px] sm:h-[320px]"
       case "tablet":
-        return "w-full h-[500px] md:h-[550px]"
+        return "w-full h-[350px] md:h-[380px]"
       case "desktop":
-        return "w-full h-[600px]"
+        return "w-full h-[400px]"
       case "large-desktop":
-        return "w-full h-[700px]"
+        return "w-full h-[480px]"
       default:
-        return "w-full h-[500px]"
+        return "w-full h-[350px]"
     }
   }
 
@@ -217,26 +217,18 @@ export function AdaptiveQuoteCard({
               <>
                 <CarouselPrevious
                   className={`absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-white/95 text-gray-900 backdrop-blur-sm border-0 shadow-xl hover:bg-white hover:shadow-2xl hover:scale-110 transition-all duration-300 touch-manipulation ${
-                    deviceInfo.type === "mobile"
-                      ? "h-10 w-10"
-                      : deviceInfo.type === "tablet"
-                        ? "h-11 w-11"
-                        : "h-12 w-12"
+                    deviceInfo.type === "mobile" ? "h-8 w-8" : deviceInfo.type === "tablet" ? "h-9 w-9" : "h-10 w-10"
                   }`}
                   aria-label={`Previous image (${current} of ${count})`}
                 />
                 <CarouselNext
                   className={`absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-white/95 text-gray-900 backdrop-blur-sm border-0 shadow-xl hover:bg-white hover:shadow-2xl hover:scale-110 transition-all duration-300 touch-manipulation ${
-                    deviceInfo.type === "mobile"
-                      ? "h-10 w-10"
-                      : deviceInfo.type === "tablet"
-                        ? "h-11 w-11"
-                        : "h-12 w-12"
+                    deviceInfo.type === "mobile" ? "h-8 w-8" : deviceInfo.type === "tablet" ? "h-9 w-9" : "h-10 w-10"
                   }`}
                   aria-label={`Next image (${current + 2} of ${count})`}
                 />
                 <div
-                  className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2 z-10"
+                  className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 z-10"
                   role="tablist"
                   aria-label="Image navigation"
                 >
@@ -246,8 +238,8 @@ export function AdaptiveQuoteCard({
                       role="tab"
                       aria-selected={index === current}
                       aria-label={`View image ${index + 1} of ${count}`}
-                      className={`h-2 rounded-full transition-all duration-300 touch-manipulation ${
-                        index === current ? "w-10 bg-white shadow-lg" : "w-2 bg-white/70 hover:bg-white/90"
+                      className={`h-1.5 rounded-full transition-all duration-300 touch-manipulation ${
+                        index === current ? "w-8 bg-white shadow-lg" : "w-1.5 bg-white/70 hover:bg-white/90"
                       }`}
                       onClick={() => scrollTo(index)}
                     />
@@ -257,16 +249,16 @@ export function AdaptiveQuoteCard({
             )}
           </Carousel>
 
-          <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-8 lg:p-10 z-10">
-            <div className="flex items-end justify-between gap-4 flex-wrap">
-              <div className="flex-1 min-w-0 space-y-3">
+          <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-5 lg:p-6 z-10">
+            <div className="flex items-end justify-between gap-3 flex-wrap">
+              <div className="flex-1 min-w-0 space-y-1.5">
                 <h2
                   className={`font-light text-white tracking-tight leading-tight drop-shadow-2xl ${
                     deviceInfo.type === "mobile"
-                      ? "text-3xl sm:text-4xl"
+                      ? "text-2xl sm:text-3xl"
                       : deviceInfo.type === "tablet"
-                        ? "text-4xl sm:text-5xl"
-                        : "text-5xl lg:text-6xl"
+                        ? "text-3xl sm:text-4xl"
+                        : "text-4xl lg:text-5xl"
                   }`}
                 >
                   {aircraftModel?.name || "Aircraft Model"}
@@ -274,77 +266,77 @@ export function AdaptiveQuoteCard({
                 <p
                   className={`text-white/95 font-light tracking-wide drop-shadow-lg ${
                     deviceInfo.type === "mobile"
-                      ? "text-base sm:text-lg"
+                      ? "text-sm sm:text-base"
                       : deviceInfo.type === "tablet"
-                        ? "text-lg sm:text-xl"
-                        : "text-xl lg:text-2xl"
+                        ? "text-base sm:text-lg"
+                        : "text-lg lg:text-xl"
                   }`}
                 >
                   {aircraftModel?.manufacturer || "Aircraft Manufacturer"}
                 </p>
 
-                <div className="flex flex-wrap gap-2 pt-2">
-                  <div className="flex items-center gap-2 bg-white/25 backdrop-blur-md border border-white/40 px-4 py-2 rounded-full shadow-lg">
-                    <Users className="h-4 w-4 text-white" aria-hidden="true" />
-                    <span className="text-sm font-medium text-white">{capacity} passengers</span>
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  <div className="flex items-center gap-1.5 bg-white/25 backdrop-blur-md border border-white/40 px-3 py-1.5 rounded-full shadow-lg">
+                    <Users className="h-3.5 w-3.5 text-white" aria-hidden="true" />
+                    <span className="text-xs font-medium text-white">{capacity} passengers</span>
                   </div>
                   {aircraftTail?.year && (
-                    <div className="flex items-center gap-2 bg-white/25 backdrop-blur-md border border-white/40 px-4 py-2 rounded-full shadow-lg">
-                      <Calendar className="h-4 w-4 text-white" aria-hidden="true" />
-                      <span className="text-sm font-medium text-white">{aircraftTail.year}</span>
+                    <div className="flex items-center gap-1.5 bg-white/25 backdrop-blur-md border border-white/40 px-3 py-1.5 rounded-full shadow-lg">
+                      <Calendar className="h-3.5 w-3.5 text-white" aria-hidden="true" />
+                      <span className="text-xs font-medium text-white">{aircraftTail.year}</span>
                     </div>
                   )}
                   {aircraftTail?.speedKnotsOverride && (
-                    <div className="flex items-center gap-2 bg-white/25 backdrop-blur-md border border-white/40 px-4 py-2 rounded-full shadow-lg">
-                      <Gauge className="h-4 w-4 text-white" aria-hidden="true" />
-                      <span className="text-sm font-medium text-white">{aircraftTail.speedKnotsOverride} kts</span>
+                    <div className="flex items-center gap-1.5 bg-white/25 backdrop-blur-md border border-white/40 px-3 py-1.5 rounded-full shadow-lg">
+                      <Gauge className="h-3.5 w-3.5 text-white" aria-hidden="true" />
+                      <span className="text-xs font-medium text-white">{aircraftTail.speedKnotsOverride} kts</span>
                     </div>
                   )}
                 </div>
               </div>
 
               {isSelected && (
-                <div className="flex items-center gap-2 bg-green-500 text-white px-5 py-2.5 rounded-full shadow-2xl border-2 border-white/30">
-                  <CheckCircle className="h-5 w-5" aria-hidden="true" />
-                  <span className="font-semibold text-sm tracking-wide">Selected</span>
+                <div className="flex items-center gap-1.5 bg-green-500 text-white px-3 py-1.5 rounded-full shadow-2xl border-2 border-white/30">
+                  <CheckCircle className="h-4 w-4" aria-hidden="true" />
+                  <span className="font-semibold text-xs tracking-wide">Selected</span>
                 </div>
               )}
             </div>
           </div>
         </div>
 
-        <div className="p-6 sm:p-8 lg:p-10 space-y-8">
+        <div className="p-4 sm:p-5 lg:p-6 space-y-5">
           {/* Pricing Section */}
-          <div className="space-y-2">
-            <span className="uppercase tracking-widest text-gray-500 font-medium text-xs">Total Charter Price</span>
+          <div className="space-y-1">
+            <span className="uppercase tracking-widest text-gray-500 font-medium text-[10px]">Total Charter Price</span>
             <div
               className={`font-light text-gray-900 tracking-tight ${
                 deviceInfo.type === "mobile"
-                  ? "text-4xl sm:text-5xl"
+                  ? "text-3xl sm:text-4xl"
                   : deviceInfo.type === "tablet"
-                    ? "text-5xl sm:text-6xl"
-                    : "text-6xl lg:text-7xl"
+                    ? "text-4xl sm:text-5xl"
+                    : "text-5xl lg:text-6xl"
               }`}
             >
               {formatCurrency(total)}
             </div>
-            <p className="text-sm text-gray-600 font-light">All-inclusive pricing with taxes and fees</p>
+            <p className="text-xs text-gray-600 font-light">All-inclusive pricing with taxes and fees</p>
           </div>
 
           {/* Amenities Section */}
           {amenities.length > 0 && (
-            <div className="space-y-4">
-              <h3 className="uppercase tracking-widest text-gray-500 font-medium text-xs">Featured Amenities</h3>
+            <div className="space-y-2.5">
+              <h3 className="uppercase tracking-widest text-gray-500 font-medium text-[10px]">Featured Amenities</h3>
               <TooltipProvider delayDuration={150}>
-                <div className="flex flex-wrap gap-3">
+                <div className="flex flex-wrap gap-2">
                   {amenities.slice(0, 8).map((amenity, i) => {
                     const Icon = getAmenityIcon(amenity)
                     return (
                       <Tooltip key={i}>
                         <TooltipTrigger asChild>
-                          <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 hover:border-gray-300 hover:bg-gray-100 hover:shadow-sm transition-all duration-200 touch-manipulation">
-                            <Icon className="h-4 w-4 text-gray-600 flex-shrink-0" aria-hidden="true" />
-                            <span className="text-sm font-light text-gray-700 truncate max-w-[140px]">{amenity}</span>
+                          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-50 border border-gray-200 hover:border-gray-300 hover:bg-gray-100 hover:shadow-sm transition-all duration-200 touch-manipulation">
+                            <Icon className="h-3.5 w-3.5 text-gray-600 flex-shrink-0" aria-hidden="true" />
+                            <span className="text-xs font-light text-gray-700 truncate max-w-[120px]">{amenity}</span>
                           </div>
                         </TooltipTrigger>
                         <TooltipContent side="top" className="max-w-xs text-xs">
@@ -354,8 +346,8 @@ export function AdaptiveQuoteCard({
                     )
                   })}
                   {amenities.length > 8 && (
-                    <div className="flex items-center px-4 py-2.5 text-sm text-gray-500 font-light">
-                      +{amenities.length - 8} more amenities
+                    <div className="flex items-center px-3 py-1.5 text-xs text-gray-500 font-light">
+                      +{amenities.length - 8} more
                     </div>
                   )}
                 </div>
@@ -364,39 +356,39 @@ export function AdaptiveQuoteCard({
           )}
 
           {/* Specifications Grid */}
-          <div className="space-y-4">
-            <h3 className="uppercase tracking-widest text-gray-500 font-medium text-xs">Aircraft Specifications</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="space-y-2.5">
+            <h3 className="uppercase tracking-widest text-gray-500 font-medium text-[10px]">Aircraft Specifications</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
               {aircraftTail?.year && (
-                <div className="flex items-center gap-3 p-4 rounded-xl bg-gray-50 border border-gray-200">
-                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center">
-                    <Calendar className="h-5 w-5 text-gray-600" aria-hidden="true" />
+                <div className="flex items-center gap-2.5 p-3 rounded-lg bg-gray-50 border border-gray-200">
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center">
+                    <Calendar className="h-4 w-4 text-gray-600" aria-hidden="true" />
                   </div>
                   <div className="min-w-0">
-                    <div className="text-xs text-gray-500 font-medium uppercase tracking-wide">Year</div>
-                    <div className="text-base text-gray-900 font-semibold">{aircraftTail.year}</div>
+                    <div className="text-[10px] text-gray-500 font-medium uppercase tracking-wide">Year</div>
+                    <div className="text-sm text-gray-900 font-semibold">{aircraftTail.year}</div>
                   </div>
                 </div>
               )}
               {aircraftTail?.yearOfRefurbishment && (
-                <div className="flex items-center gap-3 p-4 rounded-xl bg-gray-50 border border-gray-200">
-                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center">
-                    <Clock className="h-5 w-5 text-gray-600" aria-hidden="true" />
+                <div className="flex items-center gap-2.5 p-3 rounded-lg bg-gray-50 border border-gray-200">
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center">
+                    <Clock className="h-4 w-4 text-gray-600" aria-hidden="true" />
                   </div>
                   <div className="min-w-0">
-                    <div className="text-xs text-gray-500 font-medium uppercase tracking-wide">Refurbished</div>
-                    <div className="text-base text-gray-900 font-semibold">{aircraftTail.yearOfRefurbishment}</div>
+                    <div className="text-[10px] text-gray-500 font-medium uppercase tracking-wide">Refurbished</div>
+                    <div className="text-sm text-gray-900 font-semibold">{aircraftTail.yearOfRefurbishment}</div>
                   </div>
                 </div>
               )}
               {aircraftTail?.rangeNmOverride && (
-                <div className="flex items-center gap-3 p-4 rounded-xl bg-gray-50 border border-gray-200">
-                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center">
-                    <Route className="h-5 w-5 text-gray-600" aria-hidden="true" />
+                <div className="flex items-center gap-2.5 p-3 rounded-lg bg-gray-50 border border-gray-200">
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center">
+                    <Route className="h-4 w-4 text-gray-600" aria-hidden="true" />
                   </div>
                   <div className="min-w-0">
-                    <div className="text-xs text-gray-500 font-medium uppercase tracking-wide">Range</div>
-                    <div className="text-base text-gray-900 font-semibold">{aircraftTail.rangeNmOverride} nm</div>
+                    <div className="text-[10px] text-gray-500 font-medium uppercase tracking-wide">Range</div>
+                    <div className="text-sm text-gray-900 font-semibold">{aircraftTail.rangeNmOverride} nm</div>
                   </div>
                 </div>
               )}
@@ -405,23 +397,23 @@ export function AdaptiveQuoteCard({
 
           {/* Special Notes */}
           {option.conditions?.trim() && (
-            <div className="space-y-3">
-              <h3 className="uppercase tracking-widest text-gray-500 font-medium text-xs">Special Notes</h3>
-              <div className="text-sm text-gray-700 font-light leading-relaxed bg-amber-50 border-l-4 border-amber-400 rounded-lg p-5">
+            <div className="space-y-2">
+              <h3 className="uppercase tracking-widest text-gray-500 font-medium text-[10px]">Special Notes</h3>
+              <div className="text-xs text-gray-700 font-light leading-relaxed bg-amber-50 border-l-4 border-amber-400 rounded-lg p-3">
                 {option.conditions}
               </div>
             </div>
           )}
         </div>
 
-        <div className="border-t border-gray-200 bg-gradient-to-b from-gray-50 to-white p-6 sm:p-8 lg:p-10">
+        <div className="border-t border-gray-200 bg-gradient-to-b from-gray-50 to-white p-4 sm:p-5 lg:p-6">
           <Button
-            className={`w-full font-semibold tracking-wide rounded-2xl transition-all duration-300 touch-manipulation shadow-lg hover:shadow-2xl active:scale-[0.98] ${
+            className={`w-full font-semibold tracking-wide rounded-xl transition-all duration-300 touch-manipulation shadow-lg hover:shadow-2xl active:scale-[0.98] ${
               deviceInfo.type === "mobile"
-                ? "text-lg py-5"
+                ? "text-base py-3"
                 : deviceInfo.type === "tablet"
-                  ? "text-xl py-6"
-                  : "text-xl py-7 lg:py-8"
+                  ? "text-lg py-4"
+                  : "text-lg py-5"
             } ${
               isSelected
                 ? "!bg-green-600 hover:!bg-green-700 !text-white border-0"
@@ -434,15 +426,15 @@ export function AdaptiveQuoteCard({
             aria-label={isSelected ? "Currently selected option" : "Select this aircraft for your charter"}
           >
             {isSelected ? (
-              <span className="flex items-center justify-center gap-3">
-                <CheckCircle className="h-6 w-6" aria-hidden="true" />
+              <span className="flex items-center justify-center gap-2.5">
+                <CheckCircle className="h-5 w-5" aria-hidden="true" />
                 Selected Option
               </span>
             ) : (
               "Select This Aircraft"
             )}
           </Button>
-          <p className="text-center text-sm text-gray-600 font-light mt-4 leading-relaxed">
+          <p className="text-center text-xs text-gray-600 font-light mt-3 leading-relaxed">
             {isSelected
               ? "You've selected this aircraft for your charter"
               : "Click to choose this aircraft and proceed with your booking"}
