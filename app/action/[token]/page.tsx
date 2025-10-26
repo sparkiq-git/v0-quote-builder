@@ -207,10 +207,18 @@ export default function ActionPage({ params }: { params: { token: string } }) {
 
       // Read response once
       const text = await res.text()
-      const json = JSON.parse(text)
+      
+      // Try to parse JSON, handle errors gracefully
+      let json
+      try {
+        json = JSON.parse(text)
+      } catch (parseErr) {
+        console.error("Failed to parse JSON response:", parseErr, "Response text:", text)
+        throw new Error(`Server returned non-JSON response: ${text.slice(0, 200)}`)
+      }
 
       if (!res.ok || json?.ok === false) {
-        throw new Error(json?.error || `Request failed (${res.status})`)
+        throw new Error(json?.error || json?.details || `Request failed (${res.status})`)
       }
 
       // Show success dialog

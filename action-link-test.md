@@ -70,7 +70,7 @@ NEXT_PUBLIC_APP_URL=https://your-domain.com
 SELECT * FROM action_link ORDER BY created_at DESC LIMIT 5;
 
 -- Check audit logs
-SELECT * FROM audit_log WHERE action LIKE 'action_link%' ORDER BY created_at DESC LIMIT 10;
+SELECT * FROM action_link_audit_log WHERE action LIKE 'action_link%' ORDER BY created_at DESC LIMIT 10;
 
 -- Check rate limits (if using Upstash)
 SELECT * FROM rate_limits ORDER BY created_at DESC LIMIT 10;

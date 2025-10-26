@@ -688,7 +688,7 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
               </Button>
 
               {/* Not Interested button - show below confirm button */}
-              {!isLocked && quote.status === "pending_response" && (
+              {!isLocked && (quote.status === "pending_response" || quote.status === "opened" || quote.status === "awaiting response") && (
                 <Button
                   variant="outline"
                   className="w-full border-gray-300 text-gray-700 hover:bg-gray-100"
@@ -889,7 +889,7 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
                     </Button>
 
                     {/* Not Interested button - show below confirm button */}
-                    {!isLocked && quote.status === "pending_response" && (
+                    {!isLocked && (quote.status === "pending_response" || quote.status === "opened" || quote.status === "awaiting response") && (
                       <Button
                         variant="outline"
                         className="w-full border-gray-300 text-gray-700 hover:bg-gray-100"

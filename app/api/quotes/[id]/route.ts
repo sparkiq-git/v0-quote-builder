@@ -368,9 +368,17 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     }
 
     return NextResponse.json({ success: true, quote: updatedQuote })
-  } catch (error) {
+  } catch (error: any) {
     console.error("Unexpected error updating quote:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    console.error("Error details:", {
+      message: error?.message,
+      stack: error?.stack,
+      body
+    })
+    return NextResponse.json({ 
+      error: error?.message || "Internal server error",
+      details: error?.message 
+    }, { status: 500 })
   }
 }
 
