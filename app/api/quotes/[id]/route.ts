@@ -272,7 +272,18 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   const { id } = params
 
   try {
-    const body = await req.json()
+    // Parse request body
+    let body: any = {}
+    try {
+      body = await req.json()
+    } catch (parseError: any) {
+      console.error("Failed to parse request body:", parseError)
+      return NextResponse.json({ 
+        error: "Invalid request body",
+        details: parseError?.message 
+      }, { status: 400 })
+    }
+
     const { selectedOptionId, status, declineReason, declineNotes } = body
 
     // Check if this is a public quote access (from action link)
@@ -332,42 +343,62 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     // }
 
     // Log the action in audit log (if from action link)
-    try {
-      const referer = req.headers.get("referer") || ""
-      const isPublicAccess = referer?.includes("/action/") || referer?.includes("/q/")
-      
-      if (isPublicAccess) {
-        // Get action link info for audit - look for any status (active or consumed)
-        const { data: actionLink } = await supabase
-          .from("action_link")
-          .select("id, tenant_id, action_type, status")
-          .eq("metadata->>quote_id", id)
-          .order("created_at", { ascending: false })
-          .maybeSingle()
+    // Note: This is intentionally outside the main try-catch to prevent audit failures from breaking the response
+    if (true) {
+      try {
+        const referer = req.headers.get("referer") || ""
+        const isPublicAccess = referer?.includes("/action/") || referer?.includes("/q/")
         
-        if (actionLink) {
-          await supabase.from("action_link_audit_log").insert({
-            tenant_id: actionLink.tenant_id,
-            actor_user_id: null,
-            action: `quote.${status || 'updated'}`,
-            target_id: actionLink.id,
-            action_type: actionLink.action_type,
-            details: {
-              quote_id: id,
-              selectedOptionId,
-              status,
-              declineReason,
-              declineNotes,
-              link_status: actionLink.status, // track if link was active/consumed
-            },
-            ip: req.headers.get("x-forwarded-for") || "unknown",
-            user_agent: req.headers.get("user-agent") || "unknown",
-          })
+        if (isPublicAccess) {
+          // Get action link info for audit - look for any status (active or consumed)
+          const { data: actionLink, error: actionLinkError } = await supabase
+            .from("action_link")
+            .select("id, tenant_id, action_type, status")
+            .eq("metadata->>quote_id", id)
+            .order("created_at", { ascending: false })
+            .maybeSingle()
+          
+          if (actionLinkError) {
+            console.error("Failed to fetch action link for audit:", actionLinkError)
+          } else if (actionLink) {
+            const auditPayload = {
+              tenant_id: actionLink.tenant_id,
+              actor_user_id: null,
+              action: `quote.${status || 'updated'}`,
+              target_id: actionLink.id,
+              action_type: actionLink.action_type,
+              details: {
+                quote_id: id,
+                selectedOptionId,
+                status,
+                declineReason,
+                declineNotes,
+                link_status: actionLink.status, // track if link was active/consumed
+              },
+              ip: req.headers.get("x-forwarded-for") || "unknown",
+              user_agent: req.headers.get("user-agent") || "unknown",
+            }
+            
+            console.log("Inserting audit log:", JSON.stringify(auditPayload, null, 2))
+            
+            const { error: auditError } = await supabase.from("action_link_audit_log").insert(auditPayload)
+            
+            if (auditError) {
+              console.error("Failed to insert audit log:", JSON.stringify(auditError, null, 2))
+            } else {
+              console.log("Audit log inserted successfully")
+            }
+          }
         }
+      } catch (auditErr: any) {
+        console.error("Audit log failed (non-critical):", auditErr)
+        console.error("Audit error details:", {
+          message: auditErr?.message,
+          stack: auditErr?.stack,
+          name: auditErr?.name,
+        })
+        // Don't throw - this is non-critical
       }
-    } catch (auditErr) {
-      console.error("Audit log failed (non-critical):", auditErr)
-      // Don't throw - this is non-critical
     }
 
     return NextResponse.json({ success: true, quote: updatedQuote })
@@ -376,11 +407,29 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     console.error("Error details:", {
       message: error?.message,
       stack: error?.stack,
+      name: error?.name,
     })
-    return NextResponse.json({ 
-      error: error?.message || "Internal server error",
-      details: error?.message 
-    }, { status: 500 })
+    
+    // Always return JSON, even on errors
+    try {
+      return NextResponse.json({ 
+        error: error?.message || "Internal server error",
+        details: error?.message || "An unexpected error occurred",
+      }, { status: 500 })
+    } catch (responseError) {
+      // Fallback if even JSON response creation fails
+      console.error("Failed to create error response:", responseError)
+      return new Response(
+        JSON.stringify({ 
+          error: error?.message || "Internal server error",
+          details: "Failed to create proper error response"
+        }), 
+        { 
+          status: 500,
+          headers: { "Content-Type": "application/json" }
+        }
+      )
+    }
   }
 }
 

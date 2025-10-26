@@ -328,8 +328,8 @@ export default function ActionPage({ params }: { params: { token: string } }) {
         params={{ token: params.token }}
         verifiedEmail={email}
         quote={quote}
-        onAccept={() => handleConsume("accept")}
-        onDecline={() => handleConsume("decline")}
+        onAccept={undefined}
+        onDecline={undefined}
       />
     </>
   )
