@@ -15,7 +15,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
-import { Plane, Info, Mail, Phone, CheckCircle, Clock, CreditCard, FileText, XCircle, AlertCircle } from "lucide-react"
+import { Plane, Info, Mail, Phone, CheckCircle, Clock, CreditCard, FileText } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Badge } from "@/components/ui/badge"
 
@@ -639,9 +639,8 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
           {/* Enhanced Aircraft Options */}
           <div className="space-y-2 sm:space-y-3 md:space-y-4 lg:space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 bg-white/80 backdrop-blur-sm p-3 sm:p-4 md:p-5 lg:p-6 rounded-xl border border-gray-200/50">
-              <div className="flex items-center gap-2">
-                <Plane className="h-5 w-5 text-blue-600" />
-                <p className="text-gray-800 font-semibold text-sm sm:text-base">Aircraft Options</p>
+              <div className="flex items-center gap-3">
+                <h3 className="text-lg font-semibold text-gray-900">Aircraft Options</h3>
               </div>
               <Badge variant={statusDisplay.variant} className="text-xs flex items-center gap-1 px-3 py-1 self-start sm:self-auto">
                 <StatusIcon className="h-3 w-3" />
@@ -711,7 +710,7 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
               {!isLocked && (quote.status === "pending_response" || quote.status === "opened" || quote.status === "awaiting response") && (
                 <Button
                   variant="outline"
-                  className="w-full border-gray-300 text-gray-700 hover:bg-gray-100"
+                  className="w-full border-gray-300 text-gray-700 hover:bg-gray-100 bg-transparent"
                   onClick={() => setIsDeclineModalOpen(true)}
                 >
                   Not Interested
@@ -912,7 +911,7 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
                     {!isLocked && (quote.status === "pending_response" || quote.status === "opened" || quote.status === "awaiting response") && (
                       <Button
                         variant="outline"
-                        className="w-full border-gray-300 text-gray-700 hover:bg-gray-100"
+                        className="w-full border-gray-300 text-gray-700 hover:bg-gray-100 bg-transparent"
                         onClick={() => setIsDeclineModalOpen(true)}
                       >
                         Not Interested
@@ -936,9 +935,6 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
                 <div className="px-4 xl:px-6 py-3 xl:py-4 border-b border-gray-200/50 bg-gradient-to-r from-white/90 to-blue-50/50 backdrop-blur-sm mb-3 xl:mb-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                        <Plane className="h-4 w-4 text-blue-600" />
-                      </div>
                       <h3 className="text-lg font-semibold text-gray-900">Aircraft Options</h3>
                     </div>
                     <Badge variant={statusDisplay.variant} className="text-xs flex items-center gap-1 px-3 py-1">
@@ -988,9 +984,8 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
               </div>
             </div>
           </div>
-        </div>
         {/* /Right pane */}
       </div>
     </div>
-  )
+  )\
 }
