@@ -109,7 +109,7 @@ function TripInfoList({
   destination: string
 }) {
   return (
-    <div className="space-y-1 text-xs leading-5">
+    <div className="space-y-1 text-xs leading-5 font-light">
       <div>
         <span className="font-medium">Date:</span> {date}
       </div>
@@ -188,11 +188,13 @@ function TripInfoControl({
 
 function LegRow({ leg, index }: { leg: any; index: number }) {
   const codeCls =
-    "font-extrabold leading-none tracking-tight uppercase whitespace-nowrap text-[clamp(0.95rem,1.6vw,1.05rem)]"
+    "font-semibold leading-none tracking-tight uppercase whitespace-nowrap text-[clamp(0.95rem,1.6vw,1.05rem)]"
 
   return (
     <div className="px-2 py-1.5 grid items-center gap-x-2 gap-y-1 [grid-template-columns:max-content_1fr_max-content_auto]">
-      <div className="col-span-4 row-start-1 text-xs text-gray-500 mt-0.5">{formatDate(leg.departureDate)}</div>
+      <div className="col-span-4 row-start-1 text-xs text-gray-500 mt-0.5 font-light">
+        {formatDate(leg.departureDate)}
+      </div>
       <div className="col-start-1 row-start-2">
         <div className={codeCls}>{leg.origin}</div>
       </div>
@@ -265,7 +267,7 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
           "Content-Type": "application/json",
           "x-public-quote": "true",
         },
-        body: JSON.stringify({ selectedOptionId: optionId }),
+        body: JSON.JSONstringify({ selectedOptionId: optionId }),
       })
 
       if (!response.ok) {
@@ -567,24 +569,26 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
               {/* Expiration date in top right */}
               {expirationDate && (
                 <div className="absolute top-0 right-0 text-right">
-                  <p className={`text-xs ${isExpired ? "text-red-600 font-medium" : "text-amber-600 font-medium"}`}>
+                  <p className={`text-xs ${isExpired ? "text-red-600 font-semibold" : "text-amber-600 font-semibold"}`}>
                     {isExpired ? "Expired" : "Expires"}
                   </p>
-                  <p className={`text-xs ${isExpired ? "text-red-500" : "text-amber-600"}`}>{expirationDate}</p>
+                  <p className={`text-xs ${isExpired ? "text-red-500 font-light" : "text-amber-600 font-light"}`}>
+                    {expirationDate}
+                  </p>
                 </div>
               )}
               <div>
-                <p className="font-medium text-sm">{quote.customer?.name ?? "Fernando Arriaga"}</p>
-                <p className="text-xs text-gray-600">{quote.customer?.company ?? "Spark IQ"}</p>
+                <p className="font-semibold text-sm">{quote.customer?.name ?? "Fernando Arriaga"}</p>
+                <p className="text-xs text-gray-600 font-light">{quote.customer?.company ?? "Spark IQ"}</p>
               </div>
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
                   <Mail className="h-4 w-4 text-gray-500" />
-                  <span className="text-xs">{quote.customer?.email ?? "farriaga@sparkiq.io"}</span>
+                  <span className="text-xs font-light">{quote.customer?.email ?? "farriaga@sparkiq.io"}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Phone className="h-4 w-4 text-gray-500" />
-                  <span className="text-xs">{quote.customer?.phone ?? "619-606-1123"}</span>
+                  <span className="text-xs font-light">{quote.customer?.phone ?? "619-606-1123"}</span>
                 </div>
               </div>
             </div>
@@ -593,7 +597,7 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
           {/* Trip Summary directly under Customer */}
           <SectionCard>
             <div className="divide-y divide-gray-200">
-              <p className="font-medium text-sm">Trip Summary</p>
+              <p className="font-semibold text-sm">Trip Summary</p>
               {quote.legs?.map((leg, index) => (
                 <LegRow key={index} leg={leg} index={index} />
               ))}
@@ -603,8 +607,8 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
           {/* Additional Services (list) */}
           {quote.services?.length > 0 && (
             <SectionCard>
-              <p className="font-medium text-sm">Additional Services</p>
-              <ul className="space-y-0 text-xs">
+              <p className="font-semibold text-sm">Additional Services</p>
+              <ul className="space-y-0 text-xs font-light">
                 {quote.services.map((service) => (
                   <li key={service.id} className="text-gray-700">
                     <span className="font-medium">{service.name}</span>
@@ -618,21 +622,21 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
           {/* Total Trip Cost */}
           <SectionCard>
             <div className="space-y-0">
-              <p className="font-medium text-sm mb-2">Total Trip Cost</p>
+              <p className="font-semibold text-sm mb-2">Total Trip Cost</p>
 
               <div className="grid grid-cols-2 items-center">
-                <span className="text-gray-700 text-xs">Selected Aircraft</span>
-                <span className="font-medium text-right text-xs">{formatCurrency(selectedOptionTotal)}</span>
+                <span className="text-gray-700 text-xs font-light">Selected Aircraft</span>
+                <span className="font-semibold text-right text-xs">{formatCurrency(selectedOptionTotal)}</span>
               </div>
 
               {quote.services?.map((s) => (
                 <div key={s.id} className="grid grid-cols-2 items-center text-xs">
-                  <span className="text-gray-600">{s.name}</span>
-                  <span className="text-right">{formatCurrency(s.amount)}</span>
+                  <span className="text-gray-600 font-light">{s.name}</span>
+                  <span className="text-right font-light">{formatCurrency(s.amount)}</span>
                 </div>
               ))}
 
-              <div className="grid grid-cols-2 items-center font-bold text-sm pt-3 border-t border-gray-200">
+              <div className="grid grid-cols-2 items-center font-semibold text-sm pt-3 border-t border-gray-200">
                 <span>Grand Total</span>
                 <span className="text-right">{formatCurrency(grandTotal)}</span>
               </div>
@@ -648,7 +652,7 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
               </div>
               <Badge
                 variant={statusDisplay.variant}
-                className="text-xs flex items-center gap-1 px-3 py-1 self-start sm:self-auto"
+                className="text-xs flex items-center gap-1 px-3 py-1 self-start sm:self-auto font-medium"
               >
                 <StatusIcon className="h-3 w-3" />
                 {statusDisplay.text}
@@ -673,7 +677,7 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
           {/* Mobile Terms (visible on phones) */}
           {quote.options?.length >= 1 && quote.terms && (
             <SectionCard className="mt-2">
-              <p className="text-xs text-muted-foreground whitespace-pre-wrap">{quote.terms}</p>
+              <p className="text-xs text-muted-foreground whitespace-pre-wrap font-light">{quote.terms}</p>
             </SectionCard>
           )}
 
@@ -806,32 +810,36 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
                       {expirationDate && (
                         <div className="absolute top-0 right-0 text-right">
                           <p
-                            className={`text-xs ${isExpired ? "text-red-600 font-medium" : "text-amber-600 font-medium"}`}
+                            className={`text-xs ${isExpired ? "text-red-600 font-semibold" : "text-amber-600 font-semibold"}`}
                           >
                             {isExpired ? "Expired" : "Expires"}
                           </p>
-                          <p className={`text-xs ${isExpired ? "text-red-500" : "text-amber-600"}`}>{expirationDate}</p>
+                          <p
+                            className={`text-xs ${isExpired ? "text-red-500 font-light" : "text-amber-600 font-light"}`}
+                          >
+                            {expirationDate}
+                          </p>
                         </div>
                       )}
                       <div>
-                        <p className="font-medium text-sm">{quote.customer?.name ?? "Fernando Arriaga"}</p>
-                        <p className="text-xs text-gray-600">{quote.customer?.company ?? "Spark IQ"}</p>
+                        <p className="font-semibold text-sm">{quote.customer?.name ?? "Fernando Arriaga"}</p>
+                        <p className="text-xs text-gray-600 font-light">{quote.customer?.company ?? "Spark IQ"}</p>
                       </div>
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
                           <Mail className="h-4 w-4 text-gray-500" />
-                          <span className="text-xs">{quote.customer?.email ?? "farriaga@sparkiq.io"}</span>
+                          <span className="text-xs font-light">{quote.customer?.email ?? "farriaga@sparkiq.io"}</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <Phone className="h-4 w-4 text-gray-500" />
-                          <span className="text-xs">{quote.customer?.phone ?? "619-606-1123"}</span>
+                          <span className="text-xs font-light">{quote.customer?.phone ?? "619-606-1123"}</span>
                         </div>
                       </div>
                     </div>
 
                     {/* Trip Summary */}
                     <div className="pb-4 border-b border-gray-200/50">
-                      <p className="font-medium text-sm mb-3">Trip Summary</p>
+                      <p className="font-semibold text-sm mb-3">Trip Summary</p>
                       <div className="divide-y divide-gray-200">
                         {quote.legs?.map((leg, index) => (
                           <LegRow key={index} leg={leg} index={index} />
@@ -842,8 +850,8 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
                     {/* Additional Services */}
                     {quote.services?.length > 0 && (
                       <div className="pb-4 border-b border-gray-200/50">
-                        <p className="font-medium text-sm mb-3">Additional Services</p>
-                        <ul className="space-y-1 text-xs">
+                        <p className="font-semibold text-sm mb-3">Additional Services</p>
+                        <ul className="space-y-1 text-xs font-light">
                           {quote.services.map((service) => (
                             <li key={service.id} className="text-gray-700">
                               <span className="font-medium">{service.name}</span>
@@ -856,21 +864,23 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
 
                     {/* Total Trip Cost */}
                     <div>
-                      <p className="font-medium text-sm mb-3">Total Trip Cost</p>
+                      <p className="font-semibold text-sm mb-3">Total Trip Cost</p>
                       <div className="space-y-1">
                         <div className="grid grid-cols-2 items-center">
-                          <span className="text-gray-700 text-xs">Selected Aircraft</span>
-                          <span className="font-medium text-right text-xs">{formatCurrency(selectedOptionTotal)}</span>
+                          <span className="text-gray-700 text-xs font-light">Selected Aircraft</span>
+                          <span className="font-semibold text-right text-xs">
+                            {formatCurrency(selectedOptionTotal)}
+                          </span>
                         </div>
 
                         {quote.services?.map((s) => (
                           <div key={s.id} className="grid grid-cols-2 items-center text-xs">
-                            <span className="text-gray-600">{s.name}</span>
-                            <span className="text-right">{formatCurrency(s.amount)}</span>
+                            <span className="text-gray-600 font-light">{s.name}</span>
+                            <span className="text-right font-light">{formatCurrency(s.amount)}</span>
                           </div>
                         ))}
 
-                        <div className="grid grid-cols-2 items-center font-bold text-sm pt-3 border-t border-gray-200">
+                        <div className="grid grid-cols-2 items-center font-semibold text-sm pt-3 border-t border-gray-200">
                           <span>Grand Total</span>
                           <span className="text-right">{formatCurrency(grandTotal)}</span>
                         </div>
@@ -978,7 +988,7 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
                   <div className="flex justify-center pl-6 pr-6">
                     <Card className="mt-3 mb-3 w-full">
                       <CardContent className="pl-1">
-                        <p className="text-xs text-muted-foreground whitespace-pre-wrap">{quote.terms}</p>
+                        <p className="text-xs text-muted-foreground whitespace-pre-wrap font-light">{quote.terms}</p>
                       </CardContent>
                     </Card>
                   </div>
@@ -989,7 +999,7 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
                     <CardContent className="flex flex-col items-center justify-center py-12">
                       <Plane className="h-14 w-14 text-muted-foreground mb-3" />
                       <h3 className="text-base font-semibold mb-1">No aircraft options available</h3>
-                      <p className="text-muted-foreground text-center text-sm">
+                      <p className="text-muted-foreground text-center text-sm font-light">
                         Please contact us directly to discuss aircraft options for your trip.
                       </p>
                     </CardContent>
