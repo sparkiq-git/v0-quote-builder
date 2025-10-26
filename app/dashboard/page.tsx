@@ -210,7 +210,7 @@ export default function DashboardPage() {
           title="Unpaid"
           icon={Clock}
           currentValue={unpaidQuotes}
-          description="Still awaiting payment"
+          description="Awaiting payment"
         />
         <MetricCard
           title="Upcoming"
