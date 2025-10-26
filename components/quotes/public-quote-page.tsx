@@ -597,7 +597,7 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
           {/* Trip Summary directly under Customer */}
           <SectionCard>
             <div className="divide-y divide-gray-200">
-              <p className="font-semibold text-sm py-1.5">Trip Summary</p>
+              <p className="font-semibold text-sm py-0">Trip Summary</p>
               {quote.legs?.map((leg, index) => (
                 <LegRow key={index} leg={leg} index={index} />
               ))}
