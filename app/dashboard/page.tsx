@@ -1,58 +1,47 @@
-"use client";
+"use client"
 
-import Link from "next/link";
-import { useMemo } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Tooltip, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Users, FileText, Clock, Plus, Plane } from "lucide-react";
-import { useMockStore } from "@/lib/mock/store";
-import { formatTimeAgo } from "@/lib/utils/format";
-import { RouteMap } from "@/components/dashboard/route-map";
-import { useSupabaseCount } from "@/src/hooks/useSupabaseCount";
+import Link from "next/link"
+import { useMemo, useState, useEffect, useCallback } from "react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Tooltip, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { Users, FileText, Clock, Plus, Plane } from "lucide-react"
+import { useMockStore } from "@/lib/mock/store"
+import { formatTimeAgo } from "@/lib/utils/format"
+import { RouteMap } from "@/components/dashboard/route-map"
+import { createClient } from "@/lib/supabase/client"
 
 /* ---------------------------------- page ---------------------------------- */
 export default function DashboardPage() {
-  const { state, getMetrics, loading } = useMockStore();
-  const metrics = getMetrics();
+  const supabase = createClient()
+  const [leadCount, setLeadCount] = useState(0)
 
-  // 1) Leads: lead.status IN ('opened','new')
-  const { count: leadCount } = useSupabaseCount({
-    table: "lead",
-    filters: [{ col: "status", op: "in", value: ["opened", "new"] }],
-    realtime: true,
-  });
+  const refreshLeadCount = useCallback(async () => {
+    const { count, error } = await supabase
+      .from("lead")
+      .select("*", { count: "exact", head: true })
+      .in("status", ["opened", "new"])
+    if (!error) setLeadCount(count ?? 0)
+    else console.error("Lead count error:", error)
+  }, [supabase])
 
-  // 2) Quotes: quote.status = 'awaiting response'
-  const { count: quotesAwaitingResponse } = useSupabaseCount({
-    table: "quote", // change to "quotes" if your table is plural
-    filters: [{ col: "status", op: "eq", value: "awaiting response" }],
-    realtime: true,
-  });
+  useEffect(() => {
+    refreshLeadCount()
+    // optional realtime updates:
+    const channel = supabase
+      .channel("realtime-leads-count")
+      .on("postgres_changes", { event: "*", schema: "public", table: "lead" }, () => refreshLeadCount())
+      .subscribe()
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [refreshLeadCount, supabase])
 
-  // 3) Unpaid: quote.payment_status = 'unpaid'
-  const { count: unpaidQuotes } = useSupabaseCount({
-    table: "quote", // change to "quotes" if needed
-    filters: [{ col: "payment_status", op: "eq", value: "unpaid" }],
-    realtime: true,
-  });
+  const { state, getMetrics, loading } = useMockStore()
 
-  // 4) Upcoming Departures: quote_detail.depart_dt within next 7 days
-  const start = new Date();
-  start.setHours(0, 0, 0, 0);
-  const end = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-  end.setHours(23, 59, 59, 999);
-
-  const { count: upcomingDepartures } = useSupabaseCount({
-    table: "quote_detail",
-    filters: [
-      { col: "depart_dt", op: "gte", value: start.toISOString() },
-      { col: "depart_dt", op: "lte", value: end.toISOString() },
-    ],
-    realtime: true,
-  });
+  const metrics = getMetrics()
 
   const recentLeads = useMemo(
     () =>
@@ -60,33 +49,53 @@ export default function DashboardPage() {
         .filter((l) => l.status !== "deleted")
         .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))
         .slice(0, 3),
-    [state.leads]
-  );
+    [state.leads],
+  )
 
   const recentQuotes = useMemo(
     () => state.quotes.sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)).slice(0, 3),
-    [state.quotes]
-  );
+    [state.quotes],
+  )
+
+  const pendingConversionLeads = state.leads.filter((l) => l.status === "new").length
+  const quotesAwaitingAcceptance = state.quotes.filter((q) => q.status === "pending_acceptance").length
+  const unpaidQuotes = state.quotes.filter((q) => q.status === "awaiting_payment").length
+
+  const upcomingTrips = useMemo(() => {
+    const now = new Date()
+    const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+
+    return state.quotes.filter((quote) => {
+      if (quote.status !== "paid") return false
+
+      // Check if any leg has a departure date within the next 7 days
+      return quote.legs.some((leg) => {
+        if (!leg.departureDate) return false
+        const departureDate = new Date(leg.departureDate)
+        return departureDate >= now && departureDate <= sevenDaysFromNow
+      })
+    }).length
+  }, [state.quotes])
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
       case "new":
-        return "default";
+        return "default"
       case "converted":
-        return "secondary";
+        return "secondary"
       case "pending_acceptance":
-        return "outline";
+        return "outline"
       case "accepted_by_requester":
       case "accepted":
-        return "default";
+        return "default"
       case "declined":
-        return "destructive";
+        return "destructive"
       case "expired":
-        return "secondary";
+        return "secondary"
       default:
-        return "outline";
+        return "outline"
     }
-  };
+  }
 
   if (loading) {
     return (
@@ -121,7 +130,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
-    );
+    )
   }
 
   function MetricCard({
@@ -130,10 +139,10 @@ export default function DashboardPage() {
     currentValue,
     description,
   }: {
-    title: string;
-    icon: any;
-    currentValue: number;
-    description: string;
+    title: string
+    icon: any
+    currentValue: number
+    description: string
   }) {
     return (
       <Card className="col-span-1 h-full flex flex-col">
@@ -148,7 +157,7 @@ export default function DashboardPage() {
           <p className="text-xs text-muted-foreground mb-0 min-h-4 truncate">{description}</p>
         </CardContent>
       </Card>
-    );
+    )
   }
 
   return (
@@ -159,29 +168,19 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5">
-        <MetricCard
-          title="Leads"
-          icon={Users}
-          currentValue={leadCount}
-          description='Status: "opened" or "new"'
-        />
+        <MetricCard title="Leads" icon={Users} currentValue={leadCount} description="Pending conversion to quote" />
         <MetricCard
           title="Quotes"
           icon={FileText}
-          currentValue={quotesAwaitingResponse}
-          description='Status: "awaiting response"'
+          currentValue={quotesAwaitingAcceptance}
+          description="Awaiting client acceptance"
         />
-        <MetricCard
-          title="Unpaid"
-          icon={Clock}
-          currentValue={unpaidQuotes}
-          description="Still awaiting payment"
-        />
+        <MetricCard title="Unpaid" icon={Clock} currentValue={unpaidQuotes} description="Still awaiting payment" />
         <MetricCard
           title="Upcoming"
           icon={Plane}
-          currentValue={upcomingDepartures}
-          description="Departures in next 7 days"
+          currentValue={upcomingTrips}
+          description="Paid trips in next 7 days"
         />
       </div>
 
@@ -335,5 +334,5 @@ export default function DashboardPage() {
         </Card>
       </div>
     </div>
-  );
+  )
 }
