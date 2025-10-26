@@ -164,7 +164,7 @@ export function AdaptiveQuoteCard({
   }
 
   return (
-    <div className="mx-auto w-full max-w-[1344px] px-2 sm:px-3 md:px-4 lg:px-5 xl:px-6 pb-3 sm:pb-4 md:pb-5 lg:pb-6">
+    <div className="mx-auto w-full max-w-[1344px] px-2 sm:px-3 md:px-4 lg:px-5 xl:px-6 pb-3 sm:pb-4 md:pb-5 lg:pb-6 sm:pl-0 sm:pr-0">
       <style>{`
         .carousel-container .carousel-previous,
         .carousel-container .carousel-next,
