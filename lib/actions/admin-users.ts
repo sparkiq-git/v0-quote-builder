@@ -2,6 +2,7 @@
 
 import { createClient } from "@supabase/supabase-js"
 import type { AdminUser, ShiftRotation } from "@/lib/types/admin"
+import { uploadAvatar } from "./avatar-upload"
 
 const getAdminClient = () => {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -107,33 +108,44 @@ export async function createUser(formData: FormData) {
     if (authError) {
       console.error("Create user auth error:", authError)
       if (authError.message.includes("email_exists") || authError.message.includes("already been registered")) {
+        // Check if we have avatar file to upload for existing user
+        const avatarFile = formData.get("avatar_file") as File
+        if (avatarFile) {
+          console.log("User exists but has avatar file - attempting to find user and update avatar")
+          // Try to find the existing user and update their avatar
+          const { data: existingUsers } = await supabase.auth.admin.listUsers()
+          const existingUser = existingUsers.users.find(u => u.email === email)
+          
+          if (existingUser) {
+            const uploadResult = await uploadAvatar(existingUser.id, avatarFile)
+            if (uploadResult.success) {
+              console.log("Avatar updated for existing user:", uploadResult.path)
+            } else {
+              console.error("Failed to update avatar for existing user:", uploadResult.error)
+            }
+          }
+        }
         return { success: false, error: "A user with this email address has already been registered" }
       }
       throw authError
     }
 
-    // Handle avatar upload if provided - using original working implementation
-    const avatarData = formData.get("avatar_data") as string
-    if (avatarData && authData.user) {
-      const avatarName = formData.get("avatar_name") as string
-      const avatarType = formData.get("avatar_type") as string
-
-      const buffer = Uint8Array.from(atob(avatarData), (c) => c.charCodeAt(0))
-      const fileName = `${authData.user.id}/${Date.now()}-${avatarName}`
-
-      const { error: uploadError } = await supabase.storage.from("avatars").upload(fileName, buffer, {
-        contentType: avatarType,
-        upsert: true,
+    // Handle avatar upload if provided - using clean upload function
+    const avatarFile = formData.get("avatar_file") as File
+    if (avatarFile && authData.user) {
+      console.log("Processing avatar upload for new user:", { 
+        userId: authData.user.id, 
+        email: authData.user.email 
       })
-
-      if (!uploadError) {
-        await supabase.auth.admin.updateUserById(authData.user.id, {
-          user_metadata: {
-            ...authData.user.user_metadata,
-            avatar_path: fileName,
-          },
-        })
+      
+      const uploadResult = await uploadAvatar(authData.user.id, avatarFile)
+      if (!uploadResult.success) {
+        console.error("Avatar upload failed:", uploadResult.error)
+      } else {
+        console.log("Avatar uploaded successfully:", uploadResult.path)
       }
+    } else {
+      console.log("No avatar file provided or no user created")
     }
 
     // Create crew profile if needed

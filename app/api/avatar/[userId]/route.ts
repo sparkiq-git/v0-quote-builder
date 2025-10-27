@@ -16,6 +16,7 @@ export async function GET(request: NextRequest, { params }: { params: { userId: 
     }
 
     if (!result.url) {
+      // Return a default avatar or 404
       return NextResponse.json({ error: "No avatar found" }, { status: 404 })
     }
 
