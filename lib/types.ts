@@ -55,12 +55,42 @@ export interface WeatherForecast {
 
 export interface Lead {
   id: string
-  customerId: string
-  customer: Customer
-  legs: Leg[]
-  status: "new" | "converted" | "deleted"
-  isArchived: boolean // Added isArchived field for archive functionality
-  createdAt: string
+  tenant_id: string
+  customer_name: string
+  customer_email?: string
+  customer_phone?: string
+  company?: string
+  trip_summary?: string
+  total_pax: number
+  leg_count: number
+  status: "new" | "active" | "opened" | "converted" | "expired" | "deleted" | "withdrawn"
+  created_at: string
+  earliest_departure?: string
+  last_viewed_at?: string | null
+}
+
+export interface LeadTenantEngagement {
+  id: string
+  lead_id: string
+  tenant_id: string
+  status: "new" | "opened" | "converted" | "deleted"
+  last_viewed_at?: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface LeadWithEngagement extends Lead {
+  lead_tenant_engagement?: LeadTenantEngagement[]
+}
+
+export interface LeadDetail {
+  id: string
+  lead_id: string
+  origin: string
+  destination: string
+  departureDate: string
+  departureTime: string
+  passengers: number
   notes?: string
 }
 

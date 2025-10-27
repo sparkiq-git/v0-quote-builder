@@ -3,11 +3,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Plane, MapPin, Clock, Users } from "lucide-react"
-import type { Leg } from "@/lib/types"
+import type { LeadDetail } from "@/lib/types"
 import { formatDate, formatAirportCode } from "@/lib/utils/format"
 
 interface LeadLegsTimelineProps {
-  legs: Leg[]
+  legs: LeadDetail[]
 }
 
 export function LeadLegsTimeline({ legs }: LeadLegsTimelineProps) {

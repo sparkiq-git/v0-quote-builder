@@ -7,11 +7,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Plus, Users, Archive } from "lucide-react"
 import { LeadTable } from "@/components/leads/lead-table"
+import { ErrorBoundary } from "@/components/ui/error-boundary"
+import { LeadTableSkeleton } from "@/components/leads/lead-skeletons"
 import { createClient } from "@/lib/supabase/client"
-import type { Lead } from "@/lib/types"
+import type { LeadWithEngagement } from "@/lib/types"
 
 export default function LeadsPage() {
-  const [leads, setLeads] = useState<(Lead & { last_viewed_at?: string | null })[]>([])
+  const [leads, setLeads] = useState<LeadWithEngagement[]>([])
   const [statusFilter, setStatusFilter] = useState<"active" | "expired" | "all">("active")
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -81,7 +83,7 @@ export default function LeadsPage() {
         return
       }
 
-const leadsWithView = (data || []).map((l: any) => ({
+const leadsWithView = (data || []).map((l: any): LeadWithEngagement => ({
   ...l,
   status: l.lead_tenant_engagement?.[0]?.status ?? "new",
   last_viewed_at: l.lead_tenant_engagement?.[0]?.last_viewed_at ?? null,
@@ -169,7 +171,29 @@ const leadsWithView = (data || []).map((l: any) => ({
   const expiredCount = leads.filter((l) => l.status === "expired").length
 
   if (error) return <div className="p-8 text-red-600">Error: {error}</div>
-  if (loading) return <div className="p-8 text-muted-foreground">Loading leads...</div>
+  if (loading) return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Leads</h1>
+          <p className="text-muted-foreground">Track and manage customer inquiries in real time.</p>
+        </div>
+        <div className="flex items-center gap-4">
+          <div className="h-9 w-[180px] bg-muted animate-pulse rounded-md" />
+          <div className="h-9 w-24 bg-muted animate-pulse rounded-md" />
+        </div>
+      </div>
+      <Card>
+        <CardHeader>
+          <div className="h-6 w-32 bg-muted animate-pulse rounded" />
+          <div className="h-4 w-64 bg-muted animate-pulse rounded" />
+        </CardHeader>
+        <CardContent>
+          <LeadTableSkeleton />
+        </CardContent>
+      </Card>
+    </div>
+  )
 
   return (
     <div className="space-y-6">
@@ -210,7 +234,9 @@ const leadsWithView = (data || []).map((l: any) => ({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <LeadTable data={filteredLeads} setLeads={setLeads} />
+          <ErrorBoundary>
+            <LeadTable data={filteredLeads} setLeads={setLeads} />
+          </ErrorBoundary>
         </CardContent>
       </Card>
     </div>

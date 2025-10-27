@@ -42,8 +42,10 @@ import {
 import { createClient } from "@/lib/supabase/client"
 import { useToast } from "@/hooks/use-toast"
 import { formatDate, formatTimeAgo } from "@/lib/utils/format"
-import type { Lead } from "@/lib/types"
+import type { LeadWithEngagement, LeadDetail } from "@/lib/types"
 import { LeadLegsTimeline } from "@/components/leads/lead-legs-timeline"
+import { LeadDetailModalSkeleton } from "@/components/leads/lead-skeletons"
+import { ErrorBoundary } from "@/components/ui/error-boundary"
 
 interface LeadDetailModalProps {
   leadId: string | null
@@ -56,7 +58,7 @@ export function LeadDetailModal({
   open,
   onClose,
 }: LeadDetailModalProps) {
-  const [lead, setLead] = useState<Lead | null>(null)
+  const [lead, setLead] = useState<LeadWithEngagement | null>(null)
   const [loading, setLoading] = useState(false)
   const supabase = createClient()
   const { toast } = useToast()
@@ -94,7 +96,7 @@ export function LeadDetailModal({
           setLead(basicData)
         }
       } else {
-        const leadWithDetails = {
+        const leadWithDetails: LeadWithEngagement = {
           ...data,
           details: data.details || [],
         }
@@ -207,15 +209,14 @@ const handleDeleteLead = async () => {
         </DialogHeader>
 
         {loading ? (
-          <div className="py-12 text-center text-muted-foreground">
-            Loading lead...
-          </div>
+          <LeadDetailModalSkeleton />
         ) : !lead ? (
           <div className="py-12 text-center text-muted-foreground">
             No lead found.
           </div>
         ) : (
-          <div className="space-y-6">
+          <ErrorBoundary>
+            <div className="space-y-6">
             {/* Top Controls */}
             <div className="flex justify-end gap-2">
               <AlertDialog>
@@ -363,9 +364,12 @@ const handleDeleteLead = async () => {
 
             {/* ✅ Trip Timeline */}
             {lead.details && lead.details.length > 0 && (
-              <LeadLegsTimeline legs={lead.details} />
+              <ErrorBoundary>
+                <LeadLegsTimeline legs={lead.details} />
+              </ErrorBoundary>
             )}
-          </div>
+            </div>
+          </ErrorBoundary>
         )}
       </DialogContent>
     </Dialog>

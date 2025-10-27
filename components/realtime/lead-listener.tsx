@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
+import type { Lead } from "@/lib/types"
 
 // Optional helper: small delay to debounce grouped inserts
 const debounce = (fn: Function, delay: number) => {
@@ -18,7 +19,7 @@ export function LeadListener() {
   const router = useRouter()
   const supabase = createClient()
   const soundRef = useRef<HTMLAudioElement | null>(null)
-  const pendingLeads = useRef<any[]>([])
+  const pendingLeads = useRef<Lead[]>([])
 
   useEffect(() => {
     // Preload the sound
@@ -62,7 +63,7 @@ export function LeadListener() {
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "lead" },
         (payload) => {
-          const newLead = payload.new
+          const newLead = payload.new as Lead
 
           // ✅ Only show for same tenant
           if (tenantId && newLead.tenant_id !== tenantId) return

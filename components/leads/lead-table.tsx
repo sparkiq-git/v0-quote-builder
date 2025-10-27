@@ -29,12 +29,12 @@ import { MoreHorizontal, Eye, FileText, Trash2, ArrowUpDown, Search, Filter } fr
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { createClient } from "@/lib/supabase/client";
-import type { Lead } from "@/lib/types";
+import type { Lead, LeadWithEngagement } from "@/lib/types";
 import { formatDate, formatTimeAgo } from "@/lib/utils/format";
 
 interface LeadTableProps {
-  data: Lead[];
-  setLeads?: React.Dispatch<React.SetStateAction<Lead[]>>;
+  data: LeadWithEngagement[];
+  setLeads?: React.Dispatch<React.SetStateAction<LeadWithEngagement[]>>;
   onOpenNewCountChange?: (count: number) => void; // added prop
 }
 
@@ -156,7 +156,7 @@ const handleDeleteLead = async (leadId: string, e?: React.MouseEvent) => {
     }
   }
 
-  const columns: ColumnDef<Lead>[] = [
+  const columns: ColumnDef<LeadWithEngagement>[] = [
     {
       accessorKey: "customer_name",
       header: ({ column }) => (
