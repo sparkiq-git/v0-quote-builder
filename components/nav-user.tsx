@@ -74,8 +74,8 @@ export function NavUser({ user }: NavUserProps) {
                 </div>
               </div>
             </DropdownMenuLabel>
+            <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              
               <DropdownMenuItem>
                 <Bell />
                 Notifications
