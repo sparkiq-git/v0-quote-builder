@@ -38,7 +38,7 @@ interface FormData {
   }
 }
 
-export function CreateUserModal({ open, onOpenChange, onSuccess }: CreateUserModalProps) {
+export function CreateUserModalClean({ open, onOpenChange, onSuccess }: CreateUserModalProps) {
   const [loading, setLoading] = useState(false)
   const [shiftRotations, setShiftRotations] = useState<any[]>([])
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
