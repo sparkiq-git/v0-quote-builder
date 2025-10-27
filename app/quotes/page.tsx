@@ -78,6 +78,7 @@ export default function QuotesPage() {
           status: q.status,
           createdAt: q.created_at,
           expiresAt: q.valid_until,
+          openCount: q.open_count || 0,
           customer: {
             name: q.contact_name || "—",
             email: q.contact_email || "",
@@ -332,7 +333,18 @@ export default function QuotesPage() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline">{quote.status}</Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline">{quote.status}</Badge>
+                        {quote.status === "open" && quote.openCount > 0 && (
+                          <div className="relative">
+                            <div className="w-6 h-6 bg-blue-100 border border-blue-200 rounded-full flex items-center justify-center">
+                              <span className="text-xs font-medium text-blue-700">
+                                {quote.openCount}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <div className="text-sm">
