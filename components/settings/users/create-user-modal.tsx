@@ -539,29 +539,55 @@ export function CreateUserModal({ open, onOpenChange, onSuccess }: CreateUserMod
                         )}
                       />
 
-                      <FormField
-                        control={form.control}
-                        name="crew_data.international"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                            <div className="space-y-0.5">
-                              <FormLabel className="text-base flex items-center gap-2">
-                                <Globe className="h-4 w-4" /> International Crew
-                              </FormLabel>
-                              <FormDescription className="text-sm">
-                                Enable for international flight operations
-                              </FormDescription>
-                            </div>
-                            <FormControl>
-                              <Switch
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                                className="data-[state=checked]:bg-green-600"
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
+                      <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="crew_data.international"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                              <div className="space-y-0.5">
+                                <FormLabel className="text-base flex items-center gap-2">
+                                  <Globe className="h-4 w-4" /> International Crew
+                                </FormLabel>
+                                <FormDescription className="text-sm">
+                                  Enable for international flight operations
+                                </FormDescription>
+                              </div>
+                              <FormControl>
+                                <Switch
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                  className="data-[state=checked]:bg-green-600"
+                                />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="crew_data.active"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                              <div className="space-y-0.5">
+                                <FormLabel className="text-base flex items-center gap-2">
+                                  <UserCheck className="h-4 w-4" /> Active Crew
+                                </FormLabel>
+                                <FormDescription className="text-sm">
+                                  Available for scheduling
+                                </FormDescription>
+                              </div>
+                              <FormControl>
+                                <Switch
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                  className="data-[state=checked]:bg-blue-600"
+                                />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                      </div>
                     </CardContent>
                   </Card>
                 ) : (
