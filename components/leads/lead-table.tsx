@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import {
   type ColumnDef,
   type ColumnFiltersState,
@@ -48,17 +48,21 @@ export function LeadTable({ data, setLeads, onOpenNewCountChange }: LeadTablePro
   const { toast } = useToast();
   const supabase = createClient();
 
-  //  compute "opened" | "new" count whenever the incoming table data changes
-  useEffect(() => {
-    const count = Array.isArray(data)
+  // ✅ Memoized count calculation for better performance
+  const openNewCount = useMemo(() => {
+    return Array.isArray(data)
       ? data.filter((l) => l && (l.status === "opened" || l.status === "new")).length
       : 0;
-    onOpenNewCountChange?.(count);
-  }, [data, onOpenNewCountChange]);
+  }, [data]);
+
+  // ✅ Notify parent component when count changes
+  useEffect(() => {
+    onOpenNewCountChange?.(openNewCount);
+  }, [openNewCount, onOpenNewCountChange]);
 
 
 
-  const handleRowClick = async (leadId: string) => {
+  const handleRowClick = useCallback(async (leadId: string) => {
     try {
       const { data: { session }, error: sessionError } = await supabase.auth.getSession()
       if (sessionError || !session?.access_token) return
@@ -79,9 +83,9 @@ export function LeadTable({ data, setLeads, onOpenNewCountChange }: LeadTablePro
 
     setSelectedLeadId(leadId)
     setIsModalOpen(true)
-  }
+  }, [supabase, setLeads])
 
-  const handleConvertToQuote = async (leadId: string, e?: React.MouseEvent) => {
+  const handleConvertToQuote = useCallback(async (leadId: string, e?: React.MouseEvent) => {
     e?.stopPropagation()
     try {
       const { data: leadData, error: fetchError } = await supabase
@@ -117,9 +121,9 @@ export function LeadTable({ data, setLeads, onOpenNewCountChange }: LeadTablePro
       console.error("Convert error:", err)
       toast({ title: "Error", description: "Failed to convert lead.", variant: "destructive" })
     }
-  }
+  }, [supabase, router, toast])
 
-const handleDeleteLead = async (leadId: string, e?: React.MouseEvent) => {
+const handleDeleteLead = useCallback(async (leadId: string, e?: React.MouseEvent) => {
   e?.stopPropagation()
 
   const { error } = await supabase.rpc("rpc_delete_lead", { p_lead_id: leadId })
@@ -138,10 +142,10 @@ const handleDeleteLead = async (leadId: string, e?: React.MouseEvent) => {
     title: "Lead updated",
     description: "Lead visibility handled successfully.",
   })
-}
+}, [supabase, toast])
 
 
-  const getStatusBadgeVariant = (status: string) => {
+  const getStatusBadgeVariant = useCallback((status: string) => {
     switch (status) {
       case "active":
       case "new":
@@ -154,9 +158,9 @@ const handleDeleteLead = async (leadId: string, e?: React.MouseEvent) => {
       default:
         return "outline"
     }
-  }
+  }, [])
 
-  const columns: ColumnDef<LeadWithEngagement>[] = [
+  const columns: ColumnDef<LeadWithEngagement>[] = useMemo(() => [
     {
       accessorKey: "customer_name",
       header: ({ column }) => (
@@ -257,7 +261,7 @@ const handleDeleteLead = async (leadId: string, e?: React.MouseEvent) => {
         )
       },
     },
-  ]
+  ], [getStatusBadgeVariant, handleRowClick, handleConvertToQuote, handleDeleteLead])
 
   const table = useReactTable({
     data,

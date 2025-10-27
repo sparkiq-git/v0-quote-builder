@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -153,9 +153,9 @@ const leadsWithView = (data || []).map((l: any): LeadWithEngagement => ({
   }, [sessionChecked])
 
   /**
-   * ✅ Filtering logic
+   * ✅ Memoized filtering logic for better performance
    */
-  const getFilteredLeads = () => {
+  const filteredLeads = useMemo(() => {
     switch (statusFilter) {
       case "active":
         return leads.filter((l) => ["active", "new", "opened"].includes(l.status))
@@ -164,11 +164,18 @@ const leadsWithView = (data || []).map((l: any): LeadWithEngagement => ({
       default:
         return leads
     }
-  }
+  }, [leads, statusFilter])
 
-  const filteredLeads = getFilteredLeads()
-  const activeCount = leads.filter((l) => ["active", "new", "opened"].includes(l.status)).length
-  const expiredCount = leads.filter((l) => l.status === "expired").length
+  /**
+   * ✅ Memoized counts calculation
+   */
+  const leadCounts = useMemo(() => {
+    const activeCount = leads.filter((l) => ["active", "new", "opened"].includes(l.status)).length
+    const expiredCount = leads.filter((l) => l.status === "expired").length
+    return { activeCount, expiredCount }
+  }, [leads])
+
+  const { activeCount, expiredCount } = leadCounts
 
   if (error) return <div className="p-8 text-red-600">Error: {error}</div>
   if (loading) return (
