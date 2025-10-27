@@ -180,7 +180,11 @@ const handleDeleteLead = useCallback(async (leadId: string, e?: React.MouseEvent
     },
     {
       accessorKey: "trip_summary",
-      header: "Trip Details",
+      header: ({ column }) => (
+        <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
+          Trip Details <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      ),
       cell: ({ row }) => {
         const lead = row.original
         return (
@@ -194,10 +198,22 @@ const handleDeleteLead = useCallback(async (leadId: string, e?: React.MouseEvent
         )
       },
     },
-    { accessorKey: "total_pax", header: "Passengers", cell: ({ row }) => <div className="text-center">{row.original.total_pax || 0}</div> },
+    { 
+      accessorKey: "total_pax", 
+      header: ({ column }) => (
+        <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
+          Passengers <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      ),
+      cell: ({ row }) => <div className="text-center">{row.original.total_pax || 0}</div> 
+    },
     {
       accessorKey: "status",
-      header: "Status",
+      header: ({ column }) => (
+        <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
+          Status <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      ),
       cell: ({ row }) => {
         const status = row.getValue("status") as string
         return <Badge variant={getStatusBadgeVariant(status)}>{status}</Badge>
@@ -205,7 +221,11 @@ const handleDeleteLead = useCallback(async (leadId: string, e?: React.MouseEvent
     },
     {
       accessorKey: "created_at",
-      header: "Created",
+      header: ({ column }) => (
+        <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
+          Created <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      ),
       cell: ({ row }) => {
         const date = row.getValue("created_at") as string
         return (
@@ -218,7 +238,11 @@ const handleDeleteLead = useCallback(async (leadId: string, e?: React.MouseEvent
     },
     {
       accessorKey: "last_viewed_at",
-      header: "Last Viewed",
+      header: ({ column }) => (
+        <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
+          Last Viewed <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      ),
       cell: ({ row }) => {
         const date = row.original.last_viewed_at
         return date ? (
@@ -244,15 +268,14 @@ const handleDeleteLead = useCallback(async (leadId: string, e?: React.MouseEvent
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleRowClick(lead.id) }}>
-                <Eye className="mr-2 h-4 w-4" /> View Details
-              </DropdownMenuItem>
-              {(lead.status === "active" || lead.status === "new") && (
+              {(lead.status === "new" || lead.status === "opened") && (
                 <DropdownMenuItem onClick={(e) => handleConvertToQuote(lead.id, e)}>
                   <FileText className="mr-2 h-4 w-4" /> Convert to Quote
                 </DropdownMenuItem>
               )}
-              <DropdownMenuSeparator />
+              {(lead.status === "new" || lead.status === "opened") && (
+                <DropdownMenuSeparator />
+              )}
               <DropdownMenuItem className="text-destructive" onClick={(e) => handleDeleteLead(lead.id, e)}>
                 <Trash2 className="mr-2 h-4 w-4" /> Delete Lead
               </DropdownMenuItem>
