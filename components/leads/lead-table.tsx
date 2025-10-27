@@ -296,6 +296,22 @@ const handleDeleteLead = useCallback(async (leadId: string, e?: React.MouseEvent
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     state: { sorting, columnFilters },
+    // ✅ Enhanced global filtering for better search experience
+    globalFilterFn: (row, columnId, value) => {
+      const search = value.toLowerCase()
+      const lead = row.original
+      
+      // Search across multiple fields
+      const searchableFields = [
+        lead.customer_name?.toLowerCase() || '',
+        lead.company?.toLowerCase() || '',
+        lead.trip_summary?.toLowerCase() || '',
+        lead.customer_email?.toLowerCase() || '',
+        lead.status?.toLowerCase() || ''
+      ]
+      
+      return searchableFields.some(field => field.includes(search))
+    },
   })
 
   useEffect(() => {
@@ -308,9 +324,12 @@ const handleDeleteLead = useCallback(async (leadId: string, e?: React.MouseEvent
         <div className="flex items-center space-x-2">
           <Search className="h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search leads..."
-            value={(table.getColumn("customer_name")?.getFilterValue() as string) ?? ""}
-            onChange={(e) => table.getColumn("customer_name")?.setFilterValue(e.target.value)}
+            placeholder="Search leads by name, company, email, or trip details..."
+            value={(table.getState().globalFilter as string) ?? ""}
+            onChange={(e) => {
+              // Set global filter for comprehensive search
+              table.setGlobalFilter(e.target.value)
+            }}
             className="max-w-sm"
           />
         </div>

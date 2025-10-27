@@ -2,10 +2,9 @@
 
 import { useState, useEffect, useMemo } from "react"
 import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Plus, Users, Archive } from "lucide-react"
+import { Users, Archive } from "lucide-react"
 import { LeadTable } from "@/components/leads/lead-table"
 import { ErrorBoundary } from "@/components/ui/error-boundary"
 import { LeadTableSkeleton } from "@/components/leads/lead-skeletons"
@@ -225,11 +224,6 @@ const leadsWithView = (data || []).map((l: any): LeadWithEngagement => ({
               <SelectItem value="all">All Leads</SelectItem>
             </SelectContent>
           </Select>
-
-          <Button onClick={() => router.push("/leads/new")}>
-            <Plus className="mr-2 h-4 w-4" />
-            Add Lead
-          </Button>
         </div>
       </div>
 
