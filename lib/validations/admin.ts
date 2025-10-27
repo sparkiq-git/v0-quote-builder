@@ -21,6 +21,15 @@ export const userFormSchema = z.object({
     })
     .optional(),
   avatar: z.instanceof(File).optional(),
+}).refine((data) => {
+  // If not crew, display_name is required
+  if (!data.is_crew && !data.display_name) {
+    return false
+  }
+  return true
+}, {
+  message: "Display name is required for non-crew users",
+  path: ["display_name"]
 })
 
 export type UserFormInput = z.infer<typeof userFormSchema>

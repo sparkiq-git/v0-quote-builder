@@ -256,22 +256,30 @@ export function CreateUserModal({ open, onOpenChange, onSuccess }: CreateUserMod
                       )}
                     />
 
-                    {!isCrew && (
-                      <FormField
-                        control={form.control}
-                        name="display_name"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-base">Display Name *</FormLabel>
-                            <FormControl>
-                              <Input placeholder="John Doe" {...field} className="h-11 text-base" />
-                            </FormControl>
-                            <FormDescription>Name shown throughout the application</FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    )}
+                    <FormField
+                      control={form.control}
+                      name="display_name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-base">Display Name {!isCrew ? "*" : ""}</FormLabel>
+                          <FormControl>
+                            <Input 
+                              placeholder="John Doe" 
+                              {...field} 
+                              className="h-11 text-base"
+                              disabled={isCrew}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            {isCrew 
+                              ? "Display name will be auto-generated from crew information" 
+                              : "Name shown throughout the application"
+                            }
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
                     <FormField
                       control={form.control}
