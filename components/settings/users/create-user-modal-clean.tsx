@@ -68,10 +68,10 @@ export function CreateUserModalClean({ open, onOpenChange, onSuccess }: CreateUs
       return
     }
 
-    setAvatarFile(file)
     const reader = new FileReader()
     reader.onload = (e) => setAvatarPreview(e.target?.result as string)
     reader.readAsDataURL(file)
+    setAvatarFile(file)
   }
 
   const removeAvatar = () => {
@@ -103,30 +103,17 @@ export function CreateUserModalClean({ open, onOpenChange, onSuccess }: CreateUs
       submitData.append("is_crew", "false") // Simplified - no crew logic
       submitData.append("crew_data", "null")
 
-      // Handle avatar synchronously
+      // Handle avatar using the working method from original script
       if (avatarFile) {
         try {
           const buffer = await avatarFile.arrayBuffer()
-          const uint8Array = new Uint8Array(buffer)
-          
-          // Convert to base64 using a more robust method
-          let binary = ''
-          for (let i = 0; i < uint8Array.byteLength; i++) {
-            binary += String.fromCharCode(uint8Array[i])
-          }
-          const base64 = btoa(binary)
-          
+          const base64 = btoa(String.fromCharCode(...new Uint8Array(buffer)))
           submitData.append("avatar_data", base64)
           submitData.append("avatar_name", avatarFile.name)
           submitData.append("avatar_type", avatarFile.type)
           console.log("Avatar data prepared:", { name: avatarFile.name, type: avatarFile.type, size: avatarFile.size })
         } catch (error) {
           console.error("Avatar conversion error:", error)
-          toast({
-            title: "Warning",
-            description: "Failed to process avatar image, but user will still be created",
-            variant: "destructive",
-          })
         }
       }
 

@@ -112,47 +112,27 @@ export async function createUser(formData: FormData) {
       throw authError
     }
 
-    // Handle avatar upload if provided
+    // Handle avatar upload if provided - using original working implementation
     const avatarData = formData.get("avatar_data") as string
     if (avatarData && authData.user) {
       const avatarName = formData.get("avatar_name") as string
       const avatarType = formData.get("avatar_type") as string
 
-      console.log("Processing avatar upload:", { 
-        userId: authData.user.id, 
-        fileName: avatarName, 
-        type: avatarType,
-        dataSize: avatarData.length 
+      const buffer = Uint8Array.from(atob(avatarData), (c) => c.charCodeAt(0))
+      const fileName = `${authData.user.id}/${Date.now()}-${avatarName}`
+
+      const { error: uploadError } = await supabase.storage.from("avatars").upload(fileName, buffer, {
+        contentType: avatarType,
+        upsert: true,
       })
 
-      try {
-        // Convert base64 back to buffer
-        const binaryString = atob(avatarData)
-        const buffer = new Uint8Array(binaryString.length)
-        for (let i = 0; i < binaryString.length; i++) {
-          buffer[i] = binaryString.charCodeAt(i)
-        }
-        
-        const fileName = `${authData.user.id}/${Date.now()}-${avatarName}`
-
-        const { error: uploadError } = await supabase.storage.from("avatars").upload(fileName, buffer, {
-          contentType: avatarType,
-          upsert: true,
+      if (!uploadError) {
+        await supabase.auth.admin.updateUserById(authData.user.id, {
+          user_metadata: {
+            ...authData.user.user_metadata,
+            avatar_path: fileName,
+          },
         })
-
-        if (uploadError) {
-          console.error("Avatar upload error:", uploadError)
-        } else {
-          console.log("Avatar uploaded successfully:", fileName)
-          await supabase.auth.admin.updateUserById(authData.user.id, {
-            user_metadata: {
-              ...authData.user.user_metadata,
-              avatar_path: fileName,
-            },
-          })
-        }
-      } catch (error) {
-        console.error("Avatar processing error:", error)
       }
     }
 
