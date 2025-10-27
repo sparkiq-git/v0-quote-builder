@@ -11,23 +11,8 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
-import {
-  Plus,
-  FileText,
-  Eye,
-  ExternalLink,
-  Filter,
-  Search,
-  X,
-  Trash2,
-  Calendar,
-  CheckCircle,
-  FileCheck,
-  Loader2,
-  Send,
-  FileSignature
-} from "lucide-react"
-import { formatDate, formatTimeAgo, formatCurrency } from "@/lib/utils/format"
+import { Plus, FileText, Eye, Search, Trash2, Loader2, Send, FileSignature } from "lucide-react"
+import { formatDate, formatTimeAgo } from "@/lib/utils/format"
 import { useToast } from "@/hooks/use-toast"
 import {
   Dialog,
@@ -37,7 +22,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { QuoteWorkflowStepper } from "@/components/quotes/quote-workflow-stepper"
 import { deleteQuote } from "@/lib/supabase/queries/quotes"
 
 export default function QuotesPage() {
@@ -168,10 +152,12 @@ export default function QuotesPage() {
 
     try {
       setSending(true)
-      
+
       // Check authentication
       const supabase = createClient()
-      const { data: { session } } = await supabase.auth.getSession()
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
       if (!session) throw new Error("Not authenticated")
 
       // Call Edge Function
@@ -189,9 +175,7 @@ export default function QuotesPage() {
       })
 
       // Update quote status in UI
-      setQuotes((prev) =>
-        prev.map((q) => (q.id === selectedQuote.id ? { ...q, status: "invoiced" } : q))
-      )
+      setQuotes((prev) => prev.map((q) => (q.id === selectedQuote.id ? { ...q, status: "invoiced" } : q)))
 
       // Close modal and reset
       setInvoiceContractOpen(false)
@@ -334,9 +318,7 @@ export default function QuotesPage() {
                         <Badge variant="outline">{quote.status}</Badge>
                         {quote.status === "opened" && quote.openCount > 0 && (
                           <div className="absolute -top-2 -right-1 bg-slate-100 border border-slate-200 rounded-full flex items-center justify-center font-normal w-3.5 h-3.5">
-                            <span className="text-xs font-small text-slate-700">
-                              {quote.openCount}
-                            </span>
+                            <span className="text-[0.7125rem] font-small text-slate-700">{quote.openCount}</span>
                           </div>
                         )}
                       </div>
@@ -347,56 +329,57 @@ export default function QuotesPage() {
                         <div className="text-muted-foreground">{formatTimeAgo(quote.createdAt)}</div>
                       </div>
                     </TableCell>
-<TableCell>
-  <div className="flex items-center space-x-2">
-    <Button
-      variant="default"
-      size="sm"
-      disabled={!canSendInvoiceContract(quote)}
-      onClick={() => handleOpenInvoiceContractModal(quote)}
-      title={!canSendInvoiceContract(quote) ? "Quote must be accepted to send invoice & contract" : ""}
-    >
-      <FileSignature className="mr-2 h-4 w-4" />
-      Invoice & Contract
-    </Button>
+                    <TableCell>
+                      <div className="flex items-center space-x-2">
+                        <Button
+                          variant="default"
+                          size="sm"
+                          disabled={!canSendInvoiceContract(quote)}
+                          onClick={() => handleOpenInvoiceContractModal(quote)}
+                          title={
+                            !canSendInvoiceContract(quote) ? "Quote must be accepted to send invoice & contract" : ""
+                          }
+                        >
+                          <FileSignature className="mr-2 h-4 w-4" />
+                          Invoice & Contract
+                        </Button>
 
-    <Button asChild variant="outline" size="sm">
-      <Link href={`/quotes/${quote.id}`}>
-        <Eye className="mr-2 h-4 w-4" />
-        Edit
-      </Link>
-    </Button>
+                        <Button asChild variant="outline" size="sm">
+                          <Link href={`/quotes/${quote.id}`}>
+                            <Eye className="mr-2 h-4 w-4" />
+                            Edit
+                          </Link>
+                        </Button>
 
-    <Button
-      variant="outline"
-      size="sm"
-      onClick={() => handleConvertToInvoice(quote.id)}
-      disabled={converting === quote.id}
-    >
-      {converting === quote.id ? (
-        <>
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          Creating...
-        </>
-      ) : (
-        <>
-          <FileText className="mr-2 h-4 w-4" />
-          Invoice
-        </>
-      )}
-    </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleConvertToInvoice(quote.id)}
+                          disabled={converting === quote.id}
+                        >
+                          {converting === quote.id ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Creating...
+                            </>
+                          ) : (
+                            <>
+                              <FileText className="mr-2 h-4 w-4" />
+                              Invoice
+                            </>
+                          )}
+                        </Button>
 
-    <Button
-      variant="outline"
-      size="sm"
-      onClick={() => handleDeleteQuote(quote.id)}
-      className="text-red-600 hover:text-red-700 hover:bg-red-50"
-    >
-      <Trash2 className="h-4 w-4" />
-    </Button>
-  </div>
-</TableCell>
-
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDeleteQuote(quote.id)}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
