@@ -126,7 +126,13 @@ export async function createUser(formData: FormData) {
       })
 
       try {
-        const buffer = Uint8Array.from(atob(avatarData), (c) => c.charCodeAt(0))
+        // Convert base64 back to buffer
+        const binaryString = atob(avatarData)
+        const buffer = new Uint8Array(binaryString.length)
+        for (let i = 0; i < binaryString.length; i++) {
+          buffer[i] = binaryString.charCodeAt(i)
+        }
+        
         const fileName = `${authData.user.id}/${Date.now()}-${avatarName}`
 
         const { error: uploadError } = await supabase.storage.from("avatars").upload(fileName, buffer, {

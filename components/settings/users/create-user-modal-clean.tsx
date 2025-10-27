@@ -103,12 +103,19 @@ export function CreateUserModalClean({ open, onOpenChange, onSuccess }: CreateUs
       submitData.append("is_crew", "false") // Simplified - no crew logic
       submitData.append("crew_data", "null")
 
-      // Handle avatar
+      // Handle avatar synchronously
       if (avatarFile) {
         try {
           const buffer = await avatarFile.arrayBuffer()
           const uint8Array = new Uint8Array(buffer)
-          const base64 = btoa(String.fromCharCode(...uint8Array))
+          
+          // Convert to base64 using a more robust method
+          let binary = ''
+          for (let i = 0; i < uint8Array.byteLength; i++) {
+            binary += String.fromCharCode(uint8Array[i])
+          }
+          const base64 = btoa(binary)
+          
           submitData.append("avatar_data", base64)
           submitData.append("avatar_name", avatarFile.name)
           submitData.append("avatar_type", avatarFile.type)
