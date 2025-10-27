@@ -335,7 +335,7 @@ export default function QuotesPage() {
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Badge variant="outline">{quote.status}</Badge>
-                        {quote.status === "open" && quote.openCount > 0 && (
+                        {quote.status === "opened" && quote.openCount > 0 && (
                           <div className="relative">
                             <div className="w-6 h-6 bg-blue-100 border border-blue-200 rounded-full flex items-center justify-center">
                               <span className="text-xs font-medium text-blue-700">
