@@ -248,7 +248,12 @@ export function CreateUserModal({ open, onOpenChange, onSuccess }: CreateUserMod
                         <FormItem>
                           <FormLabel className="text-base">Email Address *</FormLabel>
                           <FormControl>
-                            <Input placeholder="john.doe@company.com" {...field} className="h-11 text-base" />
+                            <Input 
+                              placeholder="john.doe@company.com" 
+                              {...field} 
+                              value={field.value || ""}
+                              className="h-11 text-base" 
+                            />
                           </FormControl>
                           <FormDescription>Used for login and notifications</FormDescription>
                           <FormMessage />
@@ -265,7 +270,8 @@ export function CreateUserModal({ open, onOpenChange, onSuccess }: CreateUserMod
                           <FormControl>
                             <Input 
                               placeholder="John Doe" 
-                              {...field} 
+                              {...field}
+                              value={field.value || ""}
                               className="h-11 text-base"
                               disabled={isCrew}
                             />
@@ -291,7 +297,7 @@ export function CreateUserModal({ open, onOpenChange, onSuccess }: CreateUserMod
                             Phone Number
                           </FormLabel>
                           <FormControl>
-                            <Input placeholder="+1 (555) 123-4567" {...field} className="h-11 text-base" />
+                            <Input placeholder="+1 (555) 123-4567" {...field} value={field.value || ""} className="h-11 text-base" />
                           </FormControl>
                           <FormDescription>Optional contact number for emergency notifications</FormDescription>
                           <FormMessage />
@@ -437,7 +443,7 @@ export function CreateUserModal({ open, onOpenChange, onSuccess }: CreateUserMod
                             <FormItem>
                               <FormLabel className="text-base">First Name *</FormLabel>
                               <FormControl>
-                                <Input placeholder="John" {...field} className="h-11 text-base" />
+                                <Input placeholder="John" {...field} value={field.value || ""} className="h-11 text-base" />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -450,7 +456,7 @@ export function CreateUserModal({ open, onOpenChange, onSuccess }: CreateUserMod
                             <FormItem>
                               <FormLabel className="text-base">Last Name *</FormLabel>
                               <FormControl>
-                                <Input placeholder="Doe" {...field} className="h-11 text-base" />
+                                <Input placeholder="Doe" {...field} value={field.value || ""} className="h-11 text-base" />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -465,7 +471,7 @@ export function CreateUserModal({ open, onOpenChange, onSuccess }: CreateUserMod
                           <FormItem>
                             <FormLabel className="text-base">Display Name *</FormLabel>
                             <FormControl>
-                              <Input placeholder="John D." {...field} className="h-11 text-base" />
+                              <Input placeholder="John D." {...field} value={field.value || ""} className="h-11 text-base" />
                             </FormControl>
                             <FormDescription>Name shown in schedules and assignments</FormDescription>
                             <FormMessage />
@@ -483,7 +489,7 @@ export function CreateUserModal({ open, onOpenChange, onSuccess }: CreateUserMod
                               Crew Phone
                             </FormLabel>
                             <FormControl>
-                              <Input placeholder="+1 (555) 123-4567" {...field} className="h-11 text-base" />
+                              <Input placeholder="+1 (555) 123-4567" {...field} value={field.value || ""} className="h-11 text-base" />
                             </FormControl>
                             <FormDescription>Separate contact for crew operations</FormDescription>
                             <FormMessage />
@@ -501,7 +507,7 @@ export function CreateUserModal({ open, onOpenChange, onSuccess }: CreateUserMod
                               Home Base
                             </FormLabel>
                             <FormControl>
-                              <Input placeholder="Los Angeles, CA" {...field} className="h-11 text-base" />
+                              <Input placeholder="Los Angeles, CA" {...field} value={field.value || ""} className="h-11 text-base" />
                             </FormControl>
                             <FormDescription>Primary operating location</FormDescription>
                             <FormMessage />

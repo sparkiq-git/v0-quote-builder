@@ -12,8 +12,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useToast } from "@/hooks/use-toast"
 import { getUsers, deleteUser, resendInvite, resetPassword } from "@/lib/actions/admin-users"
 import { CreateUserModal } from "./create-user-modal"
-import { CreateUserModalSimple } from "./create-user-modal-simple"
-import { TestModal } from "./test-modal"
 import { EditUserModal } from "./edit-user-modal"
 import { RoleManagementModal } from "./role-management-modal"
 import type { AdminUser } from "@/lib/types/admin"
@@ -396,8 +394,7 @@ export function UsersListClient() {
       </Card>
 
       {/* Modals */}
-      {/* Testing with basic HTML form to isolate the issue */}
-      <TestModal open={showCreateModal} onOpenChange={setShowCreateModal} onSuccess={loadUsers} />
+      <CreateUserModal open={showCreateModal} onOpenChange={setShowCreateModal} onSuccess={loadUsers} />
 
       <EditUserModal open={showEditModal} onOpenChange={setShowEditModal} onSuccess={loadUsers} user={selectedUser} />
 
