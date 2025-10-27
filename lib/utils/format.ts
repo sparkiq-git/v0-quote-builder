@@ -1,4 +1,5 @@
 import { format, formatDistanceToNow, isValid, parseISO } from "date-fns"
+import { getAirportCoordinates } from "@/lib/data/airports"
 
 export function formatCurrency(amount: number): string {
   // Handle NaN, undefined, or null values
@@ -48,6 +49,22 @@ export function formatFlightTime(hours: number): string {
 
 export function formatAirportCode(code: string): string {
   return code.toUpperCase()
+}
+
+export function getAirportName(code: string): string | null {
+  const airport = getAirportCoordinates(code)
+  return airport?.name || null
+}
+
+export function formatAirportDisplay(code: string, name?: string): string {
+  const airportCode = formatAirportCode(code)
+  const airportName = name || getAirportName(code)
+  
+  if (airportName) {
+    return `${airportCode} (${airportName})`
+  }
+  
+  return airportCode
 }
 
 export function generateQuoteToken(): string {

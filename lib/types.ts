@@ -86,12 +86,23 @@ export interface LeadWithEngagement extends Lead {
 export interface LeadDetail {
   id: string
   lead_id: string
-  origin: string
-  destination: string
-  departureDate: string
-  departureTime: string
-  passengers: number
+  seq: number
+  origin?: string
+  origin_code?: string
+  destination?: string
+  destination_code?: string
+  depart_dt?: string
+  depart_time?: string
+  pax_count?: number
+  aircraft_pref_override?: string
   notes?: string
+  created_at: string
+  updated_at: string
+  origin_lat?: number
+  origin_long?: number
+  destination_lat?: number
+  destination_long?: number
+  distance_nm?: number
 }
 
 export interface AircraftType {
