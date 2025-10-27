@@ -12,7 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useToast } from "@/hooks/use-toast"
 import { getUsers, deleteUser, resendInvite, resetPassword } from "@/lib/actions/admin-users"
 import { CreateUserModal } from "./create-user-modal"
-import { CreateUserModalMinimal } from "./create-user-modal-minimal"
+import { CreateUserModalClean } from "./create-user-modal-clean"
 import { EditUserModal } from "./edit-user-modal"
 import { RoleManagementModal } from "./role-management-modal"
 import type { AdminUser } from "@/lib/types/admin"
@@ -395,8 +395,8 @@ export function UsersListClient() {
       </Card>
 
       {/* Modals */}
-      {/* Testing with minimal react-hook-form to isolate the issue */}
-      <CreateUserModalMinimal open={showCreateModal} onOpenChange={setShowCreateModal} onSuccess={loadUsers} />
+      {/* Clean implementation built from scratch */}
+      <CreateUserModalClean open={showCreateModal} onOpenChange={setShowCreateModal} onSuccess={loadUsers} />
 
       <EditUserModal open={showEditModal} onOpenChange={setShowEditModal} onSuccess={loadUsers} user={selectedUser} />
 
