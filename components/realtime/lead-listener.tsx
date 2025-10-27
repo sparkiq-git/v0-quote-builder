@@ -14,7 +14,7 @@ const debounce = (fn: Function, delay: number) => {
   }
 }
 
-export function LeadListener({ tenantId }: { tenantId?: string | null }) {
+export function LeadListener() {
   const router = useRouter()
   const supabase = createClient()
   const soundRef = useRef<HTMLAudioElement | null>(null)
@@ -26,9 +26,12 @@ export function LeadListener({ tenantId }: { tenantId?: string | null }) {
 
     const subscribeRealtime = async () => {
       const { data: { session } } = await supabase.auth.getSession()
-      if (session) {
-        supabase.realtime.setAuth(session.access_token)
-      }
+      if (!session) return // No session, no need to listen
+      
+      supabase.realtime.setAuth(session.access_token)
+      
+      // Get tenantId from user metadata
+      const tenantId = session.user?.app_metadata?.tenant_id
 
       const channel = supabase.channel("global-leads-listener")
 
@@ -77,7 +80,7 @@ export function LeadListener({ tenantId }: { tenantId?: string | null }) {
     }
 
     subscribeRealtime()
-  }, [tenantId, router, supabase])
+  }, [router, supabase])
 
   return null // no UI, background listener only
 }

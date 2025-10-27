@@ -8,7 +8,6 @@ import { MockStoreProvider } from "@/lib/mock/store"
 import { Toaster } from "sonner"
 import { Toaster as CustomToaster } from "@/components/ui/toaster"
 import { LeadListener } from "@/components/realtime/lead-listener"
-import { getServerUser } from "@/lib/supabase/server" // server-side only
 
 const inter = Inter({
   subsets: ["latin"],
@@ -33,16 +32,6 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode
 }) {
-  // ✅ SERVER-SAFE Supabase call
-  let tenantId: string | null = null
-
-  try {
-    const { tenantId: userTenantId } = await getServerUser()
-    tenantId = userTenantId
-  } catch (err) {
-    console.warn("Supabase user fetch failed (likely client render):", err)
-  }
-
   return (
     <html
       lang="en"
@@ -60,7 +49,7 @@ export default async function RootLayout({
           <CustomToaster />
 
           {/* ✅ Global listener; runs safely client-side only */}
-          <LeadListener tenantId={tenantId} />
+          <LeadListener />
         </MockStoreProvider>
       </body>
     </html>
