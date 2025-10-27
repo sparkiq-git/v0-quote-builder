@@ -1,6 +1,6 @@
 import type React from "react"
 import type { Metadata } from "next"
-import { Geist, Geist_Mono } from "next/font/google"
+import { Inter, JetBrains_Mono } from "next/font/google"
 import "./globals.css"
 import { MockStoreProvider } from "@/lib/mock/store"
 
@@ -10,16 +10,16 @@ import { Toaster as CustomToaster } from "@/components/ui/toaster"
 import { LeadListener } from "@/components/realtime/lead-listener"
 import { getServerUser } from "@/lib/supabase/server" // server-side only
 
-const geistSans = Geist({
+const inter = Inter({
   subsets: ["latin"],
   display: "swap",
-  variable: "--font-geist-sans",
+  variable: "--font-inter",
 })
 
-const geistMono = Geist_Mono({
+const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
   display: "swap",
-  variable: "--font-geist-mono",
+  variable: "--font-jetbrains-mono",
 })
 
 export const metadata: Metadata = {
@@ -46,7 +46,7 @@ export default async function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+      className={`${inter.variable} ${jetbrainsMono.variable} antialiased`}
       suppressHydrationWarning
     >
       <body>
