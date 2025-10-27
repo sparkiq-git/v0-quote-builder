@@ -1,8 +1,9 @@
 "use client"
-import { supabase } from "@/lib/supabase/client"
+import { createClient } from "@/lib/supabase/client"
 import type { AircraftRecord } from "@/lib/types"
 
 export async function getAircraft(): Promise<AircraftRecord[]> {
+  const supabase = createClient()
   const { data, error } = await supabase
     .from("aircraft")
     .select("*")

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { createClient } from "@supabase/supabase-js"
+import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -40,11 +40,6 @@ import {
 import { QuoteWorkflowStepper } from "@/components/quotes/quote-workflow-stepper"
 import { deleteQuote } from "@/lib/supabase/queries/quotes"
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
-
 export default function QuotesPage() {
   const router = useRouter()
   const { toast } = useToast()
@@ -64,6 +59,7 @@ export default function QuotesPage() {
   useEffect(() => {
     const fetchQuotes = async () => {
       try {
+        const supabase = createClient()
         const tenantId = process.env.NEXT_PUBLIC_TENANT_ID!
         const { data, error } = await supabase
           .from("quote")
@@ -174,6 +170,7 @@ export default function QuotesPage() {
       setSending(true)
       
       // Check authentication
+      const supabase = createClient()
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) throw new Error("Not authenticated")
 

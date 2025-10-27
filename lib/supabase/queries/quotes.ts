@@ -1,6 +1,6 @@
 "use client"
 
-import { supabase } from "@/lib/supabase/client"
+import { createClient } from "@/lib/supabase/client"
 
 /* =========================================================
    HELPERS
@@ -20,6 +20,7 @@ function req<T>(v: T | null | undefined, msg: string): T {
    CREATE
 ========================================================= */
 export async function createQuote(tenantId?: string) {
+  const supabase = createClient()
   const { data: userData, error: userError } = await supabase.auth.getUser()
   if (userError) throw userError
   const user = userData?.user
@@ -62,6 +63,7 @@ export async function createQuote(tenantId?: string) {
 ========================================================= */
 export async function getQuoteById(id: string) {
   if (!id) throw new Error("Missing quote id")
+  const supabase = createClient()
 
   const { data: quote, error: quoteError } = await supabase
     .from("quote")
@@ -142,6 +144,7 @@ export async function saveQuoteAll(quote: any) {
 ========================================================= */
 export async function deleteQuote(id: string) {
   if (!id) throw new Error("Missing quote ID")
+  const supabase = createClient()
 
   await Promise.all([
     supabase.from("quote_detail").delete().eq("quote_id", id),
