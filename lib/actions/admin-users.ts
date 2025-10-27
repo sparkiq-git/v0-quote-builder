@@ -356,3 +356,17 @@ export async function getRoleStatistics() {
     return { success: false, error: "Failed to get role statistics", data: {} }
   }
 }
+
+export async function getShiftRotations() {
+  try {
+    const supabase = getAdminClient()
+    const { data, error } = await supabase.from("shift_rotations").select("*").order("name")
+
+    if (error) throw error
+
+    return { success: true, data: (data || []) as ShiftRotation[] }
+  } catch (error) {
+    console.error("Get shift rotations error:", error)
+    return { success: false, data: [] }
+  }
+}
