@@ -105,11 +105,22 @@ export function CreateUserModalClean({ open, onOpenChange, onSuccess }: CreateUs
 
       // Handle avatar
       if (avatarFile) {
-        const buffer = await avatarFile.arrayBuffer()
-        const base64 = btoa(String.fromCharCode(...new Uint8Array(buffer)))
-        submitData.append("avatar_data", base64)
-        submitData.append("avatar_name", avatarFile.name)
-        submitData.append("avatar_type", avatarFile.type)
+        try {
+          const buffer = await avatarFile.arrayBuffer()
+          const uint8Array = new Uint8Array(buffer)
+          const base64 = btoa(String.fromCharCode(...uint8Array))
+          submitData.append("avatar_data", base64)
+          submitData.append("avatar_name", avatarFile.name)
+          submitData.append("avatar_type", avatarFile.type)
+          console.log("Avatar data prepared:", { name: avatarFile.name, type: avatarFile.type, size: avatarFile.size })
+        } catch (error) {
+          console.error("Avatar conversion error:", error)
+          toast({
+            title: "Warning",
+            description: "Failed to process avatar image, but user will still be created",
+            variant: "destructive",
+          })
+        }
       }
 
       const result = await createUser(submitData)
@@ -123,11 +134,20 @@ export function CreateUserModalClean({ open, onOpenChange, onSuccess }: CreateUs
         onOpenChange(false)
         resetForm()
       } else {
-        toast({
-          title: "Error",
-          description: result.error || "Failed to create user",
-          variant: "destructive",
-        })
+        // Handle specific error cases
+        if (result.error?.includes("email_exists") || result.error?.includes("already been registered")) {
+          toast({
+            title: "User Already Exists",
+            description: `A user with email ${formData.email} already exists. Please use a different email address.`,
+            variant: "destructive",
+          })
+        } else {
+          toast({
+            title: "Error",
+            description: result.error || "Failed to create user",
+            variant: "destructive",
+          })
+        }
       }
     } catch (error) {
       toast({

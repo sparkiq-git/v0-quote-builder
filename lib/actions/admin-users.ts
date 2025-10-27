@@ -104,7 +104,13 @@ export async function createUser(formData: FormData) {
       },
     })
 
-    if (authError) throw authError
+    if (authError) {
+      console.error("Create user auth error:", authError)
+      if (authError.message.includes("email_exists") || authError.message.includes("already been registered")) {
+        return { success: false, error: "A user with this email address has already been registered" }
+      }
+      throw authError
+    }
 
     // Handle avatar upload if provided
     const avatarData = formData.get("avatar_data") as string
@@ -112,21 +118,35 @@ export async function createUser(formData: FormData) {
       const avatarName = formData.get("avatar_name") as string
       const avatarType = formData.get("avatar_type") as string
 
-      const buffer = Uint8Array.from(atob(avatarData), (c) => c.charCodeAt(0))
-      const fileName = `${authData.user.id}/${Date.now()}-${avatarName}`
-
-      const { error: uploadError } = await supabase.storage.from("avatars").upload(fileName, buffer, {
-        contentType: avatarType,
-        upsert: true,
+      console.log("Processing avatar upload:", { 
+        userId: authData.user.id, 
+        fileName: avatarName, 
+        type: avatarType,
+        dataSize: avatarData.length 
       })
 
-      if (!uploadError) {
-        await supabase.auth.admin.updateUserById(authData.user.id, {
-          user_metadata: {
-            ...authData.user.user_metadata,
-            avatar_path: fileName,
-          },
+      try {
+        const buffer = Uint8Array.from(atob(avatarData), (c) => c.charCodeAt(0))
+        const fileName = `${authData.user.id}/${Date.now()}-${avatarName}`
+
+        const { error: uploadError } = await supabase.storage.from("avatars").upload(fileName, buffer, {
+          contentType: avatarType,
+          upsert: true,
         })
+
+        if (uploadError) {
+          console.error("Avatar upload error:", uploadError)
+        } else {
+          console.log("Avatar uploaded successfully:", fileName)
+          await supabase.auth.admin.updateUserById(authData.user.id, {
+            user_metadata: {
+              ...authData.user.user_metadata,
+              avatar_path: fileName,
+            },
+          })
+        }
+      } catch (error) {
+        console.error("Avatar processing error:", error)
       }
     }
 
