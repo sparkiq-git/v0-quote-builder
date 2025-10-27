@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast"
 import { getUsers, deleteUser, resendInvite, resetPassword } from "@/lib/actions/admin-users"
 import { CreateUserModal } from "./create-user-modal"
 import { EditUserModal } from "./edit-user-modal"
+import { RoleManagementModal } from "./role-management-modal"
 import type { AdminUser } from "@/lib/types/admin"
 import { AVAILABLE_ROLES } from "@/lib/types/admin"
 import {
@@ -27,6 +28,7 @@ import {
   Users,
   Edit,
   AlertCircle,
+  Shield,
 } from "lucide-react"
 
 export function UsersListClient() {
@@ -38,6 +40,7 @@ export function UsersListClient() {
   const [crewFilter, setCrewFilter] = useState("all")
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
+  const [showRoleManagement, setShowRoleManagement] = useState(false)
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null)
   const { toast } = useToast()
 
@@ -229,10 +232,16 @@ export function UsersListClient() {
           <h2 className="text-2xl font-bold tracking-tight">Users</h2>
           <p className="text-muted-foreground">Manage user accounts and crew profiles</p>
         </div>
-        <Button onClick={() => setShowCreateModal(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Create User
-        </Button>
+        <div className="flex gap-3">
+          <Button variant="outline" onClick={() => setShowRoleManagement(true)}>
+            <Shield className="h-4 w-4 mr-2" />
+            Manage Roles
+          </Button>
+          <Button onClick={() => setShowCreateModal(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Create User
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -388,6 +397,13 @@ export function UsersListClient() {
       <CreateUserModal open={showCreateModal} onOpenChange={setShowCreateModal} onSuccess={loadUsers} />
 
       <EditUserModal open={showEditModal} onOpenChange={setShowEditModal} onSuccess={loadUsers} user={selectedUser} />
+
+      <RoleManagementModal 
+        open={showRoleManagement} 
+        onOpenChange={setShowRoleManagement} 
+        users={users}
+        onRoleUpdate={loadUsers}
+      />
     </div>
   )
 }

@@ -255,16 +255,104 @@ export async function resetPassword(email: string) {
   }
 }
 
-export async function getShiftRotations() {
+export async function bulkUpdateUserRoles(userIds: string[], role: string, action: "add" | "remove") {
   try {
     const supabase = getAdminClient()
-    const { data, error } = await supabase.from("shift_rotations").select("*").order("name")
+    const results = []
 
-    if (error) throw error
+    for (const userId of userIds) {
+      // Get current user data
+      const { data: userData, error: userError } = await supabase.auth.admin.getUserById(userId)
+      if (userError) {
+        results.push({ userId, success: false, error: userError.message })
+        continue
+      }
 
-    return { success: true, data: (data || []) as ShiftRotation[] }
+      const currentRoles = Array.isArray(userData.user.app_metadata?.roles)
+        ? userData.user.app_metadata.roles
+        : userData.user.app_metadata?.role
+          ? [userData.user.app_metadata.role]
+          : []
+
+      let updatedRoles: string[]
+      if (action === "add") {
+        updatedRoles = currentRoles.includes(role) ? currentRoles : [...currentRoles, role]
+      } else {
+        updatedRoles = currentRoles.filter(r => r !== role)
+      }
+
+      // Update user roles
+      const { error: updateError } = await supabase.auth.admin.updateUserById(userId, {
+        app_metadata: {
+          ...userData.user.app_metadata,
+          roles: updatedRoles,
+          role: updatedRoles[0] || null,
+        },
+      })
+
+      if (updateError) {
+        results.push({ userId, success: false, error: updateError.message })
+      } else {
+        results.push({ userId, success: true })
+      }
+    }
+
+    const successCount = results.filter(r => r.success).length
+    const failureCount = results.filter(r => !r.success).length
+
+    return {
+      success: failureCount === 0,
+      data: results,
+      summary: {
+        total: userIds.length,
+        success: successCount,
+        failed: failureCount,
+      },
+    }
   } catch (error) {
-    console.error("Get shift rotations error:", error)
-    return { success: false, data: [] }
+    console.error("Bulk update user roles error:", error)
+    return { success: false, error: "Failed to update user roles", data: [] }
+  }
+}
+
+export async function getRoleStatistics() {
+  try {
+    const supabase = getAdminClient()
+
+    // Get all users
+    const { data: authData, error: authError } = await supabase.auth.admin.listUsers({
+      page: 1,
+      perPage: 1000, // Adjust based on your user count
+    })
+
+    if (authError) throw authError
+
+    // Calculate role statistics
+    const roleStats = {
+      admin: 0,
+      manager: 0,
+      dispatcher: 0,
+      crew: 0,
+      viewer: 0,
+    }
+
+    authData.users.forEach((user) => {
+      const roles = Array.isArray(user.app_metadata?.roles)
+        ? user.app_metadata.roles
+        : user.app_metadata?.role
+          ? [user.app_metadata.role]
+          : []
+
+      roles.forEach((role) => {
+        if (role in roleStats) {
+          roleStats[role as keyof typeof roleStats]++
+        }
+      })
+    })
+
+    return { success: true, data: roleStats }
+  } catch (error) {
+    console.error("Get role statistics error:", error)
+    return { success: false, error: "Failed to get role statistics", data: {} }
   }
 }
