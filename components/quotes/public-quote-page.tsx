@@ -71,8 +71,8 @@ function ElegantConnector() {
       >
         <path d="M1 5h6.5M7 2l4 3-4 3" stroke="#9CA3AF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
-      <span className="absolute left-[7%] top-1/2 -translate-y-1/2 w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-blue-600" />
-      <span className="absolute right-[7%] top-1/2 -translate-y-1/2 w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-blue-600" />
+      <span className="absolute left-[7%] top-1/2 -translate-y-1/2 w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-gray-600" />
+      <span className="absolute right-[7%] top-1/2 -translate-y-1/2 w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-gray-600" />
     </div>
   )
 }
@@ -647,7 +647,7 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
           <div className="space-y-2 sm:space-y-3 md:space-y-4 lg:space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 bg-white/80 backdrop-blur-sm p-3 sm:p-4 md:p-5 lg:p-6 rounded-xl border border-gray-200/50">
               <div className="flex items-center gap-2">
-                <Plane className="h-5 w-5 text-blue-600" />
+                <Plane className="h-5 w-5 text-gray-600" />
                 <p className="text-gray-800 font-semibold text-sm sm:text-base">Aircraft Options</p>
               </div>
               <Badge
@@ -696,7 +696,7 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
           >
             <div className="space-y-3 pb-6">
               {quote.status === "itinerary_created" && (
-                <Button asChild className="w-full !bg-blue-600 hover:!bg-blue-700 !text-white !font-semibold">
+                <Button asChild className="w-full !bg-gray-600 hover:!bg-gray-700 !text-white !font-semibold">
                   <a href={`/itineraries/${quote.id}`} target="_blank" rel="noopener noreferrer">
                     View Your Itinerary
                   </a>
@@ -707,7 +707,7 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
                 onClick={selectedOptionId ? handleSubmitQuote : undefined}
                 disabled={isLocked || !selectedOptionId}
                 className={`w-full hover:opacity-90 transition-opacity !font-semibold ${
-                  !isLocked && selectedOptionId ? "!bg-blue-700" : ""
+                  !isLocked && selectedOptionId ? "!bg-gray-700" : ""
                 }`}
                 style={{
                   ...getButtonStyle(),
@@ -904,7 +904,7 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
                 >
                   <div className="space-y-3">
                     {quote.status === "itinerary_created" && (
-                      <Button asChild className="w-full !bg-blue-600 hover:!bg-blue-700 !text-white !font-semibold">
+                      <Button asChild className="w-full !bg-gray-600 hover:!bg-gray-700 !text-white !font-semibold">
                         <a href={`/itineraries/${quote.id}`} target="_blank" rel="noopener noreferrer">
                           View Your Itinerary
                         </a>
@@ -915,7 +915,7 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
                       onClick={selectedOptionId ? handleSubmitQuote : undefined}
                       disabled={isLocked || !selectedOptionId}
                       className={`w-full hover:opacity-90 transition-opacity relative z-50 !font-semibold ${
-                        !isLocked && selectedOptionId ? "!bg-blue-700" : ""
+                        !isLocked && selectedOptionId ? "!bg-gray-700" : ""
                       }`}
                       style={{
                         ...getButtonStyle(),
@@ -953,7 +953,7 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
           <div className="h-full pt-3 lg:pt-4 xl:pt-6 pb-3 lg:pb-4 xl:pb-6 px-2 lg:px-3 xl:px-3">
             <div className="h-full overflow-y-auto overflow-x-hidden bg-white/95 backdrop-blur-sm border border-gray-200/50 rounded-2xl shadow-xl p-0">
               <div className="p-0">
-                <div className="px-4 xl:px-6 py-3 xl:py-4 border-b border-gray-200/50 bg-gradient-to-r from-white/90 to-blue-50/50 backdrop-blur-sm mb-3 xl:mb-4">
+                <div className="px-4 xl:px-6 py-3 xl:py-4 border-b border-gray-200/50 bg-gradient-to-r from-white/90 to-gray-50/50 backdrop-blur-sm mb-3 xl:mb-4">
                   <div className="flex items-center justify-end">
                     
                     <Badge variant={statusDisplay.variant} className="text-xs flex items-center gap-1 px-3 py-1">

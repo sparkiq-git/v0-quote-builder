@@ -201,8 +201,8 @@ export function PublicQuoteOptionCard({
                       </h3>
                       <p className="text-xs sm:text-sm text-gray-500 font-light tracking-wide">
                         {aircraftModel?.manufacturer || "Aircraft Manufacturer"}
-                        {aircraftTail?.notes && (
-                          <span className="text-gray-400 font-normal"> ({aircraftTail.notes})</span>
+                        {option.notes && (
+                          <span className="text-gray-400 font-normal"> ({option.notes})</span>
                         )}
                       </p>
                     </div>
@@ -300,7 +300,7 @@ export function PublicQuoteOptionCard({
                     </div>
                   </div>
                   {isSelected && (
-                    <div className="flex items-center gap-1.5 border border-green-200/80 bg-green-50 text-green-700 px-2.5 py-1 rounded-full self-start sm:self-auto">
+                    <div className="flex items-center gap-1.5 border border-gray-200/80 bg-gray-50 text-gray-700 px-2.5 py-1 rounded-full self-start sm:self-auto">
                       <CheckCircle className="h-3 w-3" />
                       <span className="text-[10px] sm:text-xs font-light tracking-wide">Selected</span>
                     </div>
@@ -310,7 +310,7 @@ export function PublicQuoteOptionCard({
                 <Button
                   className={`w-full font-light tracking-wide text-xs sm:text-sm md:text-sm py-2.5 sm:py-3 md:py-3.5 rounded-lg transition-all duration-300 touch-manipulation ${
                     isSelected
-                      ? "!bg-green-600 hover:!bg-green-700 !text-white border-0 shadow-sm hover:shadow-md"
+                      ? "!bg-gray-600 hover:!bg-gray-700 !text-white border-0 shadow-sm hover:shadow-md"
                       : hasSelectedOption && !isSelected
                         ? "!bg-gray-300 hover:!bg-gray-400 !text-gray-600 !border-gray-300"
                         : "!bg-gray-900 hover:!bg-gray-800 !text-white border-0 shadow-sm hover:shadow-md"

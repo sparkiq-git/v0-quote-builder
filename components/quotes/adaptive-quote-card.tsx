@@ -271,8 +271,8 @@ export function AdaptiveQuoteCard({
                   }`}
                 >
                   {aircraftModel?.manufacturer || "Aircraft Manufacturer"}
-                  {aircraftTail?.notes && (
-                    <span className="text-white/80 font-normal"> ({aircraftTail.notes})</span>
+                  {option.notes && (
+                    <span className="text-white/80 font-normal"> ({option.notes})</span>
                   )}
                 </p>
 
@@ -300,7 +300,7 @@ export function AdaptiveQuoteCard({
               </div>
 
               {isSelected && (
-                <div className="flex items-center gap-1.5 bg-green-500 text-white px-3 py-1.5 rounded-full shadow-2xl border-2 border-white/30">
+                <div className="flex items-center gap-1.5 bg-gray-600 text-white px-3 py-1.5 rounded-full shadow-2xl border-2 border-white/30">
                   <CheckCircle className="h-4 w-4" aria-hidden="true" />
                   <span className="font-semibold text-xs tracking-wide">Selected</span>
                 </div>
@@ -415,7 +415,7 @@ export function AdaptiveQuoteCard({
                   : "text-lg py-3"
             } ${
               isSelected
-                ? "!bg-green-600 hover:!bg-green-700 !text-white border-0"
+                ? "!bg-gray-600 hover:!bg-gray-700 !text-white border-0"
                 : hasSelectedOption && !isSelected
                   ? "!bg-gray-400 hover:!bg-gray-500 !text-white !border-gray-400"
                   : "!bg-gray-900 hover:!bg-black !text-white border-0"
