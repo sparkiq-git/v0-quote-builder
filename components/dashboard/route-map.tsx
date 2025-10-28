@@ -29,6 +29,7 @@ type RouteLeg = {
 type Route = {
   id: string;
   customerName: string;
+  contactEmail?: string;
   status: string;
   createdAt: string;
   legs: RouteLeg[];
@@ -140,7 +141,8 @@ export function RouteMap() {
           destination_long,
           quote:quote_id (
             id,
-            customer_name,
+            contact_name,
+            contact_email,
             status,
             created_at
           )
@@ -165,7 +167,8 @@ export function RouteMap() {
         )
         .map((r) => ({
           id: String(r.quote_id),
-          customerName: r.quote?.customer_name ?? "Unknown",
+          customerName: r.quote?.contact_name ?? "Unknown",
+          contactEmail: r.quote?.contact_email ?? "",
           status: r.quote?.status ?? "unknown",
           createdAt: r.quote?.created_at ?? "",
           legs: [
@@ -328,6 +331,7 @@ export function RouteMap() {
         airplane.bindPopup(`
           <div class="text-sm space-y-2">
             <div class="font-semibold text-base">${route.customerName}</div>
+            ${route.contactEmail ? `<div>${route.contactEmail}</div>` : ""}
             <div><strong>Route:</strong> ${leg.origin} → ${leg.destination}</div>
             <div><strong>Status:</strong> ${route.status}</div>
             <div><strong>Departure:</strong> ${new Date(
