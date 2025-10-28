@@ -115,7 +115,7 @@ useEffect(() => {
           ],
         });
 
-        if (formatted.length >= 10) break; // still limit to 10 on map for clarity
+        // if (formatted.length >= 10) break;
       }
 
       setRoutes(formatted);
