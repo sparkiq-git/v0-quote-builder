@@ -115,7 +115,7 @@ export function AdaptiveQuoteCard({
   const scrollTo = useCallback((index: number) => api?.scrollTo(index), [api])
 
   const amenities = option.selectedAmenities || []
-  const capacity = aircraftTail?.capacityOverride || aircraftModel?.defaultCapacity || 0
+  const capacity = aircraftTail?.capacityOverride || aircraftModel?.defaultCapacity || 8
 
   const getCardClasses = () => {
     const baseClasses =
@@ -271,6 +271,9 @@ export function AdaptiveQuoteCard({
                   }`}
                 >
                   {aircraftModel?.manufacturer || "Aircraft Manufacturer"}
+                  {aircraftTail?.notes && (
+                    <span className="text-white/80 font-normal"> ({aircraftTail.notes})</span>
+                  )}
                 </p>
 
                 {amenities.length > 0 && (

@@ -300,6 +300,7 @@ export interface AircraftTail {
   capacityOverride?: number
   rangeNmOverride?: number
   speedKnotsOverride?: number
+  notes?: string
   isArchived: boolean
   createdAt: string
   updatedAt: string

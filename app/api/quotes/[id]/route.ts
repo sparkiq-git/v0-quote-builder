@@ -259,6 +259,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
               })
               .filter(Boolean) || [],
             capacityOverride: aircraft.capacity_pax,
+            notes: aircraft.notes,
             rangeNmOverride: aircraft.range_nm,
             speedKnotsOverride: aircraft.cruising_speed,
             status: aircraft.status,

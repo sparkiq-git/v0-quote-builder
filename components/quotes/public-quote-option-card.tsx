@@ -114,7 +114,7 @@ export function PublicQuoteOptionCard({
   const scrollTo = useCallback((index: number) => api?.scrollTo(index), [api])
 
   const amenities = option.selectedAmenities || []
-  const capacity = aircraftTail?.capacityOverride || aircraftModel?.defaultCapacity || 0
+  const capacity = aircraftTail?.capacityOverride || aircraftModel?.defaultCapacity || 8
 
   return (
     <div className="mx-auto w-full max-w-screen-xl px-2 sm:px-3 md:px-4 lg:px-6 xl:px-8 pb-3 sm:pb-4 md:pb-5 lg:pb-6">
@@ -201,6 +201,9 @@ export function PublicQuoteOptionCard({
                       </h3>
                       <p className="text-xs sm:text-sm text-gray-500 font-light tracking-wide">
                         {aircraftModel?.manufacturer || "Aircraft Manufacturer"}
+                        {aircraftTail?.notes && (
+                          <span className="text-gray-400 font-normal"> ({aircraftTail.notes})</span>
+                        )}
                       </p>
                     </div>
                     <div className="flex items-center gap-1.5 border border-gray-200/80 px-2.5 py-1 rounded-full self-start sm:self-auto">
