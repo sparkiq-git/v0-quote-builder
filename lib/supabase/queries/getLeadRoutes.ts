@@ -1,10 +1,9 @@
 import { createClient } from "@/lib/supabase/client"
 
-export async function getLeadRoutes(limit = 10) {
+export async function getLeadRoutes() {
   const supabase = createClient()
-  const now = new Date().toISOString()
 
-  // 1. Get upcoming leads (status new or opened)
+  // 1. Get all leads with status new or opened (no date filter)
   const { data, error } = await supabase
     .from("lead_detail")
     .select(`
@@ -26,10 +25,8 @@ export async function getLeadRoutes(limit = 10) {
         created_at
       )
     `)
-    .gt("depart_dt", now)
-    .in("lead.status", ["new", "opened"]) // Filter leads
-    .order("depart_dt", { ascending: true })
-    .limit(limit)
+    .in("lead.status", ["new", "opened"]) // only new/opened leads
+    .order("depart_dt", { ascending: true }) // optional sort by date
 
   if (error) throw error
 
@@ -55,6 +52,7 @@ export async function getLeadRoutes(limit = 10) {
             lng: r.destination_long,
             name: r.destination_code,
           },
+          departDt: r.depart_dt,
         },
       ],
     })) ?? []
