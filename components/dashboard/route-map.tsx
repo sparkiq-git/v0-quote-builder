@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Plus, Minus, RotateCcw, MapPin } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -14,6 +15,8 @@ declare global {
 
 const US_CENTER: [number, number] = [39.8, -98.6];
 const US_ZOOM = 4;
+
+type FilterType = "leads" | "upcoming";
 
 type RouteLeg = {
   origin: string;
@@ -32,6 +35,7 @@ type Route = {
 };
 
 export function RouteMap() {
+  const [activeFilter, setActiveFilter] = useState<FilterType>("leads");
   const [routes, setRoutes] = useState<Route[]>([]);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
@@ -44,11 +48,13 @@ export function RouteMap() {
 
   const supabase = createClient();
 
-  // --- Fetch 10 future legs where parent lead.status in ('new','opened')
+  // === FETCH LEADS (current month, future depart_dt, status new/opened) ===
   useEffect(() => {
     const loadLeadRoutes = async () => {
       try {
-        const nowIso = new Date().toISOString();
+        const now = new Date();
+        const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+        const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString();
 
         const { data, error } = await supabase
           .from("lead_detail")
@@ -71,39 +77,24 @@ export function RouteMap() {
               created_at
             )
           `)
-          .gt("depart_dt", nowIso)
+          .gte("depart_dt", firstDay)
+          .lte("depart_dt", lastDay)
           .in("lead.status", ["new", "opened"])
           .order("depart_dt", { ascending: true })
-          .limit(20); // pull a few extra, we will drop invalid coords below
+          .limit(20);
 
         if (error) throw error;
 
         const formatted: Route[] = [];
+
         for (const r of data ?? []) {
-          const oLat = Number(r.origin_lat);
-          const oLng = Number(r.origin_long);
-          const dLat = Number(r.destination_lat);
-          const dLng = Number(r.destination_long);
-
-          const hasAllCoords =
-            Number.isFinite(oLat) &&
-            Number.isFinite(oLng) &&
-            Number.isFinite(dLat) &&
-            Number.isFinite(dLng);
-
-          if (!hasAllCoords) {
-            // Don’t crash the map — just skip this leg
-            console.warn("[RouteMap] Skipping leg with missing coords:", {
-              lead_id: r.lead_id,
-              origin: r.origin,
-              destination: r.destination,
-              origin_lat: r.origin_lat,
-              origin_long: r.origin_long,
-              destination_lat: r.destination_lat,
-              destination_long: r.destination_long,
-            });
+          if (
+            !r.origin_lat ||
+            !r.origin_long ||
+            !r.destination_lat ||
+            !r.destination_long
+          )
             continue;
-          }
 
           formatted.push({
             id: String(r.lead_id),
@@ -115,13 +106,13 @@ export function RouteMap() {
                 origin: r.origin,
                 destination: r.destination,
                 originCoords: {
-                  lat: oLat,
-                  lng: oLng,
+                  lat: r.origin_lat,
+                  lng: r.origin_long,
                   name: r.origin_code,
                 },
                 destCoords: {
-                  lat: dLat,
-                  lng: dLng,
+                  lat: r.destination_lat,
+                  lng: r.destination_long,
                   name: r.destination_code,
                 },
                 departDt: r.depart_dt,
@@ -129,7 +120,6 @@ export function RouteMap() {
             ],
           });
 
-          // stop when we have 10 valid legs
           if (formatted.length >= 10) break;
         }
 
@@ -140,10 +130,30 @@ export function RouteMap() {
       }
     };
 
-    loadLeadRoutes();
-  }, [refreshKey, supabase]);
+    if (activeFilter === "leads") loadLeadRoutes();
+    else {
+      // Dummy data for upcoming (no Supabase yet)
+      setRoutes([
+        {
+          id: "temp-1",
+          customerName: "Upcoming Demo Route",
+          status: "upcoming",
+          createdAt: new Date().toISOString(),
+          legs: [
+            {
+              origin: "MIA",
+              destination: "LAX",
+              originCoords: { lat: 25.7959, lng: -80.2870, name: "MIA" },
+              destCoords: { lat: 33.9416, lng: -118.4085, name: "LAX" },
+              departDt: new Date().toISOString(),
+            },
+          ],
+        },
+      ]);
+    }
+  }, [activeFilter, refreshKey, supabase]);
 
-  // --- Leaflet init
+  // === Initialize Leaflet ===
   useEffect(() => {
     if (!mapContainer.current) return;
 
@@ -159,21 +169,14 @@ export function RouteMap() {
           script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
           script.onload = () => initializeMap();
           document.head.appendChild(script);
-        } else {
-          initializeMap();
-        }
+        } else initializeMap();
       } catch (error) {
-        console.error("Failed to load Leaflet:", error);
-        setMapError("Failed to load map library. Please check your internet connection.");
+        setMapError("Failed to load map library. Check your connection.");
       }
     };
 
     const initializeMap = () => {
-      if (map.current) {
-        map.current.remove();
-        map.current = null;
-      }
-
+      if (map.current) map.current.remove();
       try {
         map.current = window.L.map(mapContainer.current!, {
           center: US_CENTER,
@@ -193,131 +196,106 @@ export function RouteMap() {
         }).addTo(map.current);
 
         setMapLoaded(true);
-        setMapError(null);
       } catch (error) {
-        console.error("Failed to initialize Leaflet:", error);
-        setMapError("Failed to initialize map. Please refresh the page.");
+        setMapError("Failed to initialize map. Please refresh.");
       }
     };
 
     loadLeaflet();
-
-    return () => {
-      if (map.current) {
-        map.current.remove();
-        map.current = null;
-      }
-    };
+    return () => map.current?.remove();
   }, [refreshKey]);
 
-  // --- Draw routes
+  // === Draw Routes & Airplane ===
   useEffect(() => {
     if (!map.current || !mapLoaded) return;
 
-    // Clear layers safely
-    for (const layer of routeLayers.current) {
-      try {
-        map.current.removeLayer(layer);
-      } catch {}
-    }
-    for (const marker of airportMarkers.current) {
-      try {
-        map.current.removeLayer(marker);
-      } catch {}
-    }
+    // Clear layers
+    routeLayers.current.forEach((l) => map.current.removeLayer(l));
+    airportMarkers.current.forEach((m) => map.current.removeLayer(m));
     routeLayers.current = [];
     airportMarkers.current = [];
 
     if (!routes.length) return;
 
-    const allLeafletLayers: any[] = [];
+    const allCoords: [number, number][] = [];
 
-    const addMarker = (
-      coords: { lat: number; lng: number; name: string },
-      label: string
-    ) => {
-      if (!Number.isFinite(coords.lat) || !Number.isFinite(coords.lng)) return null;
+    routes.forEach((route) => {
+      route.legs.forEach((leg) => {
+        const originLatLng: [number, number] = [leg.originCoords.lat, leg.originCoords.lng];
+        const destLatLng: [number, number] = [leg.destCoords.lat, leg.destCoords.lng];
+        allCoords.push(originLatLng, destLatLng);
 
-      const marker = window.L.marker([coords.lat, coords.lng], {
-        icon: window.L.divIcon({
-          html: `
-            <div class="airport-pointer">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="#1f2937" stroke="#fff" stroke-width="2"/>
-                <circle cx="12" cy="9" r="2.5" fill="#fff"/>
-              </svg>
-            </div>
-          `,
-          className: "airport-pointer-container",
-          iconSize: [24, 24],
-          iconAnchor: [12, 24],
-        }),
-      }).addTo(map.current);
-
-      marker.bindPopup(
-        `<strong>${label}</strong><br>${coords.lat.toFixed(2)}, ${coords.lng.toFixed(2)}`
-      );
-
-      airportMarkers.current.push(marker);
-      allLeafletLayers.push(marker);
-      return marker;
-    };
-
-    for (const route of routes) {
-      for (const leg of route.legs) {
-        const { originCoords, destCoords } = leg;
-
-        if (
-          !originCoords ||
-          !destCoords ||
-          !Number.isFinite(originCoords.lat) ||
-          !Number.isFinite(originCoords.lng) ||
-          !Number.isFinite(destCoords.lat) ||
-          !Number.isFinite(destCoords.lng)
-        ) {
-          console.warn("[RouteMap] Skipping draw for leg with bad coords:", leg);
-          continue;
-        }
-
-        const originLatLng: [number, number] = [originCoords.lat, originCoords.lng];
-        const destLatLng: [number, number] = [destCoords.lat, destCoords.lng];
-
-        // route line
+        // Route line
         const routeLine = window.L.polyline([originLatLng, destLatLng], {
           color: "#2563eb",
           weight: 1.5,
-          opacity: 0.85,
+          opacity: 0.8,
           dashArray: "3, 2",
         }).addTo(map.current);
 
-        const popupHtml = `
+        // Airplane icon midpoint
+        const midLat = (leg.originCoords.lat + leg.destCoords.lat) / 2;
+        const midLng = (leg.originCoords.lng + leg.destCoords.lng) / 2;
+        const angle =
+          (Math.atan2(
+            leg.destCoords.lat - leg.originCoords.lat,
+            leg.destCoords.lng - leg.originCoords.lng
+          ) *
+            180) /
+          Math.PI;
+
+        const airplane = window.L.marker([midLat, midLng], {
+          icon: window.L.divIcon({
+            html: `
+              <div class="airplane-icon" style="transform: rotate(${angle + 90}deg);">
+                <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+                  <circle cx="16" cy="16" r="10" fill="#ffffff" stroke="#374151" stroke-width="2"/>
+                  <path d="M16 8c-.5 0-1 .2-1 .5V12l-4 2.5v1l4-1.25V18l-1 .75V20l1.75-.5L17.25 20v-1.25L16.25 18v-3.75l4 1.25v-1L16.25 12V8.5c0-.3-.5-.5-1-.5z" fill="#374151" transform="translate(0, 1)"/>
+                </svg>
+              </div>
+            `,
+            className: "airplane-icon-container",
+            iconSize: [32, 32],
+            iconAnchor: [16, 16],
+          }),
+        }).addTo(map.current);
+
+        airplane.bindPopup(`
           <div class="text-sm space-y-2">
             <div class="font-semibold text-base">${route.customerName}</div>
             <div><strong>Route:</strong> ${leg.origin} → ${leg.destination}</div>
             <div><strong>Status:</strong> ${route.status}</div>
             <div><strong>Departure:</strong> ${new Date(leg.departDt).toLocaleString()}</div>
           </div>
-        `;
-        routeLine.bindPopup(popupHtml);
+        `);
 
-        routeLayers.current.push(routeLine);
-        allLeafletLayers.push(routeLine);
+        routeLayers.current.push(routeLine, airplane);
 
-        // markers
-        addMarker(originCoords, leg.origin);
-        addMarker(destCoords, leg.destination);
-      }
-    }
+        // Airport markers
+        const makeMarker = (coords: { lat: number; lng: number; name: string }, label: string) =>
+          window.L.marker([coords.lat, coords.lng], {
+            icon: window.L.divIcon({
+              html: `
+                <div class="airport-pointer">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="#1f2937" stroke="#fff" stroke-width="2"/>
+                    <circle cx="12" cy="9" r="2.5" fill="#fff"/>
+                  </svg>
+                </div>
+              `,
+              iconSize: [24, 24],
+              iconAnchor: [12, 24],
+            }),
+          }).addTo(map.current);
 
-    // Fit bounds only if we actually drew something
-    if (allLeafletLayers.length > 0) {
-      const group = window.L.featureGroup(allLeafletLayers);
-      try {
-        map.current.fitBounds(group.getBounds(), { padding: [20, 20], maxZoom: 6 });
-      } catch (e) {
-        // guard against rare empty bounds edge cases
-        console.warn("[RouteMap] fitBounds failed:", e);
-      }
+        makeMarker(leg.originCoords, leg.origin);
+        makeMarker(leg.destCoords, leg.destination);
+      });
+    });
+
+    if (allCoords.length) {
+      const group = window.L.featureGroup(routeLayers.current);
+      map.current.fitBounds(group.getBounds(), { padding: [20, 20], maxZoom: 6 });
     }
   }, [routes, mapLoaded]);
 
@@ -342,14 +320,33 @@ export function RouteMap() {
       <div className="grid gap-4 grid-cols-1">
         <Card className="relative overflow-hidden p-0">
           <div className="relative w-full h-[520px] bg-slate-50">
-            {/* Info Banner */}
-            <div className="absolute top-4 left-4 z-[1000] bg-white/90 backdrop-blur-sm px-3 py-2 rounded-lg shadow">
-              <span className="text-xs font-medium text-slate-700">
-                Showing up to 10 <strong>future leads</strong> (status: new / opened)
-              </span>
+            {/* Filter buttons */}
+            <div className="absolute top-4 left-4 z-[1000] flex items-center gap-2 bg-white/10 rounded-lg p-2 shadow-lg border border-white/10">
+              {(["leads", "upcoming"] as FilterType[]).map((filter) => {
+                const isActive = activeFilter === filter;
+                return (
+                  <Button
+                    key={filter}
+                    variant={isActive ? "default" : "ghost"}
+                    size="sm"
+                    className={`h-8 px-3 text-xs ${
+                      isActive ? "shadow-sm" : "hover:bg-slate-300"
+                    }`}
+                    onClick={() => setActiveFilter(filter)}
+                  >
+                    {filter.charAt(0).toUpperCase() + filter.slice(1)}
+                    <Badge
+                      variant={isActive ? "secondary" : "outline"}
+                      className="ml-2 h-4 px-1 text-[10px]"
+                    >
+                      {routes.length}
+                    </Badge>
+                  </Button>
+                );
+              })}
             </div>
 
-            {/* Zoom / Refresh */}
+            {/* Zoom controls */}
             <div className="absolute top-20 right-4 z-[1000] flex flex-col gap-1 bg-white/10 rounded-lg p-1 shadow-lg border border-white/10">
               <Button variant="ghost" size="sm" onClick={handleZoomIn}>
                 <Plus className="h-4 w-4" />
@@ -375,20 +372,6 @@ export function RouteMap() {
                   <Button onClick={handleRefresh} size="sm" className="mt-4">
                     <RotateCcw className="mr-2 h-4 w-4" /> Try Again
                   </Button>
-                </div>
-              </div>
-            )}
-
-            {!mapError && routes.length === 0 && (
-              <div className="absolute inset-0 flex items-center justify-center z-10">
-                <div className="text-center space-y-3 bg-white/90 rounded-xl p-8 shadow-lg">
-                  <div className="w-16 h-16 mx-auto bg-slate-100 rounded-full flex items-center justify-center">
-                    <MapPin className="h-8 w-8 text-slate-400" />
-                  </div>
-                  <p className="text-slate-600 font-medium">No routes to display</p>
-                  <p className="text-xs text-slate-500 mt-1">
-                    No active leads with future departures (or missing coordinates).
-                  </p>
                 </div>
               </div>
             )}
