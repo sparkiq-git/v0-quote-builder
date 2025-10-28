@@ -49,109 +49,105 @@ export function RouteMap() {
   const supabase = createClient();
 
   // === Fetch LEADS for current month ===
-  useEffect(() => {
-    const loadLeadRoutes = async () => {
-      try {
-        const now = new Date();
-        const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-        const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString();
-
-        const { data, error } = await supabase
-          .from("lead_detail")
-          .select(`
+  // === Fetch LEADS (all with status new/opened) ===
+useEffect(() => {
+  const loadLeadRoutes = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("lead_detail")
+        .select(`
+          id,
+          lead_id,
+          origin,
+          origin_code,
+          destination,
+          destination_code,
+          depart_dt,
+          origin_lat,
+          origin_long,
+          destination_lat,
+          destination_long,
+          lead:lead_id (
             id,
-            lead_id,
-            origin,
-            origin_code,
-            destination,
-            destination_code,
-            depart_dt,
-            origin_lat,
-            origin_long,
-            destination_lat,
-            destination_long,
-            lead:lead_id (
-              id,
-              customer_name,
-              status,
-              created_at
-            )
-          `)
-          .gte("depart_dt", firstDay)
-          .lte("depart_dt", lastDay)
-          .in("lead.status", ["new", "opened"])
-          .order("depart_dt", { ascending: true })
-          .limit(20);
-
-        if (error) throw error;
-
-        const formatted: Route[] = [];
-
-        for (const r of data ?? []) {
-          if (
-            !r.origin_lat ||
-            !r.origin_long ||
-            !r.destination_lat ||
-            !r.destination_long
+            customer_name,
+            status,
+            created_at
           )
-            continue;
+        `)
+        .in("lead.status", ["new", "opened"])
+        .order("depart_dt", { ascending: true })
+        .limit(20);
 
-          formatted.push({
-            id: String(r.lead_id),
-            customerName: r.lead?.customer_name ?? "Unknown",
-            status: r.lead?.status ?? "unknown",
-            createdAt: r.lead?.created_at ?? "",
-            legs: [
-              {
-                origin: r.origin,
-                destination: r.destination,
-                originCoords: {
-                  lat: r.origin_lat,
-                  lng: r.origin_long,
-                  name: r.origin_code,
-                },
-                destCoords: {
-                  lat: r.destination_lat,
-                  lng: r.destination_long,
-                  name: r.destination_code,
-                },
-                departDt: r.depart_dt,
-              },
-            ],
-          });
+      if (error) throw error;
 
-          if (formatted.length >= 10) break;
-        }
+      const formatted: Route[] = [];
 
-        setRoutes(formatted);
-      } catch (err) {
-        console.error("Error loading lead routes:", err);
-        setRoutes([]);
-      }
-    };
+      for (const r of data ?? []) {
+        if (
+          !r.origin_lat ||
+          !r.origin_long ||
+          !r.destination_lat ||
+          !r.destination_long
+        )
+          continue;
 
-    if (activeFilter === "leads") loadLeadRoutes();
-    else {
-      // Placeholder for upcoming filter (no Supabase connection yet)
-      setRoutes([
-        {
-          id: "placeholder-1",
-          customerName: "Upcoming Demo Trip",
-          status: "upcoming",
-          createdAt: new Date().toISOString(),
+        formatted.push({
+          id: String(r.lead_id),
+          customerName: r.lead?.customer_name ?? "Unknown",
+          status: r.lead?.status ?? "unknown",
+          createdAt: r.lead?.created_at ?? "",
           legs: [
             {
-              origin: "MIA",
-              destination: "JFK",
-              originCoords: { lat: 25.7959, lng: -80.287, name: "MIA" },
-              destCoords: { lat: 40.6413, lng: -73.7781, name: "JFK" },
-              departDt: new Date().toISOString(),
+              origin: r.origin,
+              destination: r.destination,
+              originCoords: {
+                lat: r.origin_lat,
+                lng: r.origin_long,
+                name: r.origin_code,
+              },
+              destCoords: {
+                lat: r.destination_lat,
+                lng: r.destination_long,
+                name: r.destination_code,
+              },
+              departDt: r.depart_dt,
             },
           ],
-        },
-      ]);
+        });
+
+        if (formatted.length >= 10) break; // still limit to 10 on map for clarity
+      }
+
+      setRoutes(formatted);
+    } catch (err) {
+      console.error("Error loading lead routes:", err);
+      setRoutes([]);
     }
-  }, [activeFilter, refreshKey, supabase]);
+  };
+
+  if (activeFilter === "leads") loadLeadRoutes();
+  else {
+    // Placeholder for upcoming filter
+    setRoutes([
+      {
+        id: "placeholder-1",
+        customerName: "Upcoming Demo Trip",
+        status: "upcoming",
+        createdAt: new Date().toISOString(),
+        legs: [
+          {
+            origin: "MIA",
+            destination: "JFK",
+            originCoords: { lat: 25.7959, lng: -80.2870, name: "MIA" },
+            destCoords: { lat: 40.6413, lng: -73.7781, name: "JFK" },
+            departDt: new Date().toISOString(),
+          },
+        ],
+      },
+    ]);
+  }
+}, [activeFilter, refreshKey, supabase]);
+
 
   // === Initialize Leaflet (fixed for container reuse) ===
   useEffect(() => {
