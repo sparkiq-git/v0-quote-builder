@@ -14,23 +14,7 @@ import {
 import type { QuoteOption } from "@/lib/types"
 import { formatCurrency } from "@/lib/utils/format"
 import { useDeviceDetection, deviceLayouts } from "@/hooks/use-device-detection"
-import {
-  Wifi,
-  Coffee,
-  Tv,
-  Utensils,
-  Bed,
-  Headphones,
-  Zap,
-  Shield,
-  Star,
-  CheckCircle,
-  Users,
-  Clock,
-  Gauge,
-  Calendar,
-  Route,
-} from "lucide-react"
+import { Wifi, Coffee, Tv, Utensils, Bed, Headphones, Zap, Shield, Star, CheckCircle } from "lucide-react"
 
 interface AdaptiveQuoteCardProps {
   option: QuoteOption
@@ -271,10 +255,29 @@ export function AdaptiveQuoteCard({
                   }`}
                 >
                   {aircraftModel?.manufacturer || "Aircraft Manufacturer"}
-                  {option.notes && (
-                    <span className="text-white/80 font-normal"> ({option.notes})</span>
-                  )}
                 </p>
+
+                <div className="flex items-center gap-2 flex-wrap text-white/90 font-light drop-shadow-lg">
+                  {aircraftTail?.year && (
+                    <>
+                      <span className="text-xs sm:text-sm">{aircraftTail.year}</span>
+                      <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-white/70" />
+                    </>
+                  )}
+                  <span className="text-xs sm:text-sm">{capacity} PAX</span>
+                  {aircraftTail?.speedKnotsOverride && (
+                    <>
+                      <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-white/70" />
+                      <span className="text-xs sm:text-sm">{aircraftTail.speedKnotsOverride} kts</span>
+                    </>
+                  )}
+                  {aircraftTail?.rangeNmOverride && (
+                    <>
+                      <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-white/70" />
+                      <span className="text-xs sm:text-sm">{aircraftTail.rangeNmOverride} nm</span>
+                    </>
+                  )}
+                </div>
 
                 {amenities.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 pt-1">
@@ -331,64 +334,13 @@ export function AdaptiveQuoteCard({
               <p className="text-[8.4px] text-gray-600 font-light">All-inclusive pricing with taxes and fees</p>
             </div>
 
-            {/* Specifications Grid - Right Column on Desktop */}
             <div className="space-y-2">
-              <h3 className="uppercase tracking-widest text-gray-500 font-medium text-[7px]">
-                Aircraft Specifications
-              </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-2">
-                <div className="flex items-center gap-2.5 p-3 rounded-lg bg-gray-50 border border-gray-200">
-                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center">
-                    <Users className="h-4 w-4 text-gray-600" aria-hidden="true" />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-[7px] text-gray-500 font-medium uppercase tracking-wide">Capacity</div>
-                    <div className="text-sm text-gray-900 font-semibold">{capacity} passengers</div>
-                  </div>
-                </div>
-                {aircraftTail?.year && (
-                  <div className="flex items-center gap-2.5 p-3 rounded-lg bg-gray-50 border border-gray-200">
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center">
-                      <Calendar className="h-4 w-4 text-gray-600" aria-hidden="true" />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="text-[7px] text-gray-500 font-medium uppercase tracking-wide">Year</div>
-                      <div className="text-sm text-gray-900 font-semibold">{aircraftTail.year}</div>
-                    </div>
-                  </div>
-                )}
-                {aircraftTail?.speedKnotsOverride && (
-                  <div className="flex items-center gap-2.5 p-3 rounded-lg bg-gray-50 border border-gray-200">
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center">
-                      <Gauge className="h-4 w-4 text-gray-600" aria-hidden="true" />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="text-[7px] text-gray-500 font-medium uppercase tracking-wide">Speed</div>
-                      <div className="text-sm text-gray-900 font-semibold">{aircraftTail.speedKnotsOverride} kts</div>
-                    </div>
-                  </div>
-                )}
-                {aircraftTail?.yearOfRefurbishment && (
-                  <div className="flex items-center gap-2.5 p-3 rounded-lg bg-gray-50 border border-gray-200">
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center">
-                      <Clock className="h-4 w-4 text-gray-600" aria-hidden="true" />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="text-[7px] text-gray-500 font-medium uppercase tracking-wide">Refurbished</div>
-                      <div className="text-sm text-gray-900 font-semibold">{aircraftTail.yearOfRefurbishment}</div>
-                    </div>
-                  </div>
-                )}
-                {aircraftTail?.rangeNmOverride && (
-                  <div className="flex items-center gap-2.5 p-3 rounded-lg bg-gray-50 border border-gray-200">
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center">
-                      <Route className="h-4 w-4 text-gray-600" aria-hidden="true" />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="text-[7px] text-gray-500 font-medium uppercase tracking-wide">Range</div>
-                      <div className="text-sm text-gray-900 font-semibold">{aircraftTail.rangeNmOverride} nm</div>
-                    </div>
-                  </div>
+              <h3 className="uppercase tracking-widest text-gray-500 font-medium text-[7px]">Option Notes</h3>
+              <div className="p-3 rounded-lg bg-gray-50 border border-gray-200 min-h-[120px]">
+                {option.notes ? (
+                  <p className="text-xs text-gray-700 font-light leading-relaxed">{option.notes}</p>
+                ) : (
+                  <p className="text-xs text-gray-400 font-light italic">No additional notes for this option</p>
                 )}
               </div>
             </div>
