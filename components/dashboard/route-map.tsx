@@ -48,7 +48,7 @@ export function RouteMap() {
 
   const supabase = createClient();
 
-  // === Fetch LEADS for this month ===
+  // === Fetch LEADS for current month ===
   useEffect(() => {
     const loadLeadRoutes = async () => {
       try {
@@ -132,7 +132,7 @@ export function RouteMap() {
 
     if (activeFilter === "leads") loadLeadRoutes();
     else {
-      // Placeholder for upcoming filter
+      // Placeholder for upcoming filter (no Supabase connection yet)
       setRoutes([
         {
           id: "placeholder-1",
@@ -143,7 +143,7 @@ export function RouteMap() {
             {
               origin: "MIA",
               destination: "JFK",
-              originCoords: { lat: 25.7959, lng: -80.2870, name: "MIA" },
+              originCoords: { lat: 25.7959, lng: -80.287, name: "MIA" },
               destCoords: { lat: 40.6413, lng: -73.7781, name: "JFK" },
               departDt: new Date().toISOString(),
             },
@@ -153,7 +153,7 @@ export function RouteMap() {
     }
   }, [activeFilter, refreshKey, supabase]);
 
-  // === Initialize Map (fix reuse issue) ===
+  // === Initialize Leaflet (fixed for container reuse) ===
   useEffect(() => {
     if (!mapContainer.current) return;
 
@@ -176,17 +176,12 @@ export function RouteMap() {
     };
 
     const initializeMap = () => {
-      // ✅ FIX: Prevent "container reused" error
       if (map.current) {
         map.current.off();
         map.current.remove();
         map.current = null;
       }
-      if (mapContainer.current?._leaflet_id) {
-        try {
-          delete (mapContainer.current as any)._leaflet_id;
-        } catch {}
-      }
+      if (mapContainer.current?._leaflet_id) delete (mapContainer.current as any)._leaflet_id;
 
       try {
         map.current = window.L.map(mapContainer.current!, {
@@ -194,6 +189,9 @@ export function RouteMap() {
           zoom: US_ZOOM,
           zoomControl: false,
           attributionControl: false,
+          scrollWheelZoom: false,
+          doubleClickZoom: false,
+          touchZoom: false,
         });
 
         window.L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
@@ -219,11 +217,11 @@ export function RouteMap() {
     };
   }, [refreshKey]);
 
-  // === Draw Routes (with airplane) ===
+  // === Draw Routes (with airplane, transparent icons) ===
   useEffect(() => {
     if (!map.current || !mapLoaded) return;
 
-    // Clear all existing layers
+    // Clear existing layers
     routeLayers.current.forEach((l) => map.current.removeLayer(l));
     airportMarkers.current.forEach((m) => map.current.removeLayer(m));
     routeLayers.current = [];
@@ -261,15 +259,16 @@ export function RouteMap() {
         const airplane = window.L.marker([midLat, midLng], {
           icon: window.L.divIcon({
             html: `
-              <div class="airplane-icon" style="transform: rotate(${angle + 90}deg);">
-                <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-                  <circle cx="16" cy="16" r="10" fill="#ffffff" stroke="#374151" stroke-width="2"/>
+              <div style="transform: rotate(${angle + 90}deg);">
+                <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+                  <circle cx="16" cy="16" r="10" fill="none" stroke="#374151" stroke-width="2"/>
                   <path d="M16 8c-.5 0-1 .2-1 .5V12l-4 2.5v1l4-1.25V18l-1 .75V20l1.75-.5L17.25 20v-1.25L16.25 18v-3.75l4 1.25v-1L16.25 12V8.5c0-.3-.5-.5-1-.5z" fill="#374151" transform="translate(0, 1)"/>
                 </svg>
               </div>
             `,
-            iconSize: [32, 32],
-            iconAnchor: [16, 16],
+            className: "bg-transparent",
+            iconSize: [28, 28],
+            iconAnchor: [14, 14],
           }),
         }).addTo(map.current);
 
@@ -284,19 +283,19 @@ export function RouteMap() {
 
         routeLayers.current.push(routeLine, airplane);
 
+        // Transparent airport markers
         const makeMarker = (coords: { lat: number; lng: number; name: string }) =>
           window.L.marker([coords.lat, coords.lng], {
             icon: window.L.divIcon({
               html: `
-                <div class="airport-pointer">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="#1f2937" stroke="#fff" stroke-width="2"/>
-                    <circle cx="12" cy="9" r="2.5" fill="#fff"/>
-                  </svg>
-                </div>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="#1f2937" stroke="#ffffff" stroke-width="1.5"/>
+                  <circle cx="12" cy="9" r="2.5" fill="#ffffff"/>
+                </svg>
               `,
-              iconSize: [24, 24],
-              iconAnchor: [12, 24],
+              className: "bg-transparent",
+              iconSize: [22, 22],
+              iconAnchor: [11, 22],
             }),
           }).addTo(map.current);
 
@@ -311,20 +310,13 @@ export function RouteMap() {
     }
   }, [routes, mapLoaded, activeFilter]);
 
+  // === Zoom Buttons ===
+  const handleZoomIn = () => map.current?.zoomIn();
+  const handleZoomOut = () => map.current?.zoomOut();
+  const handleRefresh = () => setRefreshKey((k) => k + 1);
+
   return (
     <>
-      <style jsx global>{`
-        .airport-pointer-container {
-          background: none !important;
-          border: none !important;
-        }
-        .airport-pointer {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-      `}</style>
-
       <div className="grid gap-4 grid-cols-1">
         <Card className="relative overflow-hidden p-0">
           <div className="relative w-full h-[520px] bg-slate-50">
@@ -354,7 +346,20 @@ export function RouteMap() {
               })}
             </div>
 
-            {/* Map container */}
+            {/* Zoom / Refresh Controls */}
+            <div className="absolute top-20 right-4 z-[1000] flex flex-col gap-1 bg-white/80 rounded-lg p-1 shadow-lg border border-gray-200">
+              <Button variant="ghost" size="sm" onClick={handleZoomIn}>
+                <Plus className="h-4 w-4" />
+              </Button>
+              <Button variant="ghost" size="sm" onClick={handleZoomOut}>
+                <Minus className="h-4 w-4" />
+              </Button>
+              <Button variant="ghost" size="sm" onClick={handleRefresh}>
+                <RotateCcw className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {/* Map */}
             <div ref={mapContainer} className="absolute inset-0 w-full h-full" />
 
             {mapError && (
@@ -365,7 +370,7 @@ export function RouteMap() {
                   </div>
                   <p className="text-slate-800 font-medium">Map Error</p>
                   <p className="text-xs text-slate-600">{mapError}</p>
-                  <Button onClick={() => setRefreshKey((k) => k + 1)} size="sm" className="mt-4">
+                  <Button onClick={handleRefresh} size="sm" className="mt-4">
                     <RotateCcw className="mr-2 h-4 w-4" /> Try Again
                   </Button>
                 </div>
