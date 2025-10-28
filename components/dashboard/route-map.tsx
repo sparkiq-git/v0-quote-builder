@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useMemo } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -48,7 +48,7 @@ export function RouteMap() {
 
   const supabase = createClient();
 
-  // === FETCH LEADS (current month, future depart_dt, status new/opened) ===
+  // === Fetch LEADS for this month ===
   useEffect(() => {
     const loadLeadRoutes = async () => {
       try {
@@ -132,19 +132,19 @@ export function RouteMap() {
 
     if (activeFilter === "leads") loadLeadRoutes();
     else {
-      // Dummy data for upcoming (no Supabase yet)
+      // Placeholder for upcoming filter
       setRoutes([
         {
-          id: "temp-1",
-          customerName: "Upcoming Demo Route",
+          id: "placeholder-1",
+          customerName: "Upcoming Demo Trip",
           status: "upcoming",
           createdAt: new Date().toISOString(),
           legs: [
             {
               origin: "MIA",
-              destination: "LAX",
+              destination: "JFK",
               originCoords: { lat: 25.7959, lng: -80.2870, name: "MIA" },
-              destCoords: { lat: 33.9416, lng: -118.4085, name: "LAX" },
+              destCoords: { lat: 40.6413, lng: -73.7781, name: "JFK" },
               departDt: new Date().toISOString(),
             },
           ],
@@ -153,7 +153,7 @@ export function RouteMap() {
     }
   }, [activeFilter, refreshKey, supabase]);
 
-  // === Initialize Leaflet ===
+  // === Initialize Map (fix reuse issue) ===
   useEffect(() => {
     if (!mapContainer.current) return;
 
@@ -170,23 +170,30 @@ export function RouteMap() {
           script.onload = () => initializeMap();
           document.head.appendChild(script);
         } else initializeMap();
-      } catch (error) {
-        setMapError("Failed to load map library. Check your connection.");
+      } catch {
+        setMapError("Failed to load map library. Please check your connection.");
       }
     };
 
     const initializeMap = () => {
-      if (map.current) map.current.remove();
+      // ✅ FIX: Prevent "container reused" error
+      if (map.current) {
+        map.current.off();
+        map.current.remove();
+        map.current = null;
+      }
+      if (mapContainer.current?._leaflet_id) {
+        try {
+          delete (mapContainer.current as any)._leaflet_id;
+        } catch {}
+      }
+
       try {
         map.current = window.L.map(mapContainer.current!, {
           center: US_CENTER,
           zoom: US_ZOOM,
           zoomControl: false,
           attributionControl: false,
-          scrollWheelZoom: false,
-          doubleClickZoom: false,
-          touchZoom: true,
-          boxZoom: false,
         });
 
         window.L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
@@ -196,20 +203,27 @@ export function RouteMap() {
         }).addTo(map.current);
 
         setMapLoaded(true);
-      } catch (error) {
-        setMapError("Failed to initialize map. Please refresh.");
+      } catch (err) {
+        console.error("Map init error:", err);
+        setMapError("Failed to initialize map instance.");
       }
     };
 
     loadLeaflet();
-    return () => map.current?.remove();
+    return () => {
+      if (map.current) {
+        map.current.off();
+        map.current.remove();
+        map.current = null;
+      }
+    };
   }, [refreshKey]);
 
-  // === Draw Routes & Airplane ===
+  // === Draw Routes (with airplane) ===
   useEffect(() => {
     if (!map.current || !mapLoaded) return;
 
-    // Clear layers
+    // Clear all existing layers
     routeLayers.current.forEach((l) => map.current.removeLayer(l));
     airportMarkers.current.forEach((m) => map.current.removeLayer(m));
     routeLayers.current = [];
@@ -227,13 +241,13 @@ export function RouteMap() {
 
         // Route line
         const routeLine = window.L.polyline([originLatLng, destLatLng], {
-          color: "#2563eb",
+          color: activeFilter === "leads" ? "#2563eb" : "#6b7280",
           weight: 1.5,
           opacity: 0.8,
           dashArray: "3, 2",
         }).addTo(map.current);
 
-        // Airplane icon midpoint
+        // Airplane midpoint
         const midLat = (leg.originCoords.lat + leg.destCoords.lat) / 2;
         const midLng = (leg.originCoords.lng + leg.destCoords.lng) / 2;
         const angle =
@@ -254,7 +268,6 @@ export function RouteMap() {
                 </svg>
               </div>
             `,
-            className: "airplane-icon-container",
             iconSize: [32, 32],
             iconAnchor: [16, 16],
           }),
@@ -271,8 +284,7 @@ export function RouteMap() {
 
         routeLayers.current.push(routeLine, airplane);
 
-        // Airport markers
-        const makeMarker = (coords: { lat: number; lng: number; name: string }, label: string) =>
+        const makeMarker = (coords: { lat: number; lng: number; name: string }) =>
           window.L.marker([coords.lat, coords.lng], {
             icon: window.L.divIcon({
               html: `
@@ -288,8 +300,8 @@ export function RouteMap() {
             }),
           }).addTo(map.current);
 
-        makeMarker(leg.originCoords, leg.origin);
-        makeMarker(leg.destCoords, leg.destination);
+        makeMarker(leg.originCoords);
+        makeMarker(leg.destCoords);
       });
     });
 
@@ -297,11 +309,7 @@ export function RouteMap() {
       const group = window.L.featureGroup(routeLayers.current);
       map.current.fitBounds(group.getBounds(), { padding: [20, 20], maxZoom: 6 });
     }
-  }, [routes, mapLoaded]);
-
-  const handleZoomIn = () => map.current?.zoomIn();
-  const handleZoomOut = () => map.current?.zoomOut();
-  const handleRefresh = () => setRefreshKey((k) => k + 1);
+  }, [routes, mapLoaded, activeFilter]);
 
   return (
     <>
@@ -320,7 +328,7 @@ export function RouteMap() {
       <div className="grid gap-4 grid-cols-1">
         <Card className="relative overflow-hidden p-0">
           <div className="relative w-full h-[520px] bg-slate-50">
-            {/* Filter buttons */}
+            {/* Filters */}
             <div className="absolute top-4 left-4 z-[1000] flex items-center gap-2 bg-white/10 rounded-lg p-2 shadow-lg border border-white/10">
               {(["leads", "upcoming"] as FilterType[]).map((filter) => {
                 const isActive = activeFilter === filter;
@@ -346,19 +354,7 @@ export function RouteMap() {
               })}
             </div>
 
-            {/* Zoom controls */}
-            <div className="absolute top-20 right-4 z-[1000] flex flex-col gap-1 bg-white/10 rounded-lg p-1 shadow-lg border border-white/10">
-              <Button variant="ghost" size="sm" onClick={handleZoomIn}>
-                <Plus className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="sm" onClick={handleZoomOut}>
-                <Minus className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="sm" onClick={handleRefresh}>
-                <RotateCcw className="h-4 w-4" />
-              </Button>
-            </div>
-
+            {/* Map container */}
             <div ref={mapContainer} className="absolute inset-0 w-full h-full" />
 
             {mapError && (
@@ -369,7 +365,7 @@ export function RouteMap() {
                   </div>
                   <p className="text-slate-800 font-medium">Map Error</p>
                   <p className="text-xs text-slate-600">{mapError}</p>
-                  <Button onClick={handleRefresh} size="sm" className="mt-4">
+                  <Button onClick={() => setRefreshKey((k) => k + 1)} size="sm" className="mt-4">
                     <RotateCcw className="mr-2 h-4 w-4" /> Try Again
                   </Button>
                 </div>
