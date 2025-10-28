@@ -103,7 +103,21 @@ export function AdaptiveQuoteCard({
   const capacity = aircraftTail?.capacityOverride || aircraftModel?.defaultCapacity || 8
 
   const hasSpecifications =
-    aircraftTail?.year || capacity || aircraftTail?.speedKnotsOverride || aircraftTail?.rangeNmOverride
+    aircraftTail?.year || capacity || 
+    aircraftTail?.speedKnotsOverride || aircraftModel?.defaultSpeedKnots ||
+    aircraftTail?.rangeNmOverride || aircraftModel?.defaultRangeNm
+
+  // Debug logging
+  console.log("🔍 Aircraft specifications debug:", {
+    year: aircraftTail?.year,
+    capacity,
+    speedKnotsOverride: aircraftTail?.speedKnotsOverride,
+    rangeNmOverride: aircraftTail?.rangeNmOverride,
+    defaultSpeedKnots: aircraftModel?.defaultSpeedKnots,
+    defaultRangeNm: aircraftModel?.defaultRangeNm,
+    hasSpecifications,
+    deviceType: deviceInfo.type
+  })
 
   const getCardClasses = () => {
     const baseClasses =
@@ -290,13 +304,13 @@ export function AdaptiveQuoteCard({
                             </Tooltip>
                           </>
                         )}
-                        {aircraftTail?.speedKnotsOverride && (
+                        {(aircraftTail?.speedKnotsOverride || aircraftModel?.defaultSpeedKnots) && (
                           <>
                             <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-white/70" />
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <span className="text-xs sm:text-sm cursor-help">
-                                  {aircraftTail.speedKnotsOverride} kts
+                                  {aircraftTail?.speedKnotsOverride || aircraftModel?.defaultSpeedKnots} kts
                                 </span>
                               </TooltipTrigger>
                               <TooltipContent>
@@ -305,13 +319,13 @@ export function AdaptiveQuoteCard({
                             </Tooltip>
                           </>
                         )}
-                        {aircraftTail?.rangeNmOverride && (
+                        {(aircraftTail?.rangeNmOverride || aircraftModel?.defaultRangeNm) && (
                           <>
                             <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-white/70" />
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <span className="text-xs sm:text-sm cursor-help">
-                                  {aircraftTail.rangeNmOverride} nm
+                                  {aircraftTail?.rangeNmOverride || aircraftModel?.defaultRangeNm} nm
                                 </span>
                               </TooltipTrigger>
                               <TooltipContent>
@@ -360,7 +374,7 @@ export function AdaptiveQuoteCard({
 
         <div className="p-2 sm:p-2 lg:p-2.5 space-y-2">
           {/* Pricing and Specifications Grid - Side by Side on Desktop */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 md:gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 md:gap-4" data-device-type={deviceInfo.type}>
             {/* Pricing Section - Left Column on Desktop */}
             <div className="space-y-0.5">
               <span className="uppercase tracking-widest text-gray-500 font-medium text-[7px]">
