@@ -338,7 +338,7 @@ useEffect(() => {
                             <div>
                               <span className="text-muted-foreground">Model:</span>
                               <span className="ml-2 font-medium">
-                                {aircraftModel?.name || "Unknown Model"}
+                                {aircraftModel?.manufacturer ? `${aircraftModel.manufacturer} ${aircraftModel.name}` : aircraftModel?.name || "Unknown Model"}
                               </span>
                             </div>
                             {aircraftTail?.tailNumber && (
@@ -349,24 +349,24 @@ useEffect(() => {
                                 </span>
                               </div>
                             )}
-                            {aircraftTail?.operator && (
+                            {(aircraftTail?.operator || aircraftTail?.operator_id) && (
                               <div>
                                 <span className="text-muted-foreground">Operator:</span>
                                 <span className="ml-2 font-medium">
-                                  {aircraftTail.operator}
+                                  {aircraftTail.operator || aircraftTail.operator_id}
                                 </span>
                               </div>
                             )}
                             <div>
                               <span className="text-muted-foreground">Capacity:</span>
                               <span className="ml-2 font-medium">
-                                {aircraftTail?.capacityOverride || aircraftModel?.defaultCapacity || "N/A"} passengers
+                                {aircraftTail?.capacityOverride || aircraftTail?.capacity_pax || aircraftModel?.defaultCapacity || aircraftModel?.size_code || "N/A"} passengers
                               </span>
                             </div>
                             <div>
                               <span className="text-muted-foreground">Range:</span>
                               <span className="ml-2 font-medium">
-                                {aircraftTail?.rangeNmOverride || aircraftModel?.defaultRangeNm || "N/A"} nm
+                                {aircraftTail?.rangeNmOverride || aircraftTail?.range_nm || aircraftModel?.defaultRangeNm || "N/A"} nm
                               </span>
                             </div>
                           </div>

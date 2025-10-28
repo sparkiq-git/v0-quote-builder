@@ -149,8 +149,8 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     console.log("Raw services data:", JSON.stringify(services, null, 2))
     console.log("Aircraft data:", JSON.stringify(aircraftData, null, 2))
 
-    // Use type mapper to transform data consistently
-    const transformedQuote = QuoteTypeMapper.normalizeQuote({
+    // Transform data with aircraft information preserved
+    const transformedQuote = {
       ...quote,
       legs: (legs || []).map((leg: any) => ({
         id: leg.id,
@@ -174,12 +174,13 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
         
         return {
           id: option.id,
-          aircraftModelId: option.aircraft_id,
-          aircraftTailId: option.aircraft_tail_id,
-          totalHours: option.flight_hours || 0,
-          operatorCost: option.cost_operator || 0,
-          commission: option.price_commission || 0,
-          tax: option.price_base || 0,
+          aircraft_id: option.aircraft_id,
+          aircraft_tail_id: option.aircraft_tail_id,
+          flight_hours: option.flight_hours || 0,
+          cost_operator: option.cost_operator || 0,
+          price_commission: option.price_commission || 0,
+          price_base: option.price_base || 0,
+          price_total: option.price_total || 0,
           fees: [], // TODO: Add fees support if needed
           feesEnabled: false,
           selectedAmenities: aircraft?.aircraft_amenity?.map((amenity: any) => amenity.amenity?.name).filter(Boolean) || [],
@@ -258,7 +259,19 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
         taxable: service.taxable,
         notes: service.notes,
       })),
-    })
+      // Add customer object for compatibility
+      customer: {
+        id: quote.contact_id || "",
+        name: quote.contact_name || "",
+        email: quote.contact_email || "",
+        phone: quote.contact_phone || "",
+        company: quote.contact_company || "",
+      },
+      // Add other required fields
+      branding: quote.branding || { primaryColor: "#2563eb" },
+      terms: quote.terms || "",
+      workflowData: quote.workflow_data,
+    }
 
     return NextResponse.json(transformedQuote)
   } catch (error) {
