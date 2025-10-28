@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/client"
 export async function getLeadRoutes() {
   const supabase = createClient()
 
-  // 1. Get all leads with status new or opened (no date filter)
+  // ✅ 1. Get all leads with status new or opened (no date filter)
   const { data, error } = await supabase
     .from("lead_detail")
     .select(`
@@ -30,7 +30,7 @@ export async function getLeadRoutes() {
 
   if (error) throw error
 
-  // 2. Transform the data into route objects expected by RouteMap
+  // ✅ 2. Transform the data into route objects expected by RouteMap
   return (
     data?.map((r) => ({
       id: r.lead_id,
