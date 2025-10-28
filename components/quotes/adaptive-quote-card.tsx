@@ -76,7 +76,7 @@ export function AdaptiveQuoteCard({
   const aircraftModel = option.aircraftModel
   const aircraftTail = option.aircraftTail
 
-  const total = option.operatorCost + option.commission + option.tax
+  const total = (option.cost_operator || 0) + (option.price_commission || 0) + (option.price_base || 0)
 
   const images = option.overrideImages?.length
     ? option.overrideImages

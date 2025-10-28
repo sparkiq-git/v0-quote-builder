@@ -193,23 +193,23 @@ function LegRow({ leg, index }: { leg: any; index: number }) {
   return (
     <div className="px-2 py-1.5 grid items-center gap-x-2 gap-y-1 [grid-template-columns:max-content_1fr_max-content_auto]">
       <div className="col-span-4 row-start-1 text-xs text-gray-500 mt-0.5 font-light">
-        {formatDate(leg.departureDate)}
+        {formatDate(leg.depart_dt || leg.departureDate)}
       </div>
       <div className="col-start-1 row-start-2">
-        <div className={codeCls}>{leg.origin}</div>
+        <div className={codeCls}>{leg.origin_code || leg.origin}</div>
       </div>
       <div className="col-start-2 row-start-2 min-w-0">
         <ElegantConnector />
       </div>
       <div className="col-start-3 row-start-2 justify-self-end">
-        <div className={codeCls}>{leg.destination}</div>
+        <div className={codeCls}>{leg.destination_code || leg.destination}</div>
       </div>
       <div className="col-start-4 row-span-2 self-center justify-self-end pr-1 md:pr-2">
         <TripInfoControl
-          date={formatDate(leg.departureDate)}
-          passengers={leg.passengers}
-          origin={leg.origin}
-          destination={leg.destination}
+          date={formatDate(leg.depart_dt || leg.departureDate)}
+          passengers={leg.pax_count || leg.passengers}
+          origin={leg.origin_code || leg.origin}
+          destination={leg.destination_code || leg.destination}
           dialogId={`leg-${index + 1}-trip-info`}
         />
       </div>
@@ -267,7 +267,7 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
           "Content-Type": "application/json",
           "x-public-quote": "true",
         },
-        body: JSON.JSONstringify({ selectedOptionId: optionId }),
+        body: JSON.stringify({ selectedOptionId: optionId }),
       })
 
       if (!response.ok) {
@@ -424,8 +424,8 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
     }, 0) || 0
 
   const selectedOptionTotal = selectedOption
-    ? (selectedOption.operatorCost || 0) +
-      (selectedOption.commission || 0) +
+    ? (selectedOption.cost_operator || 0) +
+      (selectedOption.price_commission || 0) +
       (selectedOption.feesEnabled
         ? selectedOption.fees?.reduce((sum, fee) => {
             const amount = fee.amount || 0

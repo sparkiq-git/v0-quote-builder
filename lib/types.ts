@@ -25,6 +25,13 @@ export interface Leg {
   fboOriginId?: string
   fboDestinationId?: string
   passengerDetails?: PassengerWithLegs[] // Added passengerDetails field to store detailed passenger information per leg
+  
+  // API field names (snake_case) for compatibility with backend
+  origin_code?: string
+  destination_code?: string
+  depart_dt?: string
+  depart_time?: string
+  pax_count?: number
 }
 
 export interface PassengerWithLegs {
@@ -148,6 +155,14 @@ export interface QuoteOption {
   // Aircraft data (populated by API)
   aircraftModel?: AircraftModel
   aircraftTail?: AircraftTail
+  
+  // API field names (snake_case) for compatibility with backend
+  aircraft_id?: string
+  aircraft_tail_id?: string
+  flight_hours?: number
+  cost_operator?: number
+  price_commission?: number
+  price_base?: number
 }
 
 // Standardized quote status values
