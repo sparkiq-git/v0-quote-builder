@@ -954,7 +954,7 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
             <div className="h-full overflow-y-auto overflow-x-hidden bg-white/95 backdrop-blur-sm border border-gray-200/50 rounded-2xl shadow-xl p-0">
               <div className="p-0">
                 <div className="px-4 xl:px-6 py-3 xl:py-4 border-b border-gray-200/50 bg-gradient-to-r from-white/90 to-blue-50/50 backdrop-blur-sm mb-3 xl:mb-4">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-end">
                     
                     <Badge variant={statusDisplay.variant} className="text-xs flex items-center gap-1 px-3 py-1">
                       <StatusIcon className="h-3 w-3" />
