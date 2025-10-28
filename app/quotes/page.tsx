@@ -359,7 +359,7 @@ export default function QuotesPage() {
                       </Badge>
                       {quote.status === "opened" && quote.openCount > 0 && (
                         <div className="absolute -top-2 -right-1 bg-slate-50 border border-slate-70 rounded-full flex items-center justify-center font-normal w-3.2 h-3.2">
-                          <span className="text-[0.7125rem] font-x-small text-slate-700">{quote.openCount}</span>
+                          <span className="text-[0.7125rem] font-small text-slate-700">{quote.openCount}</span>
                         </div>
                       )}
                     </div>
