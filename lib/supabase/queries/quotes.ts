@@ -109,6 +109,12 @@ export async function getQuoteById(id: string) {
           is_primary,
           display_order
         ),
+        operator!operator_id (
+          id,
+          name,
+          icao_code,
+          iata_code
+        ),
         aircraft_amenity (
           id,
           amenity_id,
@@ -176,12 +182,19 @@ export async function getQuoteById(id: string) {
       aircraftTail: aircraft ? {
         id: aircraft.id,
         tailNumber: aircraft.tail_number,
-        operator: aircraft.operator_id,
+        operator: aircraft.operator?.name || aircraft.operator_id,
+        operator_id: aircraft.operator_id,
         year: aircraft.year_of_manufacture,
         yearOfRefurbish: aircraft.year_of_refurbish,
         cruisingSpeed: aircraft.cruising_speed,
         rangeNm: aircraft.range_nm,
-        amenities: aircraft.aircraft_amenity?.map((amenity: any) => amenity.amenity?.name).filter(Boolean) || [],
+        amenities: aircraft.aircraft_amenity?.map((amenity: any) => ({
+          name: amenity.amenity?.name,
+          code: amenity.amenity?.code,
+          icon_ref: amenity.amenity?.icon_ref,
+          description: amenity.amenity?.description,
+          category: amenity.amenity?.category
+        })).filter(Boolean) || [],
         images: aircraft.aircraft_image
           ?.sort((a: any, b: any) => {
             if (a.is_primary && !b.is_primary) return -1
@@ -207,8 +220,14 @@ export async function getQuoteById(id: string) {
         serialNumber: aircraft.serial_number,
         mtowKg: aircraft.mtow_kg,
       } : null,
-      // Include amenities
-      selectedAmenities: aircraft?.aircraft_amenity?.map((amenity: any) => amenity.amenity?.name).filter(Boolean) || [],
+      // Include amenities with full details
+      selectedAmenities: aircraft?.aircraft_amenity?.map((amenity: any) => ({
+        name: amenity.amenity?.name,
+        code: amenity.amenity?.code,
+        icon_ref: amenity.amenity?.icon_ref,
+        description: amenity.amenity?.description,
+        category: amenity.amenity?.category
+      })).filter(Boolean) || [],
     }
   })
 

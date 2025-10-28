@@ -380,15 +380,24 @@ useEffect(() => {
                           </h5>
                           {amenities.length > 0 ? (
                             <div className="flex flex-wrap gap-2">
-                              {amenities.map((amenity: string, idx: number) => (
-                                <span
-                                  key={idx}
-                                  className="inline-flex items-center gap-1 px-2 py-1 bg-primary/10 text-primary text-xs rounded-full"
-                                >
-                                  <Wifi className="h-3 w-3" />
-                                  {amenity}
-                                </span>
-                              ))}
+                              {amenities.map((amenity: any, idx: number) => {
+                                const amenityName = typeof amenity === 'string' ? amenity : amenity.name
+                                const amenityIcon = typeof amenity === 'object' ? amenity.icon_ref : null
+                                
+                                return (
+                                  <span
+                                    key={idx}
+                                    className="inline-flex items-center gap-1 px-2 py-1 bg-primary/10 text-primary text-xs rounded-full"
+                                  >
+                                    {amenityIcon ? (
+                                      <span className="text-xs">{amenityIcon}</span>
+                                    ) : (
+                                      <Wifi className="h-3 w-3" />
+                                    )}
+                                    {amenityName}
+                                  </span>
+                                )
+                              })}
                             </div>
                           ) : (
                             <p className="text-muted-foreground text-sm">No amenities selected</p>

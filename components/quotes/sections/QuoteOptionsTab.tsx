@@ -95,7 +95,7 @@ useEffect(() => {
         model_name: option.aircraftModel.name || "",
         operator_name: option.aircraftTail.operator || option.aircraftTail.operator_id || "",
         primary_image_url: option.aircraftTail.images?.[0] || option.aircraftModel.images?.[0] || null,
-        amenities: option.selectedAmenities || [],
+        amenities: option.selectedAmenities?.map((a: any) => typeof a === 'string' ? a : a.name).filter(Boolean) || [],
         capacity_pax: option.aircraftTail.capacityOverride || option.aircraftTail.capacity_pax || option.aircraftModel.defaultCapacity || 8,
         range_nm: option.aircraftTail.rangeNmOverride || option.aircraftTail.range_nm || option.aircraftModel.defaultRangeNm || 2000,
         status: option.aircraftTail.status || "active",
