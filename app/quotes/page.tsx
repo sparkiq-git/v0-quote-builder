@@ -6,11 +6,10 @@ import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
-import { Plus, FileText, Eye, Search, Trash2, Loader2, Send, FileSignature, ArrowUpDown, Filter } from "lucide-react"
+import { Plus, FileText, Eye, Search, Trash2, Loader2, Send, FileSignature, ArrowUpDown, Filter, MoreHorizontal } from "lucide-react"
 import { formatDate, formatTimeAgo } from "@/lib/utils/format"
 import { useToast } from "@/hooks/use-toast"
 import {
@@ -30,7 +29,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { MoreHorizontal } from "lucide-react"
 
 export default function QuotesPage() {
   const router = useRouter()
@@ -308,11 +306,31 @@ export default function QuotesPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Quote Details</TableHead>
-              <TableHead>Customer</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Last Updated</TableHead>
-              <TableHead>Created</TableHead>
+              <TableHead>
+                <Button variant="ghost" className="h-8 px-2 lg:px-3">
+                  Quote Details <ArrowUpDown className="ml-2 h-4 w-4" />
+                </Button>
+              </TableHead>
+              <TableHead>
+                <Button variant="ghost" className="h-8 px-2 lg:px-3">
+                  Customer <ArrowUpDown className="ml-2 h-4 w-4" />
+                </Button>
+              </TableHead>
+              <TableHead>
+                <Button variant="ghost" className="h-8 px-2 lg:px-3">
+                  Status <ArrowUpDown className="ml-2 h-4 w-4" />
+                </Button>
+              </TableHead>
+              <TableHead>
+                <Button variant="ghost" className="h-8 px-2 lg:px-3">
+                  Last Updated <ArrowUpDown className="ml-2 h-4 w-4" />
+                </Button>
+              </TableHead>
+              <TableHead>
+                <Button variant="ghost" className="h-8 px-2 lg:px-3">
+                  Created <ArrowUpDown className="ml-2 h-4 w-4" />
+                </Button>
+              </TableHead>
               <TableHead className="w-[100px]">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -322,31 +340,23 @@ export default function QuotesPage() {
                 <TableRow key={quote.id} className="hover:bg-muted/30">
                   <TableCell>
                     <div className="flex flex-col">
-                      <span className="font-medium">{quote.title}</span>
-                      <span className="text-sm text-muted-foreground">
+                      <span className="font-medium text-sm">{quote.title}</span>
+                      <span className="text-xs text-muted-foreground">
                         {quote.customer.company || "No company"}
                       </span>
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center space-x-3">
-                      <Avatar className="h-8 w-8">
-                        <AvatarFallback>
-                          {quote.customer.name
-                            ?.split(" ")
-                            .map((n: string) => n[0])
-                            .join("")}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <div className="font-medium">{quote.customer.name}</div>
-                        <div className="text-sm text-muted-foreground">{quote.customer.email}</div>
-                      </div>
+                    <div className="flex flex-col">
+                      <span className="font-medium text-sm">{quote.customer.name || "Unknown"}</span>
+                      <span className="text-xs text-muted-foreground">{quote.customer.email || "No email"}</span>
                     </div>
                   </TableCell>
                   <TableCell>
                     <div className="relative inline-block">
-                      <Badge variant={getStatusBadgeVariant(quote.status)}>{quote.status}</Badge>
+                      <Badge variant={getStatusBadgeVariant(quote.status)} className="text-xs">
+                        {quote.status}
+                      </Badge>
                       {quote.status === "opened" && quote.openCount > 0 && (
                         <div className="absolute -top-2 -right-1 bg-slate-100 border border-slate-200 rounded-full flex items-center justify-center font-normal w-3.5 h-3.5">
                           <span className="text-[0.7125rem] font-small text-slate-700">{quote.openCount}</span>
@@ -355,25 +365,25 @@ export default function QuotesPage() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div className="text-sm">
+                    <div className="text-xs">
                       <div>{formatDate(quote.updatedAt)}</div>
                       <div className="text-muted-foreground">{formatTimeAgo(quote.updatedAt)}</div>
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div className="text-sm">
+                    <div className="text-xs">
                       <div>{formatDate(quote.createdAt)}</div>
                       <div className="text-muted-foreground">{formatTimeAgo(quote.createdAt)}</div>
                     </div>
                   </TableCell>
                   <TableCell>
                     <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
+                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                         <Button variant="ghost" className="h-8 w-8 p-0">
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
+                      <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                         <DropdownMenuItem asChild>
                           <Link href={`/quotes/${quote.id}`}>
@@ -384,14 +394,14 @@ export default function QuotesPage() {
                         {canSendInvoiceContract(quote) && (
                           <>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => handleOpenInvoiceContractModal(quote)}>
+                            <DropdownMenuItem onClick={(e) => handleOpenInvoiceContractModal(quote)}>
                               <FileSignature className="mr-2 h-4 w-4" />
                               Invoice & Contract
                             </DropdownMenuItem>
                           </>
                         )}
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => handleConvertToInvoice(quote.id)} disabled={converting === quote.id}>
+                        <DropdownMenuItem onClick={(e) => handleConvertToInvoice(quote.id)} disabled={converting === quote.id}>
                           {converting === quote.id ? (
                             <>
                               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -407,7 +417,7 @@ export default function QuotesPage() {
                         <DropdownMenuSeparator />
                         <DropdownMenuItem 
                           className="text-destructive" 
-                          onClick={() => handleDeleteQuote(quote.id)}
+                          onClick={(e) => handleDeleteQuote(quote.id)}
                         >
                           <Trash2 className="mr-2 h-4 w-4" />
                           Delete Quote
