@@ -48,108 +48,105 @@ export function RouteMap() {
 
   const supabase = createClient();
 
-  // === Fetch LEADS for current month ===
-  // === Fetch LEADS (all with status new/opened) ===
-useEffect(() => {
-  const loadLeadRoutes = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("lead_detail")
-        .select(`
-          id,
-          lead_id,
-          origin,
-          origin_code,
-          destination,
-          destination_code,
-          depart_dt,
-          origin_lat,
-          origin_long,
-          destination_lat,
-          destination_long,
-          lead:lead_id (
+  // === Fetch LEADS (status new/opened, all with coordinates) ===
+  useEffect(() => {
+    const loadLeadRoutes = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("lead_detail")
+          .select(`
             id,
-            customer_name,
-            status,
-            created_at
+            lead_id,
+            origin,
+            origin_code,
+            destination,
+            destination_code,
+            depart_dt,
+            origin_lat,
+            origin_long,
+            destination_lat,
+            destination_long,
+            lead:lead_id (
+              id,
+              customer_name,
+              status,
+              created_at
+            )
+          `)
+          .in("lead.status", ["new", "opened"])
+          .order("depart_dt", { ascending: true }); // ✅ Removed limit
+
+        if (error) throw error;
+
+        const formatted: Route[] = [];
+
+        for (const r of data ?? []) {
+          // Skip records missing coordinates
+          if (
+            !r.origin_lat ||
+            !r.origin_long ||
+            !r.destination_lat ||
+            !r.destination_long
           )
-        `)
-        .in("lead.status", ["new", "opened"])
-        .order("depart_dt", { ascending: true })
-        .limit(20);
+            continue;
 
-      if (error) throw error;
+          formatted.push({
+            id: String(r.lead_id),
+            customerName: r.lead?.customer_name ?? "Unknown",
+            status: r.lead?.status ?? "unknown",
+            createdAt: r.lead?.created_at ?? "",
+            legs: [
+              {
+                origin: r.origin,
+                destination: r.destination,
+                originCoords: {
+                  lat: r.origin_lat,
+                  lng: r.origin_long,
+                  name: r.origin_code,
+                },
+                destCoords: {
+                  lat: r.destination_lat,
+                  lng: r.destination_long,
+                  name: r.destination_code,
+                },
+                departDt: r.depart_dt,
+              },
+            ],
+          });
+        }
 
-      const formatted: Route[] = [];
+        setRoutes(formatted);
+        console.log("✅ Loaded leads:", formatted.length);
+      } catch (err) {
+        console.error("Error loading lead routes:", err);
+        setRoutes([]);
+      }
+    };
 
-      for (const r of data ?? []) {
-        if (
-          !r.origin_lat ||
-          !r.origin_long ||
-          !r.destination_lat ||
-          !r.destination_long
-        )
-          continue;
-
-        formatted.push({
-          id: String(r.lead_id),
-          customerName: r.lead?.customer_name ?? "Unknown",
-          status: r.lead?.status ?? "unknown",
-          createdAt: r.lead?.created_at ?? "",
+    if (activeFilter === "leads") loadLeadRoutes();
+    else {
+      // Placeholder for upcoming filter
+      setRoutes([
+        {
+          id: "placeholder-1",
+          customerName: "Upcoming Demo Trip",
+          status: "upcoming",
+          createdAt: new Date().toISOString(),
           legs: [
             {
-              origin: r.origin,
-              destination: r.destination,
-              originCoords: {
-                lat: r.origin_lat,
-                lng: r.origin_long,
-                name: r.origin_code,
-              },
-              destCoords: {
-                lat: r.destination_lat,
-                lng: r.destination_long,
-                name: r.destination_code,
-              },
-              departDt: r.depart_dt,
+              origin: "MIA",
+              destination: "JFK",
+              originCoords: { lat: 25.7959, lng: -80.287, name: "MIA" },
+              destCoords: { lat: 40.6413, lng: -73.7781, name: "JFK" },
+              departDt: new Date().toISOString(),
             },
           ],
-        });
-
-        // if (formatted.length >= 10) break;
-      }
-
-      setRoutes(formatted);
-    } catch (err) {
-      console.error("Error loading lead routes:", err);
-      setRoutes([]);
+        },
+      ]);
     }
-  };
+  }, [activeFilter, refreshKey, supabase]);
 
-  if (activeFilter === "leads") loadLeadRoutes();
-  else {
-    // Placeholder for upcoming filter
-    setRoutes([
-      {
-        id: "placeholder-1",
-        customerName: "Upcoming Demo Trip",
-        status: "upcoming",
-        createdAt: new Date().toISOString(),
-        legs: [
-          {
-            origin: "MIA",
-            destination: "JFK",
-            originCoords: { lat: 25.7959, lng: -80.2870, name: "MIA" },
-            destCoords: { lat: 40.6413, lng: -73.7781, name: "JFK" },
-            departDt: new Date().toISOString(),
-          },
-        ],
-      },
-    ]);
-  }
-}, [activeFilter, refreshKey, supabase]);
-
-
-  // === Initialize Leaflet (fixed for container reuse) ===
+  // === Initialize Leaflet (container fix) ===
   useEffect(() => {
     if (!mapContainer.current) return;
 
@@ -177,7 +174,8 @@ useEffect(() => {
         map.current.remove();
         map.current = null;
       }
-      if (mapContainer.current?._leaflet_id) delete (mapContainer.current as any)._leaflet_id;
+      if (mapContainer.current?._leaflet_id)
+        delete (mapContainer.current as any)._leaflet_id;
 
       try {
         map.current = window.L.map(mapContainer.current!, {
@@ -185,16 +183,19 @@ useEffect(() => {
           zoom: US_ZOOM,
           zoomControl: false,
           attributionControl: false,
-          scrollWheelZoom: false,
+          scrollWheelZoom: false, // ✅ disable mouse zoom
           doubleClickZoom: false,
           touchZoom: false,
         });
 
-        window.L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
-          attribution: "© OpenStreetMap contributors © CARTO",
-          maxZoom: 18,
-          subdomains: "abcd",
-        }).addTo(map.current);
+        window.L.tileLayer(
+          "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+          {
+            attribution: "© OpenStreetMap contributors © CARTO",
+            maxZoom: 18,
+            subdomains: "abcd",
+          }
+        ).addTo(map.current);
 
         setMapLoaded(true);
       } catch (err) {
@@ -204,6 +205,7 @@ useEffect(() => {
     };
 
     loadLeaflet();
+
     return () => {
       if (map.current) {
         map.current.off();
@@ -213,11 +215,10 @@ useEffect(() => {
     };
   }, [refreshKey]);
 
-  // === Draw Routes (with airplane, transparent icons) ===
+  // === Draw routes and markers ===
   useEffect(() => {
     if (!map.current || !mapLoaded) return;
 
-    // Clear existing layers
     routeLayers.current.forEach((l) => map.current.removeLayer(l));
     airportMarkers.current.forEach((m) => map.current.removeLayer(m));
     routeLayers.current = [];
@@ -229,8 +230,15 @@ useEffect(() => {
 
     routes.forEach((route) => {
       route.legs.forEach((leg) => {
-        const originLatLng: [number, number] = [leg.originCoords.lat, leg.originCoords.lng];
-        const destLatLng: [number, number] = [leg.destCoords.lat, leg.destCoords.lng];
+        const originLatLng: [number, number] = [
+          leg.originCoords.lat,
+          leg.originCoords.lng,
+        ];
+        const destLatLng: [number, number] = [
+          leg.destCoords.lat,
+          leg.destCoords.lng,
+        ];
+
         allCoords.push(originLatLng, destLatLng);
 
         // Route line
@@ -241,7 +249,7 @@ useEffect(() => {
           dashArray: "3, 2",
         }).addTo(map.current);
 
-        // Airplane midpoint
+        // Airplane midpoint icon
         const midLat = (leg.originCoords.lat + leg.destCoords.lat) / 2;
         const midLng = (leg.originCoords.lng + leg.destCoords.lng) / 2;
         const angle =
@@ -273,14 +281,20 @@ useEffect(() => {
             <div class="font-semibold text-base">${route.customerName}</div>
             <div><strong>Route:</strong> ${leg.origin} → ${leg.destination}</div>
             <div><strong>Status:</strong> ${route.status}</div>
-            <div><strong>Departure:</strong> ${new Date(leg.departDt).toLocaleString()}</div>
+            <div><strong>Departure:</strong> ${new Date(
+              leg.departDt
+            ).toLocaleString()}</div>
           </div>
         `);
 
         routeLayers.current.push(routeLine, airplane);
 
-        // Transparent airport markers
-        const makeMarker = (coords: { lat: number; lng: number; name: string }) =>
+        // Airport markers (transparent)
+        const makeMarker = (coords: {
+          lat: number;
+          lng: number;
+          name: string;
+        }) =>
           window.L.marker([coords.lat, coords.lng], {
             icon: window.L.divIcon({
               html: `
@@ -300,81 +314,80 @@ useEffect(() => {
       });
     });
 
+    // Fit bounds
     if (allCoords.length) {
       const group = window.L.featureGroup(routeLayers.current);
       map.current.fitBounds(group.getBounds(), { padding: [20, 20], maxZoom: 6 });
     }
   }, [routes, mapLoaded, activeFilter]);
 
-  // === Zoom Buttons ===
+  // === Zoom and refresh controls ===
   const handleZoomIn = () => map.current?.zoomIn();
   const handleZoomOut = () => map.current?.zoomOut();
   const handleRefresh = () => setRefreshKey((k) => k + 1);
 
   return (
-    <>
-      <div className="grid gap-4 grid-cols-1">
-        <Card className="relative overflow-hidden p-0">
-          <div className="relative w-full h-[520px] bg-slate-50">
-            {/* Filters */}
-            <div className="absolute top-4 left-4 z-[1000] flex items-center gap-2 bg-white/10 rounded-lg p-2 shadow-lg border border-white/10">
-              {(["leads", "upcoming"] as FilterType[]).map((filter) => {
-                const isActive = activeFilter === filter;
-                return (
-                  <Button
-                    key={filter}
-                    variant={isActive ? "default" : "ghost"}
-                    size="sm"
-                    className={`h-8 px-3 text-xs ${
-                      isActive ? "shadow-sm" : "hover:bg-slate-300"
-                    }`}
-                    onClick={() => setActiveFilter(filter)}
+    <div className="grid gap-4 grid-cols-1">
+      <Card className="relative overflow-hidden p-0">
+        <div className="relative w-full h-[520px] bg-slate-50">
+          {/* Filters */}
+          <div className="absolute top-4 left-4 z-[1000] flex items-center gap-2 bg-white/10 rounded-lg p-2 shadow-lg border border-white/10">
+            {(["leads", "upcoming"] as FilterType[]).map((filter) => {
+              const isActive = activeFilter === filter;
+              return (
+                <Button
+                  key={filter}
+                  variant={isActive ? "default" : "ghost"}
+                  size="sm"
+                  className={`h-8 px-3 text-xs ${
+                    isActive ? "shadow-sm" : "hover:bg-slate-300"
+                  }`}
+                  onClick={() => setActiveFilter(filter)}
+                >
+                  {filter.charAt(0).toUpperCase() + filter.slice(1)}
+                  <Badge
+                    variant={isActive ? "secondary" : "outline"}
+                    className="ml-2 h-4 px-1 text-[10px]"
                   >
-                    {filter.charAt(0).toUpperCase() + filter.slice(1)}
-                    <Badge
-                      variant={isActive ? "secondary" : "outline"}
-                      className="ml-2 h-4 px-1 text-[10px]"
-                    >
-                      {routes.length}
-                    </Badge>
-                  </Button>
-                );
-              })}
-            </div>
-
-            {/* Zoom / Refresh Controls */}
-            <div className="absolute top-20 right-4 z-[1000] flex flex-col gap-1 bg-white/80 rounded-lg p-1 shadow-lg border border-gray-200">
-              <Button variant="ghost" size="sm" onClick={handleZoomIn}>
-                <Plus className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="sm" onClick={handleZoomOut}>
-                <Minus className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="sm" onClick={handleRefresh}>
-                <RotateCcw className="h-4 w-4" />
-              </Button>
-            </div>
-
-            {/* Map */}
-            <div ref={mapContainer} className="absolute inset-0 w-full h-full" />
-
-            {mapError && (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="text-center space-y-3 bg-white/90 rounded-xl p-8 shadow-lg">
-                  <div className="w-16 h-16 mx-auto bg-red-100 rounded-full flex items-center justify-center">
-                    <MapPin className="h-8 w-8 text-red-500" />
-                  </div>
-                  <p className="text-slate-800 font-medium">Map Error</p>
-                  <p className="text-xs text-slate-600">{mapError}</p>
-                  <Button onClick={handleRefresh} size="sm" className="mt-4">
-                    <RotateCcw className="mr-2 h-4 w-4" /> Try Again
-                  </Button>
-                </div>
-              </div>
-            )}
+                    {routes.length}
+                  </Badge>
+                </Button>
+              );
+            })}
           </div>
-        </Card>
-      </div>
-    </>
+
+          {/* Zoom / Refresh Controls */}
+          <div className="absolute top-20 right-4 z-[1000] flex flex-col gap-1 bg-white/80 rounded-lg p-1 shadow-lg border border-gray-200">
+            <Button variant="ghost" size="sm" onClick={handleZoomIn}>
+              <Plus className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="sm" onClick={handleZoomOut}>
+              <Minus className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="sm" onClick={handleRefresh}>
+              <RotateCcw className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {/* Map */}
+          <div ref={mapContainer} className="absolute inset-0 w-full h-full" />
+
+          {mapError && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="text-center space-y-3 bg-white/90 rounded-xl p-8 shadow-lg">
+                <div className="w-16 h-16 mx-auto bg-red-100 rounded-full flex items-center justify-center">
+                  <MapPin className="h-8 w-8 text-red-500" />
+                </div>
+                <p className="text-slate-800 font-medium">Map Error</p>
+                <p className="text-xs text-slate-600">{mapError}</p>
+                <Button onClick={handleRefresh} size="sm" className="mt-4">
+                  <RotateCcw className="mr-2 h-4 w-4" /> Try Again
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      </Card>
+    </div>
   );
 }
