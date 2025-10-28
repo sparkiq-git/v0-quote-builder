@@ -11,6 +11,7 @@ import {
   CarouselPrevious,
   type CarouselApi,
 } from "@/components/ui/carousel"
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip"
 import type { QuoteOption } from "@/lib/types"
 import { formatCurrency } from "@/lib/utils/format"
 import { useDeviceDetection, deviceLayouts } from "@/hooks/use-device-detection"
@@ -100,6 +101,9 @@ export function AdaptiveQuoteCard({
 
   const amenities = option.selectedAmenities || []
   const capacity = aircraftTail?.capacityOverride || aircraftModel?.defaultCapacity || 8
+
+  const hasSpecifications =
+    aircraftTail?.year || capacity || aircraftTail?.speedKnotsOverride || aircraftTail?.rangeNmOverride
 
   const getCardClasses = () => {
     const baseClasses =
@@ -258,28 +262,68 @@ export function AdaptiveQuoteCard({
                     {aircraftModel?.manufacturer || "Aircraft Manufacturer"}
                   </p>
 
-                  <div className="flex items-center gap-2 text-white/90 font-light drop-shadow-lg">
-                    {aircraftTail?.year && (
-                      <>
-                        <span className="absolute right-[7%] top-1/2 -translate-y-1/2 w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-gray-600" />
-                        <span className="text-xs sm:text-sm">{aircraftTail.year}</span>
-                        <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-white/70" />
-                      </>
-                    )}
-                    <span className="text-xs sm:text-sm">{capacity} PAX</span>
-                    {aircraftTail?.speedKnotsOverride && (
-                      <>
-                        <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-white/70" />
-                        <span className="text-xs sm:text-sm">{aircraftTail.speedKnotsOverride} kts</span>
-                      </>
-                    )}
-                    {aircraftTail?.rangeNmOverride && (
-                      <>
-                        <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-white/70" />
-                        <span className="text-xs sm:text-sm">{aircraftTail.rangeNmOverride} nm</span>
-                      </>
-                    )}
-                  </div>
+                  {hasSpecifications && (
+                    <TooltipProvider delayDuration={150}>
+                      <div className="flex items-center gap-2 text-white/90 font-light drop-shadow-lg">
+                        {aircraftTail?.year && (
+                          <>
+                            <span className="absolute right-[7%] top-1/2 -translate-y-1/2 w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-gray-600" />
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="text-xs sm:text-sm cursor-help">{aircraftTail.year}</span>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p className="text-xs">Year of Refurbishment</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </>
+                        )}
+                        {capacity && (
+                          <>
+                            <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-white/70" />
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="text-xs sm:text-sm cursor-help">{capacity} PAX</span>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p className="text-xs">Maximum Capacity</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </>
+                        )}
+                        {aircraftTail?.speedKnotsOverride && (
+                          <>
+                            <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-white/70" />
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="text-xs sm:text-sm cursor-help">
+                                  {aircraftTail.speedKnotsOverride} kts
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p className="text-xs">Aircraft Speed</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </>
+                        )}
+                        {aircraftTail?.rangeNmOverride && (
+                          <>
+                            <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-white/70" />
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="text-xs sm:text-sm cursor-help">
+                                  {aircraftTail.rangeNmOverride} nm
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p className="text-xs">Aircraft Range</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </>
+                        )}
+                      </div>
+                    </TooltipProvider>
+                  )}
                 </div>
 
                 {amenities.length > 0 && (
