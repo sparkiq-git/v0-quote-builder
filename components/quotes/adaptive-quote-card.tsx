@@ -265,10 +265,9 @@ export function AdaptiveQuoteCard({
                   {hasSpecifications && (
                     <TooltipProvider delayDuration={150}>
                       <div className="flex items-center gap-2 text-white/90 font-light drop-shadow-lg">
-                        {aircraftTail?.year && (
-                          <>
-                            <span className="absolute right-[7%] top-1/2 -translate-y-1/2 w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-gray-600" />
-                            <Tooltip>
+                         {aircraftTail?.year && (
+                           <>
+                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <span className="text-xs sm:text-sm cursor-help">{aircraftTail.year}</span>
                               </TooltipTrigger>
@@ -361,7 +360,7 @@ export function AdaptiveQuoteCard({
 
         <div className="p-2 sm:p-2 lg:p-2.5 space-y-2">
           {/* Pricing and Specifications Grid - Side by Side on Desktop */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5 lg:gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 md:gap-4">
             {/* Pricing Section - Left Column on Desktop */}
             <div className="space-y-0.5">
               <span className="uppercase tracking-widest text-gray-500 font-medium text-[7px]">
