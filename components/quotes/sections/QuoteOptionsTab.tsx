@@ -76,15 +76,14 @@ useEffect(() => {
 
   const handleAddOption = () => {
     const newOption: QuoteOption = {
-  id: crypto.randomUUID(),
-  label: `Option ${options.length + 1}`,
-  aircraft_id: "",
-  flight_hours: 0,
-  cost_operator: 0,
-  price_commission: 0,
-  price_base: 0,
-  price_total: 0,
-  notes: "",
+      id: crypto.randomUUID(),
+      label: `Option ${options.length + 1}`,
+      aircraftModelId: "",
+      aircraftTailId: "",
+      totalHours: 0,
+      operatorCost: 0,
+      commission: 0,
+      tax: 0,
       fees: [
         { id: crypto.randomUUID(), name: "US Domestic Segment Fee", amount: 0 },
         { id: crypto.randomUUID(), name: "US International Head Tax", amount: 0 },
@@ -92,9 +91,10 @@ useEffect(() => {
       ],
       feesEnabled: false,
       selectedAmenities: [],
+      notes: "",
     }
     onUpdate({ options: renumberOptions([...options, newOption]) })
-    }
+  }
 
 const handleUpdateOption = (id: string, updates: Partial<QuoteOption>) => {
   // Block only if we're hydrating pre-existing options from DB.
@@ -124,7 +124,7 @@ const handleUpdateOption = (id: string, updates: Partial<QuoteOption>) => {
     const feeTotal = option.feesEnabled
       ? (option.fees || []).reduce((sum, f) => sum + (f.amount || 0), 0)
       : 0
-    return option.cost_operator + option.price_commission + feeTotal
+    return (option.operatorCost || 0) + (option.commission || 0) + (option.tax || 0) + feeTotal
   }
 
   const total = options.reduce((sum, o) => sum + calculateOptionTotal(o), 0)
@@ -190,16 +190,12 @@ const handleNext = () => {
                   <div className="space-y-3">
                     <Label>Aircraft Selection</Label>
                     <AircraftCombobox
-                      value={option.aircraft_id || null}
+                      value={option.aircraftModelId || null}
                       onSelect={(a) => {
                         setAircraftCache((prev) => ({ ...prev, [a.aircraft_id]: a }))
                         handleUpdateOption(option.id, {
-                          aircraft_id: a.aircraft_id,
-                          aircraft_tail_number: a.tail_number,
-                          aircraft_model: a.model_name,
-                          aircraft_manufacturer: a.manufacturer_name,
-                          aircraft_capacity: a.capacity_pax,
-                          aircraft_range: a.range_nm,
+                          aircraftModelId: a.aircraft_id,
+                          aircraftTailId: a.aircraft_id, // Assuming same for now
                           selectedAmenities: a.amenities || [],
                         })
                         toast({
@@ -210,13 +206,13 @@ const handleNext = () => {
                       onClickAdd={() => setCreateOpen(true)}
                     />
 
-                 {option.aircraft_id && aircraftCache[option.aircraft_id] && (
+                 {option.aircraftModelId && aircraftCache[option.aircraftModelId] && (
   <AircraftSummaryCard
-    aircraft={aircraftCache[option.aircraft_id]}
-    onEdit={() => setEditOpenFor(option.aircraft_id!)}
+    aircraft={aircraftCache[option.aircraftModelId]}
+    onEdit={() => setEditOpenFor(option.aircraftModelId!)}
   />
 )}
-                 {option.aircraft_id && !aircraftCache[option.aircraft_id] && (
+                 {option.aircraftModelId && !aircraftCache[option.aircraftModelId] && (
   <div className="p-3 border border-yellow-200 bg-yellow-50 rounded-lg">
     <p className="text-sm text-yellow-800">
       ⚠️ Aircraft data not found. Please select a different aircraft.
@@ -232,25 +228,25 @@ const handleNext = () => {
                     <div className="grid grid-cols-3 gap-3">
                       <div className="grid gap-1.5">
                         <Label>Total Hours</Label>
-<Input
-  type="number"
-  step="0.1"
-  value={option.flight_hours ?? 0}
-  onChange={(e) =>
-    handleUpdateOption(option.id, {
-      flight_hours: parseFloat(e.target.value) || 0,
-    })
-  }
-/>
+                        <Input
+                          type="number"
+                          step="0.1"
+                          value={option.totalHours ?? 0}
+                          onChange={(e) =>
+                            handleUpdateOption(option.id, {
+                              totalHours: parseFloat(e.target.value) || 0,
+                            })
+                          }
+                        />
                       </div>
                       <div className="grid gap-1.5">
                         <Label>Operator Cost</Label>
                         <Input
                           type="number"
-                          value={option.cost_operator ?? 0}
+                          value={option.operatorCost ?? 0}
                           onChange={(e) =>
                             handleUpdateOption(option.id, {
-                              cost_operator: parseFloat(e.target.value) || 0,
+                              operatorCost: parseFloat(e.target.value) || 0,
                             })
                           }
                         />
@@ -259,14 +255,28 @@ const handleNext = () => {
                         <Label>Commission</Label>
                         <Input
                           type="number"
-                          value={option.price_commission ?? 0}
+                          value={option.commission ?? 0}
                           onChange={(e) =>
                             handleUpdateOption(option.id, {
-                              price_commission: parseFloat(e.target.value) || 0,
+                              commission: parseFloat(e.target.value) || 0,
                             })
                           }
                         />
                       </div>
+                    </div>
+
+                    {/* Tax */}
+                    <div className="grid gap-1.5">
+                      <Label>Tax</Label>
+                      <Input
+                        type="number"
+                        value={option.tax ?? 0}
+                        onChange={(e) =>
+                          handleUpdateOption(option.id, {
+                            tax: parseFloat(e.target.value) || 0,
+                          })
+                        }
+                      />
                     </div>
 
                     {/* Notes */}

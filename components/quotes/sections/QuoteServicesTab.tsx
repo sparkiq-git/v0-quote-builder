@@ -17,7 +17,14 @@ import { ItemCombobox } from "@/components/ui/item-combobox"
 import { useToast } from "@/hooks/use-toast"
 import { Switch } from "@/components/ui/switch"
 
-export function QuoteServicesTab({ quote, onNext, onBack }: any) {
+interface Props {
+  quote: any
+  onUpdate: (updates: any) => void
+  onNext: () => void
+  onBack: () => void
+}
+
+export function QuoteServicesTab({ quote, onUpdate, onNext, onBack }: Props) {
   const { toast } = useToast()
   const [saving, setSaving] = useState(false)
   const [services, setServices] = useState(
@@ -27,30 +34,33 @@ export function QuoteServicesTab({ quote, onNext, onBack }: any) {
   /* ---------------- Handlers ---------------- */
 
   const handleAddService = () => {
-    setServices((prev) => [
-      ...prev,
-      {
-        id: crypto.randomUUID(),
-        item_id: null,
-        description: "",
-        amount: 0,
-        taxable: false,
-      },
-    ])
+    const newService = {
+      id: crypto.randomUUID(),
+      item_id: null,
+      description: "",
+      amount: 0,
+      qty: 1,
+      taxable: false,
+    }
+    const updatedServices = [...services, newService]
+    setServices(updatedServices)
+    onUpdate({ services: updatedServices })
   }
 
   const handleRemoveService = (id: string) => {
-    setServices((prev) => prev.filter((s) => s.id !== id))
+    const updatedServices = services.filter((s) => s.id !== id)
+    setServices(updatedServices)
+    onUpdate({ services: updatedServices })
   }
 
   const handleUpdate = (id: string, key: string, value: any) => {
-    setServices((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, [key]: value } : s))
-    )
+    const updatedServices = services.map((s) => (s.id === id ? { ...s, [key]: value } : s))
+    setServices(updatedServices)
+    onUpdate({ services: updatedServices })
   }
 
   const total = useMemo(
-    () => services.reduce((acc, s) => acc + (Number(s.amount) || 0), 0),
+    () => services.reduce((acc, s) => acc + (Number(s.amount) || 0) * (Number(s.qty) || 1), 0),
     [services]
   )
 
@@ -98,7 +108,7 @@ export function QuoteServicesTab({ quote, onNext, onBack }: any) {
                   </Button>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   {/* Service Name */}
                   <div>
                     <Label className="text-sm mb-1 block">Service Name</Label>
@@ -123,9 +133,26 @@ export function QuoteServicesTab({ quote, onNext, onBack }: any) {
                     />
                   </div>
 
+                  {/* Quantity */}
+                  <div>
+                    <Label className="text-sm mb-1 block">Quantity</Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      value={s.qty || 1}
+                      onChange={(e) =>
+                        handleUpdate(
+                          s.id,
+                          "qty",
+                          parseInt(e.target.value) || 1
+                        )
+                      }
+                    />
+                  </div>
+
                   {/* Amount */}
                   <div>
-                    <Label className="text-sm mb-1 block">Amount</Label>
+                    <Label className="text-sm mb-1 block">Unit Price</Label>
                     <Input
                       type="number"
                       step="0.01"
