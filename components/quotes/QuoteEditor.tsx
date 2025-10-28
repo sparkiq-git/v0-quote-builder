@@ -4,8 +4,9 @@ import { useEffect, useState, useCallback } from "react"
 import { saveQuoteAll, deleteQuote } from "@/lib/supabase/queries/quotes"
 import { QuoteBuilderTabs } from "@/components/quotes/QuoteBuilderTabs"
 import { useToast } from "@/hooks/use-toast"
+import { useAutoSave } from "@/hooks/use-auto-save"
 import { Button } from "@/components/ui/button"
-import { Loader2, Trash2 } from "lucide-react"
+import { Loader2, Trash2, Save } from "lucide-react"
 import { Pencil , Check} from "lucide-react"
 import {
   AlertDialog,
@@ -17,6 +18,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { ErrorBoundary, QuoteErrorFallback } from "@/components/ui/error-boundary"
 
 interface QuoteEditorProps {
   quote: any
@@ -41,7 +43,32 @@ export function QuoteEditor({
   const [localUpdates, setLocalUpdates] = useState<Partial<any> | null>(null)
   const [localLegUpdates, setLocalLegUpdates] = useState<any[] | null>(null)
   const [editingTitle, setEditingTitle] = useState(false)
-const [tempTitle, setTempTitle] = useState(quote.title || "New Quote")
+  const [tempTitle, setTempTitle] = useState(quote.title || "New Quote")
+
+  // Auto-save functionality
+  const { saveNow, forceSave, isSaving, hasUnsavedChanges } = useAutoSave(
+    {
+      ...quote,
+      legs: Array.isArray(quoteDetails) ? quoteDetails : [],
+      options: Array.isArray(quote.options) ? quote.options : [],
+      services: Array.isArray(quote.services) ? quote.services : [],
+    },
+    {
+      delay: 30000, // 30 seconds
+      maxRetries: 3,
+      onSave: async (data) => {
+        if (!data.id) return
+        await saveQuoteAll(data)
+        setPendingChanges(false)
+        setLastSaved(new Date())
+      },
+      onError: (error) => {
+        console.error("Auto-save error:", error)
+        // Error handling is done in the hook
+      },
+      enabled: !!quote?.id && pendingChanges,
+    }
+  )
 
   /* -------------------- SYNC INITIAL PROPS -------------------- */
   useEffect(() => {
@@ -202,7 +229,9 @@ const normalizeLegs = useCallback((legs: any[]) => {
     </div>
 
     <p className="text-sm text-muted-foreground mt-1">
-      {saving
+      {isSaving
+        ? "Auto-saving..."
+        : saving
         ? "Saving..."
         : pendingChanges
         ? "Unsaved changes"
@@ -213,6 +242,12 @@ const normalizeLegs = useCallback((legs: any[]) => {
   </div>
 
   <div className="flex items-center gap-2">
+    {hasUnsavedChanges && (
+      <Button variant="outline" onClick={saveNow} disabled={isSaving}>
+        <Save className="h-4 w-4 mr-2" />
+        {isSaving ? "Saving..." : "Save Now"}
+      </Button>
+    )}
     <Button variant="outline" onClick={() => setShowDeleteModal(true)}>
       <Trash2 className="h-4 w-4 mr-2" /> Delete
     </Button>
@@ -220,52 +255,38 @@ const normalizeLegs = useCallback((legs: any[]) => {
 </div>
 
       {/* Tabs */}
-      <QuoteBuilderTabs
-        quote={{
-          ...quote,
-          legs: Array.isArray(quoteDetails) ? quoteDetails : [],
-          options: Array.isArray(quote.options) ? quote.options : [],
-          services: Array.isArray(quote.services) ? quote.services : [],
-          customer: {
-            id: quote.contact_id || "",
-            name: quote.contact_name || "",
-            email: quote.contact_email || "",
-            phone: quote.contact_phone || "",
-            company: quote.contact_company || "",
-          },
-        }}
-        onUpdate={handleUpdate}
-        onLegsChange={handleUpdateLegs}
-        onNavigate={async () => {
-          // Save any pending changes before navigation
-          if (pendingChanges) {
-            try {
-              // Prepare the complete quote object with all data
-              const completeQuote = {
-                ...quote,
-                ...localUpdates,
-                legs: Array.isArray(quoteDetails) ? quoteDetails : [],
-                options: Array.isArray(quote.options) ? quote.options : [],
-                services: Array.isArray(quote.services) ? quote.services : [],
+      <ErrorBoundary fallback={QuoteErrorFallback}>
+        <QuoteBuilderTabs
+          quote={{
+            ...quote,
+            legs: Array.isArray(quoteDetails) ? quoteDetails : [],
+            options: Array.isArray(quote.options) ? quote.options : [],
+            services: Array.isArray(quote.services) ? quote.services : [],
+            customer: {
+              id: quote.contact_id || "",
+              name: quote.contact_name || "",
+              email: quote.contact_email || "",
+              phone: quote.contact_phone || "",
+              company: quote.contact_company || "",
+            },
+          }}
+          onUpdate={handleUpdate}
+          onLegsChange={handleUpdateLegs}
+          onNavigate={async () => {
+            // Force save any pending changes before navigation
+            if (hasUnsavedChanges) {
+              try {
+                await forceSave()
+                setPendingChanges(false)
+                setLastSaved(new Date())
+              } catch (error) {
+                console.error("Failed to save before navigation:", error)
+                throw error
               }
-              
-              console.log("💾 Saving complete quote before navigation:", {
-                quoteId: completeQuote.id,
-                legs: completeQuote.legs?.length || 0,
-                options: completeQuote.options?.length || 0,
-                services: completeQuote.services?.length || 0,
-              })
-              
-              await saveQuoteAll(completeQuote)
-              setPendingChanges(false)
-              setLastSaved(new Date())
-            } catch (error) {
-              console.error("Failed to save before navigation:", error)
-              throw error
             }
-          }
-        }}
-      />
+          }}
+        />
+      </ErrorBoundary>
 
       {/* Delete Modal */}
       <AlertDialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>

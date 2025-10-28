@@ -150,6 +150,17 @@ export interface QuoteOption {
   aircraftTail?: AircraftTail
 }
 
+// Standardized quote status values
+export type QuoteStatus = 
+  | "draft"
+  | "sent" 
+  | "opened"
+  | "accepted"
+  | "declined"
+  | "cancelled"
+  | "invoiced"
+  | "expired"
+
 export interface Quote {
   id: string
   leadId?: string
@@ -158,15 +169,7 @@ export interface Quote {
   legs: Leg[]
   options: QuoteOption[]
   services: Service[]
-  status:
-    | "pending_response"
-    | "client_accepted"
-    | "availability_confirmed"
-    | "pending_payment"
-    | "payment_received"
-    | "itinerary_created"
-    | "declined"
-    | "expired"
+  status: QuoteStatus
   expiresAt: string
   createdAt: string
   publishedAt?: string

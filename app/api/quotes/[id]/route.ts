@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { createActionLinkClient } from "@/lib/supabase/action-links"
+import { QuoteTypeMapper } from "@/lib/utils/quote-mapper"
 
 /* ---------------- Utility helpers ---------------- */
 function toDateTime(date?: string | null, time?: string | null): string | null {
@@ -148,13 +149,9 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     console.log("Raw services data:", JSON.stringify(services, null, 2))
     console.log("Aircraft data:", JSON.stringify(aircraftData, null, 2))
 
-    // Transform the data to match the expected format
-    const transformedQuote = {
+    // Use type mapper to transform data consistently
+    const transformedQuote = QuoteTypeMapper.normalizeQuote({
       ...quote,
-      // Map database fields to client-friendly names
-      validUntil: quote.valid_until,
-      selectedOptionId: quote.selected_option_id,
-      // Transform legs from quote_detail to expected format
       legs: (legs || []).map((leg: any) => ({
         id: leg.id,
         origin: leg.origin_code,
@@ -171,7 +168,6 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
         destination_long: leg.destination_long,
         distance_nm: leg.distance_nm,
       })),
-      // Transform options from quote_option to expected format
       options: (options || []).map((option: any) => {
         const aircraft = aircraftData.find(a => a.id === option.aircraft_id)
         const aircraftModel = aircraft?.aircraft_model
@@ -253,7 +249,6 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
           } : null,
         }
       }),
-      // Transform services from quote_item to expected format
       services: (services || []).map((service: any) => ({
         id: service.id,
         name: service.name,
@@ -263,19 +258,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
         taxable: service.taxable,
         notes: service.notes,
       })),
-      // Ensure customer object exists
-      customer: quote.customer || {
-        id: quote.contact_id || 'unknown',
-        name: quote.contact_name || 'Unknown Customer',
-        email: quote.contact_email || '',
-        phone: quote.contact_phone || '',
-        company: quote.contact_company || '',
-      },
-      // Ensure branding exists
-      branding: quote.branding || {
-        primaryColor: '#2563eb',
-      },
-    }
+    })
 
     return NextResponse.json(transformedQuote)
   } catch (error) {
