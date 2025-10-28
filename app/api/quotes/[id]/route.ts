@@ -172,6 +172,12 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
         destination_lat: leg.destination_lat,
         destination_long: leg.destination_long,
         distance_nm: leg.distance_nm,
+        // Preserve original field names for backward compatibility
+        origin_code: leg.origin_code,
+        destination_code: leg.destination_code,
+        depart_dt: leg.depart_dt,
+        depart_time: leg.depart_time,
+        pax_count: leg.pax_count,
       })),
       options: (options || []).map((option: any) => {
         const aircraft = aircraftData.find(a => a.id === option.aircraft_id)
