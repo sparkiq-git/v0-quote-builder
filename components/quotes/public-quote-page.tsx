@@ -955,12 +955,7 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
               <div className="p-0">
                 <div className="px-4 xl:px-6 py-3 xl:py-4 border-b border-gray-200/50 bg-gradient-to-r from-white/90 to-blue-50/50 backdrop-blur-sm mb-3 xl:mb-4">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                        <Plane className="h-4 w-4 text-blue-600" />
-                      </div>
-                      <h3 className="text-lg font-semibold text-gray-900">Aircraft Options</h3>
-                    </div>
+                    
                     <Badge variant={statusDisplay.variant} className="text-xs flex items-center gap-1 px-3 py-1">
                       <StatusIcon className="h-3 w-3" />
                       {statusDisplay.text}
