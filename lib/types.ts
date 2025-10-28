@@ -517,6 +517,7 @@ export type AircraftFull = {
   manufacturer_name?: string | null
   model_name?: string | null
   primary_image_url?: string | null
+  aircraft_images?: string[] // Add aircraft_images field for compatibility
   amenities?: string[]
   capacity_pax?: number | null
   range_nm?: number | null

@@ -108,6 +108,14 @@ useEffect(() => {
         meta: option.aircraftTail.meta || {},
         aircraft_images: option.aircraftTail.images || [],
       }
+    } else if (option.aircraft_id && !aircraftCache[option.aircraft_id]) {
+      // If option has aircraft_id but no aircraft data, it might be a newly added option
+      // that hasn't been saved yet. We'll skip it for now and let the user select an aircraft.
+      console.log("⚠️ Option has aircraft_id but no aircraft data (likely newly added):", {
+        aircraft_id: option.aircraft_id,
+        hasAircraftModel: !!option.aircraftModel,
+        hasAircraftTail: !!option.aircraftTail
+      })
     } else {
       console.log("⚠️ Missing aircraft data for option:", {
         aircraft_id: option.aircraft_id,
@@ -150,6 +158,9 @@ useEffect(() => {
       feesEnabled: false,
       selectedAmenities: [],
       notes: "",
+      // Initialize empty aircraft data objects for consistency
+      aircraftModel: null,
+      aircraftTail: null,
     }
     onUpdate({ options: renumberOptions([...options, newOption]) })
   }
@@ -252,10 +263,44 @@ const handleNext = () => {
                       onSelect={(a) => {
                         // Store the full aircraft data in cache
                         setAircraftCache((prev) => ({ ...prev, [a.aircraft_id]: a }))
+                        
+                        // Also store the aircraft data in the option itself for persistence
+                        const aircraftModel = {
+                          id: a.aircraft_id,
+                          name: a.model_name || "",
+                          manufacturer: a.manufacturer_name || "",
+                          defaultCapacity: a.capacity_pax || null,
+                          defaultRangeNm: a.range_nm || null,
+                          defaultSpeedKnots: null,
+                          images: a.aircraft_images || (a.primary_image_url ? [a.primary_image_url] : []),
+                        }
+                        
+                        const aircraftTail = {
+                          id: a.aircraft_id,
+                          tailNumber: a.tail_number || "",
+                          operator: a.operator_name || "",
+                          operator_id: "", // AircraftFull doesn't have operator_id field
+                          year: a.year_of_manufacture || null,
+                          yearOfRefurbish: a.year_of_refurbish || null,
+                          cruisingSpeed: null,
+                          rangeNm: a.range_nm || null,
+                          amenities: a.amenities || [],
+                          images: a.aircraft_images || (a.primary_image_url ? [a.primary_image_url] : []),
+                          capacityOverride: a.capacity_pax || null,
+                          rangeNmOverride: a.range_nm || null,
+                          speedKnotsOverride: null,
+                          status: a.status || "ACTIVE",
+                          homeBase: a.home_base || "",
+                          serialNumber: a.serial_number || null,
+                          mtowKg: a.mtow_kg || null,
+                        }
+                        
                         handleUpdateOption(option.id, {
                           aircraft_id: a.aircraft_id,
                           aircraft_tail_id: a.aircraft_id, // Assuming same for now
                           selectedAmenities: a.amenities || [],
+                          aircraftModel: aircraftModel,
+                          aircraftTail: aircraftTail,
                         })
                         toast({
                           title: "Aircraft Selected",
