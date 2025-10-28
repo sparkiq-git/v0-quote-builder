@@ -68,6 +68,47 @@ useEffect(() => {
   }
 }, [quote])
 
+// 🛩️ Preload aircraft data from existing options
+useEffect(() => {
+  if (!quote?.options?.length) return
+  
+  const aircraftData: Record<string, AircraftFull> = {}
+  
+  quote.options.forEach((option: any) => {
+    if (option.aircraft_id && option.aircraftModel && option.aircraftTail) {
+      // Convert API aircraft data to AircraftFull format
+      aircraftData[option.aircraft_id] = {
+        aircraft_id: option.aircraft_id,
+        tenant_id: option.aircraftTail.tenant_id || "",
+        tail_number: option.aircraftTail.tailNumber || "",
+        manufacturer_name: option.aircraftModel.manufacturer || "",
+        model_name: option.aircraftModel.name || "",
+        operator_name: option.aircraftTail.operator || option.aircraftTail.operator_id || "",
+        primary_image_url: option.aircraftTail.images?.[0] || option.aircraftModel.images?.[0] || null,
+        amenities: option.selectedAmenities || [],
+        capacity_pax: option.aircraftTail.capacityOverride || option.aircraftTail.capacity_pax || option.aircraftModel.defaultCapacity || 8,
+        range_nm: option.aircraftTail.rangeNmOverride || option.aircraftTail.range_nm || option.aircraftModel.defaultRangeNm || 2000,
+        status: option.aircraftTail.status || "active",
+        home_base: option.aircraftTail.homeBase || "",
+        year_of_manufacture: option.aircraftTail.year || null,
+        year_of_refurbish: option.aircraftTail.yearOfRefurbish || null,
+        serial_number: option.aircraftTail.serialNumber || "",
+        mtow_kg: option.aircraftTail.mtowKg || null,
+        notes: option.aircraftTail.notes || "",
+        meta: option.aircraftTail.meta || {},
+        aircraft_images: option.aircraftTail.images || [],
+      }
+    }
+  })
+  
+  if (Object.keys(aircraftData).length > 0) {
+    console.log("🛩️ Preloading aircraft data:", aircraftData)
+    setAircraftCache(aircraftData)
+  } else {
+    console.log("⚠️ No aircraft data found in options:", quote.options)
+  }
+}, [quote?.options])
+
 
 
 
@@ -218,6 +259,9 @@ const handleNext = () => {
   <div className="p-3 border border-yellow-200 bg-yellow-50 rounded-lg">
     <p className="text-sm text-yellow-800">
       ⚠️ Aircraft data not found. Please select a different aircraft.
+    </p>
+    <p className="text-xs text-yellow-700 mt-1">
+      Debug: aircraft_id={option.aircraft_id}, cache keys={Object.keys(aircraftCache).join(', ')}
     </p>
   </div>
 )}
