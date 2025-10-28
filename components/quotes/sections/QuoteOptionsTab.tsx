@@ -75,15 +75,16 @@ useEffect(() => {
 // No need to fetch separately
 
   const handleAddOption = () => {
-    const newOption: QuoteOption = {
+    const newOption: any = {
       id: crypto.randomUUID(),
       label: `Option ${options.length + 1}`,
-      aircraftModelId: "",
-      aircraftTailId: "",
-      totalHours: 0,
-      operatorCost: 0,
-      commission: 0,
-      tax: 0,
+      aircraft_id: "",
+      aircraft_tail_id: "",
+      flight_hours: 0,
+      cost_operator: 0,
+      price_commission: 0,
+      price_base: 0,
+      price_total: 0,
       fees: [
         { id: crypto.randomUUID(), name: "US Domestic Segment Fee", amount: 0 },
         { id: crypto.randomUUID(), name: "US International Head Tax", amount: 0 },
@@ -120,11 +121,11 @@ const handleUpdateOption = (id: string, updates: Partial<QuoteOption>) => {
   onUpdate({ options: renumberOptions(remaining) })
 }
 
-  const calculateOptionTotal = (option: QuoteOption) => {
+  const calculateOptionTotal = (option: any) => {
     const feeTotal = option.feesEnabled
-      ? (option.fees || []).reduce((sum, f) => sum + (f.amount || 0), 0)
+      ? (option.fees || []).reduce((sum: number, f: any) => sum + (f.amount || 0), 0)
       : 0
-    return (option.operatorCost || 0) + (option.commission || 0) + (option.tax || 0) + feeTotal
+    return (option.cost_operator || 0) + (option.price_commission || 0) + (option.price_base || 0) + feeTotal
   }
 
   const total = options.reduce((sum, o) => sum + calculateOptionTotal(o), 0)
@@ -190,12 +191,12 @@ const handleNext = () => {
                   <div className="space-y-3">
                     <Label>Aircraft Selection</Label>
                     <AircraftCombobox
-                      value={option.aircraftModelId || null}
+                      value={option.aircraft_id || null}
                       onSelect={(a) => {
                         setAircraftCache((prev) => ({ ...prev, [a.aircraft_id]: a }))
                         handleUpdateOption(option.id, {
-                          aircraftModelId: a.aircraft_id,
-                          aircraftTailId: a.aircraft_id, // Assuming same for now
+                          aircraft_id: a.aircraft_id,
+                          aircraft_tail_id: a.aircraft_id, // Assuming same for now
                           selectedAmenities: a.amenities || [],
                         })
                         toast({
@@ -206,13 +207,13 @@ const handleNext = () => {
                       onClickAdd={() => setCreateOpen(true)}
                     />
 
-                 {option.aircraftModelId && aircraftCache[option.aircraftModelId] && (
+                 {option.aircraft_id && aircraftCache[option.aircraft_id] && (
   <AircraftSummaryCard
-    aircraft={aircraftCache[option.aircraftModelId]}
-    onEdit={() => setEditOpenFor(option.aircraftModelId!)}
+    aircraft={aircraftCache[option.aircraft_id]}
+    onEdit={() => setEditOpenFor(option.aircraft_id!)}
   />
 )}
-                 {option.aircraftModelId && !aircraftCache[option.aircraftModelId] && (
+                 {option.aircraft_id && !aircraftCache[option.aircraft_id] && (
   <div className="p-3 border border-yellow-200 bg-yellow-50 rounded-lg">
     <p className="text-sm text-yellow-800">
       ⚠️ Aircraft data not found. Please select a different aircraft.
@@ -231,10 +232,10 @@ const handleNext = () => {
                         <Input
                           type="number"
                           step="0.1"
-                          value={option.totalHours ?? 0}
+                          value={option.flight_hours ?? 0}
                           onChange={(e) =>
                             handleUpdateOption(option.id, {
-                              totalHours: parseFloat(e.target.value) || 0,
+                              flight_hours: parseFloat(e.target.value) || 0,
                             })
                           }
                         />
@@ -243,10 +244,10 @@ const handleNext = () => {
                         <Label>Operator Cost</Label>
                         <Input
                           type="number"
-                          value={option.operatorCost ?? 0}
+                          value={option.cost_operator ?? 0}
                           onChange={(e) =>
                             handleUpdateOption(option.id, {
-                              operatorCost: parseFloat(e.target.value) || 0,
+                              cost_operator: parseFloat(e.target.value) || 0,
                             })
                           }
                         />
@@ -255,10 +256,10 @@ const handleNext = () => {
                         <Label>Commission</Label>
                         <Input
                           type="number"
-                          value={option.commission ?? 0}
+                          value={option.price_commission ?? 0}
                           onChange={(e) =>
                             handleUpdateOption(option.id, {
-                              commission: parseFloat(e.target.value) || 0,
+                              price_commission: parseFloat(e.target.value) || 0,
                             })
                           }
                         />
@@ -270,10 +271,10 @@ const handleNext = () => {
                       <Label>Tax</Label>
                       <Input
                         type="number"
-                        value={option.tax ?? 0}
+                        value={option.price_base ?? 0}
                         onChange={(e) =>
                           handleUpdateOption(option.id, {
-                            tax: parseFloat(e.target.value) || 0,
+                            price_base: parseFloat(e.target.value) || 0,
                           })
                         }
                       />

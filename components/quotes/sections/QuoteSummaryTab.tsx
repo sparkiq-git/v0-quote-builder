@@ -52,9 +52,9 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
     if (!quote.options?.length) return 0
     return quote.options.reduce((sum, o) => {
       const total =
-        (Number(o.operatorCost) || 0) +
-        (Number(o.commission) || 0) +
-        (Number(o.tax) || 0)
+        (Number(o.cost_operator) || 0) +
+        (Number(o.price_commission) || 0) +
+        (Number(o.price_base) || 0)
       return sum + total
     }, 0)
   }, [quote.options])
@@ -287,10 +287,11 @@ useEffect(() => {
             <div className="space-y-4">
               {quote.options.map((option: any, i: number) => {
                 const total =
-                  (Number(option?.operatorCost) || 0) +
-                  (Number(option?.commission) || 0) +
-                  (Number(option?.tax) || 0)
+                  (Number(option?.cost_operator) || 0) +
+                  (Number(option?.price_commission) || 0) +
+                  (Number(option?.price_base) || 0)
 
+                // Use the aircraft data that comes from the API
                 const aircraftModel = option?.aircraftModel
                 const aircraftTail = option?.aircraftTail
                 const amenities = option?.selectedAmenities || []
@@ -318,7 +319,7 @@ useEffect(() => {
                             {formatCurrency(total)}
                           </div>
                           <div className="text-sm text-muted-foreground">
-                            {option.totalHours || 0} flight hours
+                            {option.flight_hours || 0} flight hours
                           </div>
                         </div>
                       </div>
@@ -426,15 +427,15 @@ useEffect(() => {
                         <div className="grid grid-cols-2 gap-4 text-sm">
                           <div className="flex justify-between">
                             <span className="text-muted-foreground">Operator Cost:</span>
-                            <span>{formatCurrency(option.operatorCost || 0)}</span>
+                            <span>{formatCurrency(option.cost_operator || 0)}</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-muted-foreground">Commission:</span>
-                            <span>{formatCurrency(option.commission || 0)}</span>
+                            <span>{formatCurrency(option.price_commission || 0)}</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-muted-foreground">Tax:</span>
-                            <span>{formatCurrency(option.tax || 0)}</span>
+                            <span>{formatCurrency(option.price_base || 0)}</span>
                           </div>
                           <div className="flex justify-between font-semibold">
                             <span>Total:</span>

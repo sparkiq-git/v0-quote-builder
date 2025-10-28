@@ -124,6 +124,7 @@ export async function saveQuoteAll(quote: any) {
     },
     legs: quote.legs || [],
     options: quote.options || [],
+    services: quote.services || [],
   }
 
   const res = await fetch(`/api/quotes/${quote.id}`, {
