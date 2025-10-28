@@ -60,10 +60,10 @@ export function QuoteLegsTab({ quote, onUpdate, onLegsChange, onNext, onBack }: 
           departureDate: l.departureDate || l.depart_dt || "",
           departureTime: l.departureTime || l.depart_time || "",
           passengers: l.passengers || l.pax_count || 1,
-      origin_lat: formState.origin_lat ?? legs[0]?.origin_lat ?? null,
-      origin_long: formState.origin_long ?? legs[0]?.origin_long ?? null,
-      destination_lat: formState.destination_lat ?? legs[0]?.destination_lat ?? null,
-      destination_long: formState.destination_long ?? legs[0]?.destination_long ?? null,
+          origin_lat: l.origin_lat ?? null,
+          origin_long: l.origin_long ?? null,
+          destination_lat: l.destination_lat ?? null,
+          destination_long: l.destination_long ?? null,
         }))
       : [
           {
@@ -75,6 +75,10 @@ export function QuoteLegsTab({ quote, onUpdate, onLegsChange, onNext, onBack }: 
             departureDate: "",
             departureTime: "",
             passengers: 1,
+            origin_lat: null,
+            origin_long: null,
+            destination_lat: null,
+            destination_long: null,
           },
         ]
   )
@@ -104,11 +108,31 @@ export function QuoteLegsTab({ quote, onUpdate, onLegsChange, onNext, onBack }: 
 
   /* ------------------ ✈️ Save form data to parent ------------------ */
   const saveFormData = () => {
+    console.log("🛫 QuoteLegsTab saveFormData called", {
+      tripType,
+      formState: {
+        departureDate: formState.departureDate,
+        departureTime: formState.departureTime,
+        returnDate: formState.returnDate,
+        returnTime: formState.returnTime,
+      },
+      multiLegs: multiLegs.map(leg => ({
+        departureDate: leg.departureDate,
+        departureTime: leg.departureTime,
+      }))
+    })
+
     if (tripType === "multi-city") {
-      // Save multi-city legs
-      onLegsChange(multiLegs)
+      // Save multi-city legs with proper date handling
+      const processedLegs = multiLegs.map(leg => ({
+        ...leg,
+        departureDate: leg.departureDate || null,
+        departureTime: leg.departureTime || null,
+      }))
+      console.log("🛫 Processed multi-city legs:", processedLegs)
+      onLegsChange(processedLegs)
       onUpdate({ 
-        legs: multiLegs,
+        legs: processedLegs,
         trip_type: tripType 
       })
     } else {
@@ -120,8 +144,8 @@ export function QuoteLegsTab({ quote, onUpdate, onLegsChange, onNext, onBack }: 
           origin_code: formState.origin_code,
           destination: formState.destination,
           destination_code: formState.destination_code,
-          departureDate: formState.departureDate,
-          departureTime: formState.departureTime,
+          departureDate: formState.departureDate || null,
+          departureTime: formState.departureTime || null,
           passengers: formState.passengers,
           origin_lat: formState.origin_lat,
           origin_long: formState.origin_long,
@@ -138,8 +162,8 @@ export function QuoteLegsTab({ quote, onUpdate, onLegsChange, onNext, onBack }: 
           origin_code: formState.destination_code,
           destination: formState.origin,
           destination_code: formState.origin_code,
-          departureDate: formState.returnDate,
-          departureTime: formState.returnTime,
+          departureDate: formState.returnDate || null,
+          departureTime: formState.returnTime || null,
           passengers: formState.passengers,
           origin_lat: formState.destination_lat,
           origin_long: formState.destination_long,
@@ -148,6 +172,7 @@ export function QuoteLegsTab({ quote, onUpdate, onLegsChange, onNext, onBack }: 
         })
       }
       
+      console.log("🛫 Processed one-way/round-trip legs:", newLegs)
       onLegsChange(newLegs)
       onUpdate({ 
         legs: newLegs,
@@ -268,7 +293,10 @@ const handleAddLeg = () => {
                 <Label>Departure Date *</Label>
                 <DateTimePicker
                   date={formState.departureDate}
-                  onDateChange={(d) => setFormState((prev) => ({ ...prev, departureDate: d }))}
+                  onDateChange={(d) => {
+                    console.log("📅 Departure date changed:", d)
+                    setFormState((prev) => ({ ...prev, departureDate: d }))
+                  }}
                   showOnlyDate
                 />
               </div>
@@ -291,7 +319,10 @@ const handleAddLeg = () => {
                   <Label>Return Date *</Label>
                   <DateTimePicker
                     date={formState.returnDate}
-                    onDateChange={(d) => setFormState((prev) => ({ ...prev, returnDate: d }))}
+                    onDateChange={(d) => {
+                      console.log("📅 Return date changed:", d)
+                      setFormState((prev) => ({ ...prev, returnDate: d }))
+                    }}
                     showOnlyDate
                   />
                 </div>
@@ -394,11 +425,12 @@ const handleAddLeg = () => {
                     <Label>Departure Date *</Label>
                     <DateTimePicker
                       date={leg.departureDate}
-                      onDateChange={(d) =>
+                      onDateChange={(d) => {
+                        console.log("📅 Multi-city leg date changed:", { legId: leg.id, date: d })
                         setMultiLegs((prev) =>
                           prev.map((l) => (l.id === leg.id ? { ...l, departureDate: d } : l))
                         )
-                      }
+                      }}
                       showOnlyDate
                     />
                   </div>

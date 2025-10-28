@@ -35,18 +35,30 @@ export function DateTimePicker({
   showOnlyTime,
 }: DateTimePickerProps) {
   const [open, setOpen] = React.useState(false)
-  const [selectedDate, setSelectedDate] = React.useState<Date | undefined>(date ? new Date(date) : undefined)
+  const [selectedDate, setSelectedDate] = React.useState<Date | undefined>(date ? new Date(date + 'T00:00:00') : undefined)
 
   React.useEffect(() => {
     if (date) {
-      setSelectedDate(new Date(date))
+      // Add time component to avoid timezone issues when parsing date strings
+      setSelectedDate(new Date(date + 'T00:00:00'))
     }
   }, [date])
 
   const handleDateSelect = (newDate: Date | undefined) => {
+    console.log("📅 DateTimePicker handleDateSelect called", {
+      newDate,
+      originalDate: newDate?.toISOString(),
+      localDate: newDate ? `${newDate.getFullYear()}-${String(newDate.getMonth() + 1).padStart(2, '0')}-${String(newDate.getDate()).padStart(2, '0')}` : null
+    })
     setSelectedDate(newDate)
     if (newDate && onDateChange) {
-      onDateChange(newDate.toISOString().split("T")[0])
+      // Use local date formatting to avoid timezone issues
+      const year = newDate.getFullYear()
+      const month = String(newDate.getMonth() + 1).padStart(2, '0')
+      const day = String(newDate.getDate()).padStart(2, '0')
+      const formattedDate = `${year}-${month}-${day}`
+      console.log("📅 DateTimePicker calling onDateChange with:", formattedDate)
+      onDateChange(formattedDate)
     }
     setOpen(false)
   }
