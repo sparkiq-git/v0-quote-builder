@@ -327,11 +327,9 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
         throw new Error(json?.error || "Failed to accept quote")
       }
 
-      toast({
-        title: "Quote accepted successfully!",
-        description:
-          "We've received your acceptance. We'll now check availability and send you the contract and payment details shortly.",
-      })
+      // Redirect to success page instead of showing toast
+      const successUrl = `/success?name=${encodeURIComponent(quote.customer?.name || "Valued Customer")}&quoteId=${quote.id}`
+      window.location.href = successUrl
     } catch (error: any) {
       console.error("Failed to accept quote:", error)
       toast({
@@ -719,6 +717,7 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
 
               {/* Not Interested button - show below confirm button */}
               {!isLocked &&
+                !selectedOptionId &&
                 (quote.status === "pending_response" ||
                   quote.status === "opened" ||
                   quote.status === "awaiting response") && (
@@ -927,6 +926,7 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
 
                     {/* Not Interested button - show below confirm button */}
                     {!isLocked &&
+                      !selectedOptionId &&
                       (quote.status === "pending_response" ||
                         quote.status === "opened" ||
                         quote.status === "awaiting response") && (
