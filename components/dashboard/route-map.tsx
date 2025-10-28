@@ -37,7 +37,12 @@ type Route = {
 
 export function RouteMap() {
   const [activeFilter, setActiveFilter] = useState<FilterType>("leads");
-  const [routes, setRoutes] = useState<Route[]>([]);
+
+  // Keep routes per category so badges reflect only what’s actually drawable on the map.
+  const [leadRoutes, setLeadRoutes] = useState<Route[]>([]);
+  const [upcomingRoutes, setUpcomingRoutes] = useState<Route[]>([]);
+  const [routes, setRoutes] = useState<Route[]>([]); // currently displayed set
+
   const [mapLoaded, setMapLoaded] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -49,7 +54,7 @@ export function RouteMap() {
 
   const supabase = createClient();
 
-  // === Load routes depending on active filter ===
+  // -------- Load BOTH datasets so badge counts are stable and correct --------
   useEffect(() => {
     const loadLeadRoutes = async () => {
       const { data, error } = await supabase
@@ -78,11 +83,11 @@ export function RouteMap() {
 
       if (error) {
         console.error("Lead load error:", error);
-        setRoutes([]);
+        setLeadRoutes([]);
         return;
       }
 
-      const formatted = (data ?? [])
+      const formatted: Route[] = (data ?? [])
         .filter(
           (r) =>
             r.origin_lat &&
@@ -114,15 +119,14 @@ export function RouteMap() {
           ],
         }));
 
-      setRoutes(formatted);
-      console.log("✅ Leads loaded:", formatted.length);
+      setLeadRoutes(formatted);
+      console.log("✅ Leads loaded (drawable):", formatted.length);
     };
 
     const loadUpcomingRoutes = async () => {
-      const now = new Date();
       const start = new Date();
       start.setHours(0, 0, 0, 0);
-      const end = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // Next 7 days
+      const end = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
       end.setHours(23, 59, 59, 999);
 
       const { data, error } = await supabase
@@ -153,11 +157,11 @@ export function RouteMap() {
 
       if (error) {
         console.error("Upcoming load error:", error);
-        setRoutes([]);
+        setUpcomingRoutes([]);
         return;
       }
 
-      const formatted = (data ?? [])
+      const formatted: Route[] = (data ?? [])
         .filter(
           (r) =>
             r.origin_lat &&
@@ -190,15 +194,20 @@ export function RouteMap() {
           ],
         }));
 
-      setRoutes(formatted);
-      console.log("✈️ Upcoming trips loaded:", formatted.length);
+      setUpcomingRoutes(formatted);
+      console.log("✈️ Upcoming trips loaded (drawable):", formatted.length);
     };
 
-    if (activeFilter === "leads") loadLeadRoutes();
-    else loadUpcomingRoutes();
-  }, [activeFilter, refreshKey, supabase]);
+    loadLeadRoutes();
+    loadUpcomingRoutes();
+  }, [refreshKey, supabase]);
 
-  // === Initialize Leaflet ===
+  // Choose which set to display (but keep both for badge counts)
+  useEffect(() => {
+    setRoutes(activeFilter === "leads" ? leadRoutes : upcomingRoutes);
+  }, [activeFilter, leadRoutes, upcomingRoutes]);
+
+  // -------- Initialize Leaflet --------
   useEffect(() => {
     if (!mapContainer.current) return;
 
@@ -221,12 +230,13 @@ export function RouteMap() {
     };
 
     const initializeMap = () => {
+      // Clean any prior instance
       if (map.current) {
         map.current.off();
         map.current.remove();
         map.current = null;
       }
-      if (mapContainer.current?._leaflet_id)
+      if ((mapContainer.current as any)?._leaflet_id)
         delete (mapContainer.current as any)._leaflet_id;
 
       try {
@@ -267,10 +277,11 @@ export function RouteMap() {
     };
   }, [refreshKey]);
 
-  // === Draw routes and markers ===
+  // -------- Draw routes and markers (only when routes exist) --------
   useEffect(() => {
     if (!map.current || !mapLoaded) return;
 
+    // Clear everything so markers only exist when routes exist
     routeLayers.current.forEach((l) => map.current.removeLayer(l));
     airportMarkers.current.forEach((m) => map.current.removeLayer(m));
     routeLayers.current = [];
@@ -301,7 +312,7 @@ export function RouteMap() {
           dashArray: "3, 2",
         }).addTo(map.current);
 
-        // Airplane marker
+        // Midpoint airplane
         const midLat = (leg.originCoords.lat + leg.destCoords.lat) / 2;
         const midLng = (leg.originCoords.lng + leg.destCoords.lng) / 2;
         const angle =
@@ -342,12 +353,8 @@ export function RouteMap() {
 
         routeLayers.current.push(routeLine, airplane);
 
-        // Airport markers (transparent)
-        const makeMarker = (coords: {
-          lat: number;
-          lng: number;
-          name: string;
-        }) =>
+        // Airport pins — only added because a route exists (and was drawn)
+        const makeMarker = (coords: { lat: number; lng: number; name: string }) =>
           window.L.marker([coords.lat, coords.lng], {
             icon: window.L.divIcon({
               html: `
@@ -362,8 +369,10 @@ export function RouteMap() {
             }),
           }).addTo(map.current);
 
-        makeMarker(leg.originCoords);
-        makeMarker(leg.destCoords);
+        airportMarkers.current.push(
+          makeMarker(leg.originCoords),
+          makeMarker(leg.destCoords)
+        );
       });
     });
 
@@ -373,7 +382,7 @@ export function RouteMap() {
     }
   }, [routes, mapLoaded, activeFilter]);
 
-  // === Zoom / refresh ===
+  // UI handlers
   const handleZoomIn = () => map.current?.zoomIn();
   const handleZoomOut = () => map.current?.zoomOut();
   const handleRefresh = () => setRefreshKey((k) => k + 1);
@@ -386,6 +395,9 @@ export function RouteMap() {
           <div className="absolute top-4 left-4 z-[1000] flex items-center gap-2 bg-white/10 rounded-lg p-2 shadow-lg border border-white/10">
             {(["leads", "upcoming"] as FilterType[]).map((filter) => {
               const isActive = activeFilter === filter;
+              // Badge shows count for its own dataset, not the currently selected set.
+              const cnt =
+                filter === "leads" ? leadRoutes.length : upcomingRoutes.length;
               return (
                 <Button
                   key={filter}
@@ -401,7 +413,7 @@ export function RouteMap() {
                     variant={isActive ? "secondary" : "outline"}
                     className="ml-2 h-4 px-1 text-[10px]"
                   >
-                    {routes.length}
+                    {cnt}
                   </Badge>
                 </Button>
               );
@@ -421,6 +433,7 @@ export function RouteMap() {
             </Button>
           </div>
 
+          {/* Map container */}
           <div ref={mapContainer} className="absolute inset-0 w-full h-full" />
 
           {mapError && (
