@@ -1,17 +1,16 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo, useCallback } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
-import { Plus, FileText, Eye, Search, Trash2, Loader2, Send, FileSignature } from "lucide-react"
+import { Plus, FileText, Eye, Search, Trash2, Loader2, Send, FileSignature, ArrowUpDown, Filter } from "lucide-react"
 import { formatDate, formatTimeAgo } from "@/lib/utils/format"
 import { useToast } from "@/hooks/use-toast"
 import {
@@ -23,6 +22,15 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { deleteQuote } from "@/lib/supabase/queries/quotes"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { MoreHorizontal } from "lucide-react"
 
 export default function QuotesPage() {
   const router = useRouter()
@@ -31,13 +39,12 @@ export default function QuotesPage() {
   const [loading, setLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState("all")
   const [searchQuery, setSearchQuery] = useState("")
-  const [dateFilter, setDateFilter] = useState("all")
-  const [totalFilter, setTotalFilter] = useState("all")
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [quoteToDelete, setQuoteToDelete] = useState<string | null>(null)
   const [invoiceContractOpen, setInvoiceContractOpen] = useState(false)
   const [selectedQuote, setSelectedQuote] = useState<any | null>(null)
   const [sending, setSending] = useState(false)
+  const [converting, setConverting] = useState<string | null>(null)
 
   // ✅ Fetch quotes from Supabase
   useEffect(() => {
@@ -49,14 +56,16 @@ export default function QuotesPage() {
           .from("quote")
           .select("*")
           .eq("tenant_id", tenantId)
-          .order("created_at", { ascending: false })
+          .order("updated_at", { ascending: false })
 
         if (error) throw error
 
         const mapped = data.map((q) => ({
           id: q.id,
+          title: q.title || "Untitled Quote",
           status: q.status,
           createdAt: q.created_at,
+          updatedAt: q.updated_at,
           expiresAt: q.valid_until,
           openCount: q.open_count || 0,
           customer: {
@@ -85,12 +94,13 @@ export default function QuotesPage() {
     fetchQuotes()
   }, [toast])
 
-  const handleDeleteQuote = (quoteId: string) => {
+
+  const handleDeleteQuote = useCallback((quoteId: string) => {
     setQuoteToDelete(quoteId)
     setDeleteDialogOpen(true)
-  }
+  }, [])
 
-  const confirmDeleteQuote = async () => {
+  const confirmDeleteQuote = useCallback(async () => {
     if (!quoteToDelete) return
     try {
       await deleteQuote(quoteToDelete)
@@ -109,11 +119,9 @@ export default function QuotesPage() {
       setDeleteDialogOpen(false)
       setQuoteToDelete(null)
     }
-  }
+  }, [quoteToDelete, toast])
 
-  const [converting, setConverting] = useState<string | null>(null)
-
-  const handleConvertToInvoice = async (quoteId: string) => {
+  const handleConvertToInvoice = useCallback(async (quoteId: string) => {
     try {
       setConverting(quoteId)
       const res = await fetch("/api/invoice", {
@@ -139,15 +147,15 @@ export default function QuotesPage() {
     } finally {
       setConverting(null)
     }
-  }
+  }, [toast])
 
   // Invoice & Contract handler
-  const handleOpenInvoiceContractModal = async (quote: any) => {
+  const handleOpenInvoiceContractModal = useCallback(async (quote: any) => {
     setSelectedQuote(quote)
     setInvoiceContractOpen(true)
-  }
+  }, [])
 
-  const handleSendInvoiceContract = async () => {
+  const handleSendInvoiceContract = useCallback(async () => {
     if (!selectedQuote) return
 
     try {
@@ -190,43 +198,57 @@ export default function QuotesPage() {
     } finally {
       setSending(false)
     }
-  }
+  }, [selectedQuote, toast])
 
   // Check if quote can send invoice & contract
-  const canSendInvoiceContract = (quote: any) => {
+  const canSendInvoiceContract = useCallback((quote: any) => {
     return quote.status === "accepted"
-  }
+  }, [])
 
-  const filteredQuotes = quotes.filter((quote) => {
-    if (statusFilter !== "all" && quote.status !== statusFilter) return false
+  // ✅ Enhanced filtering with better search experience
+  const filteredQuotes = useMemo(() => {
+    return quotes.filter((quote) => {
+      if (statusFilter !== "all" && quote.status !== statusFilter) return false
 
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase()
-      const matchesName = quote.customer.name.toLowerCase().includes(query)
-      const matchesEmail = quote.customer.email.toLowerCase().includes(query)
-      const matchesCompany = quote.customer.company?.toLowerCase().includes(query)
-      if (!matchesName && !matchesEmail && !matchesCompany) return false
-    }
-
-    if (dateFilter !== "all") {
-      const quoteDate = new Date(quote.createdAt)
-      const now = new Date()
-      const daysDiff = Math.floor((now.getTime() - quoteDate.getTime()) / (1000 * 60 * 60 * 24))
-      switch (dateFilter) {
-        case "today":
-          if (daysDiff > 0) return false
-          break
-        case "week":
-          if (daysDiff > 7) return false
-          break
-        case "month":
-          if (daysDiff > 30) return false
-          break
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase()
+        const searchableFields = [
+          quote.title?.toLowerCase() || '',
+          quote.customer.name?.toLowerCase() || '',
+          quote.customer.email?.toLowerCase() || '',
+          quote.customer.company?.toLowerCase() || '',
+          quote.status?.toLowerCase() || ''
+        ]
+        
+        if (!searchableFields.some(field => field.includes(query))) return false
       }
-    }
 
-    return true
-  })
+      return true
+    })
+  }, [quotes, statusFilter, searchQuery])
+
+  const getStatusBadgeVariant = useCallback((status: string) => {
+    switch (status) {
+      case "draft":
+        return "secondary"
+      case "sent":
+        return "default"
+      case "opened":
+        return "default"
+      case "accepted":
+        return "default"
+      case "declined":
+        return "destructive"
+      case "cancelled":
+        return "destructive"
+      case "invoiced":
+        return "default"
+      case "expired":
+        return "secondary"
+      default:
+        return "outline"
+    }
+  }, [])
 
   if (loading) {
     return (
@@ -237,126 +259,139 @@ export default function QuotesPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="w-full">
+      <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Quotes</h1>
+          <p className="text-muted-foreground">Track quote status and customer responses</p>
+        </div>
+        <Button asChild>
+          <Link href="/quotes/new">
+            <Plus className="mr-2 h-4 w-4" />
+            Create Quote
+          </Link>
+        </Button>
+      </div>
+
+      <div className="flex items-center py-4 gap-4">
+        <div className="flex items-center space-x-2">
+          <Search className="h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search quotes by title, name, company, email, or status..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="max-w-sm"
+          />
+        </div>
+        <div className="ml-auto flex items-center gap-2">
+          <Filter className="h-4 w-4 text-muted-foreground" />
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Statuses</SelectItem>
+              <SelectItem value="draft">Draft</SelectItem>
+              <SelectItem value="sent">Sent</SelectItem>
+              <SelectItem value="opened">Opened</SelectItem>
+              <SelectItem value="accepted">Accepted</SelectItem>
+              <SelectItem value="declined">Declined</SelectItem>
+              <SelectItem value="cancelled">Cancelled</SelectItem>
+              <SelectItem value="invoiced">Invoiced</SelectItem>
+              <SelectItem value="expired">Expired</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>All Quotes</CardTitle>
-              <CardDescription>Track quote status and customer responses</CardDescription>
-            </div>
-            <Button asChild>
-              <Link href="/quotes/new">
-                <Plus className="mr-2 h-4 w-4" />
-                Create Quote
-              </Link>
-            </Button>
-          </div>
-          <div className="flex gap-2 mt-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by name, email, or company..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="draft">Draft</SelectItem>
-                <SelectItem value="sent">Sent</SelectItem>
-                <SelectItem value="accepted">Accepted</SelectItem>
-                <SelectItem value="declined">Declined</SelectItem>
-                <SelectItem value="cancelled">Cancelled</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {filteredQuotes.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Details</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Created</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredQuotes.map((quote) => (
-                  <TableRow key={quote.id}>
-                    <TableCell>
-                      <div className="flex items-center space-x-3">
-                        <Avatar className="h-8 w-8">
-                          <AvatarFallback>
-                            {quote.customer.name
-                              ?.split(" ")
-                              .map((n: string) => n[0])
-                              .join("")}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <div className="font-medium">{quote.customer.name}</div>
-                          <div className="text-sm text-muted-foreground">{quote.customer.company}</div>
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Quote Details</TableHead>
+              <TableHead>Customer</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Last Updated</TableHead>
+              <TableHead>Created</TableHead>
+              <TableHead className="w-[100px]">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredQuotes.length > 0 ? (
+              filteredQuotes.map((quote) => (
+                <TableRow key={quote.id} className="hover:bg-muted/30">
+                  <TableCell>
+                    <div className="flex flex-col">
+                      <span className="font-medium">{quote.title}</span>
+                      <span className="text-sm text-muted-foreground">
+                        {quote.customer.company || "No company"}
+                      </span>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center space-x-3">
+                      <Avatar className="h-8 w-8">
+                        <AvatarFallback>
+                          {quote.customer.name
+                            ?.split(" ")
+                            .map((n: string) => n[0])
+                            .join("")}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <div className="font-medium">{quote.customer.name}</div>
+                        <div className="text-sm text-muted-foreground">{quote.customer.email}</div>
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="relative inline-block">
+                      <Badge variant={getStatusBadgeVariant(quote.status)}>{quote.status}</Badge>
+                      {quote.status === "opened" && quote.openCount > 0 && (
+                        <div className="absolute -top-2 -right-1 bg-slate-100 border border-slate-200 rounded-full flex items-center justify-center font-normal w-3.5 h-3.5">
+                          <span className="text-[0.7125rem] font-small text-slate-700">{quote.openCount}</span>
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="relative inline-block">
-                        <Badge variant="outline">{quote.status}</Badge>
-                        {quote.status === "opened" && quote.openCount > 0 && (
-                          <div className="absolute -top-2 -right-1 bg-slate-100 border border-slate-200 rounded-full flex items-center justify-center font-normal w-3.5 h-3.5">
-                            <span className="text-[0.7125rem] font-small text-slate-700">{quote.openCount}</span>
-                          </div>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm">
-                        <div>{formatDate(quote.createdAt)}</div>
-                        <div className="text-muted-foreground">{formatTimeAgo(quote.createdAt)}</div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-2">
-                        <Button
-                          variant="default"
-                          size="sm"
-                          disabled={!canSendInvoiceContract(quote)}
-                          onClick={() => handleOpenInvoiceContractModal(quote)}
-                          title={
-                            !canSendInvoiceContract(quote) ? "Quote must be accepted to send invoice & contract" : ""
-                          }
-                        >
-                          <FileSignature className="mr-2 h-4 w-4" />
-                          Invoice & Contract
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="text-sm">
+                      <div>{formatDate(quote.updatedAt)}</div>
+                      <div className="text-muted-foreground">{formatTimeAgo(quote.updatedAt)}</div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="text-sm">
+                      <div>{formatDate(quote.createdAt)}</div>
+                      <div className="text-muted-foreground">{formatTimeAgo(quote.createdAt)}</div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="h-8 w-8 p-0">
+                          <MoreHorizontal className="h-4 w-4" />
                         </Button>
-
-                        <Button asChild variant="outline" size="sm">
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                        <DropdownMenuItem asChild>
                           <Link href={`/quotes/${quote.id}`}>
                             <Eye className="mr-2 h-4 w-4" />
-                            Edit
+                            View/Edit
                           </Link>
-                        </Button>
-
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleConvertToInvoice(quote.id)}
-                          disabled={converting === quote.id}
-                        >
+                        </DropdownMenuItem>
+                        {canSendInvoiceContract(quote) && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => handleOpenInvoiceContractModal(quote)}>
+                              <FileSignature className="mr-2 h-4 w-4" />
+                              Invoice & Contract
+                            </DropdownMenuItem>
+                          </>
+                        )}
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => handleConvertToInvoice(quote.id)} disabled={converting === quote.id}>
                           {converting === quote.id ? (
                             <>
                               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -365,30 +400,33 @@ export default function QuotesPage() {
                           ) : (
                             <>
                               <FileText className="mr-2 h-4 w-4" />
-                              Invoice
+                              Create Invoice
                             </>
                           )}
-                        </Button>
-
-                        <Button
-                          variant="outline"
-                          size="sm"
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem 
+                          className="text-destructive" 
                           onClick={() => handleDeleteQuote(quote.id)}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
                         >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          ) : (
-            <div className="py-8 text-center text-muted-foreground">No quotes found.</div>
-          )}
-        </CardContent>
-      </Card>
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete Quote
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                  No quotes found.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
 
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
