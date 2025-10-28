@@ -79,8 +79,86 @@ export function QuoteLegsTab({ quote, onUpdate, onLegsChange, onNext, onBack }: 
         ]
   )
 
+  /* ------------------ ✈️ Auto-save on form changes ------------------ */
+  useEffect(() => {
+    // Auto-save when form state changes (debounced)
+    const timeoutId = setTimeout(() => {
+      if (tripType !== "multi-city") {
+        saveFormData()
+      }
+    }, 1000) // 1 second debounce
+
+    return () => clearTimeout(timeoutId)
+  }, [formState, tripType])
+
+  useEffect(() => {
+    // Auto-save when multi-legs change (debounced)
+    const timeoutId = setTimeout(() => {
+      if (tripType === "multi-city") {
+        saveFormData()
+      }
+    }, 1000) // 1 second debounce
+
+    return () => clearTimeout(timeoutId)
+  }, [multiLegs, tripType])
+
+  /* ------------------ ✈️ Save form data to parent ------------------ */
+  const saveFormData = () => {
+    if (tripType === "multi-city") {
+      // Save multi-city legs
+      onLegsChange(multiLegs)
+      onUpdate({ 
+        legs: multiLegs,
+        trip_type: tripType 
+      })
+    } else {
+      // Save one-way or round-trip legs
+      const newLegs = [
+        {
+          id: legs[0]?.id || crypto.randomUUID(),
+          origin: formState.origin,
+          origin_code: formState.origin_code,
+          destination: formState.destination,
+          destination_code: formState.destination_code,
+          departureDate: formState.departureDate,
+          departureTime: formState.departureTime,
+          passengers: formState.passengers,
+          origin_lat: formState.origin_lat,
+          origin_long: formState.origin_long,
+          destination_lat: formState.destination_lat,
+          destination_long: formState.destination_long,
+        }
+      ]
+      
+      // Add return leg for round-trip
+      if (tripType === "round-trip" && formState.returnDate) {
+        newLegs.push({
+          id: legs[1]?.id || crypto.randomUUID(),
+          origin: formState.destination,
+          origin_code: formState.destination_code,
+          destination: formState.origin,
+          destination_code: formState.origin_code,
+          departureDate: formState.returnDate,
+          departureTime: formState.returnTime,
+          passengers: formState.passengers,
+          origin_lat: formState.destination_lat,
+          origin_long: formState.destination_long,
+          destination_lat: formState.origin_lat,
+          destination_long: formState.origin_long,
+        })
+      }
+      
+      onLegsChange(newLegs)
+      onUpdate({ 
+        legs: newLegs,
+        trip_type: tripType 
+      })
+    }
+  }
+
   /* ------------------ ✈️ Navigate (save handled by parent) ------------------ */
   const handleSaveAndNavigate = (direction: "next" | "back") => {
+    saveFormData() // Save before navigating
     direction === "next" ? onNext() : onBack()
   }
 

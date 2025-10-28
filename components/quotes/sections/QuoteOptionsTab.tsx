@@ -193,6 +193,7 @@ const handleNext = () => {
                     <AircraftCombobox
                       value={option.aircraft_id || null}
                       onSelect={(a) => {
+                        // Store the full aircraft data in cache
                         setAircraftCache((prev) => ({ ...prev, [a.aircraft_id]: a }))
                         handleUpdateOption(option.id, {
                           aircraft_id: a.aircraft_id,
