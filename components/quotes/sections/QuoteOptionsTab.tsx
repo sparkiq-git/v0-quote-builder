@@ -72,9 +72,19 @@ useEffect(() => {
 useEffect(() => {
   if (!quote?.options?.length) return
   
+  console.log("🔍 Debug quote options:", quote.options)
+  
   const aircraftData: Record<string, AircraftFull> = {}
   
   quote.options.forEach((option: any) => {
+    console.log("🔍 Processing option:", {
+      aircraft_id: option.aircraft_id,
+      hasAircraftModel: !!option.aircraftModel,
+      hasAircraftTail: !!option.aircraftTail,
+      aircraftModel: option.aircraftModel,
+      aircraftTail: option.aircraftTail
+    })
+    
     if (option.aircraft_id && option.aircraftModel && option.aircraftTail) {
       // Convert API aircraft data to AircraftFull format
       aircraftData[option.aircraft_id] = {
@@ -98,6 +108,12 @@ useEffect(() => {
         meta: option.aircraftTail.meta || {},
         aircraft_images: option.aircraftTail.images || [],
       }
+    } else {
+      console.log("⚠️ Missing aircraft data for option:", {
+        aircraft_id: option.aircraft_id,
+        hasAircraftModel: !!option.aircraftModel,
+        hasAircraftTail: !!option.aircraftTail
+      })
     }
   })
   
