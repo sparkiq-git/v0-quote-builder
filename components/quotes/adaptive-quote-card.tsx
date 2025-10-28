@@ -245,38 +245,41 @@ export function AdaptiveQuoteCard({
                 >
                   {aircraftModel?.name || "Aircraft Model"}
                 </h2>
-                <p
-                  className={`text-white/95 font-light tracking-wide drop-shadow-lg ${
-                    deviceInfo.type === "mobile"
-                      ? "text-sm sm:text-base"
-                      : deviceInfo.type === "tablet"
-                        ? "text-base sm:text-lg"
-                        : "text-lg lg:text-xl"
-                  }`}
-                >
-                  {aircraftModel?.manufacturer || "Aircraft Manufacturer"}
-                </p>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p
+                    className={`text-white/95 font-light tracking-wide drop-shadow-lg ${
+                      deviceInfo.type === "mobile"
+                        ? "text-sm sm:text-base"
+                        : deviceInfo.type === "tablet"
+                          ? "text-base sm:text-lg"
+                          : "text-lg lg:text-xl"
+                    }`}
+                  >
+                    {aircraftModel?.manufacturer || "Aircraft Manufacturer"}
+                  </p>
 
-                <div className="flex items-center gap-2 flex-wrap text-white/90 font-light drop-shadow-lg">
-                  {aircraftTail?.year && (
-                    <>
-                      <span className="text-xs sm:text-sm">{aircraftTail.year}</span>
-                      <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-white/70" />
-                    </>
-                  )}
-                  <span className="text-xs sm:text-sm">{capacity} PAX</span>
-                  {aircraftTail?.speedKnotsOverride && (
-                    <>
-                      <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-white/70" />
-                      <span className="text-xs sm:text-sm">{aircraftTail.speedKnotsOverride} kts</span>
-                    </>
-                  )}
-                  {aircraftTail?.rangeNmOverride && (
-                    <>
-                      <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-white/70" />
-                      <span className="text-xs sm:text-sm">{aircraftTail.rangeNmOverride} nm</span>
-                    </>
-                  )}
+                  <div className="flex items-center gap-2 text-white/90 font-light drop-shadow-lg">
+                    {aircraftTail?.year && (
+                      <>
+                        <span className="absolute right-[7%] top-1/2 -translate-y-1/2 w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-gray-600" />
+                        <span className="text-xs sm:text-sm">{aircraftTail.year}</span>
+                        <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-white/70" />
+                      </>
+                    )}
+                    <span className="text-xs sm:text-sm">{capacity} PAX</span>
+                    {aircraftTail?.speedKnotsOverride && (
+                      <>
+                        <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-white/70" />
+                        <span className="text-xs sm:text-sm">{aircraftTail.speedKnotsOverride} kts</span>
+                      </>
+                    )}
+                    {aircraftTail?.rangeNmOverride && (
+                      <>
+                        <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-white/70" />
+                        <span className="text-xs sm:text-sm">{aircraftTail.rangeNmOverride} nm</span>
+                      </>
+                    )}
+                  </div>
                 </div>
 
                 {amenities.length > 0 && (
@@ -336,7 +339,7 @@ export function AdaptiveQuoteCard({
 
             <div className="space-y-2">
               <h3 className="uppercase tracking-widest text-gray-500 font-medium text-[7px]">Option Notes</h3>
-              <div className="p-3 rounded-lg bg-gray-50 border border-gray-200 min-h-[120px]">
+              <div className="p-3 rounded-lg bg-gray-50 border border-gray-200 min-h-[60px]">
                 {option.notes ? (
                   <p className="text-xs text-gray-700 font-light leading-relaxed">{option.notes}</p>
                 ) : (
