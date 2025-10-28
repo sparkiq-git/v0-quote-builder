@@ -304,31 +304,31 @@ export function AdaptiveQuoteCard({
           </div>
         </div>
 
-        <div className="p-3 sm:p-3 lg:p-4 space-y-3">
+        <div className="p-2 sm:p-2 lg:p-2.5 space-y-2">
           {/* Pricing and Specifications Grid - Side by Side on Desktop */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5 lg:gap-4">
             {/* Pricing Section - Left Column on Desktop */}
-            <div className="space-y-1">
-              <span className="uppercase tracking-widest text-gray-500 font-medium text-[10px]">
+            <div className="space-y-0.5">
+              <span className="uppercase tracking-widest text-gray-500 font-medium text-[7px]">
                 Total Charter Price
               </span>
               <div
                 className={`font-light text-gray-900 tracking-tight ${
                   deviceInfo.type === "mobile"
-                    ? "text-3xl sm:text-4xl"
+                    ? "text-xl sm:text-2xl"
                     : deviceInfo.type === "tablet"
-                      ? "text-4xl sm:text-5xl"
-                      : "text-5xl lg:text-6xl"
+                      ? "text-2xl sm:text-3xl"
+                      : "text-3xl lg:text-4xl"
                 }`}
               >
                 {formatCurrency(total)}
               </div>
-              <p className="text-xs text-gray-600 font-light">All-inclusive pricing with taxes and fees</p>
+              <p className="text-[8.4px] text-gray-600 font-light">All-inclusive pricing with taxes and fees</p>
             </div>
 
             {/* Specifications Grid - Right Column on Desktop */}
             <div className="space-y-2">
-              <h3 className="uppercase tracking-widest text-gray-500 font-medium text-[10px]">
+              <h3 className="uppercase tracking-widest text-gray-500 font-medium text-[7px]">
                 Aircraft Specifications
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-2">
@@ -338,7 +338,7 @@ export function AdaptiveQuoteCard({
                       <Calendar className="h-4 w-4 text-gray-600" aria-hidden="true" />
                     </div>
                     <div className="min-w-0">
-                      <div className="text-[10px] text-gray-500 font-medium uppercase tracking-wide">Year</div>
+                      <div className="text-[7px] text-gray-500 font-medium uppercase tracking-wide">Year</div>
                       <div className="text-sm text-gray-900 font-semibold">{aircraftTail.year}</div>
                     </div>
                   </div>
@@ -349,7 +349,7 @@ export function AdaptiveQuoteCard({
                       <Clock className="h-4 w-4 text-gray-600" aria-hidden="true" />
                     </div>
                     <div className="min-w-0">
-                      <div className="text-[10px] text-gray-500 font-medium uppercase tracking-wide">Refurbished</div>
+                      <div className="text-[7px] text-gray-500 font-medium uppercase tracking-wide">Refurbished</div>
                       <div className="text-sm text-gray-900 font-semibold">{aircraftTail.yearOfRefurbishment}</div>
                     </div>
                   </div>
@@ -360,7 +360,7 @@ export function AdaptiveQuoteCard({
                       <Route className="h-4 w-4 text-gray-600" aria-hidden="true" />
                     </div>
                     <div className="min-w-0">
-                      <div className="text-[10px] text-gray-500 font-medium uppercase tracking-wide">Range</div>
+                      <div className="text-[7px] text-gray-500 font-medium uppercase tracking-wide">Range</div>
                       <div className="text-sm text-gray-900 font-semibold">{aircraftTail.rangeNmOverride} nm</div>
                     </div>
                   </div>
@@ -372,7 +372,7 @@ export function AdaptiveQuoteCard({
           {/* Amenities Section */}
           {amenities.length > 0 && (
             <div className="space-y-2">
-              <h3 className="uppercase tracking-widest text-gray-500 font-medium text-[10px]">Featured Amenities</h3>
+              <h3 className="uppercase tracking-widest text-gray-500 font-medium text-[7px]">Featured Amenities</h3>
               <TooltipProvider delayDuration={150}>
                 <div className="flex flex-wrap gap-2">
                   {amenities.slice(0, 8).map((amenity, i) => {
@@ -382,17 +382,19 @@ export function AdaptiveQuoteCard({
                         <TooltipTrigger asChild>
                           <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-50 border border-gray-200 hover:border-gray-300 hover:bg-gray-100 hover:shadow-sm transition-all duration-200 touch-manipulation">
                             <Icon className="h-3.5 w-3.5 text-gray-600 flex-shrink-0" aria-hidden="true" />
-                            <span className="text-xs font-light text-gray-700 truncate max-w-[120px]">{amenity}</span>
+                            <span className="text-[8.4px] font-light text-gray-700 truncate max-w-[120px]">
+                              {amenity}
+                            </span>
                           </div>
                         </TooltipTrigger>
-                        <TooltipContent side="top" className="max-w-xs text-xs">
+                        <TooltipContent side="top" className="max-w-xs text-[8.4px]">
                           {amenity}
                         </TooltipContent>
                       </Tooltip>
                     )
                   })}
                   {amenities.length > 8 && (
-                    <div className="flex items-center px-3 py-1.5 text-xs text-gray-500 font-light">
+                    <div className="flex items-center px-3 py-1.5 text-[8.4px] text-gray-500 font-light">
                       +{amenities.length - 8} more
                     </div>
                   )}
@@ -404,15 +406,15 @@ export function AdaptiveQuoteCard({
           {/* Special Notes */}
           {option.conditions?.trim() && (
             <div className="space-y-2">
-              <h3 className="uppercase tracking-widest text-gray-500 font-medium text-[10px]">Special Notes</h3>
-              <div className="text-xs text-gray-700 font-light leading-relaxed bg-amber-50 border-l-4 border-amber-400 rounded-lg p-3">
+              <h3 className="uppercase tracking-widest text-gray-500 font-medium text-[7px]">Special Notes</h3>
+              <div className="text-[8.4px] text-gray-700 font-light leading-relaxed bg-amber-50 border-l-4 border-amber-400 rounded-lg p-3">
                 {option.conditions}
               </div>
             </div>
           )}
         </div>
 
-        <div className="border-t border-gray-200 bg-gradient-to-b from-gray-50 to-white p-3 sm:p-3 lg:p-4">
+        <div className="border-t border-gray-200 bg-gradient-to-b from-gray-50 to-white p-2 sm:p-2 lg:p-2.5">
           <Button
             className={`w-full font-semibold tracking-wide rounded-xl transition-all duration-300 touch-manipulation shadow-lg hover:shadow-2xl active:scale-[0.98] ${
               deviceInfo.type === "mobile"
@@ -440,7 +442,7 @@ export function AdaptiveQuoteCard({
               "Select This Aircraft"
             )}
           </Button>
-          <p className="text-center text-xs text-gray-600 font-light mt-3 leading-relaxed">
+          <p className="text-center text-[8.4px] text-gray-600 font-light mt-3 leading-relaxed">
             {isSelected
               ? "You've selected this aircraft for your charter"
               : "Click to choose this aircraft and proceed with your booking"}
