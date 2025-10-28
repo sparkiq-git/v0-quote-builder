@@ -18,10 +18,16 @@ import {
   ChevronRight,
   Send,
   Clock,
+  Users,
+  Plane,
+  Wifi,
+  Coffee,
+  Utensils,
 } from "lucide-react"
 import { formatCurrency } from "@/lib/utils/format"
 import { useToast } from "@/hooks/use-toast"
 import type { Quote } from "@/lib/types"
+import Image from "next/image"
 
 interface Props {
   quote: Quote
@@ -42,22 +48,21 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
     publishedUrl ?? `${process.env.NEXT_PUBLIC_APP_URL}/q/${quote.magic_link_slug}`
 
   /* ---------------- 💰 Totals ---------------- */
-const totalOptions = useMemo(() => {
-  if (!quote.options?.length) return 0
-  return quote.options.reduce((sum, o) => {
-    const total =
-      (Number(o.cost_operator) || 0) +
-      (Number(o.price_commission) || 0) +
-      (Number(o.price_taxes) || 0)
-    return sum + total
-  }, 0)
-}, [quote.options])
-
+  const totalOptions = useMemo(() => {
+    if (!quote.options?.length) return 0
+    return quote.options.reduce((sum, o) => {
+      const total =
+        (Number(o.operatorCost) || 0) +
+        (Number(o.commission) || 0) +
+        (Number(o.tax) || 0)
+      return sum + total
+    }, 0)
+  }, [quote.options])
 
   const totalServices = useMemo(() => {
     if (!quote.services?.length) return 0
     return quote.services.reduce(
-      (sum, s) => sum + (Number(s.amount) || Number(s.unit_price) || 0),
+      (sum, s) => sum + (Number(s.amount) || Number(s.unit_price) || 0) * (Number(s.qty) || 1),
       0
     )
   }, [quote.services])
@@ -225,25 +230,41 @@ useEffect(() => {
 
         {/* Trip Itinerary */}
         <div>
-          <h3 className="text-lg font-semibold mb-2">Trip Itinerary</h3>
+          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Trip Itinerary
+          </h3>
           {quote.legs?.length ? (
-            <ul className="space-y-2 text-sm">
-              {quote.legs.map((leg, i) => (
-                <li
+            <div className="space-y-3">
+              {quote.legs.map((leg: any, i: number) => (
+                <div
                   key={leg.id || i}
-                  className="border p-3 rounded-md bg-muted/30"
+                  className="border p-4 rounded-lg bg-muted/30"
                 >
-                  <p className="font-medium">
-                    {leg.origin || "?"} → {leg.destination || "?"}
-                  </p>
-                  <p className="text-muted-foreground text-xs">
-                    {leg.depart_dt || leg.departureDate || "No date"} at{" "}
-                    {leg.depart_time || leg.departureTime || "No time"} —{" "}
-                    {leg.pax_count || leg.passengers || 0} pax
-                  </p>
-                </li>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="font-semibold text-lg">
+                        {leg.origin || leg.origin_code || "?"} → {leg.destination || leg.destination_code || "?"}
+                      </p>
+                      <p className="text-muted-foreground text-sm mt-1">
+                        {leg.departureDate || leg.depart_dt || "No date"} at{" "}
+                        {leg.departureTime || leg.depart_time || "No time"}
+                      </p>
+                      {leg.notes && (
+                        <p className="text-muted-foreground text-xs mt-1 italic">
+                          {leg.notes}
+                        </p>
+                      )}
+                    </div>
+                    <div className="text-right">
+                      <div className="text-lg font-semibold text-primary">
+                        {leg.passengers || leg.pax_count || 0} passengers
+                      </div>
+                    </div>
+                  </div>
+                </div>
               ))}
-            </ul>
+            </div>
           ) : (
             <p className="text-muted-foreground text-sm">
               No trip legs defined.
@@ -254,87 +275,227 @@ useEffect(() => {
         <Separator />
 
         {/* Aircraft Options */}
-<div>
-  <h3 className="text-lg font-semibold mb-2">Aircraft Options</h3>
+        <div>
+          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <Plane className="h-5 w-5" />
+            Aircraft Options
+          </h3>
 
-  {!quote?.options?.length ? (
-    <p className="text-muted-foreground text-sm">No aircraft options added.</p>
-  ) : (
-    <ul className="space-y-2 text-sm">
-      {quote.options.map((o: any, i: number) => {
-        const total =
-          (Number(o?.cost_operator) || 0) +
-          (Number(o?.price_commission) || 0) +
-          (Number(o?.price_taxes) || 0)
+          {!quote?.options?.length ? (
+            <p className="text-muted-foreground text-sm">No aircraft options added.</p>
+          ) : (
+            <div className="space-y-4">
+              {quote.options.map((option: any, i: number) => {
+                const total =
+                  (Number(option?.operatorCost) || 0) +
+                  (Number(option?.commission) || 0) +
+                  (Number(option?.tax) || 0)
 
-        // Use aircraft data from the option (embedded by API)
-        const aircraftModel = o?.aircraftModel
-        const aircraftTail = o?.aircraftTail
-        const line1 = aircraftModel?.name ? `${aircraftModel.name}`.trim() : "—"
-        const tail = aircraftTail?.tailNumber ? `(${aircraftTail.tailNumber})` : ""
-        const operatorLine = aircraftTail?.operator ? `Operated by ${aircraftTail.operator}` : ""
+                const aircraftModel = option?.aircraftModel
+                const aircraftTail = option?.aircraftTail
+                const amenities = option?.selectedAmenities || []
 
-        return (
-          <li
-            key={o.id ?? i}
-            className="border p-4 rounded-md bg-muted/30 flex justify-between items-center"
-          >
-            <div className="flex flex-col">
-              <span className="font-medium text-base">
-                {o.label || `Option ${i + 1}`}
-              </span>
-              {o.notes && (
-                <span className="text-muted-foreground text-xs mb-1">
-                  {o.notes}
-                </span>
-              )}
-              <span className="text-muted-foreground text-xs">
-                {line1} {tail}
-              </span>
-              {operatorLine && (
-                <span className="text-muted-foreground text-xs">
-                  {operatorLine}
-                </span>
-              )}
+                return (
+                  <div
+                    key={option.id ?? i}
+                    className="border rounded-lg bg-muted/30 overflow-hidden"
+                  >
+                    {/* Header */}
+                    <div className="p-4 border-b bg-muted/50">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h4 className="font-semibold text-lg">
+                            {option.label || `Option ${i + 1}`}
+                          </h4>
+                          {option.notes && (
+                            <p className="text-muted-foreground text-sm mt-1">
+                              {option.notes}
+                            </p>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          <div className="text-2xl font-bold text-primary">
+                            {formatCurrency(total)}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {option.totalHours || 0} flight hours
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Aircraft Details */}
+                    <div className="p-4">
+                      <div className="grid md:grid-cols-2 gap-6">
+                        {/* Aircraft Info */}
+                        <div>
+                          <h5 className="font-medium mb-3 flex items-center gap-2">
+                            <Plane className="h-4 w-4" />
+                            Aircraft Details
+                          </h5>
+                          <div className="space-y-2 text-sm">
+                            <div>
+                              <span className="text-muted-foreground">Model:</span>
+                              <span className="ml-2 font-medium">
+                                {aircraftModel?.name || "Unknown Model"}
+                              </span>
+                            </div>
+                            {aircraftTail?.tailNumber && (
+                              <div>
+                                <span className="text-muted-foreground">Tail Number:</span>
+                                <span className="ml-2 font-medium">
+                                  {aircraftTail.tailNumber}
+                                </span>
+                              </div>
+                            )}
+                            {aircraftTail?.operator && (
+                              <div>
+                                <span className="text-muted-foreground">Operator:</span>
+                                <span className="ml-2 font-medium">
+                                  {aircraftTail.operator}
+                                </span>
+                              </div>
+                            )}
+                            <div>
+                              <span className="text-muted-foreground">Capacity:</span>
+                              <span className="ml-2 font-medium">
+                                {aircraftTail?.capacityOverride || aircraftModel?.defaultCapacity || "N/A"} passengers
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Range:</span>
+                              <span className="ml-2 font-medium">
+                                {aircraftTail?.rangeNmOverride || aircraftModel?.defaultRangeNm || "N/A"} nm
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Amenities */}
+                        <div>
+                          <h5 className="font-medium mb-3 flex items-center gap-2">
+                            <Coffee className="h-4 w-4" />
+                            Amenities
+                          </h5>
+                          {amenities.length > 0 ? (
+                            <div className="flex flex-wrap gap-2">
+                              {amenities.map((amenity: string, idx: number) => (
+                                <span
+                                  key={idx}
+                                  className="inline-flex items-center gap-1 px-2 py-1 bg-primary/10 text-primary text-xs rounded-full"
+                                >
+                                  <Wifi className="h-3 w-3" />
+                                  {amenity}
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-muted-foreground text-sm">No amenities selected</p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Image Gallery */}
+                      {(aircraftModel?.images?.length > 0 || aircraftTail?.images?.length > 0) && (
+                        <div className="mt-4">
+                          <h5 className="font-medium mb-3">Aircraft Images</h5>
+                          <div className="flex gap-2 overflow-x-auto pb-2">
+                            {[...(aircraftModel?.images || []), ...(aircraftTail?.images || [])]
+                              .slice(0, 6) // Limit to 6 images
+                              .map((image: string, idx: number) => (
+                                <div
+                                  key={idx}
+                                  className="flex-shrink-0 w-20 h-20 relative rounded-lg overflow-hidden border"
+                                >
+                                  <Image
+                                    src={image}
+                                    alt={`Aircraft image ${idx + 1}`}
+                                    fill
+                                    className="object-cover"
+                                    sizes="80px"
+                                  />
+                                </div>
+                              ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Pricing Breakdown */}
+                      <div className="mt-4 pt-4 border-t">
+                        <h5 className="font-medium mb-3">Pricing Breakdown</h5>
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Operator Cost:</span>
+                            <span>{formatCurrency(option.operatorCost || 0)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Commission:</span>
+                            <span>{formatCurrency(option.commission || 0)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Tax:</span>
+                            <span>{formatCurrency(option.tax || 0)}</span>
+                          </div>
+                          <div className="flex justify-between font-semibold">
+                            <span>Total:</span>
+                            <span>{formatCurrency(total)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
             </div>
-
-            <span className="text-base font-semibold">
-              {formatCurrency(total)}
-            </span>
-          </li>
-        )
-      })}
-    </ul>
-  )}
-</div>
+          )}
+        </div>
 
 
         <Separator />
 
         {/* Services */}
         <div>
-          <h3 className="text-lg font-semibold mb-2">Additional Services</h3>
+          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <Utensils className="h-5 w-5" />
+            Additional Services
+          </h3>
           {quote.services?.length ? (
-            <ul className="space-y-2 text-sm">
-              {quote.services.map((s, i) => (
-                <li
-                  key={s.id || i}
-                  className="border p-3 rounded-md bg-muted/30 flex justify-between"
-                >
-                  <span>
-                    <span className="font-medium">
-                      {s.description || "Service"}
-                    </span>
-                    {s.taxable && (
-                      <span className="text-xs text-muted-foreground block">
-                        Taxable
-                      </span>
-                    )}
-                  </span>
-                  <span>{formatCurrency(s.amount || 0)}</span>
-                </li>
-              ))}
-            </ul>
+            <div className="space-y-3">
+              {quote.services.map((service: any, i: number) => {
+                const totalAmount = (Number(service.amount) || Number(service.unit_price) || 0) * (Number(service.qty) || 1)
+                return (
+                  <div
+                    key={service.id || i}
+                    className="border p-4 rounded-lg bg-muted/30"
+                  >
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <h4 className="font-medium text-base">
+                          {service.description || service.name || "Service"}
+                        </h4>
+                        {service.notes && (
+                          <p className="text-muted-foreground text-sm mt-1">
+                            {service.notes}
+                          </p>
+                        )}
+                        <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+                          <span>Qty: {service.qty || 1}</span>
+                          <span>Unit Price: {formatCurrency(service.amount || service.unit_price || 0)}</span>
+                          {service.taxable && (
+                            <span className="text-amber-600 font-medium">Taxable</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-lg font-semibold">
+                          {formatCurrency(totalAmount)}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
           ) : (
             <p className="text-muted-foreground text-sm">No services added.</p>
           )}
