@@ -9,7 +9,19 @@ import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
-import { Plus, FileText, Eye, Search, Trash2, Loader2, Send, FileSignature, ArrowUpDown, Filter, MoreHorizontal } from "lucide-react"
+import {
+  Plus,
+  FileText,
+  Eye,
+  Search,
+  Trash2,
+  Loader2,
+  Send,
+  FileSignature,
+  ArrowUpDown,
+  Filter,
+  MoreHorizontal,
+} from "lucide-react"
 import { formatDate, formatTimeAgo } from "@/lib/utils/format"
 import { useToast } from "@/hooks/use-toast"
 import {
@@ -92,7 +104,6 @@ export default function QuotesPage() {
     fetchQuotes()
   }, [toast])
 
-
   const handleDeleteQuote = useCallback((quoteId: string) => {
     setQuoteToDelete(quoteId)
     setDeleteDialogOpen(true)
@@ -119,33 +130,36 @@ export default function QuotesPage() {
     }
   }, [quoteToDelete, toast])
 
-  const handleConvertToInvoice = useCallback(async (quoteId: string) => {
-    try {
-      setConverting(quoteId)
-      const res = await fetch("/api/invoice", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ quote_id: quoteId }),
-      })
+  const handleConvertToInvoice = useCallback(
+    async (quoteId: string) => {
+      try {
+        setConverting(quoteId)
+        const res = await fetch("/api/invoice", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ quote_id: quoteId }),
+        })
 
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || "Failed to create invoice")
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error || "Failed to create invoice")
 
-      toast({
-        title: "Invoice created",
-        description: `Invoice ${data.data.invoice.number} created successfully.`,
-      })
-    } catch (err: any) {
-      console.error("❌ Invoice creation failed:", err)
-      toast({
-        title: "Failed to create invoice",
-        description: err.message || "Something went wrong.",
-        variant: "destructive",
-      })
-    } finally {
-      setConverting(null)
-    }
-  }, [toast])
+        toast({
+          title: "Invoice created",
+          description: `Invoice ${data.data.invoice.number} created successfully.`,
+        })
+      } catch (err: any) {
+        console.error("❌ Invoice creation failed:", err)
+        toast({
+          title: "Failed to create invoice",
+          description: err.message || "Something went wrong.",
+          variant: "destructive",
+        })
+      } finally {
+        setConverting(null)
+      }
+    },
+    [toast],
+  )
 
   // Invoice & Contract handler
   const handleOpenInvoiceContractModal = useCallback(async (quote: any) => {
@@ -211,14 +225,14 @@ export default function QuotesPage() {
       if (searchQuery) {
         const query = searchQuery.toLowerCase()
         const searchableFields = [
-          quote.title?.toLowerCase() || '',
-          quote.customer.name?.toLowerCase() || '',
-          quote.customer.email?.toLowerCase() || '',
-          quote.customer.company?.toLowerCase() || '',
-          quote.status?.toLowerCase() || ''
+          quote.title?.toLowerCase() || "",
+          quote.customer.name?.toLowerCase() || "",
+          quote.customer.email?.toLowerCase() || "",
+          quote.customer.company?.toLowerCase() || "",
+          quote.status?.toLowerCase() || "",
         ]
-        
-        if (!searchableFields.some(field => field.includes(query))) return false
+
+        if (!searchableFields.some((field) => field.includes(query))) return false
       }
 
       return true
@@ -341,9 +355,7 @@ export default function QuotesPage() {
                   <TableCell>
                     <div className="flex flex-col">
                       <span className="font-medium text-sm">{quote.title}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {quote.customer.company || "No company"}
-                      </span>
+                      <span className="text-xs text-muted-foreground">{quote.customer.company || "No company"}</span>
                     </div>
                   </TableCell>
                   <TableCell>
@@ -358,8 +370,8 @@ export default function QuotesPage() {
                         {quote.status}
                       </Badge>
                       {quote.status === "opened" && quote.openCount > 0 && (
-                        <div className="absolute -top-3 -right-1 bg-slate-50 border border-slate-70 rounded-full flex items-center justify-center font-normal w-3.2 h-3.2">
-                          <span className="text-[0.7125rem] font-small text-slate-700">{quote.openCount}</span>
+                        <div className="absolute -top-2 -right-2 bg-slate-50 border border-slate-100 rounded-full flex items-center justify-center w-5 h-5">
+                          <span className="text-[0.676875rem] font-medium text-slate-700">{quote.openCount}</span>
                         </div>
                       )}
                     </div>
@@ -401,7 +413,10 @@ export default function QuotesPage() {
                           </>
                         )}
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={(e) => handleConvertToInvoice(quote.id)} disabled={converting === quote.id}>
+                        <DropdownMenuItem
+                          onClick={(e) => handleConvertToInvoice(quote.id)}
+                          disabled={converting === quote.id}
+                        >
                           {converting === quote.id ? (
                             <>
                               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -415,10 +430,7 @@ export default function QuotesPage() {
                           )}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem 
-                          className="text-destructive" 
-                          onClick={(e) => handleDeleteQuote(quote.id)}
-                        >
+                        <DropdownMenuItem className="text-destructive" onClick={(e) => handleDeleteQuote(quote.id)}>
                           <Trash2 className="mr-2 h-4 w-4" />
                           Delete Quote
                         </DropdownMenuItem>
