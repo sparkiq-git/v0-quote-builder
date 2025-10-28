@@ -9,7 +9,7 @@ export async function GET() {
     const { count: quotesAwaitingResponse, error: q1 } = await supabase
       .from("quote") // 
       .select("*", { count: "exact", head: true })
-      .in("status", ["awaiting response", "opened"]);
+      .eq("status", "awaiting response");
     if (q1) console.error("quotesAwaitingResponse error:", q1);
 
     // 3) Unpaid: payment_status = 'unpaid'

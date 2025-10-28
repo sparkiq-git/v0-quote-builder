@@ -1,14 +1,16 @@
-"use client";
+"use client"
 
-import { useEffect, useState, useRef, useMemo } from "react";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Plus, Minus, RotateCcw, MapPin, Activity, Users, FileText } from "lucide-react";
-import { formatTimeAgo } from "@/lib/utils/format";
-import { getLeadRoutes, getUpcomingRoutes } from "@/lib/supabase/queries/getRoutes";
+import { useMemo, useState, useEffect, useRef } from "react"
+import { Card } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Plus, Minus, Users, FileText, Activity, MapPin, RotateCcw } from "lucide-react"
+import { useMockStore } from "@/lib/mock/store"
+import { formatTimeAgo } from "@/lib/utils/format"
+import { getAirportCoordinates } from "@/lib/data/airports"
+import type { Event, Leg } from "@/lib/types"
 
-type FilterType = "leads" | "upcoming";
+type FilterType = "leads" | "upcoming"
 
 interface RouteData {
   id: string
@@ -53,6 +55,28 @@ export function RouteMap() {
         createdAt: lead.createdAt,
       }))
 
+    const quotes = state.quotes
+      .filter((quote) => quote.status === "pending_acceptance")
+      .map((quote) => ({
+        id: quote.id,
+        type: "quotes" as any,
+        legs: quote.legs,
+        customerName: quote.customer.name,
+        status: "Quote",
+        createdAt: quote.createdAt,
+      }))
+
+    const unpaid = state.quotes
+      .filter((quote) => quote.status === "awaiting_payment")
+      .map((quote) => ({
+        id: quote.id,
+        type: "unpaid" as any,
+        legs: quote.legs,
+        customerName: quote.customer.name,
+        status: "Unpaid",
+        createdAt: quote.createdAt,
+      }))
+
     const upcoming = state.quotes
       .filter((quote) => {
         if (quote.status !== "paid") return false
@@ -72,7 +96,7 @@ export function RouteMap() {
         createdAt: quote.createdAt,
       }))
 
-    return { leads, upcoming }
+    return { leads, quotes, unpaid, upcoming }
   }, [state.leads, state.quotes])
 
   // Get routes for active filter (max 10, most recent first)
