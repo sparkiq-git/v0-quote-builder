@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getUpcomingRoutes } from "@/lib/supabase/queries/getRoutes";
+import { getUpcomingRoutes } from "@/lib/supabase/queries/getUpcomingRoutes";
 
 export function useUpcomingRoutes(limit = 10) {
   const [routes, setRoutes] = useState([]);
