@@ -328,7 +328,8 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
       }
 
       // Redirect to success page instead of showing toast
-      const successUrl = `/success?name=${encodeURIComponent(quote.customer?.name || "Valued Customer")}&quoteId=${quote.id}`
+      const logo = quote.branding?.logo || "/images/aero-iq-logo.png"
+      const successUrl = `/success?name=${encodeURIComponent(quote.customer?.name || "Valued Customer")}&quoteId=${quote.id}&logo=${encodeURIComponent(logo)}`
       window.location.href = successUrl
     } catch (error: any) {
       console.error("Failed to accept quote:", error)
