@@ -48,105 +48,154 @@ export function RouteMap() {
 
   const supabase = createClient();
 
-  // === Fetch LEADS (status new/opened, all with coordinates) ===
+  // === Load routes depending on active filter ===
   useEffect(() => {
     const loadLeadRoutes = async () => {
-      try {
-        const { data, error } = await supabase
-          .from("lead_detail")
-          .select(`
+      const { data, error } = await supabase
+        .from("lead_detail")
+        .select(`
+          id,
+          lead_id,
+          origin,
+          origin_code,
+          destination,
+          destination_code,
+          depart_dt,
+          origin_lat,
+          origin_long,
+          destination_lat,
+          destination_long,
+          lead:lead_id (
             id,
-            lead_id,
-            origin,
-            origin_code,
-            destination,
-            destination_code,
-            depart_dt,
-            origin_lat,
-            origin_long,
-            destination_lat,
-            destination_long,
-            lead:lead_id (
-              id,
-              customer_name,
-              status,
-              created_at
-            )
-          `)
-          .in("lead.status", ["new", "opened"])
-          .order("depart_dt", { ascending: true }); // ✅ Removed limit
-
-        if (error) throw error;
-
-        const formatted: Route[] = [];
-
-        for (const r of data ?? []) {
-          // Skip records missing coordinates
-          if (
-            !r.origin_lat ||
-            !r.origin_long ||
-            !r.destination_lat ||
-            !r.destination_long
+            customer_name,
+            status,
+            created_at
           )
-            continue;
+        `)
+        .in("lead.status", ["new", "opened"])
+        .order("depart_dt", { ascending: true });
 
-          formatted.push({
-            id: String(r.lead_id),
-            customerName: r.lead?.customer_name ?? "Unknown",
-            status: r.lead?.status ?? "unknown",
-            createdAt: r.lead?.created_at ?? "",
-            legs: [
-              {
-                origin: r.origin,
-                destination: r.destination,
-                originCoords: {
-                  lat: r.origin_lat,
-                  lng: r.origin_long,
-                  name: r.origin_code,
-                },
-                destCoords: {
-                  lat: r.destination_lat,
-                  lng: r.destination_long,
-                  name: r.destination_code,
-                },
-                departDt: r.depart_dt,
-              },
-            ],
-          });
-        }
-
-        setRoutes(formatted);
-        console.log("✅ Loaded leads:", formatted.length);
-      } catch (err) {
-        console.error("Error loading lead routes:", err);
+      if (error) {
+        console.error("Lead load error:", error);
         setRoutes([]);
+        return;
       }
+
+      const formatted = (data ?? [])
+        .filter(
+          (r) =>
+            r.origin_lat &&
+            r.origin_long &&
+            r.destination_lat &&
+            r.destination_long
+        )
+        .map((r) => ({
+          id: String(r.lead_id),
+          customerName: r.lead?.customer_name ?? "Unknown",
+          status: r.lead?.status ?? "unknown",
+          createdAt: r.lead?.created_at ?? "",
+          legs: [
+            {
+              origin: r.origin,
+              destination: r.destination,
+              originCoords: {
+                lat: r.origin_lat,
+                lng: r.origin_long,
+                name: r.origin_code,
+              },
+              destCoords: {
+                lat: r.destination_lat,
+                lng: r.destination_long,
+                name: r.destination_code,
+              },
+              departDt: r.depart_dt,
+            },
+          ],
+        }));
+
+      setRoutes(formatted);
+      console.log("✅ Leads loaded:", formatted.length);
+    };
+
+    const loadUpcomingRoutes = async () => {
+      const now = new Date();
+      const start = new Date();
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // Next 7 days
+      end.setHours(23, 59, 59, 999);
+
+      const { data, error } = await supabase
+        .from("quote_detail")
+        .select(`
+          id,
+          quote_id,
+          origin,
+          origin_code,
+          destination,
+          destination_code,
+          depart_dt,
+          origin_lat,
+          origin_long,
+          destination_lat,
+          destination_long,
+          quote:quote_id (
+            id,
+            customer_name,
+            status,
+            created_at
+          )
+        `)
+        .gte("depart_dt", start.toISOString())
+        .lte("depart_dt", end.toISOString())
+        .order("depart_dt", { ascending: true });
+
+      if (error) {
+        console.error("Upcoming load error:", error);
+        setRoutes([]);
+        return;
+      }
+
+      const formatted = (data ?? [])
+        .filter(
+          (r) =>
+            r.origin_lat &&
+            r.origin_long &&
+            r.destination_lat &&
+            r.destination_long
+        )
+        .map((r) => ({
+          id: String(r.quote_id),
+          customerName: r.quote?.customer_name ?? "Unknown",
+          status: r.quote?.status ?? "unknown",
+          createdAt: r.quote?.created_at ?? "",
+          legs: [
+            {
+              origin: r.origin,
+              destination: r.destination,
+              originCoords: {
+                lat: r.origin_lat,
+                lng: r.origin_long,
+                name: r.origin_code,
+              },
+              destCoords: {
+                lat: r.destination_lat,
+                lng: r.destination_long,
+                name: r.destination_code,
+              },
+              departDt: r.depart_dt,
+            },
+          ],
+        }));
+
+      setRoutes(formatted);
+      console.log("✈️ Upcoming trips loaded:", formatted.length);
     };
 
     if (activeFilter === "leads") loadLeadRoutes();
-    else {
-      // Placeholder for upcoming filter
-      setRoutes([
-        {
-          id: "placeholder-1",
-          customerName: "Upcoming Demo Trip",
-          status: "upcoming",
-          createdAt: new Date().toISOString(),
-          legs: [
-            {
-              origin: "MIA",
-              destination: "JFK",
-              originCoords: { lat: 25.7959, lng: -80.287, name: "MIA" },
-              destCoords: { lat: 40.6413, lng: -73.7781, name: "JFK" },
-              departDt: new Date().toISOString(),
-            },
-          ],
-        },
-      ]);
-    }
+    else loadUpcomingRoutes();
   }, [activeFilter, refreshKey, supabase]);
 
-  // === Initialize Leaflet (container fix) ===
+  // === Initialize Leaflet ===
   useEffect(() => {
     if (!mapContainer.current) return;
 
@@ -183,7 +232,7 @@ export function RouteMap() {
           zoom: US_ZOOM,
           zoomControl: false,
           attributionControl: false,
-          scrollWheelZoom: false, // ✅ disable mouse zoom
+          scrollWheelZoom: false,
           doubleClickZoom: false,
           touchZoom: false,
         });
@@ -243,13 +292,13 @@ export function RouteMap() {
 
         // Route line
         const routeLine = window.L.polyline([originLatLng, destLatLng], {
-          color: activeFilter === "leads" ? "#2563eb" : "#6b7280",
+          color: activeFilter === "leads" ? "#2563eb" : "#16a34a",
           weight: 1.5,
           opacity: 0.8,
           dashArray: "3, 2",
         }).addTo(map.current);
 
-        // Airplane midpoint icon
+        // Airplane marker
         const midLat = (leg.originCoords.lat + leg.destCoords.lat) / 2;
         const midLng = (leg.originCoords.lng + leg.destCoords.lng) / 2;
         const angle =
@@ -314,14 +363,13 @@ export function RouteMap() {
       });
     });
 
-    // Fit bounds
     if (allCoords.length) {
       const group = window.L.featureGroup(routeLayers.current);
       map.current.fitBounds(group.getBounds(), { padding: [20, 20], maxZoom: 6 });
     }
   }, [routes, mapLoaded, activeFilter]);
 
-  // === Zoom and refresh controls ===
+  // === Zoom / refresh ===
   const handleZoomIn = () => map.current?.zoomIn();
   const handleZoomOut = () => map.current?.zoomOut();
   const handleRefresh = () => setRefreshKey((k) => k + 1);
@@ -356,7 +404,7 @@ export function RouteMap() {
             })}
           </div>
 
-          {/* Zoom / Refresh Controls */}
+          {/* Zoom / Refresh */}
           <div className="absolute top-20 right-4 z-[1000] flex flex-col gap-1 bg-white/80 rounded-lg p-1 shadow-lg border border-gray-200">
             <Button variant="ghost" size="sm" onClick={handleZoomIn}>
               <Plus className="h-4 w-4" />
@@ -369,7 +417,6 @@ export function RouteMap() {
             </Button>
           </div>
 
-          {/* Map */}
           <div ref={mapContainer} className="absolute inset-0 w-full h-full" />
 
           {mapError && (
