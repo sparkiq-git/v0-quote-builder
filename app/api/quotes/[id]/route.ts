@@ -84,6 +84,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
 
     // Fetch aircraft data for the options
     const aircraftIds = (options || []).map(opt => opt.aircraft_id).filter(Boolean)
+    console.log("🛩️ Aircraft IDs to fetch:", aircraftIds)
     
     let aircraftData = []
     
@@ -134,6 +135,10 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
         console.error("Aircraft fetch error:", aircraftError)
       } else {
         aircraftData = aircraft || []
+        console.log("🛩️ Aircraft data fetched:", aircraftData.length, "aircraft")
+        if (aircraftData.length > 0) {
+          console.log("🛩️ First aircraft:", aircraftData[0])
+        }
       }
     }
 
@@ -171,6 +176,13 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       options: (options || []).map((option: any) => {
         const aircraft = aircraftData.find(a => a.id === option.aircraft_id)
         const aircraftModel = aircraft?.aircraft_model
+        
+        console.log("🛩️ Processing option:", {
+          optionId: option.id,
+          aircraftId: option.aircraft_id,
+          foundAircraft: !!aircraft,
+          foundModel: !!aircraftModel
+        })
         
         return {
           id: option.id,
