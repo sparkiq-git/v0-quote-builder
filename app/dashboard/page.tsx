@@ -204,19 +204,19 @@ export default function DashboardPage() {
           title="Quotes"
           icon={FileText}
           currentValue={quotesAwaitingResponse}
-          description='Awaiting client response'
+          description='Awaiting client response"'
         />
         <MetricCard
           title="Unpaid"
           icon={Clock}
           currentValue={unpaidQuotes}
-          description='Awaiting payment'
+          description="Awaiting payment"
         />
         <MetricCard
           title="Upcoming"
           icon={Plane}
           currentValue={upcomingDepartures}
-          description='Departures in next 7 days'
+          description="Departures in next 7 days"
         />
       </div>
 
