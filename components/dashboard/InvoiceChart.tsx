@@ -47,7 +47,7 @@ export default function InvoiceChart() {
     <Card className="shadow-sm border border-gray-200 w-full h-[520px]">
       <CardHeader>
         <CardTitle className="text-sm text-gray-600">
-          Invoice Totals by Month (Paid Only)
+          Paid Invoice Totals by Month 
         </CardTitle>
       </CardHeader>
       <CardContent>
