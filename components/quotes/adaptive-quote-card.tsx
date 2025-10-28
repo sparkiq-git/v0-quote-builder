@@ -11,7 +11,6 @@ import {
   CarouselPrevious,
   type CarouselApi,
 } from "@/components/ui/carousel"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import type { QuoteOption } from "@/lib/types"
 import { formatCurrency } from "@/lib/utils/format"
 import { useDeviceDetection, deviceLayouts } from "@/hooks/use-device-detection"
@@ -274,24 +273,27 @@ export function AdaptiveQuoteCard({
                   {aircraftModel?.manufacturer || "Aircraft Manufacturer"}
                 </p>
 
-                <div className="flex flex-wrap gap-1.5 pt-1">
-                  <div className="flex items-center gap-1.5 bg-white/25 backdrop-blur-md border border-white/40 px-3 py-1.5 rounded-full shadow-lg">
-                    <Users className="h-3.5 w-3.5 text-white" aria-hidden="true" />
-                    <span className="text-xs font-medium text-white">{capacity} passengers</span>
+                {amenities.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {amenities.slice(0, 6).map((amenity, i) => {
+                      const Icon = getAmenityIcon(amenity)
+                      return (
+                        <div
+                          key={i}
+                          className="flex items-center gap-1.5 bg-white/25 backdrop-blur-md border border-white/40 px-3 py-1.5 rounded-full shadow-lg"
+                        >
+                          <Icon className="h-3.5 w-3.5 text-white" aria-hidden="true" />
+                          <span className="text-xs font-medium text-white truncate max-w-[120px]">{amenity}</span>
+                        </div>
+                      )
+                    })}
+                    {amenities.length > 6 && (
+                      <div className="flex items-center gap-1.5 bg-white/25 backdrop-blur-md border border-white/40 px-3 py-1.5 rounded-full shadow-lg">
+                        <span className="text-xs font-medium text-white">+{amenities.length - 6} more</span>
+                      </div>
+                    )}
                   </div>
-                  {aircraftTail?.year && (
-                    <div className="flex items-center gap-1.5 bg-white/25 backdrop-blur-md border border-white/40 px-3 py-1.5 rounded-full shadow-lg">
-                      <Calendar className="h-3.5 w-3.5 text-white" aria-hidden="true" />
-                      <span className="text-xs font-medium text-white">{aircraftTail.year}</span>
-                    </div>
-                  )}
-                  {aircraftTail?.speedKnotsOverride && (
-                    <div className="flex items-center gap-1.5 bg-white/25 backdrop-blur-md border border-white/40 px-3 py-1.5 rounded-full shadow-lg">
-                      <Gauge className="h-3.5 w-3.5 text-white" aria-hidden="true" />
-                      <span className="text-xs font-medium text-white">{aircraftTail.speedKnotsOverride} kts</span>
-                    </div>
-                  )}
-                </div>
+                )}
               </div>
 
               {isSelected && (
@@ -332,6 +334,15 @@ export function AdaptiveQuoteCard({
                 Aircraft Specifications
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-2">
+                <div className="flex items-center gap-2.5 p-3 rounded-lg bg-gray-50 border border-gray-200">
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center">
+                    <Users className="h-4 w-4 text-gray-600" aria-hidden="true" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-[7px] text-gray-500 font-medium uppercase tracking-wide">Capacity</div>
+                    <div className="text-sm text-gray-900 font-semibold">{capacity} passengers</div>
+                  </div>
+                </div>
                 {aircraftTail?.year && (
                   <div className="flex items-center gap-2.5 p-3 rounded-lg bg-gray-50 border border-gray-200">
                     <div className="flex-shrink-0 w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center">
@@ -340,6 +351,17 @@ export function AdaptiveQuoteCard({
                     <div className="min-w-0">
                       <div className="text-[7px] text-gray-500 font-medium uppercase tracking-wide">Year</div>
                       <div className="text-sm text-gray-900 font-semibold">{aircraftTail.year}</div>
+                    </div>
+                  </div>
+                )}
+                {aircraftTail?.speedKnotsOverride && (
+                  <div className="flex items-center gap-2.5 p-3 rounded-lg bg-gray-50 border border-gray-200">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center">
+                      <Gauge className="h-4 w-4 text-gray-600" aria-hidden="true" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-[7px] text-gray-500 font-medium uppercase tracking-wide">Speed</div>
+                      <div className="text-sm text-gray-900 font-semibold">{aircraftTail.speedKnotsOverride} kts</div>
                     </div>
                   </div>
                 )}
@@ -368,40 +390,6 @@ export function AdaptiveQuoteCard({
               </div>
             </div>
           </div>
-
-          {/* Amenities Section */}
-          {amenities.length > 0 && (
-            <div className="space-y-2">
-              <h3 className="uppercase tracking-widest text-gray-500 font-medium text-[7px]">Featured Amenities</h3>
-              <TooltipProvider delayDuration={150}>
-                <div className="flex flex-wrap gap-2">
-                  {amenities.slice(0, 8).map((amenity, i) => {
-                    const Icon = getAmenityIcon(amenity)
-                    return (
-                      <Tooltip key={i}>
-                        <TooltipTrigger asChild>
-                          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-50 border border-gray-200 hover:border-gray-300 hover:bg-gray-100 hover:shadow-sm transition-all duration-200 touch-manipulation">
-                            <Icon className="h-3.5 w-3.5 text-gray-600 flex-shrink-0" aria-hidden="true" />
-                            <span className="text-[8.4px] font-light text-gray-700 truncate max-w-[120px]">
-                              {amenity}
-                            </span>
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent side="top" className="max-w-xs text-[8.4px]">
-                          {amenity}
-                        </TooltipContent>
-                      </Tooltip>
-                    )
-                  })}
-                  {amenities.length > 8 && (
-                    <div className="flex items-center px-3 py-1.5 text-[8.4px] text-gray-500 font-light">
-                      +{amenities.length - 8} more
-                    </div>
-                  )}
-                </div>
-              </TooltipProvider>
-            </div>
-          )}
 
           {/* Special Notes */}
           {option.conditions?.trim() && (
