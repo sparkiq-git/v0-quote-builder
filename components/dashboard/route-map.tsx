@@ -1,16 +1,14 @@
-"use client"
+"use client";
 
-import { useMemo, useState, useEffect, useRef } from "react"
-import { Card } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Plus, Minus, Users, FileText, Activity, MapPin, RotateCcw } from "lucide-react"
-import { useMockStore } from "@/lib/mock/store"
-import { formatTimeAgo } from "@/lib/utils/format"
-import { getAirportCoordinates } from "@/lib/data/airports"
-import type { Event, Leg } from "@/lib/types"
+import { useEffect, useState, useRef, useMemo } from "react";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Plus, Minus, RotateCcw, MapPin, Activity, Users, FileText } from "lucide-react";
+import { formatTimeAgo } from "@/lib/utils/format";
+import { getLeadRoutes, getUpcomingRoutes } from "@/lib/supabase/queries/getRoutes";
 
-type FilterType = "leads" | "upcoming"
+type FilterType = "leads" | "upcoming";
 
 interface RouteData {
   id: string
