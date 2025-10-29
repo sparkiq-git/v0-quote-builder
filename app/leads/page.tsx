@@ -168,7 +168,6 @@ const leadsWithView = (data || []).map((l: any): LeadWithEngagement => ({
         subscription.unsubscribe?.()
       }
     }
-    }
 
     fetchLeads()
   }, [sessionChecked])
