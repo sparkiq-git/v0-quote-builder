@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Plus, UserCircle } from "lucide-react"
@@ -9,8 +9,32 @@ import { PassengerCreateDialog } from "@/components/passengers/passenger-create-
 import { useMockStore } from "@/lib/mock/store"
 
 export default function PassengersPage() {
-  const { state } = useMockStore()
   const [showCreateDialog, setShowCreateDialog] = useState(false)
+  const [isClient, setIsClient] = useState(false)
+  
+  // Only access the store on the client side
+  const { state } = useMockStore()
+  
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
+
+  // Show loading state during hydration
+  if (!isClient) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Passengers</h1>
+            <p className="text-muted-foreground">Manage passenger profiles and travel history</p>
+          </div>
+        </div>
+        <div className="flex items-center justify-center h-64">
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">

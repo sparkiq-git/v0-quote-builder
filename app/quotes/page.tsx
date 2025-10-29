@@ -56,10 +56,13 @@ export default function QuotesPage() {
   const [sending, setSending] = useState(false)
   const [converting, setConverting] = useState<string | null>(null)
 
-  // ✅ Fetch quotes from Supabase
+  // ✅ Fetch quotes from Supabase (client-side only)
   useEffect(() => {
     const fetchQuotes = async () => {
       try {
+        // Only run on client side
+        if (typeof window === 'undefined') return
+        
         const supabase = createClient()
         const tenantId = process.env.NEXT_PUBLIC_TENANT_ID!
         const { data, error } = await supabase

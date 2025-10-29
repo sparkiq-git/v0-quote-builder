@@ -23,6 +23,9 @@ export default function LeadsPage() {
    * ✅ Session check
    */
   useEffect(() => {
+    // Only run on client side
+    if (typeof window === 'undefined') return;
+    
     const supabase = createClient()
 
     const checkSession = async () => {

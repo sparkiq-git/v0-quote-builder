@@ -16,8 +16,6 @@ import { createClient } from "@/lib/supabase/client";
 
 /* ---------------------------------- page ---------------------------------- */
 export default function DashboardPage() {
-  const supabase = createClient();
-
   // Counts shown in MetricCards
   const [leadCount, setLeadCount] = useState(0);
   const [quotesAwaitingResponse, setQuotesAwaitingResponse] = useState(0);
@@ -25,10 +23,18 @@ export default function DashboardPage() {
   const [upcomingDepartures, setUpcomingDepartures] = useState(0);
   const [commission, setCommission] = useState(0);
   const [paidInvoicesCount, setPaidInvoicesCount] = useState(0);
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   // === Load LEADS (status IN ['opened','new'])
   useEffect(() => {
+    if (!isClient) return;
+    
     let cancelled = false;
+    const supabase = createClient();
 
     const loadLeadCount = async () => {
       try {
@@ -58,11 +64,14 @@ export default function DashboardPage() {
       cancelled = true;
       clearInterval(id);
     };
-  }, [supabase]);
+  }, [isClient]);
 
   // === Load Quotes/Unpaid/Upcoming from API + Monthly Commission
   useEffect(() => {
+    if (!isClient) return;
+    
     let cancelled = false;
+    const supabase = createClient();
 
     const loadMetrics = async () => {
       try {
@@ -108,7 +117,7 @@ export default function DashboardPage() {
       cancelled = true;
       clearInterval(id);
     };
-  }, [supabase]);
+  }, [isClient]);
 
   // Mock store (unchanged)
   const { state, getMetrics, loading } = useMockStore();
