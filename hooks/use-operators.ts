@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { createClient } from "@/lib/supabase/client"
+import { supabase } from "@/lib/supabase/client"
 
 export interface OperatorData {
   id: string
@@ -19,7 +19,6 @@ export function useOperators() {
     const fetchOperators = async () => {
       try {
         setLoading(true)
-        const supabase = createClient()
       const { data, error } = await supabase
           .from("operator")
           .select("id, name, icao_code, iata_code")

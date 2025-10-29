@@ -1,6 +1,6 @@
 "use client"
 
-import { createClient } from "@/lib/supabase/client"
+import { supabase } from "@/lib/supabase/client"
 
 /* =========================================================
    Utilities
@@ -17,8 +17,6 @@ function isUUID(v?: string | null) {
 ========================================================= */
 export async function upsertQuoteOptions(quoteId: string, options: any[]) {
   if (!quoteId) throw new Error("Missing quoteId")
-  
-  const supabase = createClient()
 
   // ✅ Normalize + sequentially label options
   const validOptions = (options || [])
@@ -104,7 +102,6 @@ export async function upsertQuoteOptions(quoteId: string, options: any[]) {
 ========================================================= */
 export async function deleteQuoteOption(optionId: string) {
   if (!isUUID(optionId)) return
-  const supabase = createClient()
   const { error } = await supabase.from("quote_option").delete().eq("id", optionId)
   if (error) throw error
 }

@@ -1,14 +1,12 @@
 "use client"
 
-import { createClient } from "@/lib/supabase/client"
+import { supabase } from "@/lib/supabase/client"
 
 /* =========================================================
    QUOTE ITEMS (services)
 ========================================================= */
 export async function upsertQuoteItems(quoteId: string, services: any[]) {
   if (!quoteId) throw new Error("Missing quoteId")
-  
-  const supabase = createClient()
 
   // 🔁 Normalize & prepare data (accept either "amount" or "unit_price")
   const validItems = (services || [])
