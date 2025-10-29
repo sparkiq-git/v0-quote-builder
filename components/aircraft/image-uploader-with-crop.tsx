@@ -5,7 +5,6 @@ import Cropper from "react-easy-crop"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
-import { supabase } from "@/lib/supabase/client"
 import { Loader2, UploadCloud } from "lucide-react"
 import { getCroppedImg } from "@/lib/utils/crop"
 
@@ -58,6 +57,12 @@ export default function ImageUploaderWithCrop({
       setUploading(true)
       const blob = await getCroppedImg(imageSrc, croppedAreaPixels)
       if (!blob) throw new Error("Failed to create cropped image")
+
+      // Only run on client side
+      if (typeof window === 'undefined') return;
+      
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
 
       const filePath = `tenant/${tenantId}/aircraft/${aircraftId}/${Date.now()}.jpg`
       const { error } = await supabase.storage

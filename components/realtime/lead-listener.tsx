@@ -85,7 +85,7 @@ export function LeadListener() {
     }
 
     subscribeRealtime()
-  }, [router, supabase])
+  }, [router])
 
   return null // no UI, background listener only
 }

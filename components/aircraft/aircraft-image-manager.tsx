@@ -6,7 +6,6 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { ImagePlus, Trash2, UploadCloud, X, Crop } from "lucide-react"
 import Cropper from "react-easy-crop"
 import Slider from "@mui/material/Slider"
-import { supabase } from "@/lib/supabase/client"
 import { useToast } from "@/hooks/use-toast"
 import { getCroppedImg } from "@/lib/utils/crop"
 
@@ -160,6 +159,12 @@ export default function AircraftImageManager({ aircraftId, tenantId, onImagesUpd
       toast({ title: "Uploading images..." })
 
       // Check authentication first
+      // Only run on client side
+      if (typeof window === 'undefined') return;
+      
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+      
       const { data: { user }, error: authError } = await supabase.auth.getUser()
       if (authError || !user) {
         console.error("Auth error:", authError)
@@ -271,6 +276,12 @@ export default function AircraftImageManager({ aircraftId, tenantId, onImagesUpd
             variant="outline"
             size="sm"
             onClick={async () => {
+              // Only run on client side
+              if (typeof window === 'undefined') return;
+              
+              const { createClient } = await import("@/lib/supabase/client");
+              const supabase = createClient();
+              
               console.log("🧪 Aircraft Image Debug Info:")
               console.log("Aircraft ID:", aircraftId)
               console.log("Tenant ID:", tenantId)

@@ -14,7 +14,6 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
-import { supabase } from "@/lib/supabase/client"
 import { getModels, updateModel } from "@/lib/supabase/queries/models"
 import type { AircraftModelRecord } from "@/lib/types"
 import ModelImageManager from "@/components/aircraft/model-image-manager"
@@ -49,6 +48,12 @@ export function ModelEditDialog({
     if (typeof window === "undefined") return
     async function loadTenant() {
       try {
+        // Only run on client side
+        if (typeof window === 'undefined') return;
+        
+        const { createClient } = await import("@/lib/supabase/client");
+        const supabase = createClient();
+        
         const { data } = await supabase.auth.getUser()
         const tenantId = data?.user?.app_metadata?.tenant_id ?? null
         console.log("Loaded tenant ID:", tenantId)

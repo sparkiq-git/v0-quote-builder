@@ -17,7 +17,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
-import { supabase } from "@/lib/supabase/client"
 import { ModelFormSchema, type ModelFormData } from "@/lib/schemas/aircraft"
 import { insertModel } from "@/lib/supabase/queries/models"
 import ModelImageManager from "@/components/aircraft/model-image-manager"
@@ -50,6 +49,12 @@ export function ModelCreateDialog({
     if (typeof window === "undefined") return
     async function loadTenant() {
       try {
+        // Only run on client side
+        if (typeof window === 'undefined') return;
+        
+        const { createClient } = await import("@/lib/supabase/client");
+        const supabase = createClient();
+        
         const { data } = await supabase.auth.getUser()
         setTenantId(data?.user?.app_metadata?.tenant_id ?? null)
       } catch (err) {

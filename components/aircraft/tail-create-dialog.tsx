@@ -31,7 +31,6 @@ import AircraftImageManager from "./aircraft-image-manager"
 import { AmenitySelector } from "./amenity-selector"
 import { Check, ChevronsUpDown, Plus } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { supabase } from "@/lib/supabase/client"
 
 interface TailCreateDialogProps {
   children: React.ReactNode
@@ -67,6 +66,12 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
     if (typeof window === "undefined") return
     async function loadTenantAndTypeRating() {
       try {
+        // Only run on client side
+        if (typeof window === 'undefined') return;
+        
+        const { createClient } = await import("@/lib/supabase/client");
+        const supabase = createClient();
+        
         const { data } = await supabase.auth.getUser()
         const tenantId = data?.user?.app_metadata?.tenant_id ?? null
         setTenantId(tenantId)

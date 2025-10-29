@@ -6,7 +6,6 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { ImagePlus, Trash2, UploadCloud, X, Crop } from "lucide-react"
 import Cropper from "react-easy-crop"
 import Slider from "@mui/material/Slider"
-import { supabase } from "@/lib/supabase/client"
 import { useToast } from "@/hooks/use-toast"
 import { getCroppedImg } from "@/lib/utils/crop"
 
@@ -154,6 +153,12 @@ export default function ModelImageManager({ modelId, tenantId, onImagesUpdated }
       toast({ title: "Uploading images..." })
 
       // Check authentication first
+      // Only run on client side
+      if (typeof window === 'undefined') return;
+      
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+      
       const { data: { user }, error: authError } = await supabase.auth.getUser()
       if (authError || !user) {
         console.error("Auth error:", authError)
@@ -236,6 +241,12 @@ export default function ModelImageManager({ modelId, tenantId, onImagesUpdated }
 
   const handleDelete = async (url: string, id?: string) => {
     try {
+      // Only run on client side
+      if (typeof window === 'undefined') return;
+      
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+      
       // Extract storage path from URL
       const urlParts = url.split("/storage/v1/object/public/")
       const path = urlParts.length > 1 ? urlParts[1] : null
@@ -309,6 +320,12 @@ export default function ModelImageManager({ modelId, tenantId, onImagesUpdated }
             variant="outline"
             size="sm"
             onClick={async () => {
+              // Only run on client side
+              if (typeof window === 'undefined') return;
+              
+              const { createClient } = await import("@/lib/supabase/client");
+              const supabase = createClient();
+              
               console.log("🧪 Debug Info:")
               console.log("Tenant ID:", tenantId)
               console.log("Model ID:", modelId)
