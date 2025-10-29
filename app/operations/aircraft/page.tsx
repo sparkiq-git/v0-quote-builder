@@ -5,32 +5,32 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Plus, Grid3x3, TableIcon } from "lucide-react"
-import dynamic from "next/dynamic"
-
-// Dynamically import components to prevent SSR issues
-const ModelsTable = dynamic(() => import("@/components/aircraft/models-table").then(mod => ({ default: mod.ModelsTable })), { 
-  ssr: false,
-  loading: () => <div className="flex items-center justify-center h-32">Loading models table...</div>
-})
-const ModelsGrid = dynamic(() => import("@/components/aircraft/models-grid").then(mod => ({ default: mod.ModelsGrid })), { 
-  ssr: false,
-  loading: () => <div className="flex items-center justify-center h-32">Loading models grid...</div>
-})
-const TailsTable = dynamic(() => import("@/components/aircraft/tails-table").then(mod => ({ default: mod.TailsTable })), { 
-  ssr: false,
-  loading: () => <div className="flex items-center justify-center h-32">Loading tails table...</div>
-})
-const TailsGrid = dynamic(() => import("@/components/aircraft/tails-grid").then(mod => ({ default: mod.TailsGrid })), { 
-  ssr: false,
-  loading: () => <div className="flex items-center justify-center h-32">Loading tails grid...</div>
-})
-const TailCreateDialog = dynamic(() => import("@/components/aircraft/tail-create-dialog").then(mod => ({ default: mod.TailCreateDialog })), { 
-  ssr: false,
-  loading: () => null
-})
+import dynamicImport from "next/dynamic"
 
 // Force dynamic rendering to prevent SSR issues with Supabase client
 export const dynamic = 'force-dynamic'
+
+// Dynamically import components to prevent SSR issues
+const ModelsTable = dynamicImport(() => import("@/components/aircraft/models-table").then(mod => ({ default: mod.ModelsTable })), { 
+  ssr: false,
+  loading: () => <div className="flex items-center justify-center h-32">Loading models table...</div>
+})
+const ModelsGrid = dynamicImport(() => import("@/components/aircraft/models-grid").then(mod => ({ default: mod.ModelsGrid })), { 
+  ssr: false,
+  loading: () => <div className="flex items-center justify-center h-32">Loading models grid...</div>
+})
+const TailsTable = dynamicImport(() => import("@/components/aircraft/tails-table").then(mod => ({ default: mod.TailsTable })), { 
+  ssr: false,
+  loading: () => <div className="flex items-center justify-center h-32">Loading tails table...</div>
+})
+const TailsGrid = dynamicImport(() => import("@/components/aircraft/tails-grid").then(mod => ({ default: mod.TailsGrid })), { 
+  ssr: false,
+  loading: () => <div className="flex items-center justify-center h-32">Loading tails grid...</div>
+})
+const TailCreateDialog = dynamicImport(() => import("@/components/aircraft/tail-create-dialog").then(mod => ({ default: mod.TailCreateDialog })), { 
+  ssr: false,
+  loading: () => null
+})
 
 export default function AircraftPage() {
   const [view, setView] = useState<"grid" | "table">("grid")
