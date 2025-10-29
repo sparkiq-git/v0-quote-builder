@@ -33,10 +33,10 @@ export default function DashboardPage() {
     if (!isClient) return;
     
     let cancelled = false;
-    const { createClient } = await import("@/lib/supabase/client");
-    const supabase = createClient();
 
     const loadLeadCount = async () => {
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
       try {
         const { count, error } = await supabase
           .from("lead")
@@ -71,8 +71,6 @@ export default function DashboardPage() {
     if (!isClient) return;
     
     let cancelled = false;
-    const { createClient } = await import("@/lib/supabase/client");
-    const supabase = createClient();
 
     const loadMetrics = async () => {
       try {
@@ -89,6 +87,9 @@ export default function DashboardPage() {
     };
 
     const loadCommission = async () => {
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+      
       const now = new Date();
       const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
       const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);

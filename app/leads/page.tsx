@@ -25,10 +25,9 @@ export default function LeadsPage() {
     // Only run on client side
     if (typeof window === 'undefined') return;
     
-    const { createClient } = await import("@/lib/supabase/client")
-    const supabase = createClient()
-
     const checkSession = async () => {
+      const { createClient } = await import("@/lib/supabase/client")
+      const supabase = createClient()
       const { data: { session }, error } = await supabase.auth.getSession()
       if (error) {
         console.error("Session check error:", error)
@@ -52,6 +51,9 @@ export default function LeadsPage() {
     })
 
     return () => authListener.subscription.unsubscribe()
+    }
+
+    checkSession()
   }, [router])
 
   /**
@@ -62,10 +64,9 @@ export default function LeadsPage() {
     // Only run on client side
     if (typeof window === 'undefined') return;
 
-    const { createClient } = await import("@/lib/supabase/client")
-    const supabase = createClient()
-
     const fetchLeads = async () => {
+      const { createClient } = await import("@/lib/supabase/client")
+      const supabase = createClient()
       const { data, error } = await supabase
         .from("lead")
         .select(`
@@ -156,6 +157,9 @@ const leadsWithView = (data || []).map((l: any): LeadWithEngagement => ({
       supabase.removeChannel(channel)
       subscription.unsubscribe?.()
     }
+    }
+
+    fetchLeads()
   }, [sessionChecked])
 
   /**
