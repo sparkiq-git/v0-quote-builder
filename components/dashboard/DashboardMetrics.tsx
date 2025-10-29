@@ -136,7 +136,7 @@ export default function DashboardMetrics() {
           minimumFractionDigits: 2,
         })}`}
         color="text-amber-600"
-        description="Sum of price commissions this month"
+        description="Price commissions this month"
       />
     </div>
   );
