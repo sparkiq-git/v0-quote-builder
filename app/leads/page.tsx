@@ -106,58 +106,58 @@ const leadsWithView = (data || []).map((l: any): LeadWithEngagement => ({
 
       setLeads(leadsWithView)
       setLoading(false)
+
+      // ✅ Realtime channel setup
+      channel = supabase.channel("leads-realtime")
+
+      // 🔹 Lead INSERT / UPDATE / DELETE
+      channel.on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "lead" },
+        (payload) => {
+          setLeads((prev) => {
+            switch (payload.eventType) {
+              case "INSERT":
+                // prevent duplicates
+                if (prev.some((l) => l.id === payload.new.id)) return prev
+                return [{ ...payload.new, last_viewed_at: null }, ...prev]
+              case "UPDATE":
+                return prev.map((lead) =>
+                  lead.id === payload.new.id
+                    ? { ...lead, ...payload.new }
+                    : lead
+                )
+              case "DELETE":
+                return prev.filter((lead) => lead.id !== payload.old.id)
+              default:
+                return prev
+            }
+          })
+        }
+      )
+
+      // 🔹 Engagement last_viewed_at update
+      channel.on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "lead_tenant_engagement" },
+        (payload) => {
+          const leadId = payload.new.lead_id
+          const lastViewed = payload.new.last_viewed_at
+          if (!leadId) return
+          setLeads((prev) =>
+            prev.map((lead) =>
+              lead.id === leadId ? { ...lead, last_viewed_at: lastViewed } : lead
+            )
+          )
+        }
+      )
+
+      subscription = channel.subscribe((status) =>
+        console.log("Realtime subscription status:", status)
+      )
     }
 
     fetchLeads()
-
-    // ✅ Realtime channel setup
-    const channel = supabase.channel("leads-realtime")
-
-    // 🔹 Lead INSERT / UPDATE / DELETE
-    channel.on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: "lead" },
-      (payload) => {
-        setLeads((prev) => {
-          switch (payload.eventType) {
-            case "INSERT":
-              // prevent duplicates
-              if (prev.some((l) => l.id === payload.new.id)) return prev
-              return [{ ...payload.new, last_viewed_at: null }, ...prev]
-            case "UPDATE":
-              return prev.map((lead) =>
-                lead.id === payload.new.id
-                  ? { ...lead, ...payload.new }
-                  : lead
-              )
-            case "DELETE":
-              return prev.filter((lead) => lead.id !== payload.old.id)
-            default:
-              return prev
-          }
-        })
-      }
-    )
-
-    // 🔹 Engagement last_viewed_at update
-    channel.on(
-      "postgres_changes",
-      { event: "UPDATE", schema: "public", table: "lead_tenant_engagement" },
-      (payload) => {
-        const leadId = payload.new.lead_id
-        const lastViewed = payload.new.last_viewed_at
-        if (!leadId) return
-        setLeads((prev) =>
-          prev.map((lead) =>
-            lead.id === leadId ? { ...lead, last_viewed_at: lastViewed } : lead
-          )
-        )
-      }
-    )
-
-    subscription = channel.subscribe((status) =>
-      console.log("Realtime subscription status:", status)
-    )
 
     return () => {
       // ✅ Proper cleanup for Next.js hot reloads
