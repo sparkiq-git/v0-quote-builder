@@ -1,11 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { useMemo, useState, useEffect } from "react";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -114,19 +112,6 @@ export default function DashboardPage() {
     [state.quotes]
   );
 
-  if (loading) {
-    return (
-      <div className="space-y-6 sm:space-y-8">
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
-          Welcome back!
-        </h1>
-        <p className="text-muted-foreground text-sm sm:text-base">
-          Loading your dashboard...
-        </p>
-      </div>
-    );
-  }
-
   function MetricCard({
     title,
     icon: Icon,
@@ -139,10 +124,10 @@ export default function DashboardPage() {
     description: string;
   }) {
     return (
-      <Card className="col-span-1 h-full flex flex-col">
+      <Card className="col-span-1 h-full flex flex-col hover:shadow-md transition-shadow border border-gray-200">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1">
           <CardTitle className="text-sm font-medium flex items-center gap-2">
-            <Icon className="h-4 w-4" />
+            <Icon className="h-4 w-4 text-muted-foreground" />
             {title}
           </CardTitle>
         </CardHeader>
@@ -167,7 +152,7 @@ export default function DashboardPage() {
         </p>
       </div>
 
-      {/* === Top Metric Cards (Commission REMOVED) === */}
+      {/* === Top Metric Cards (4 total) === */}
       <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard
           title="Leads"
@@ -195,7 +180,7 @@ export default function DashboardPage() {
         />
       </div>
 
-      {/* === Additional Monthly Metrics Section === */}
+      {/* === Additional Monthly Metrics Section (matches top style) === */}
       <DashboardMetrics />
 
       {/* === Chart + Map === */}
