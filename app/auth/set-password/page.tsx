@@ -6,7 +6,6 @@ export const runtime = "edge";
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -44,7 +43,6 @@ function parseQueryToken() {
 
 export default function SetPasswordPage() {
   const router = useRouter();
-  const supabase = useMemo(() => createClient(), []);
 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -63,6 +61,12 @@ export default function SetPasswordPage() {
         // Try hash tokens first
         const hashTokens = parseHashTokens(window.location.hash);
         if (hashTokens?.access_token && hashTokens?.refresh_token) {
+          // Only run on client side
+          if (typeof window === 'undefined') return;
+          
+          const { createClient } = await import("@/lib/supabase/client");
+          const supabase = createClient();
+          
           const { data, error } = await supabase.auth.setSession({
             access_token: hashTokens.access_token,
             refresh_token: hashTokens.refresh_token,
@@ -86,6 +90,12 @@ export default function SetPasswordPage() {
         // Fallback: verifyOtp if the email client stripped the hash
         const qs = parseQueryToken();
         if (qs?.token && qs.type === "invite") {
+          // Only run on client side
+          if (typeof window === 'undefined') return;
+          
+          const { createClient } = await import("@/lib/supabase/client");
+          const supabase = createClient();
+          
           const { data, error } = await supabase.auth.verifyOtp({
             type: "invite",
             token: qs.token,
@@ -132,6 +142,12 @@ export default function SetPasswordPage() {
     }
 
     try {
+      // Only run on client side
+      if (typeof window === 'undefined') return;
+      
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+      
       const { error } = await supabase.auth.updateUser({ password });
       if (error) throw error;
 

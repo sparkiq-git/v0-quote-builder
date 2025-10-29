@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { createClient } from "@supabase/supabase-js"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -23,10 +22,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
 
 export default function InvoicesPage() {
   const router = useRouter()
@@ -114,6 +109,15 @@ export default function InvoicesPage() {
   const confirmDelete = async () => {
     if (!invoiceToDelete) return
     try {
+      // Only run on client side
+      if (typeof window === 'undefined') return;
+      
+      const { createClient } = await import("@supabase/supabase-js");
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      );
+      
       const { error } = await supabase.from("invoice").delete().eq("id", invoiceToDelete)
       if (error) throw error
       setInvoices((prev) => prev.filter((i) => i.id !== invoiceToDelete))
