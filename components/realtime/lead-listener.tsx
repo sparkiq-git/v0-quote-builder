@@ -23,12 +23,7 @@ export function LeadListener() {
     // Only run on client side
     if (typeof window === 'undefined') return;
     
-    // Test Sonner toast on component mount
-    console.log("🔔 LeadListener mounted, testing Sonner toast...")
-    toast("LeadListener initialized", {
-      description: "Sonner toast system is working",
-      duration: 3000,
-    })
+    console.log("🔔 LeadListener mounted, setting up real-time notifications...")
     
     // Preload the sound
     soundRef.current = new Audio("/notify.mp3")
@@ -58,7 +53,6 @@ export function LeadListener() {
           ? `New Lead: ${firstLead.customer_name || "Unnamed"}`
           : `${count} New Leads`
 
-        console.log("🔔 Showing Sonner toast:", label)
         toast(label, {
           description: count === 1
             ? firstLead.trip_summary || "No trip summary"
@@ -73,28 +67,80 @@ export function LeadListener() {
         pendingLeads.current = []
       }, 1000) // group leads arriving within 1s
 
+      // 🔔 Listen for new leads
       channel.on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "lead" },
         (payload) => {
           const newLead = payload.new as Lead
-          console.log("🔔 New lead received:", newLead)
 
           // ✅ Only show for same tenant
-          if (tenantId && newLead.tenant_id !== tenantId) {
-            console.log("🔔 Lead filtered out - different tenant:", newLead.tenant_id, "vs", tenantId)
-            return
-          }
+          if (tenantId && newLead.tenant_id !== tenantId) return
 
-          console.log("🔔 Adding lead to pending list:", newLead.customer_name)
           pendingLeads.current.push(newLead)
           flushLeads()
         }
       )
 
-      channel.subscribe((status) =>
-        console.log("Global Realtime Listener:", status)
+      // 🔔 Listen for quote status changes (approved/declined)
+      channel.on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "quote" },
+        (payload) => {
+          const oldQuote = payload.old
+          const newQuote = payload.new
+
+          // Only show notifications for specific status changes
+          if (oldQuote.status !== newQuote.status) {
+            if (newQuote.status === "accepted") {
+              toast("Quote Approved! 🎉", {
+                description: `Quote "${newQuote.title || 'Untitled'}" has been approved by the customer.`,
+                action: {
+                  label: "View Quote",
+                  onClick: () => router.push(`/quotes/${newQuote.id}`),
+                },
+              })
+            } else if (newQuote.status === "declined") {
+              toast("Quote Declined", {
+                description: `Quote "${newQuote.title || 'Untitled'}" was declined by the customer.`,
+                action: {
+                  label: "View Quote",
+                  onClick: () => router.push(`/quotes/${newQuote.id}`),
+                },
+              })
+            }
+          }
+        }
       )
+
+      // 🔔 Listen for invoice status changes (paid)
+      channel.on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "invoice" },
+        (payload) => {
+          const oldInvoice = payload.old
+          const newInvoice = payload.new
+
+          // Only show notifications for payment status changes
+          if (oldInvoice.status !== newInvoice.status && newInvoice.status === "paid") {
+            toast("Invoice Paid! 💰", {
+              description: `Invoice ${newInvoice.number} has been paid ($${newInvoice.amount}).`,
+              action: {
+                label: "View Invoice",
+                onClick: () => router.push(`/invoices`),
+              },
+            })
+          }
+        }
+      )
+
+      channel.subscribe((status) => {
+        if (status === "SUBSCRIBED") {
+          console.log("🔔 Real-time notifications active")
+        } else if (status === "CHANNEL_ERROR") {
+          console.error("🔔 Real-time subscription error")
+        }
+      })
 
       return () => channel.unsubscribe()
     }
