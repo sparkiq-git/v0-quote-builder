@@ -1,6 +1,8 @@
-import { createClient } from "@/lib/supabase/client"
-
 export async function getLeadRoutes() {
+  // Only run on client side
+  if (typeof window === 'undefined') throw new Error("getLeadRoutes can only be called on client side")
+  
+  const { createClient } = await import("@/lib/supabase/client")
   const supabase = createClient()
 
   // ✅ 1. Get all leads with status new or opened (no date filter)

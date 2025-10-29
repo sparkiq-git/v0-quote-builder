@@ -1,7 +1,5 @@
 "use client"
 
-import { createClient } from "@/lib/supabase/client"
-
 /* =========================================================
    HELPERS
 ========================================================= */
@@ -20,6 +18,10 @@ function req<T>(v: T | null | undefined, msg: string): T {
    CREATE
 ========================================================= */
 export async function createQuote(tenantId?: string) {
+  // Only run on client side
+  if (typeof window === 'undefined') throw new Error("createQuote can only be called on client side")
+  
+  const { createClient } = await import("@/lib/supabase/client")
   const supabase = createClient()
   const { data: userData, error: userError } = await supabase.auth.getUser()
   if (userError) throw userError
@@ -63,6 +65,10 @@ export async function createQuote(tenantId?: string) {
 ========================================================= */
 export async function getQuoteById(id: string) {
   if (!id) throw new Error("Missing quote id")
+  // Only run on client side
+  if (typeof window === 'undefined') throw new Error("getQuoteById can only be called on client side")
+  
+  const { createClient } = await import("@/lib/supabase/client")
   const supabase = createClient()
 
   const { data: quote, error: quoteError } = await supabase
@@ -291,6 +297,10 @@ export async function saveQuoteAll(quote: any) {
 ========================================================= */
 export async function deleteQuote(id: string) {
   if (!id) throw new Error("Missing quote ID")
+  // Only run on client side
+  if (typeof window === 'undefined') throw new Error("deleteQuote can only be called on client side")
+  
+  const { createClient } = await import("@/lib/supabase/client")
   const supabase = createClient()
 
   await Promise.all([

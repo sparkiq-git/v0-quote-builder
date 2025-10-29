@@ -2,7 +2,7 @@
 
 "use server"
 
-import { createClient } from "@/lib/supabase/client"
+import { createClient } from "@/lib/supabase/server"
 
 /**
  * Fetches available items for a given tenant.

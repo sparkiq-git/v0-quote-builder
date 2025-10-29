@@ -1,8 +1,11 @@
 "use client"
-import { createClient } from "@/lib/supabase/client"
 import type { AircraftRecord } from "@/lib/types"
 
 export async function getAircraft(): Promise<AircraftRecord[]> {
+  // Only run on client side
+  if (typeof window === 'undefined') throw new Error("getAircraft can only be called on client side")
+  
+  const { createClient } = await import("@/lib/supabase/client")
   const supabase = createClient()
   const { data, error } = await supabase
     .from("aircraft")
