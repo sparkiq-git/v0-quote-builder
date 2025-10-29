@@ -1,6 +1,9 @@
 "use client"
 
 import { useEffect, useState } from "react"
+
+// Force dynamic rendering to prevent SSR issues
+export const dynamic = 'force-dynamic'
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { CheckCircle, ArrowRight } from "lucide-react"

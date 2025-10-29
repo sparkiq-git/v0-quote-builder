@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
 
 type Op = "eq" | "neq" | "gt" | "gte" | "lt" | "lte" | "in" | "is";
 type Filter =
@@ -26,10 +25,22 @@ export function useSupabaseCount({
   realtimeTable,
   channelName,
 }: Options) {
-  const supabase = useMemo(() => createClient(), []);
+  const [supabase, setSupabase] = useState<any>(null);
   const [count, setCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Initialize supabase client on client side
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
+    const initSupabase = async () => {
+      const { createClient } = await import("@/lib/supabase/client");
+      setSupabase(createClient());
+    };
+    
+    initSupabase();
+  }, []);
 
   // Create a deterministic unique name per call
   const uniqueChannelName = useMemo(() => {
@@ -41,6 +52,8 @@ export function useSupabaseCount({
   }, [schema, table, realtimeTable, filters, channelName]);
 
   const refresh = useCallback(async () => {
+    if (!supabase) return;
+    
     setLoading(true);
     setError(null);
     let q = supabase.from(table).select("*", { count: "exact", head: true });
@@ -63,6 +76,8 @@ export function useSupabaseCount({
   }, [supabase, table, filters]);
 
   useEffect(() => {
+    if (!supabase) return;
+    
     refresh();
     if (!realtime) return;
 

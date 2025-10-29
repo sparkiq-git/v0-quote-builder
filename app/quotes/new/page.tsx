@@ -1,6 +1,9 @@
 "use client"
 
 import { useEffect, useState } from "react"
+
+// Force dynamic rendering to prevent SSR issues with Supabase client
+export const dynamic = 'force-dynamic'
 import { useRouter } from "next/navigation"
 import { createQuote } from "@/lib/supabase/queries/quotes"
 import { QuoteEditor } from "@/components/quotes/QuoteEditor"
