@@ -63,45 +63,56 @@ export function LeadDetailModal({
 
   useEffect(() => {
     if (!leadId || !open) return
+    
     const fetchLead = async () => {
+      // Only run on client side
+      if (typeof window === 'undefined') return;
+      
       setLoading(true)
 
-      // ✅ Fetch lead with its related details (segments/legs)
-      const { data, error } = await supabase
-        .from("lead")
-        .select(
-          `
-          *,
-          details:lead_detail(*)
-        `
-        )
-        .eq("id", leadId)
-        .single()
+      try {
+        const { createClient } = await import("@/lib/supabase/client");
+        const supabase = createClient();
 
-      if (error) {
-        console.error("Error fetching lead:", error)
-
-        // fallback: just load lead without details
-        const { data: basicData, error: basicError } = await supabase
+        // ✅ Fetch lead with its related details (segments/legs)
+        const { data, error } = await supabase
           .from("lead")
-          .select("*")
+          .select(
+            `
+            *,
+            details:lead_detail(*)
+          `
+          )
           .eq("id", leadId)
           .single()
 
-        if (basicError) {
-          console.error("Error fetching lead (fallback):", basicError)
-        } else {
-          setLead(basicData)
-        }
-      } else {
-        const leadWithDetails: LeadWithEngagement = {
-          ...data,
-          details: data.details || [],
-        }
-        setLead(leadWithDetails)
-      }
+        if (error) {
+          console.error("Error fetching lead:", error)
 
-      setLoading(false)
+          // fallback: just load lead without details
+          const { data: basicData, error: basicError } = await supabase
+            .from("lead")
+            .select("*")
+            .eq("id", leadId)
+            .single()
+
+          if (basicError) {
+            console.error("Error fetching lead (fallback):", basicError)
+          } else {
+            setLead(basicData)
+          }
+        } else {
+          const leadWithDetails: LeadWithEngagement = {
+            ...data,
+            details: data.details || [],
+          }
+          setLead(leadWithDetails)
+        }
+      } catch (err) {
+        console.error("Unexpected error fetching lead:", err)
+      } finally {
+        setLoading(false)
+      }
     }
 
     fetchLead()

@@ -8,8 +8,6 @@ import { Plus, User } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
-
 interface Contact {
   id: string
   full_name: string
@@ -29,8 +27,20 @@ export function ContactCombobox({ value, selectedName, onSelect }: ContactCombob
   const [contacts, setContacts] = useState<Contact[]>([])
   const [search, setSearch] = useState("")
   const [creating, setCreating] = useState(false)
-  const supabase = createClientComponentClient()
+  const [supabase, setSupabase] = useState<any>(null)
   const { toast } = useToast()
+
+  // Initialize supabase client on client side
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
+    const initSupabase = async () => {
+      const { createClientComponentClient } = await import("@supabase/auth-helpers-nextjs");
+      setSupabase(createClientComponentClient());
+    };
+    
+    initSupabase();
+  }, []);
 
   // 🔹 Read tenant_id from environment variable
   const tenantId =
@@ -44,7 +54,7 @@ export function ContactCombobox({ value, selectedName, onSelect }: ContactCombob
 
   // 🔹 Fetch contacts when dropdown opens or search changes
   useEffect(() => {
-    if (!open || !tenantId) return
+    if (!open || !tenantId || !supabase) return
 
     const fetchContacts = async () => {
       const { data, error } = await supabase
@@ -68,7 +78,7 @@ export function ContactCombobox({ value, selectedName, onSelect }: ContactCombob
     }
 
     fetchContacts()
-  }, [open, search, tenantId])
+  }, [open, search, tenantId, supabase])
 
   // 🔹 Handle creating a new contact inline
   const handleCreate = async (form: FormData) => {
@@ -82,6 +92,14 @@ export function ContactCombobox({ value, selectedName, onSelect }: ContactCombob
       toast({
         title: "Missing tenant",
         description: "TENANT_ID environment variable is required to create contacts.",
+        variant: "destructive",
+      })
+      return
+    }
+    if (!supabase) {
+      toast({
+        title: "Error",
+        description: "Supabase client not initialized.",
         variant: "destructive",
       })
       return
