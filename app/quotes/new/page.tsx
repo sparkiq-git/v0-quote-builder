@@ -3,9 +3,15 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { createQuote } from "@/lib/supabase/queries/quotes"
-import { QuoteEditor } from "@/components/quotes/QuoteEditor"
 import { useToast } from "@/hooks/use-toast"
 import { Loader2 } from "lucide-react"
+import dynamic from "next/dynamic"
+
+// Dynamically import QuoteEditor to prevent SSR issues
+const QuoteEditor = dynamic(() => import("@/components/quotes/QuoteEditor").then(mod => ({ default: mod.QuoteEditor })), { 
+  ssr: false,
+  loading: () => <div className="flex items-center justify-center h-32">Loading quote editor...</div>
+})
 
 // Force dynamic rendering to prevent SSR issues with Supabase client
 export const dynamic = 'force-dynamic'

@@ -5,12 +5,29 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Plus, Grid3x3, TableIcon } from "lucide-react"
+import dynamic from "next/dynamic"
 
-import { ModelsTable } from "@/components/aircraft/models-table"
-import { ModelsGrid } from "@/components/aircraft/models-grid"
-import { TailsTable } from "@/components/aircraft/tails-table"
-import { TailsGrid } from "@/components/aircraft/tails-grid"
-import { TailCreateDialog } from "@/components/aircraft/tail-create-dialog"
+// Dynamically import components to prevent SSR issues
+const ModelsTable = dynamic(() => import("@/components/aircraft/models-table").then(mod => ({ default: mod.ModelsTable })), { 
+  ssr: false,
+  loading: () => <div className="flex items-center justify-center h-32">Loading models table...</div>
+})
+const ModelsGrid = dynamic(() => import("@/components/aircraft/models-grid").then(mod => ({ default: mod.ModelsGrid })), { 
+  ssr: false,
+  loading: () => <div className="flex items-center justify-center h-32">Loading models grid...</div>
+})
+const TailsTable = dynamic(() => import("@/components/aircraft/tails-table").then(mod => ({ default: mod.TailsTable })), { 
+  ssr: false,
+  loading: () => <div className="flex items-center justify-center h-32">Loading tails table...</div>
+})
+const TailsGrid = dynamic(() => import("@/components/aircraft/tails-grid").then(mod => ({ default: mod.TailsGrid })), { 
+  ssr: false,
+  loading: () => <div className="flex items-center justify-center h-32">Loading tails grid...</div>
+})
+const TailCreateDialog = dynamic(() => import("@/components/aircraft/tail-create-dialog").then(mod => ({ default: mod.TailCreateDialog })), { 
+  ssr: false,
+  loading: () => null
+})
 
 // Force dynamic rendering to prevent SSR issues with Supabase client
 export const dynamic = 'force-dynamic'
