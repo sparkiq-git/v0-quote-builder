@@ -121,16 +121,16 @@ export default function DashboardMetrics() {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 justify-center">
       <MetricCard
-        title="Cost Operator (This Month)"
+        title="Cost Operator"
         icon={DollarSign}
         value={`$${costOperator.toLocaleString(undefined, {
           minimumFractionDigits: 2,
         })}`}
         color="text-blue-600"
-        description="Sum of operator costs this month"
+        description="Operator costs this month"
       />
       <MetricCard
-        title="Price Commission (This Month)"
+        title="Price Commission"
         icon={TrendingUp}
         value={`$${priceCommission.toLocaleString(undefined, {
           minimumFractionDigits: 2,
