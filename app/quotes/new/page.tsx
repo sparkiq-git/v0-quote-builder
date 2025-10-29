@@ -1,14 +1,14 @@
 "use client"
 
 import { useEffect, useState } from "react"
-
-// Force dynamic rendering to prevent SSR issues with Supabase client
-export const dynamic = 'force-dynamic'
 import { useRouter } from "next/navigation"
 import { createQuote } from "@/lib/supabase/queries/quotes"
 import { QuoteEditor } from "@/components/quotes/QuoteEditor"
 import { useToast } from "@/hooks/use-toast"
 import { Loader2 } from "lucide-react"
+
+// Force dynamic rendering to prevent SSR issues with Supabase client
+export const dynamic = 'force-dynamic'
 
 export default function NewQuotePage() {
   const router = useRouter()
@@ -17,9 +17,16 @@ export default function NewQuotePage() {
   const [quote, setQuote] = useState<any | null>(null)
   const [quoteDetails, setQuoteDetails] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [isClient, setIsClient] = useState(false)
+
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
 
   /* -------------------- INITIALIZE NEW QUOTE -------------------- */
   useEffect(() => {
+    if (!isClient) return;
+    
     const initNewQuote = async () => {
       try {
         setLoading(true)
@@ -52,9 +59,18 @@ export default function NewQuotePage() {
     }
 
     initNewQuote()
-  }, [toast])
+  }, [toast, isClient])
 
   /* -------------------- RENDER -------------------- */
+  if (!isClient) {
+    return (
+      <div className="flex h-[70vh] flex-col items-center justify-center text-muted-foreground space-y-2">
+        <Loader2 className="h-6 w-6 animate-spin" />
+        <p>Initializing...</p>
+      </div>
+    )
+  }
+
   if (loading) {
     return (
       <div className="flex h-[70vh] flex-col items-center justify-center text-muted-foreground space-y-2">

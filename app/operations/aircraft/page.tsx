@@ -1,9 +1,6 @@
 "use client"
 
-import { useState } from "react"
-
-// Force dynamic rendering to prevent SSR issues with Supabase client
-export const dynamic = 'force-dynamic'
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -15,10 +12,34 @@ import { TailsTable } from "@/components/aircraft/tails-table"
 import { TailsGrid } from "@/components/aircraft/tails-grid"
 import { TailCreateDialog } from "@/components/aircraft/tail-create-dialog"
 
+// Force dynamic rendering to prevent SSR issues with Supabase client
+export const dynamic = 'force-dynamic'
+
 export default function AircraftPage() {
   const [view, setView] = useState<"grid" | "table">("grid")
   const [activeTab, setActiveTab] = useState<"models" | "tails">("models")
   const [showTailDialog, setShowTailDialog] = useState(false)
+  const [isClient, setIsClient] = useState(false)
+
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
+
+  if (!isClient) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Aircraft</h1>
+            <p className="text-muted-foreground">Manage your aircraft fleet and models</p>
+          </div>
+        </div>
+        <div className="flex items-center justify-center h-64">
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <>

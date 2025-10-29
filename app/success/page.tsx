@@ -1,15 +1,16 @@
 "use client"
 
 import { useEffect, useState } from "react"
-
-// Force dynamic rendering to prevent SSR issues
-export const dynamic = 'force-dynamic'
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { CheckCircle, ArrowRight } from "lucide-react"
 import { useRouter, useSearchParams } from "next/navigation"
+import { Suspense } from "react"
 
-export default function SuccessPage() {
+// Force dynamic rendering to prevent SSR issues
+export const dynamic = 'force-dynamic'
+
+function SuccessPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [customerName, setCustomerName] = useState("")
@@ -109,5 +110,22 @@ export default function SuccessPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function SuccessPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-slate-50 to-gray-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mb-4 animate-pulse">
+            <CheckCircle className="w-8 h-8 text-gray-600" />
+          </div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    }>
+      <SuccessPageContent />
+    </Suspense>
   )
 }
