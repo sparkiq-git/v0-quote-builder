@@ -30,7 +30,6 @@ import {
 import { useMockStore } from "@/lib/mock/store"
 import { cn } from "@/lib/utils"
 import { NavUser } from "@/components/nav-user"
-import { createClient } from "@/lib/supabase/client"
 
 const mainNavigation = [
   {
@@ -109,6 +108,10 @@ export function AppSidebar() {
 
   useEffect(() => {
     const fetchUser = async () => {
+      // Only run on client side
+      if (typeof window === 'undefined') return;
+      
+      const { createClient } = await import("@/lib/supabase/client")
       const supabase = createClient()
       const {
         data: { user: authUser },

@@ -28,7 +28,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { MoreHorizontal, Eye, FileText, Trash2, ArrowUpDown, Search, Filter } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
-import { createClient } from "@/lib/supabase/client";
 import type { Lead, LeadWithEngagement } from "@/lib/types";
 import { formatDate, formatTimeAgo } from "@/lib/utils/format";
 
@@ -46,7 +45,6 @@ export function LeadTable({ data, setLeads, onOpenNewCountChange }: LeadTablePro
 
   const router = useRouter();
   const { toast } = useToast();
-  const supabase = createClient();
 
   // ✅ Memoized count calculation for better performance
   const openNewCount = useMemo(() => {
@@ -64,6 +62,12 @@ export function LeadTable({ data, setLeads, onOpenNewCountChange }: LeadTablePro
 
   const handleRowClick = useCallback(async (leadId: string) => {
     try {
+      // Only run on client side
+      if (typeof window === 'undefined') return;
+      
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+      
       const { data: { session }, error: sessionError } = await supabase.auth.getSession()
       if (sessionError || !session?.access_token) return
 
@@ -83,11 +87,17 @@ export function LeadTable({ data, setLeads, onOpenNewCountChange }: LeadTablePro
 
     setSelectedLeadId(leadId)
     setIsModalOpen(true)
-  }, [supabase, setLeads])
+  }, [setLeads])
 
   const handleConvertToQuote = useCallback(async (leadId: string, e?: React.MouseEvent) => {
     e?.stopPropagation()
     try {
+      // Only run on client side
+      if (typeof window === 'undefined') return;
+      
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+      
       const { data: leadData, error: fetchError } = await supabase
         .from("lead")
         .select("*")
@@ -121,28 +131,43 @@ export function LeadTable({ data, setLeads, onOpenNewCountChange }: LeadTablePro
       console.error("Convert error:", err)
       toast({ title: "Error", description: "Failed to convert lead.", variant: "destructive" })
     }
-  }, [supabase, router, toast])
+  }, [router, toast])
 
 const handleDeleteLead = useCallback(async (leadId: string, e?: React.MouseEvent) => {
   e?.stopPropagation()
 
-  const { error } = await supabase.rpc("rpc_delete_lead", { p_lead_id: leadId })
+  try {
+    // Only run on client side
+    if (typeof window === 'undefined') return;
+    
+    const { createClient } = await import("@/lib/supabase/client");
+    const supabase = createClient();
+    
+    const { error } = await supabase.rpc("rpc_delete_lead", { p_lead_id: leadId })
 
-  if (error) {
-    console.error("Delete error:", error)
+    if (error) {
+      console.error("Delete error:", error)
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete lead.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    toast({
+      title: "Lead updated",
+      description: "Lead visibility handled successfully.",
+    })
+  } catch (err) {
+    console.error("Delete error:", err)
     toast({
       title: "Error",
-      description: error.message || "Failed to delete lead.",
+      description: "Failed to delete lead.",
       variant: "destructive",
     })
-    return
   }
-
-  toast({
-    title: "Lead updated",
-    description: "Lead visibility handled successfully.",
-  })
-}, [supabase, toast])
+}, [toast])
 
 
   const getStatusBadgeVariant = useCallback((status: string) => {

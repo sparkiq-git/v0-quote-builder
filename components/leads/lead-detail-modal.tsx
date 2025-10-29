@@ -39,7 +39,6 @@ import {
   Calendar,
   User,
 } from "lucide-react"
-import { createClient } from "@/lib/supabase/client"
 import { useToast } from "@/hooks/use-toast"
 import { formatDate, formatTimeAgo } from "@/lib/utils/format"
 import type { LeadWithEngagement, LeadDetail } from "@/lib/types"
@@ -60,7 +59,6 @@ export function LeadDetailModal({
 }: LeadDetailModalProps) {
   const [lead, setLead] = useState<LeadWithEngagement | null>(null)
   const [loading, setLoading] = useState(false)
-  const supabase = createClient()
   const { toast } = useToast()
 
   useEffect(() => {
@@ -129,6 +127,12 @@ const handleConvertToQuote = async () => {
   if (!lead) return
 
   try {
+    // Only run on client side
+    if (typeof window === 'undefined') return;
+    
+    const { createClient } = await import("@/lib/supabase/client");
+    const supabase = createClient();
+    
     const { data: newQuoteId, error } = await supabase.rpc("rpc_convert_lead_to_quote", {
       p_lead_id: lead.id,
     })
@@ -165,6 +169,12 @@ const handleDeleteLead = async () => {
   if (!lead) return
 
   try {
+    // Only run on client side
+    if (typeof window === 'undefined') return;
+    
+    const { createClient } = await import("@/lib/supabase/client");
+    const supabase = createClient();
+    
     const { error } = await supabase.rpc("rpc_delete_lead", {
       p_lead_id: lead.id,
     })

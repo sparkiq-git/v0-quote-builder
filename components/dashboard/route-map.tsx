@@ -5,7 +5,6 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Minus, RotateCcw, MapPin } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
 
 declare global {
   interface Window {
@@ -52,11 +51,15 @@ export function RouteMap() {
   const routeLayers = useRef<any[]>([]);
   const airportMarkers = useRef<any[]>([]);
 
-  const supabase = createClient();
-
   // -------- Load BOTH datasets so badge counts are stable and correct --------
   useEffect(() => {
     const loadLeadRoutes = async () => {
+      // Only run on client side
+      if (typeof window === 'undefined') return;
+      
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+      
       const { data, error } = await supabase
         .from("lead_detail")
         .select(`

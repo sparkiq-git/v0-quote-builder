@@ -13,7 +13,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar"
-import { createClient } from "@/lib/supabase/client"
 
 interface UserData {
   name: string
@@ -31,6 +30,10 @@ export function NavUser({ user }: NavUserProps) {
   const { isMobile } = useSidebar()
 
   const handleSignOut = async () => {
+    // Only run on client side
+    if (typeof window === 'undefined') return;
+    
+    const { createClient } = await import("@/lib/supabase/client")
     const supabase = createClient()
     await supabase.auth.signOut()
     window.location.href = "/sign-in"

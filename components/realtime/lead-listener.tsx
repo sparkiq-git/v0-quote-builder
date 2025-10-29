@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useRef } from "react"
-import { createClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 import type { Lead } from "@/lib/types"
@@ -17,15 +16,20 @@ const debounce = (fn: Function, delay: number) => {
 
 export function LeadListener() {
   const router = useRouter()
-  const supabase = createClient()
   const soundRef = useRef<HTMLAudioElement | null>(null)
   const pendingLeads = useRef<Lead[]>([])
 
   useEffect(() => {
+    // Only run on client side
+    if (typeof window === 'undefined') return;
+    
     // Preload the sound
     soundRef.current = new Audio("/notify.mp3")
 
     const subscribeRealtime = async () => {
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+      
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) return // No session, no need to listen
       

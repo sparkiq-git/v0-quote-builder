@@ -1,15 +1,19 @@
 "use client";
 import { useEffect, useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { createClient } from "@/lib/supabase/client";
 
 export default function DashboardMetrics() {
   const [upcoming, setUpcoming] = useState(0);
   const [commission, setCommission] = useState(0);
-  const supabase = createClient();
 
   useEffect(() => {
     const loadMetrics = async () => {
+      // Only run on client side
+      if (typeof window === 'undefined') return;
+      
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+      
       const now = new Date();
       const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
       const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);

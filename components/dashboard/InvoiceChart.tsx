@@ -2,14 +2,18 @@
 import { useEffect, useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { LineChart, Line, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from "recharts";
-import { createClient } from "@/lib/supabase/client";
 
 export default function InvoiceChart() {
   const [data, setData] = useState<any[]>([]);
-  const supabase = createClient();
 
   useEffect(() => {
     const loadChart = async () => {
+      // Only run on client side
+      if (typeof window === 'undefined') return;
+      
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+      
       const now = new Date();
       const currentYear = now.getFullYear();
       const lastYear = currentYear - 1;

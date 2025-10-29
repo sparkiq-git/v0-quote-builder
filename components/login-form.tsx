@@ -4,7 +4,6 @@ import type React from "react"
 
 import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { createClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -48,7 +47,12 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
     setError(null)
 
     try {
-      const supabase = createClient()
+      // Only run on client side
+      if (typeof window === 'undefined') return;
+      
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+      
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -79,7 +83,12 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
     setError(null)
 
     try {
-      const supabase = createClient()
+      // Only run on client side
+      if (typeof window === 'undefined') return;
+      
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+      
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
