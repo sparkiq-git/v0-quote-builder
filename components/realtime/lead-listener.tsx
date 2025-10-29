@@ -23,8 +23,17 @@ export function LeadListener() {
     // Only run on client side
     if (typeof window === 'undefined') return;
     
+    // Test Sonner toast on component mount
+    console.log("🔔 LeadListener mounted, testing Sonner toast...")
+    toast("LeadListener initialized", {
+      description: "Sonner toast system is working",
+      duration: 3000,
+    })
+    
     // Preload the sound
     soundRef.current = new Audio("/notify.mp3")
+
+    let cleanup: (() => void) | undefined
 
     const subscribeRealtime = async () => {
       const { createClient } = await import("@/lib/supabase/client");
@@ -49,6 +58,7 @@ export function LeadListener() {
           ? `New Lead: ${firstLead.customer_name || "Unnamed"}`
           : `${count} New Leads`
 
+        console.log("🔔 Showing Sonner toast:", label)
         toast(label, {
           description: count === 1
             ? firstLead.trip_summary || "No trip summary"
@@ -68,10 +78,15 @@ export function LeadListener() {
         { event: "INSERT", schema: "public", table: "lead" },
         (payload) => {
           const newLead = payload.new as Lead
+          console.log("🔔 New lead received:", newLead)
 
           // ✅ Only show for same tenant
-          if (tenantId && newLead.tenant_id !== tenantId) return
+          if (tenantId && newLead.tenant_id !== tenantId) {
+            console.log("🔔 Lead filtered out - different tenant:", newLead.tenant_id, "vs", tenantId)
+            return
+          }
 
+          console.log("🔔 Adding lead to pending list:", newLead.customer_name)
           pendingLeads.current.push(newLead)
           flushLeads()
         }
@@ -84,7 +99,15 @@ export function LeadListener() {
       return () => channel.unsubscribe()
     }
 
-    subscribeRealtime()
+    subscribeRealtime().then((cleanupFn) => {
+      cleanup = cleanupFn
+    })
+
+    return () => {
+      if (cleanup) {
+        cleanup()
+      }
+    }
   }, [router])
 
   return null // no UI, background listener only

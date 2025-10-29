@@ -43,7 +43,21 @@ export default async function RootLayout({
           {children}
 
           {/* ✅ Global Sonner toaster */}
-          <Toaster richColors position="top-right" closeButton />
+          <Toaster 
+            richColors 
+            position="top-right" 
+            closeButton 
+            expand={true}
+            visibleToasts={5}
+            toastOptions={{
+              duration: 5000,
+              style: {
+                background: 'hsl(var(--background))',
+                color: 'hsl(var(--foreground))',
+                border: '1px solid hsl(var(--border))',
+              },
+            }}
+          />
           
           {/* ✅ Custom toast system for useToast hook */}
           <CustomToaster />
