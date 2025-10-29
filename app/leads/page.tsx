@@ -25,6 +25,8 @@ export default function LeadsPage() {
     // Only run on client side
     if (typeof window === 'undefined') return;
     
+    let authListener: any = null;
+
     const checkSession = async () => {
       const { createClient } = await import("@/lib/supabase/client")
       const supabase = createClient()
@@ -41,19 +43,20 @@ export default function LeadsPage() {
 
       supabase.realtime.setAuth(session.access_token)
       setSessionChecked(true)
+
+      authListener = supabase.auth.onAuthStateChange((_event, newSession) => {
+        if (newSession) supabase.realtime.setAuth(newSession.access_token)
+        else router.push("/sign-in")
+      })
     }
 
     checkSession()
 
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, newSession) => {
-      if (newSession) supabase.realtime.setAuth(newSession.access_token)
-      else router.push("/sign-in")
-    })
-
-    return () => authListener.subscription.unsubscribe()
+    return () => {
+      if (authListener) {
+        authListener.subscription.unsubscribe()
+      }
     }
-
-    checkSession()
   }, [router])
 
   /**
@@ -64,9 +67,13 @@ export default function LeadsPage() {
     // Only run on client side
     if (typeof window === 'undefined') return;
 
+    let supabase: any = null;
+    let channel: any = null;
+    let subscription: any = null;
+
     const fetchLeads = async () => {
       const { createClient } = await import("@/lib/supabase/client")
-      const supabase = createClient()
+      supabase = createClient()
       const { data, error } = await supabase
         .from("lead")
         .select(`
@@ -148,14 +155,18 @@ const leadsWithView = (data || []).map((l: any): LeadWithEngagement => ({
       }
     )
 
-    const subscription = channel.subscribe((status) =>
+    subscription = channel.subscribe((status) =>
       console.log("Realtime subscription status:", status)
     )
 
     return () => {
       // ✅ Proper cleanup for Next.js hot reloads
-      supabase.removeChannel(channel)
-      subscription.unsubscribe?.()
+      if (supabase && channel) {
+        supabase.removeChannel(channel)
+      }
+      if (subscription) {
+        subscription.unsubscribe?.()
+      }
     }
     }
 
