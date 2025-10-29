@@ -49,13 +49,22 @@ export default async function RootLayout({
             closeButton 
             expand={true}
             visibleToasts={5}
+            offset="16px"
             toastOptions={{
-              duration: 5000,
+              duration: 6000,
               style: {
-                background: 'hsl(var(--background))',
+                background: 'linear-gradient(135deg, hsl(var(--background)) 0%, hsl(var(--muted)) 100%)',
                 color: 'hsl(var(--foreground))',
                 border: '1px solid hsl(var(--border))',
+                borderRadius: '12px',
+                boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+                backdropFilter: 'blur(8px)',
+                zIndex: 9999,
               },
+              className: 'sonner-toast',
+            }}
+            style={{
+              zIndex: 9999,
             }}
           />
           
