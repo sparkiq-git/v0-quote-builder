@@ -9,31 +9,26 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Users, FileText, Clock, Plane, DollarSign } from "lucide-react";
+import { Users, FileText, Clock, Plane } from "lucide-react";
 import { useMockStore } from "@/lib/mock/store";
 import { RouteMap } from "@/components/dashboard/route-map";
 import InvoiceChart from "@/components/dashboard/InvoiceChart";
 import DashboardMetrics from "@/components/dashboard/DashboardMetrics";
 
 export default function DashboardPage() {
-  // Counts shown in MetricCards
   const [leadCount, setLeadCount] = useState(0);
   const [quotesAwaitingResponse, setQuotesAwaitingResponse] = useState(0);
   const [unpaidQuotes, setUnpaidQuotes] = useState(0);
   const [upcomingDepartures, setUpcomingDepartures] = useState(0);
-  const [commission, setCommission] = useState(0);
-  const [paidInvoicesCount, setPaidInvoicesCount] = useState(0);
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
   }, []);
 
-  // === Load LEADS (status IN ['opened','new'])
+  // === Load LEADS
   useEffect(() => {
     if (!isClient) return;
-
     let cancelled = false;
 
     const loadLeadCount = async () => {
@@ -70,10 +65,9 @@ export default function DashboardPage() {
     };
   }, [isClient]);
 
-  // === Load Quotes/Unpaid/Upcoming + Monthly Commission
+  // === Load Metrics (Quotes, Unpaid, Upcoming)
   useEffect(() => {
     if (!isClient) return;
-
     let cancelled = false;
 
     const loadMetrics = async () => {
@@ -91,37 +85,8 @@ export default function DashboardPage() {
       }
     };
 
-    const loadCommission = async () => {
-      const { createClient } = await import("@/lib/supabase/client");
-      const supabase = createClient();
-
-      const now = new Date();
-      const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-      const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-
-      const { data, error } = await supabase
-        .from("invoice")
-        .select("amount, status, issued_at")
-        .eq("status", "paid")
-        .gte("issued_at", firstDay.toISOString())
-        .lte("issued_at", lastDay.toISOString());
-
-      if (!error && data?.length) {
-        const total = data.reduce((sum, inv) => sum + parseFloat(inv.amount), 0);
-        setCommission(total);
-        setPaidInvoicesCount(data.length);
-      } else if (error) {
-        console.error("Commission load error:", error);
-      }
-    };
-
     loadMetrics();
-    loadCommission();
-
-    const id = setInterval(() => {
-      loadMetrics();
-      loadCommission();
-    }, 15000);
+    const id = setInterval(loadMetrics, 15000);
 
     return () => {
       cancelled = true;
@@ -129,7 +94,6 @@ export default function DashboardPage() {
     };
   }, [isClient]);
 
-  // Mock store (unchanged)
   const { state, getMetrics, loading } = useMockStore();
   const metrics = getMetrics();
 
@@ -150,26 +114,6 @@ export default function DashboardPage() {
     [state.quotes]
   );
 
-  const getStatusBadgeVariant = (status: string) => {
-    switch (status) {
-      case "new":
-        return "default";
-      case "converted":
-        return "secondary";
-      case "pending_acceptance":
-        return "outline";
-      case "accepted_by_requester":
-      case "accepted":
-        return "default";
-      case "declined":
-        return "destructive";
-      case "expired":
-        return "secondary";
-      default:
-        return "outline";
-    }
-  };
-
   if (loading) {
     return (
       <div className="space-y-6 sm:space-y-8">
@@ -183,7 +127,6 @@ export default function DashboardPage() {
     );
   }
 
-  // MetricCard sub-component
   function MetricCard({
     title,
     icon: Icon,
@@ -224,8 +167,8 @@ export default function DashboardPage() {
         </p>
       </div>
 
-      {/* === Top Metric Cards === */}
-      <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5">
+      {/* === Top Metric Cards (Commission REMOVED) === */}
+      <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard
           title="Leads"
           icon={Users}
@@ -249,14 +192,6 @@ export default function DashboardPage() {
           icon={Plane}
           currentValue={upcomingDepartures}
           description="Departures in next 7 days"
-        />
-        <MetricCard
-          title="Commission"
-          icon={DollarSign}
-          currentValue={`$${commission.toLocaleString(undefined, {
-            minimumFractionDigits: 2,
-          })}`}
-          description={`${paidInvoicesCount} paid invoices this month`}
         />
       </div>
 
