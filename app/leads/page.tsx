@@ -53,7 +53,7 @@ export default function LeadsPage() {
     checkSession()
 
     return () => {
-      if (authListener) {
+      if (authListener?.subscription) {
         authListener.subscription.unsubscribe()
       }
     }
@@ -168,8 +168,6 @@ const leadsWithView = (data || []).map((l: any): LeadWithEngagement => ({
         subscription.unsubscribe?.()
       }
     }
-
-    fetchLeads()
   }, [sessionChecked])
 
   /**

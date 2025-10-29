@@ -7,8 +7,6 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Button } from "@/components/ui/button"
 import { Check, ChevronsUpDown } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { getAvailableItems } from "@/lib/supabase/queries/items"
-
 interface ItemComboboxProps {
   tenantId: string
   value: string | null
@@ -21,9 +19,23 @@ export function ItemCombobox({ tenantId, value, onSelect }: ItemComboboxProps) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    getAvailableItems(tenantId)
-      .then((data) => setItems(data))
-      .finally(() => setLoading(false))
+    const fetchItems = async () => {
+      try {
+        const response = await fetch(`/api/items?tenantId=${encodeURIComponent(tenantId)}`)
+        if (!response.ok) {
+          throw new Error('Failed to fetch items')
+        }
+        const data = await response.json()
+        setItems(data)
+      } catch (error) {
+        console.error('Error fetching items:', error)
+        setItems([])
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchItems()
   }, [tenantId])
 
   const selected = items.find((i) => i.id === value)
