@@ -203,7 +203,7 @@ export function RouteMap() {
 
     loadLeadRoutes();
     loadUpcomingRoutes();
-  }, [refreshKey, supabase]);
+  }, [refreshKey]);
 
   // Choose which set to display (but keep both for badge counts)
   useEffect(() => {

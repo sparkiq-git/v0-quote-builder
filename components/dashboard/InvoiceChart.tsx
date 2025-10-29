@@ -45,7 +45,7 @@ export default function InvoiceChart() {
     };
 
     loadChart();
-  }, [supabase]);
+  }, []);
 
   return (
     <Card className="shadow-sm border border-gray-200 w-full h-[520px]">

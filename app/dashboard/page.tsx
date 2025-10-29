@@ -12,7 +12,6 @@ import { useMockStore } from "@/lib/mock/store";
 import { formatTimeAgo } from "@/lib/utils/format";
 import { RouteMap } from "@/components/dashboard/route-map";
 import InvoiceChart from "@/components/dashboard/InvoiceChart";
-import { createClient } from "@/lib/supabase/client";
 
 /* ---------------------------------- page ---------------------------------- */
 export default function DashboardPage() {
@@ -34,6 +33,7 @@ export default function DashboardPage() {
     if (!isClient) return;
     
     let cancelled = false;
+    const { createClient } = await import("@/lib/supabase/client");
     const supabase = createClient();
 
     const loadLeadCount = async () => {
@@ -71,6 +71,7 @@ export default function DashboardPage() {
     if (!isClient) return;
     
     let cancelled = false;
+    const { createClient } = await import("@/lib/supabase/client");
     const supabase = createClient();
 
     const loadMetrics = async () => {

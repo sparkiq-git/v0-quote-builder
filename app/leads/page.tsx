@@ -8,7 +8,6 @@ import { Users, Archive } from "lucide-react"
 import { LeadTable } from "@/components/leads/lead-table"
 import { ErrorBoundary } from "@/components/ui/error-boundary"
 import { LeadTableSkeleton } from "@/components/leads/lead-skeletons"
-import { createClient } from "@/lib/supabase/client"
 import type { LeadWithEngagement } from "@/lib/types"
 
 export default function LeadsPage() {
@@ -26,6 +25,7 @@ export default function LeadsPage() {
     // Only run on client side
     if (typeof window === 'undefined') return;
     
+    const { createClient } = await import("@/lib/supabase/client")
     const supabase = createClient()
 
     const checkSession = async () => {
@@ -59,6 +59,10 @@ export default function LeadsPage() {
    */
   useEffect(() => {
     if (!sessionChecked) return
+    // Only run on client side
+    if (typeof window === 'undefined') return;
+
+    const { createClient } = await import("@/lib/supabase/client")
     const supabase = createClient()
 
     const fetchLeads = async () => {

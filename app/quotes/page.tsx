@@ -3,7 +3,6 @@
 import { useEffect, useState, useMemo, useCallback } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -63,6 +62,7 @@ export default function QuotesPage() {
         // Only run on client side
         if (typeof window === 'undefined') return
         
+        const { createClient } = await import("@/lib/supabase/client")
         const supabase = createClient()
         const tenantId = process.env.NEXT_PUBLIC_TENANT_ID!
         const { data, error } = await supabase
@@ -177,6 +177,10 @@ export default function QuotesPage() {
       setSending(true)
 
       // Check authentication
+      // Only run on client side
+      if (typeof window === 'undefined') return;
+      
+      const { createClient } = await import("@/lib/supabase/client")
       const supabase = createClient()
       const {
         data: { session },
