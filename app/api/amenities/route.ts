@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
+import { createStaticClient } from "@/lib/supabase/static"
 
 export async function GET() {
   try {
-    const supabase = await createClient()
+    // Use static client for public data that doesn't require authentication
+    const supabase = createStaticClient()
     
     const { data, error } = await supabase
       .from("amenity")

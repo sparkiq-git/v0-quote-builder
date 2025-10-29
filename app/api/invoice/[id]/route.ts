@@ -1,8 +1,12 @@
 // app/api/invoice/[id]/route.ts
 import { NextResponse } from "next/server"
-import { supabase } from "@/lib/supabase/client"
+import { createClient } from "@/lib/supabase/server"
+
+// Force dynamic rendering for this route since it requires authentication
+export const dynamic = 'force-dynamic'
 
 export async function GET(_: Request, { params }: { params: { id: string } }) {
+  const supabase = await createClient()
   try {
     const { id } = params
     const { data, error } = await supabase
@@ -20,6 +24,8 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
 }
 
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+  const supabase = await createClient()
+  
   try {
     const { id } = params
     const updates = await req.json()
@@ -36,6 +42,8 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
 }
 
 export async function DELETE(_: Request, { params }: { params: { id: string } }) {
+  const supabase = await createClient()
+  
   try {
     const { id } = params
     const { error } = await supabase.from("invoice").delete().eq("id", id)

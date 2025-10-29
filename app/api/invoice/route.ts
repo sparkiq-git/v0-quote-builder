@@ -1,8 +1,12 @@
 // app/api/invoice/route.ts
 import { NextResponse } from "next/server"
-import { supabase } from "@/lib/supabase/client"
+import { createClient } from "@/lib/supabase/server"
+
+// Force dynamic rendering for this route since it requires authentication
+export const dynamic = 'force-dynamic'
 
 export async function GET() {
+  const supabase = await createClient()
   try {
     // Retrieve all invoices (you can later add filters, pagination, tenant auth, etc.)
     const { data, error } = await supabase
@@ -30,6 +34,8 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+  const supabase = await createClient()
+  
   try {
     const { quote_id } = await req.json()
     if (!quote_id) return NextResponse.json({ error: "Missing quote_id" }, { status: 400 })

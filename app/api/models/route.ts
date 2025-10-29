@@ -3,6 +3,9 @@ import { createClient } from "@/lib/supabase/server"
 import { createActionLinkClient } from "@/lib/supabase/action-links"
 import { z } from "zod"
 
+// Force dynamic rendering for this route since it requires authentication
+export const dynamic = 'force-dynamic'
+
 /** 🔹 Define minimal schema validation (keeps API safe) */
 const ModelSchema = z.object({
   manufacturer_id: z.string().nullable().optional(),
