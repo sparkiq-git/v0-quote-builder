@@ -1,8 +1,9 @@
 "use client"
 
-import { supabase } from "@/lib/supabase/client"
+import { createClient } from "@/lib/supabase/client"
 
 export async function getContacts(tenantId: string) {
+  const supabase = createClient()
   const { data, error } = await supabase
     .from("contact")
     .select("*")
@@ -13,6 +14,7 @@ export async function getContacts(tenantId: string) {
 }
 
 export async function upsertContact(contact: any) {
+  const supabase = createClient()
   const { data, error } = await supabase
     .from("contact")
     .upsert(contact, { onConflict: "id" })

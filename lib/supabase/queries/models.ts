@@ -1,10 +1,11 @@
 "use client"
 
-import { supabase } from "@/lib/supabase/client"
+import { createClient } from "@/lib/supabase/client"
 import type { AircraftModelRecord } from "@/lib/types"
 
 /** 🔹 Get all aircraft models with images and manufacturer info */
 export async function getModels(): Promise<AircraftModelRecord[]> {
+  const supabase = createClient()
   const { data, error } = await supabase
     .from("aircraft_model")
     .select(`

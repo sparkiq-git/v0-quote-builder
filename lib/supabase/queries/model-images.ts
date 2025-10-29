@@ -1,6 +1,6 @@
 "use client"
 
-import { supabase } from "@/lib/supabase/client"
+import { createClient } from "@/lib/supabase/client"
 
 export interface AircraftModelImage {
   id: string
@@ -16,6 +16,7 @@ export interface AircraftModelImage {
 
 /** 🔹 Get all images for a model */
 export async function getModelImages(modelId: string): Promise<AircraftModelImage[]> {
+  const supabase = createClient()
   const { data, error } = await supabase
     .from("aircraft_model_image")
     .select("*")
@@ -27,6 +28,7 @@ export async function getModelImages(modelId: string): Promise<AircraftModelImag
 
 /** 🔹 Insert a new image record */
 export async function insertModelImage(payload: Omit<AircraftModelImage, "id" | "created_at">) {
+  const supabase = createClient()
   const { data, error } = await supabase.from("aircraft_model_image").insert(payload).select("*").single()
   if (error) throw error
   return data
@@ -34,6 +36,7 @@ export async function insertModelImage(payload: Omit<AircraftModelImage, "id" | 
 
 /** 🔹 Update image metadata (caption, order, primary flag) */
 export async function updateModelImage(id: string, updates: Partial<AircraftModelImage>) {
+  const supabase = createClient()
   const { data, error } = await supabase.from("aircraft_model_image").update(updates).eq("id", id).select("*").single()
   if (error) throw error
   return data
@@ -41,12 +44,14 @@ export async function updateModelImage(id: string, updates: Partial<AircraftMode
 
 /** 🔹 Delete an image */
 export async function deleteModelImage(id: string) {
+  const supabase = createClient()
   const { error } = await supabase.from("aircraft_model_image").delete().eq("id", id)
   if (error) throw error
 }
 
 /** 🔹 Set a new primary image (unsets others for that model) */
 export async function setPrimaryModelImage(modelId: string, imageId: string) {
+  const supabase = createClient()
   const { error: unset } = await supabase
     .from("aircraft_model_image")
     .update({ is_primary: false })

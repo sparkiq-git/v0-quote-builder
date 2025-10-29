@@ -28,5 +28,3 @@ export function createClient() {
 
 // Export a function to get the client instead of calling it at module level
 export const getSupabaseClient = () => createClient()
-
-export const supabase = createClient()
