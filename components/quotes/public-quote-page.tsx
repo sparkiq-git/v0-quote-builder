@@ -830,7 +830,7 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
                 <Card className="shadow-xl border-0 bg-white/90 backdrop-blur-sm">
                   <CardContent className="p-5 xl:p-7 space-y-5 xl:space-y-6">
                     {/* Branding */}
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 justify-center">
                       <img
                         src={tenantLogoUrl || "/images/aero-iq-logo.png"}
                         alt={quote?.customer?.company || "Brand"}
