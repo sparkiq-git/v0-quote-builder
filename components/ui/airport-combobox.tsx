@@ -220,7 +220,7 @@ export function AirportCombobox({
               onValueChange={setQuery}
               autoFocus
             />
-            <CommandList>
+            <CommandList className="pointer-events-auto max-h-[320px] overflow-y-auto overflow-x-hidden">
               {!loading && (debounced?.trim().length ?? 0) >= 2 && items.length === 0 && (
                 <CommandEmpty>No airport found.</CommandEmpty>
               )}

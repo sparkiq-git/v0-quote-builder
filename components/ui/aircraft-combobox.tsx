@@ -119,7 +119,7 @@ export function AircraftCombobox({ value, onSelect, onClickAdd }: Props) {
             placeholder="Search aircraft..."
             onValueChange={setSearch}
           />
-          <CommandList>
+          <CommandList className="pointer-events-auto max-h-[320px] overflow-y-auto overflow-x-hidden">
             <CommandEmpty>
               <div className="flex flex-col items-center py-6 gap-2">
                 <p className="text-sm text-muted-foreground">
