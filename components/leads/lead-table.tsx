@@ -1,23 +1,21 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import Link from "next/link"
+import { useEffect, useState, useMemo, useCallback } from "react";
 import {
   type ColumnDef,
   type ColumnFiltersState,
   type SortingState,
-  type VisibilityState,
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
-} from "@tanstack/react-table"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+} from "@tanstack/react-table";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { LeadDetailModal } from "@/components/leads/lead-detail-modal";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,292 +23,325 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import {
-  MoreHorizontal,
-  Eye,
-  FileText,
-  Trash2,
-  ArrowUpDown,
-  Search,
-  Filter,
-  Archive,
-  ArchiveRestore,
-} from "lucide-react"
-import type { Lead } from "@/lib/types"
-import { useMockStore } from "@/lib/mock/store"
-import { formatDate, formatTimeAgo } from "@/lib/utils/format"
-import { useRouter } from "next/navigation"
-import { useToast } from "@/hooks/use-toast"
+} from "@/components/ui/dropdown-menu";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { MoreHorizontal, Eye, FileText, Trash2, ArrowUpDown, Search, Filter } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useToast } from "@/hooks/use-toast";
+import type { Lead, LeadWithEngagement } from "@/lib/types";
+import { formatDate, formatTimeAgo } from "@/lib/utils/format";
 
 interface LeadTableProps {
-  data: Lead[]
-  showArchived?: boolean // Added prop to control archived lead visibility
+  data: LeadWithEngagement[];
+  setLeads?: React.Dispatch<React.SetStateAction<LeadWithEngagement[]>>;
+  onOpenNewCountChange?: (count: number) => void; // added prop
 }
 
-export function LeadTable({ data, showArchived = false }: LeadTableProps) {
-  const [sorting, setSorting] = useState<SortingState>([])
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
-  const [rowSelection, setRowSelection] = useState({})
+export function LeadTable({ data, setLeads, onOpenNewCountChange }: LeadTableProps) {
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const { dispatch, convertLeadToQuote } = useMockStore()
-  const router = useRouter()
-  const { toast } = useToast()
+  const router = useRouter();
+  const { toast } = useToast();
 
-  const handleRowClick = (leadId: string) => {
-    router.push(`/leads/${leadId}`)
-  }
+  // ✅ Memoized count calculation for better performance
+  const openNewCount = useMemo(() => {
+    return Array.isArray(data)
+      ? data.filter((l) => l && (l.status === "opened" || l.status === "new")).length
+      : 0;
+  }, [data]);
 
-  const handleConvertToQuote = (leadId: string) => {
+  // ✅ Notify parent component when count changes
+  useEffect(() => {
+    onOpenNewCountChange?.(openNewCount);
+  }, [openNewCount, onOpenNewCountChange]);
+
+
+
+  const handleRowClick = useCallback(async (leadId: string) => {
     try {
-      const quote = convertLeadToQuote(leadId)
-      toast({
-        title: "Lead converted to quote",
-        description: "The lead has been successfully converted to a quote.",
-      })
-      router.push(`/quotes/${quote.id}`)
-    } catch (error) {
+      // Only run on client side
+      if (typeof window === 'undefined') return;
+      
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+      
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+      if (sessionError || !session?.access_token) return
+
+      // Optimistic UI update
+      if (setLeads) {
+        const now = new Date().toISOString()
+        setLeads((prev) =>
+          prev.map((lead) => (lead.id === leadId ? { ...lead, last_viewed_at: now } : lead))
+        )
+      }
+
+      const { error: rpcError } = await supabase.rpc("rpc_log_lead_engagement", { p_lead_id: leadId })
+      if (rpcError) console.error("RPC error:", rpcError)
+    } catch (err) {
+      console.error("Unexpected error logging engagement:", err)
+    }
+
+    setSelectedLeadId(leadId)
+    setIsModalOpen(true)
+  }, [setLeads])
+
+  const handleConvertToQuote = useCallback(async (leadId: string, e?: React.MouseEvent) => {
+    e?.stopPropagation()
+    try {
+      // Only run on client side
+      if (typeof window === 'undefined') return;
+      
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+      
+      const { data: leadData, error: fetchError } = await supabase
+        .from("lead")
+        .select("*")
+        .eq("id", leadId)
+        .single()
+      if (fetchError) throw fetchError
+
+      const quote = {
+        tenant_id: leadData.tenant_id,
+        customer_name: leadData.customer_name,
+        customer_email: leadData.customer_email,
+        company: leadData.company,
+        trip_summary: leadData.trip_summary,
+        leg_count: leadData.leg_count,
+        total_pax: leadData.total_pax,
+        created_at: new Date().toISOString(),
+        status: "new",
+      }
+
+      const { data: newQuote, error: insertError } = await supabase
+        .from("quotes")
+        .insert([quote])
+        .select()
+        .single()
+      if (insertError) throw insertError
+
+      await supabase.from("lead").update({ status: "converted" }).eq("id", leadId)
+      toast({ title: "Lead converted", description: "Lead successfully converted to quote." })
+      router.push(`/quotes/${newQuote.id}`)
+    } catch (err) {
+      console.error("Convert error:", err)
+      toast({ title: "Error", description: "Failed to convert lead.", variant: "destructive" })
+    }
+  }, [router, toast])
+
+const handleDeleteLead = useCallback(async (leadId: string, e?: React.MouseEvent) => {
+  e?.stopPropagation()
+
+  try {
+    // Only run on client side
+    if (typeof window === 'undefined') return;
+    
+    const { createClient } = await import("@/lib/supabase/client");
+    const supabase = createClient();
+    
+    const { error } = await supabase.rpc("rpc_delete_lead", { p_lead_id: leadId })
+
+    if (error) {
+      console.error("Delete error:", error)
       toast({
         title: "Error",
-        description: "Failed to convert lead to quote.",
+        description: error.message || "Failed to delete lead.",
         variant: "destructive",
       })
+      return
     }
-  }
 
-  const handleDeleteLead = (leadId: string) => {
-    dispatch({ type: "DELETE_LEAD", payload: leadId })
     toast({
-      title: "Lead deleted",
-      description: "The lead has been moved to deleted status.",
+      title: "Lead updated",
+      description: "Lead visibility handled successfully.",
+    })
+  } catch (err) {
+    console.error("Delete error:", err)
+    toast({
+      title: "Error",
+      description: "Failed to delete lead.",
+      variant: "destructive",
     })
   }
+}, [toast])
 
-  const handleArchiveLead = (leadId: string) => {
-    dispatch({ type: "ARCHIVE_LEAD", payload: leadId })
-    toast({
-      title: "Lead archived",
-      description: "The lead has been archived and moved out of active view.",
-    })
-  }
 
-  const handleUnarchiveLead = (leadId: string) => {
-    dispatch({ type: "UNARCHIVE_LEAD", payload: leadId })
-    toast({
-      title: "Lead unarchived",
-      description: "The lead has been restored to active status.",
-    })
-  }
-
-  const getStatusBadgeVariant = (status: string) => {
+  const getStatusBadgeVariant = useCallback((status: string) => {
     switch (status) {
+      case "active":
       case "new":
         return "default"
-      case "converted":
+      case "expired":
         return "secondary"
+      case "withdrawn":
       case "deleted":
         return "destructive"
       default:
         return "outline"
     }
-  }
+  }, [])
 
-  const columns: ColumnDef<Lead>[] = [
+  const columns: ColumnDef<LeadWithEngagement>[] = useMemo(() => [
     {
-      accessorKey: "customer.name",
-      header: ({ column }) => {
-        return (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            className="h-8 px-2"
-          >
-            Details
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
-        )
-      },
+      accessorKey: "customer_name",
+      header: ({ column }) => (
+        <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
+          Details <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      ),
       cell: ({ row }) => {
         const lead = row.original
         return (
-          <div className="flex items-center space-x-3">
-            <Avatar className="h-8 w-8">
-              <AvatarFallback className="text-xs">
-                {lead.customer.name
-                  .split(" ")
-                  .map((n) => n[0])
-                  .join("")}
-              </AvatarFallback>
-            </Avatar>
-            <div className={lead.isArchived ? "opacity-60" : ""}>
-              {" "}
-              {/* Added visual indicator for archived leads */}
-              <div className={`font-medium ${lead.isArchived ? "line-through" : ""}`}>{lead.customer.name}</div>
-              <div className="text-sm text-muted-foreground">{lead.customer.company}</div>
-            </div>
+          <div className="flex flex-col">
+            <span className="font-medium">{lead.customer_name || "Unknown"}</span>
+            <span className="text-sm text-muted-foreground">{lead.company || "No company"}</span>
           </div>
         )
       },
     },
     {
-      accessorKey: "legs",
-      header: "Trip Details",
+      accessorKey: "trip_summary",
+      header: ({ column }) => (
+        <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
+          Trip Details <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      ),
       cell: ({ row }) => {
         const lead = row.original
-        const firstLeg = lead.legs[0]
         return (
-          <div className={lead.isArchived ? "opacity-60" : ""}>
-            {" "}
-            {/* Added visual indicator for archived leads */}
-            <div className={`font-medium ${lead.isArchived ? "line-through" : ""}`}>
-              {firstLeg?.origin} → {firstLeg?.destination}
-            </div>
+          <div>
+            <div className="font-medium">{lead.trip_summary || "No summary"}</div>
             <div className="text-sm text-muted-foreground">
-              {formatDate(firstLeg?.departureDate || "")}
-              {lead.legs.length > 1 && ` +${lead.legs.length - 1} more legs`}
+              {lead.earliest_departure ? formatDate(lead.earliest_departure) : "No date"}
+              {lead.leg_count > 1 && ` +${lead.leg_count - 1} legs`}
             </div>
           </div>
         )
       },
     },
-    {
-      accessorKey: "legs.0.passengers",
-      header: ({ column }) => {
-        return (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            className="h-8 px-2"
-          >
-            Passengers
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
-        )
-      },
-      cell: ({ row }) => {
-        const passengers = row.original.legs[0]?.passengers || 0
-        const lead = row.original
-        return <div className={`text-center ${lead.isArchived ? "opacity-60 line-through" : ""}`}>{passengers}</div>
-      },
+    { 
+      accessorKey: "total_pax", 
+      header: ({ column }) => (
+        <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
+          Passengers <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      ),
+      cell: ({ row }) => <div className="text-center">{row.original.total_pax || 0}</div> 
     },
     {
       accessorKey: "status",
-      header: "Status",
+      header: ({ column }) => (
+        <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
+          Status <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      ),
       cell: ({ row }) => {
         const status = row.getValue("status") as string
-        const lead = row.original
-        return (
-          <div className="flex items-center gap-2">
-            <Badge variant={getStatusBadgeVariant(status)} className={lead.isArchived ? "opacity-60" : ""}>
-              {status.replace("_", " ")}
-            </Badge>
-            {lead.isArchived && (
-              <Badge variant="outline" className="text-xs">
-                Archived
-              </Badge>
-            )}{" "}
-            {/* Added archived badge */}
-          </div>
-        )
+        return <Badge variant={getStatusBadgeVariant(status)}>{status}</Badge>
       },
     },
     {
-      accessorKey: "createdAt",
-      header: ({ column }) => {
-        return (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            className="h-8 px-2"
-          >
-            Created
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
-        )
-      },
+      accessorKey: "created_at",
+      header: ({ column }) => (
+        <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
+          Created <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      ),
       cell: ({ row }) => {
-        const date = row.getValue("createdAt") as string
-        const lead = row.original
+        const date = row.getValue("created_at") as string
         return (
-          <div className={`text-sm ${lead.isArchived ? "opacity-60" : ""}`}>
-            <div className={lead.isArchived ? "line-through" : ""}>{formatDate(date)}</div>
+          <div className="text-sm">
+            <div>{formatDate(date)}</div>
             <div className="text-muted-foreground">{formatTimeAgo(date)}</div>
           </div>
         )
       },
     },
     {
+      accessorKey: "last_viewed_at",
+      header: ({ column }) => (
+        <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
+          Last Viewed <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      ),
+      cell: ({ row }) => {
+        const date = row.original.last_viewed_at
+        return date ? (
+          <div className="text-sm">
+            <div>{formatDate(date)}</div>
+            <div className="text-muted-foreground">{formatTimeAgo(date)}</div>
+          </div>
+        ) : (
+          <div className="text-muted-foreground text-sm italic">Never</div>
+        )
+      },
+    },
+    {
       id: "actions",
-      enableHiding: false,
       cell: ({ row }) => {
         const lead = row.original
-
         return (
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <span className="sr-only">Open menu</span>
+            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+              <Button variant="ghost" className="h-8 w-8 p-0" data-no-row-click>
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <DropdownMenuItem asChild>
-                <Link href={`/leads/${lead.id}`}>
-                  <Eye className="mr-2 h-4 w-4" />
-                  View Details
-                </Link>
-              </DropdownMenuItem>
-              {lead.status === "new" && !lead.isArchived && (
-                <DropdownMenuItem onClick={() => handleConvertToQuote(lead.id)}>
-                  <FileText className="mr-2 h-4 w-4" />
-                  Convert to Quote
+              {(lead.status === "new" || lead.status === "opened") && (
+                <DropdownMenuItem onClick={(e) => handleConvertToQuote(lead.id, e)}>
+                  <FileText className="mr-2 h-4 w-4" /> Convert to Quote
                 </DropdownMenuItem>
               )}
-              <DropdownMenuSeparator />
-              {!lead.isArchived ? (
-                <DropdownMenuItem onClick={() => handleArchiveLead(lead.id)}>
-                  <Archive className="mr-2 h-4 w-4" />
-                  Archive Lead
-                </DropdownMenuItem>
-              ) : (
-                <DropdownMenuItem onClick={() => handleUnarchiveLead(lead.id)}>
-                  <ArchiveRestore className="mr-2 h-4 w-4" />
-                  Unarchive Lead
-                </DropdownMenuItem>
+              {(lead.status === "new" || lead.status === "opened") && (
+                <DropdownMenuSeparator />
               )}
-              <DropdownMenuItem onClick={() => handleDeleteLead(lead.id)} className="text-destructive">
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete Lead
+              <DropdownMenuItem className="text-destructive" onClick={(e) => handleDeleteLead(lead.id, e)}>
+                <Trash2 className="mr-2 h-4 w-4" /> Delete Lead
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         )
       },
     },
-  ]
+  ], [getStatusBadgeVariant, handleRowClick, handleConvertToQuote, handleDeleteLead])
 
   const table = useReactTable({
     data,
     columns,
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
-    onColumnVisibilityChange: setColumnVisibility,
-    onRowSelectionChange: setRowSelection,
-    state: {
-      sorting,
-      columnFilters,
-      columnVisibility,
-      rowSelection,
+    onSortingChange: setSorting,
+    onColumnFiltersChange: setColumnFilters,
+    state: { sorting, columnFilters },
+    // ✅ Enhanced global filtering for better search experience
+    globalFilterFn: (row, columnId, value) => {
+      const search = value.toLowerCase()
+      const lead = row.original
+      
+      // Search across multiple fields
+      const searchableFields = [
+        lead.customer_name?.toLowerCase() || '',
+        lead.company?.toLowerCase() || '',
+        lead.trip_summary?.toLowerCase() || '',
+        lead.customer_email?.toLowerCase() || '',
+        lead.status?.toLowerCase() || ''
+      ]
+      
+      return searchableFields.some(field => field.includes(search))
     },
   })
+
+  useEffect(() => {
+    table.setPageSize(100)
+  }, [table])
 
   return (
     <div className="w-full">
@@ -318,93 +349,65 @@ export function LeadTable({ data, showArchived = false }: LeadTableProps) {
         <div className="flex items-center space-x-2">
           <Search className="h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Filter details..."
-            value={(table.getColumn("customer.name")?.getFilterValue() as string) ?? ""}
-            onChange={(event) => table.getColumn("customer.name")?.setFilterValue(event.target.value)}
+            placeholder="Search leads by name, company, email, or trip details..."
+            value={(table.getState().globalFilter as string) ?? ""}
+            onChange={(e) => {
+              // Set global filter for comprehensive search
+              table.setGlobalFilter(e.target.value)
+            }}
             className="max-w-sm"
           />
         </div>
-        <Select
-          value={(table.getColumn("status")?.getFilterValue() as string) ?? ""}
-          onValueChange={(value) => table.getColumn("status")?.setFilterValue(value === "all" ? "" : value)}
-        >
-          <SelectTrigger className="w-[180px]">
-            <Filter className="mr-2 h-4 w-4" />
-            <SelectValue placeholder="Filter by status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Statuses</SelectItem>
-            <SelectItem value="new">New</SelectItem>
-            <SelectItem value="converted">Converted</SelectItem>
-            <SelectItem value="deleted">Deleted</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="ml-auto flex items-center gap-2">
+          <Filter className="h-4 w-4 text-muted-foreground" />
+        </div>
       </div>
+
       <div className="rounded-md border">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => {
-                  return (
-                    <TableHead key={header.id}>
-                      {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-                    </TableHead>
-                  )
-                })}
+                {headerGroup.headers.map((header) => (
+                  <TableHead key={header.id}>
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(header.column.columnDef.header, header.getContext())}
+                  </TableHead>
+                ))}
               </TableRow>
             ))}
           </TableHeader>
           <TableBody>
-            {table.getRowModel().rows?.length ? (
+            {table.getRowModel().rows.length ? (
               table.getRowModel().rows.map((row) => (
                 <TableRow
                   key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
-                  onClick={() => handleRowClick(row.original.id)}
-                  className="cursor-pointer"
+                  onClick={(e) => {
+                    const target = e.target as HTMLElement
+                    if (target.closest('[data-no-row-click]')) return
+                    handleRowClick(row.original.id)
+                  }}
+                  className="cursor-pointer hover:bg-muted/30"
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
-                      {cell.column.id === "actions" ? (
-                        <div onClick={(e) => e.stopPropagation()}>
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                        </div>
-                      ) : (
-                        flexRender(cell.column.columnDef.cell, cell.getContext())
-                      )}
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                   ))}
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center">
-                  No results.
+                <TableCell colSpan={columns.length} className="h-24 text-center text-muted-foreground">
+                  No leads found.
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
-      </div>
-      <div className="flex items-center justify-end space-x-2 py-4">
-        <div className="flex-1 text-sm text-muted-foreground">
-          {table.getFilteredSelectedRowModel().rows.length} of {table.getFilteredRowModel().rows.length} row(s)
-          selected.
-        </div>
-        <div className="space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
-          >
-            Previous
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
-            Next
-          </Button>
-        </div>
+
+        <LeadDetailModal leadId={selectedLeadId} open={isModalOpen} onClose={() => setIsModalOpen(false)} />
       </div>
     </div>
   )

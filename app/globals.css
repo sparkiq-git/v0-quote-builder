@@ -1,7 +1,160 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* Sonner Toast Custom Styling */
+.sonner-toast {
+  z-index: 9999 !important;
+  position: relative;
+  overflow: hidden;
+}
+
+.sonner-toast::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #3b82f6, #8b5cf6, #06b6d4);
+  background-size: 200% 100%;
+  animation: gradient-shift 3s ease-in-out infinite;
+}
+
+@keyframes gradient-shift {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.sonner-toast [data-sonner-toast] {
+  border: none !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+  backdrop-filter: blur(12px) !important;
+  background: rgba(255, 255, 255, 0.95) !important;
+  border-radius: 16px !important;
+  padding: 16px !important;
+  margin: 8px !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.dark .sonner-toast [data-sonner-toast] {
+  background: rgba(15, 23, 42, 0.95) !important;
+  border: 1px solid rgba(148, 163, 184, 0.1) !important;
+}
+
+.sonner-toast [data-sonner-toast]:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 32px 64px -12px rgba(0, 0, 0, 0.35) !important;
+}
+
+.sonner-toast [data-sonner-toast] [data-title] {
+  font-weight: 600 !important;
+  font-size: 15px !important;
+  color: hsl(var(--foreground)) !important;
+  margin-bottom: 4px !important;
+}
+
+.sonner-toast [data-sonner-toast] [data-description] {
+  font-size: 14px !important;
+  color: hsl(var(--muted-foreground)) !important;
+  line-height: 1.4 !important;
+}
+
+.sonner-toast [data-sonner-toast] [data-action] {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8) !important;
+  color: white !important;
+  border: none !important;
+  border-radius: 8px !important;
+  padding: 8px 16px !important;
+  font-weight: 500 !important;
+  font-size: 13px !important;
+  transition: all 0.2s ease !important;
+  margin-top: 8px !important;
+}
+
+.sonner-toast [data-sonner-toast] [data-action]:hover {
+  background: linear-gradient(135deg, #1d4ed8, #1e40af) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4) !important;
+}
+
+.sonner-toast [data-sonner-toast] [data-close-button] {
+  background: rgba(0, 0, 0, 0.1) !important;
+  border: none !important;
+  border-radius: 6px !important;
+  color: hsl(var(--muted-foreground)) !important;
+  transition: all 0.2s ease !important;
+}
+
+.sonner-toast [data-sonner-toast] [data-close-button]:hover {
+  background: rgba(0, 0, 0, 0.2) !important;
+  color: hsl(var(--foreground)) !important;
+}
+
+/* Success toast specific styling */
+.sonner-toast [data-sonner-toast][data-type="success"] {
+  border-left: 4px solid #10b981 !important;
+}
+
+.sonner-toast [data-sonner-toast][data-type="success"]::before {
+  background: linear-gradient(90deg, #10b981, #059669) !important;
+}
+
+/* Error toast specific styling */
+.sonner-toast [data-sonner-toast][data-type="error"] {
+  border-left: 4px solid #ef4444 !important;
+}
+
+.sonner-toast [data-sonner-toast][data-type="error"]::before {
+  background: linear-gradient(90deg, #ef4444, #dc2626) !important;
+}
+
+/* Info toast specific styling */
+.sonner-toast [data-sonner-toast][data-type="info"] {
+  border-left: 4px solid #3b82f6 !important;
+}
+
+.sonner-toast [data-sonner-toast][data-type="info"]::before {
+  background: linear-gradient(90deg, #3b82f6, #1d4ed8) !important;
+}
+
 @custom-variant dark (&:is(.dark *));
+
+/* Custom animations for success page */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.6s ease-out;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.8s ease-out;
+}
+
+.animate-slide-up-delayed {
+  animation: slide-up 0.8s ease-out 0.2s both;
+}
 
 :root {
   --background: #ffffff;
@@ -75,8 +228,8 @@
 }
 
 @theme inline {
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-jetbrains-mono);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -122,4 +275,12 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Force Radix layers to be clickable and above any overlays */
+[data-radix-popper-content-wrapper],
+[data-slot="popover-content"],
+[data-slot="dropdown-menu-content"] {
+  pointer-events: auto !important;
+  z-index: 2147483647 !important;
 }

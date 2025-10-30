@@ -1,48 +1,62 @@
 "use client"
 
-import { notFound, useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { ArrowLeft } from "lucide-react"
-import { QuoteBuilderTabs } from "@/components/quotes/quote-builder-tabs"
-import { useMockStore } from "@/lib/mock/store"
+import { useEffect, useState } from "react"
+import { useParams } from "next/navigation"
+import { Loader2 } from "lucide-react"
+import { getQuoteById } from "@/lib/supabase/queries/quotes"
+import { QuoteEditor } from "@/components/quotes/QuoteEditor"
+import { useToast } from "@/hooks/use-toast"
 import type { Quote } from "@/lib/types"
 
-interface QuoteDetailPageProps {
-  params: {
-    id: string
+export default function QuoteEditPage() {
+  const { id } = useParams()
+  const [quote, setQuote] = useState<Quote | null>(null)
+  const [loading, setLoading] = useState(true)
+  const { toast } = useToast()
+
+  useEffect(() => {
+    const fetchQuote = async () => {
+      try {
+        const q = await getQuoteById(id as string)
+        if (!q) throw new Error("Quote not found")
+        setQuote(q)
+      } catch (err: any) {
+        toast({
+          title: "Error loading quote",
+          description: err.message,
+          variant: "destructive",
+        })
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    if (id) fetchQuote()
+  }, [id])
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-[70vh] text-muted-foreground">
+        <Loader2 className="animate-spin mr-2" /> Loading quote...
+      </div>
+    )
   }
-}
-
-export default function QuoteDetailPage({ params }: QuoteDetailPageProps) {
-  const { getQuoteById, dispatch } = useMockStore()
-  const router = useRouter()
-
-  const quote = getQuoteById(params.id)
 
   if (!quote) {
-    notFound()
-  }
-
-  const handleUpdateQuote = (updates: Partial<Quote>) => {
-    dispatch({
-      type: "UPDATE_QUOTE",
-      payload: { id: params.id, updates },
-    })
+    return (
+      <div className="p-6 text-center text-muted-foreground">
+        Quote not found or deleted.
+      </div>
+    )
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center space-x-4">
-        <Button variant="outline" size="icon" onClick={() => router.back()}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Quote Builder</h1>
-          <p className="text-muted-foreground">Configure and publish quote for {quote.customer.name}</p>
-        </div>
-      </div>
-
-      <QuoteBuilderTabs quote={quote} onUpdate={handleUpdateQuote} />
+    <div className="container py-8">
+      <QuoteEditor
+        quote={quote}
+        quoteDetails={quote.legs || []}
+        onQuoteChange={setQuote}
+      />
     </div>
   )
 }

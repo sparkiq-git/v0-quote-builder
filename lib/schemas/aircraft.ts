@@ -24,17 +24,23 @@ export const TailFormSchema = z.object({
   modelId: z.string().min(1, "Model is required"),
   tailNumber: z.string().min(1, "Tail number is required"),
   operator: z.string().optional(),
-  amenities: z.string().optional(),
   year: z
     .number()
     .int()
     .min(1900)
     .max(new Date().getFullYear() + 5)
     .optional(),
-  status: z.enum(["active", "mx", "inactive", "sold"]).default("active"),
-  capacityOverride: z.number().int().nonnegative().optional(),
-  rangeNmOverride: z.number().int().nonnegative().optional(),
-  speedKnotsOverride: z.number().nonnegative().optional(),
+  yearOfRefurbishment: z
+    .number()
+    .int()
+    .min(1900)
+    .max(new Date().getFullYear() + 5)
+    .nullable()
+    .optional(),
+  status: z.enum(["active", "inactive"]).default("active"),
+  capacityOverride: z.number().int().nonnegative().nullable().optional(),
+  rangeNmOverride: z.number().int().nonnegative().nullable().optional(),
+  speedKnotsOverride: z.number().nonnegative().nullable().optional(),
   images: z
     .array(
       z

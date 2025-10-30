@@ -18,23 +18,28 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Search, MoreHorizontal, Edit, Archive, Trash2, Plane, Plus, ArchiveRestore } from "lucide-react"
-import { useMockStore } from "@/lib/mock/store"
+import { Search, MoreHorizontal, Edit, Archive, Trash2, Plane, Plus, ArchiveRestore, ImageIcon } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { TailCreateDialog } from "./tail-create-dialog"
+import { TailImageDialog } from "./tail-image-dialog"
 import { computeEffectiveTail } from "@/lib/utils/aircraft"
+import { useAircraft } from "@/hooks/use-aircraft"
 
 export function TailsTable() {
-  const { state, dispatch, getModelById, getCategoryById } = useMockStore()
+  const { aircraft, loading, error } = useAircraft()
   const { toast } = useToast()
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [modelFilter, setModelFilter] = useState("all")
   const [archiveFilter, setArchiveFilter] = useState<"active" | "all">("active")
   const [deleteTailId, setDeleteTailId] = useState<string | null>(null)
+  const [editTailId, setEditTailId] = useState<string | null>(null)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [imageTailId, setImageTailId] = useState<string | null>(null)
+  const [imageDialogOpen, setImageDialogOpen] = useState(false)
 
-  const filteredTails = (state.aircraftTails || []).filter((tail) => {
-    const model = getModelById(tail.modelId)
+  const filteredTails = aircraft.filter((tail) => {
+    const model = tail.aircraftModel
     const matchesSearch =
       tail.tailNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
       model?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -42,35 +47,82 @@ export function TailsTable() {
       tail.operator?.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesStatus = statusFilter === "all" || tail.status === statusFilter
     const matchesModel = modelFilter === "all" || tail.modelId === modelFilter
-    const matchesArchive = archiveFilter === "all" || (archiveFilter === "active" && !tail.isArchived)
+    // Note: We don't have isArchived field in the database yet, so we'll show all for now
+    const matchesArchive = archiveFilter === "all" || (archiveFilter === "active" && true)
     return matchesSearch && matchesStatus && matchesModel && matchesArchive
   })
 
-  const uniqueStatuses = Array.from(new Set((state.aircraftTails || []).map((tail) => tail.status)))
+  const uniqueStatuses = Array.from(new Set(aircraft.map((tail) => tail.status)))
 
-  const handleArchiveTail = (tailId: string) => {
-    dispatch({ type: "ARCHIVE_TAIL", payload: tailId })
-    toast({
-      title: "Tail archived",
-      description: "The aircraft tail has been archived successfully.",
-    })
+  const handleArchiveTail = async (tailId: string) => {
+    try {
+      const response = await fetch(`/api/aircraft/${tailId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "inactive" }),
+      })
+      
+      if (!response.ok) throw new Error("Failed to archive tail")
+      
+      toast({
+        title: "Tail archived",
+        description: "The aircraft tail has been archived successfully.",
+      })
+      // TODO: Refresh data
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to archive tail. Please try again.",
+        variant: "destructive",
+      })
+    }
   }
 
-  const handleUnarchiveTail = (tailId: string) => {
-    dispatch({ type: "UNARCHIVE_TAIL", payload: tailId })
-    toast({
-      title: "Tail unarchived",
-      description: "The aircraft tail has been unarchived successfully.",
-    })
+  const handleUnarchiveTail = async (tailId: string) => {
+    try {
+      const response = await fetch(`/api/aircraft/${tailId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "active" }),
+      })
+      
+      if (!response.ok) throw new Error("Failed to unarchive tail")
+      
+      toast({
+        title: "Tail unarchived",
+        description: "The aircraft tail has been unarchived successfully.",
+      })
+      // TODO: Refresh data
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to unarchive tail. Please try again.",
+        variant: "destructive",
+      })
+    }
   }
 
-  const handleDeleteTail = (tailId: string) => {
-    dispatch({ type: "DELETE_TAIL", payload: tailId })
-    setDeleteTailId(null)
-    toast({
-      title: "Tail deleted",
-      description: "The aircraft tail has been deleted successfully.",
-    })
+  const handleDeleteTail = async (tailId: string) => {
+    try {
+      const response = await fetch(`/api/aircraft/${tailId}`, {
+        method: "DELETE",
+      })
+      
+      if (!response.ok) throw new Error("Failed to delete tail")
+      
+      setDeleteTailId(null)
+      toast({
+        title: "Tail deleted",
+        description: "The aircraft tail has been deleted successfully.",
+      })
+      // TODO: Refresh data
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete tail. Please try again.",
+        variant: "destructive",
+      })
+    }
   }
 
   const getStatusBadgeVariant = (status: string) => {
@@ -127,13 +179,15 @@ export function TailsTable() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Models</SelectItem>
-            {(state.aircraftModels || [])
-              .filter((m) => !m.isArchived)
-              .map((model) => (
-                <SelectItem key={model.id} value={model.id}>
-                  {model.name}
-                </SelectItem>
-              ))}
+            {Array.from(new Set(aircraft.map(tail => tail.aircraftModel?.id).filter(Boolean)))
+              .map((modelId) => {
+                const model = aircraft.find(tail => tail.aircraftModel?.id === modelId)?.aircraftModel
+                return model ? (
+                  <SelectItem key={modelId} value={modelId}>
+                    {model.name}
+                  </SelectItem>
+                ) : null
+              })}
           </SelectContent>
         </Select>
         <ToggleGroup
@@ -146,8 +200,24 @@ export function TailsTable() {
         </ToggleGroup>
       </div>
 
+      {/* Loading State */}
+      {loading && (
+        <div className="flex items-center justify-center py-16">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+        </div>
+      )}
+
+      {/* Error State */}
+      {error && (
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <Plane className="h-16 w-16 text-muted-foreground mb-4" />
+          <h3 className="text-lg font-semibold mb-2">Error loading aircraft</h3>
+          <p className="text-muted-foreground mb-6 max-w-md">{error}</p>
+        </div>
+      )}
+
       {/* Table */}
-      {filteredTails.length > 0 ? (
+      {!loading && !error && filteredTails.length > 0 ? (
         <div className="rounded-md border">
           <Table>
             <TableHeader>
@@ -163,18 +233,21 @@ export function TailsTable() {
             </TableHeader>
             <TableBody>
               {filteredTails.map((tail) => {
-                const model = getModelById(tail.modelId)
-                const category = model ? getCategoryById(model.categoryId) : null
+                const model = tail.aircraftModel
                 const effective = model ? computeEffectiveTail(model, tail) : null
 
                 return (
                   <TableRow
                     key={tail.id}
-                    className={`${tail.isArchived ? "opacity-60" : ""} hover:bg-muted/50 transition-colors`}
+                    onClick={() => {
+                      setEditTailId(tail.id)
+                      setIsEditDialogOpen(true)
+                    }}
+                    className={`${tail.isArchived ? "opacity-60" : ""} hover:bg-muted/50 transition-colors cursor-pointer`}
                   >
                     <TableCell>
                       <div className="space-y-1">
-                        <p className={`font-medium ${tail.isArchived ? "line-through" : ""}`}>{tail.tailNumber}</p>
+                        <p className="font-medium">{tail.tailNumber}</p>
                         {tail.year && <p className="text-sm text-muted-foreground">{tail.year}</p>}
                       </div>
                     </TableCell>
@@ -182,11 +255,6 @@ export function TailsTable() {
                       <div className="space-y-1">
                         <p className="font-medium">{model?.name || "Unknown"}</p>
                         {model?.manufacturer && <p className="text-sm text-muted-foreground">{model.manufacturer}</p>}
-                        {category && (
-                          <Badge variant="outline" className="text-xs">
-                            {category.name}
-                          </Badge>
-                        )}
                       </div>
                     </TableCell>
                     <TableCell>
@@ -227,16 +295,11 @@ export function TailsTable() {
                     </TableCell>
                     <TableCell>
                       <Badge variant={getStatusBadgeVariant(tail.status)}>{getStatusLabel(tail.status)}</Badge>
-                      {tail.isArchived && (
-                        <Badge variant="outline" className="text-xs">
-                          Archived
-                        </Badge>
-                      )}
                     </TableCell>
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
+                          <Button variant="ghost" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
@@ -247,6 +310,13 @@ export function TailsTable() {
                               Edit
                             </DropdownMenuItem>
                           </TailCreateDialog>
+                          <DropdownMenuItem onClick={() => {
+                            setImageTailId(tail.id)
+                            setImageDialogOpen(true)
+                          }}>
+                            <ImageIcon className="mr-2 h-4 w-4" />
+                            Add Images
+                          </DropdownMenuItem>
                           {!tail.isArchived && (
                             <DropdownMenuItem onClick={() => handleArchiveTail(tail.id)}>
                               <Archive className="mr-2 h-4 w-4" />
@@ -272,7 +342,7 @@ export function TailsTable() {
             </TableBody>
           </Table>
         </div>
-      ) : (
+      ) : !loading && !error ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <Plane className="h-16 w-16 text-muted-foreground mb-4" />
           <h3 className="text-lg font-semibold mb-2">
@@ -292,7 +362,13 @@ export function TailsTable() {
             </TailCreateDialog>
           )}
         </div>
-      )}
+      ) : null}
+
+      {/* Edit Dialog */}
+      <TailCreateDialog tailId={editTailId || undefined} open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen} />
+
+      {/* Image Dialog */}
+      <TailImageDialog tailId={imageTailId} open={imageDialogOpen} onOpenChange={setImageDialogOpen} />
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!deleteTailId} onOpenChange={() => setDeleteTailId(null)}>

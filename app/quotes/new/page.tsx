@@ -1,87 +1,105 @@
 "use client"
 
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { ArrowLeft } from "lucide-react"
-import { QuoteBuilderTabs } from "@/components/quotes/quote-builder-tabs"
-import { useMockStore } from "@/lib/mock/store"
-import type { Quote } from "@/lib/types"
 import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
+import { createQuote } from "@/lib/supabase/queries/quotes"
+import { useToast } from "@/hooks/use-toast"
+import { Loader2 } from "lucide-react"
+import dynamicImport from "next/dynamic"
+
+// Force dynamic rendering to prevent SSR issues with Supabase client
+export const dynamic = 'force-dynamic'
+
+// Dynamically import QuoteEditor to prevent SSR issues
+const QuoteEditor = dynamicImport(() => import("@/components/quotes/QuoteEditor").then(mod => ({ default: mod.QuoteEditor })), { 
+  ssr: false,
+  loading: () => <div className="flex items-center justify-center h-32">Loading quote editor...</div>
+})
 
 export default function NewQuotePage() {
-  const { dispatch } = useMockStore()
   const router = useRouter()
-  const [quote, setQuote] = useState<Quote | null>(null)
+  const { toast } = useToast()
+
+  const [quote, setQuote] = useState<any | null>(null)
+  const [quoteDetails, setQuoteDetails] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [isClient, setIsClient] = useState(false)
 
   useEffect(() => {
-    const newQuote: Quote = {
-      id: `quote-${Date.now()}`,
-      customerId: `customer-${Date.now()}`,
-      customer: {
-        id: `customer-${Date.now()}`,
-        name: "",
-        email: "",
-        phone: "",
-      },
-      legs: [
-        {
-          id: `leg-${Date.now()}`,
-          origin: "",
-          destination: "",
-          departureDate: "",
-          departureTime: "",
-          passengers: 1,
-        },
-      ],
-      options: [],
-      services: [],
-      status: "pending_acceptance",
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-      createdAt: new Date().toISOString(),
-      terms: "Standard terms and conditions apply.",
-      branding: {
-        primaryColor: "#2563eb",
-      },
+    setIsClient(true)
+  }, [])
+
+  /* -------------------- INITIALIZE NEW QUOTE -------------------- */
+  useEffect(() => {
+    if (!isClient) return;
+    
+    const initNewQuote = async () => {
+      try {
+        setLoading(true)
+        const tenantId = process.env.NEXT_PUBLIC_TENANT_ID
+        if (!tenantId) throw new Error("Missing NEXT_PUBLIC_TENANT_ID")
+
+        console.log("🟡 Creating new quote for tenant:", tenantId)
+
+        const data = await createQuote(tenantId)
+
+        if (!data?.id) throw new Error("Quote creation failed")
+
+        setQuote(data)
+        setQuoteDetails([])
+
+        toast({
+          title: "New quote created",
+          description: "You can now begin editing your quote.",
+        })
+      } catch (err: any) {
+        console.error("❌ Error creating new quote:", err)
+        toast({
+          title: "Failed to create quote",
+          description: err.message || "Could not create quote in Supabase.",
+          variant: "destructive",
+        })
+      } finally {
+        setLoading(false)
+      }
     }
 
-    // Add the quote to the store
-    dispatch({
-      type: "ADD_QUOTE",
-      payload: newQuote,
-    })
+    initNewQuote()
+  }, [toast, isClient])
 
-    setQuote(newQuote)
-  }, [dispatch])
+  /* -------------------- RENDER -------------------- */
+  if (!isClient) {
+    return (
+      <div className="flex h-[70vh] flex-col items-center justify-center text-muted-foreground space-y-2">
+        <Loader2 className="h-6 w-6 animate-spin" />
+        <p>Initializing...</p>
+      </div>
+    )
+  }
 
-  const handleUpdateQuote = (updates: Partial<Quote>) => {
-    if (!quote) return
-
-    dispatch({
-      type: "UPDATE_QUOTE",
-      payload: { id: quote.id, updates },
-    })
-
-    // Update local state to reflect changes
-    setQuote((prev) => (prev ? { ...prev, ...updates } : null))
+  if (loading) {
+    return (
+      <div className="flex h-[70vh] flex-col items-center justify-center text-muted-foreground space-y-2">
+        <Loader2 className="h-6 w-6 animate-spin" />
+        <p>Initializing new quote...</p>
+      </div>
+    )
   }
 
   if (!quote) {
-    return <div>Loading...</div>
+    return (
+      <div className="p-8 text-center text-destructive">
+        Failed to create quote. Please try again.
+      </div>
+    )
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center space-x-4">
-        <Button variant="outline" size="icon" onClick={() => router.back()}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Create New Quote</h1>
-          <p className="text-muted-foreground">Configure and publish a new charter quote</p>
-        </div>
-      </div>
-
-      <QuoteBuilderTabs quote={quote} onUpdate={handleUpdateQuote} />
-    </div>
+    <QuoteEditor
+      quote={quote}
+      quoteDetails={quoteDetails}
+      onQuoteChange={(updated) => setQuote(updated)}
+      onQuoteDetailsChange={(legs) => setQuoteDetails(legs)}
+    />
   )
 }
