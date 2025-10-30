@@ -29,4 +29,10 @@ export function createClient() {
 // Export a function to get the client instead of calling it at module level
 export const getSupabaseClient = () => createClient()
 
-export const supabase = createClient()
+// This creates a proxy that only initializes the client when actually accessed
+export const supabase = new Proxy({} as ReturnType<typeof createBrowserClient>, {
+  get(target, prop) {
+    const client = createClient()
+    return (client as any)[prop]
+  },
+})
