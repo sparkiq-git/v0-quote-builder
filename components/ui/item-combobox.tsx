@@ -41,7 +41,7 @@ export function ItemCombobox({ tenantId, value, onSelect }: ItemComboboxProps) {
   const selected = items.find((i) => i.id === value)
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={setOpen} modal={true}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"

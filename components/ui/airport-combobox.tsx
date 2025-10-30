@@ -190,7 +190,7 @@ export function AirportCombobox({
         </label>
       )}
 
-      <Popover open={open} onOpenChange={setOpen}>
+      <Popover open={open} onOpenChange={setOpen} modal={true}>
         <PopoverTrigger asChild>
           <Button
             ref={triggerRef as any}

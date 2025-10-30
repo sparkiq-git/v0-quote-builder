@@ -232,7 +232,7 @@ export function EditUserModal({ open, onOpenChange, onSuccess, user }: EditUserM
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Roles</FormLabel>
-                    <Popover open={rolesOpen} onOpenChange={setRolesOpen}>
+                    <Popover open={rolesOpen} onOpenChange={setRolesOpen} modal={true}>
                       <PopoverTrigger asChild>
                         <FormControl>
                           <Button

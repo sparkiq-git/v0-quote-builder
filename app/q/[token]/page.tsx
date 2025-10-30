@@ -136,7 +136,7 @@ function TripInfoControl({
     <>
       {/* Desktop */}
       <div className="hidden md:inline-flex">
-        <Popover>
+        <Popover modal={true}>
           <PopoverTrigger asChild>
             <button
               type="button"

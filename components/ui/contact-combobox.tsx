@@ -126,7 +126,7 @@ export function ContactCombobox({ value, selectedName, onSelect }: ContactCombob
   }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={setOpen} modal={true}>
       <PopoverTrigger asChild>
         {/* ✅ uses selectedName instead of searching in contacts[] */}
         <Button variant="outline" className="justify-between w-full">

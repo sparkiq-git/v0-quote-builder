@@ -416,7 +416,7 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
               name="modelId"
               control={control}
               render={({ field }) => (
-                <Popover open={modelComboOpen} onOpenChange={setModelComboOpen}>
+                <Popover open={modelComboOpen} onOpenChange={setModelComboOpen} modal={true}>
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
@@ -476,7 +476,7 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
                   name="operator"
                   control={control}
                   render={({ field }) => (
-                    <Popover open={operatorComboOpen} onOpenChange={setOperatorComboOpen}>
+                    <Popover open={operatorComboOpen} onOpenChange={setOperatorComboOpen} modal={true}>
                       <PopoverTrigger asChild>
                         <Button
                           variant="outline"

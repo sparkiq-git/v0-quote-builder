@@ -64,7 +64,7 @@ export function AmenitySelector({ selectedAmenityIds, onSelectionChange, disable
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <label className="text-sm font-medium">Aircraft Amenities</label>
-        <Popover open={open} onOpenChange={setOpen}>
+        <Popover open={open} onOpenChange={setOpen} modal={true}>
           <PopoverTrigger asChild>
             <Button
               variant="outline"

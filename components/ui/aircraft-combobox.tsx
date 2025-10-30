@@ -92,7 +92,7 @@ export function AircraftCombobox({ value, onSelect, onClickAdd }: Props) {
   const selectedThumbnail = getSelectedThumbnail()
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={setOpen} modal={true}>
       <PopoverTrigger asChild>
         <Button variant="outline" className="justify-between w-full">
           <div className="flex items-center gap-2 min-w-0">

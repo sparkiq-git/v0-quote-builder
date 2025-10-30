@@ -351,7 +351,7 @@ export function PreItineraryDataDialog({ quote, open, onOpenChange }: PreItinera
                 <div className="space-y-3">
                   <Label>Select Crew Members (Optional)</Label>
 
-                  <Popover open={crewComboboxOpen} onOpenChange={setCrewComboboxOpen}>
+                  <Popover open={crewComboboxOpen} onOpenChange={setCrewComboboxOpen} modal={true}>
                     <PopoverTrigger asChild>
                       <Button
                         variant="outline"
