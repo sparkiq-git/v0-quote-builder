@@ -13,7 +13,7 @@ import { createClient } from "@/lib/supabase/server"
  * @param tenantId - The tenant UUID (required for tenant context)
  */
 export async function getAvailableItems(tenantId?: string | null) {
-  const supabase = createClient()
+  const supabase = await createClient()
 
   try {
     let query = supabase
