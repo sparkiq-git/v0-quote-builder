@@ -276,3 +276,11 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Force Radix layers to be clickable and above any overlays */
+[data-radix-popper-content-wrapper],
+[data-slot="popover-content"],
+[data-slot="dropdown-menu-content"] {
+  pointer-events: auto !important;
+  z-index: 2147483647 !important;
+}
