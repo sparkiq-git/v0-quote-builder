@@ -94,7 +94,7 @@ export function AircraftCombobox({ value, onSelect, onClickAdd }: Props) {
   return (
     <Popover open={open} onOpenChange={setOpen} modal={true}>
       <PopoverTrigger asChild>
-        <Button variant="outline" className="justify-between w-full">
+        <Button type="button" variant="outline" className="justify-between w-full">
           <div className="flex items-center gap-2 min-w-0">
             {selectedThumbnail ? (
               <img
@@ -126,7 +126,7 @@ export function AircraftCombobox({ value, onSelect, onClickAdd }: Props) {
                   No aircraft found
                 </p>
                 {onClickAdd && (
-                  <Button
+                  <Button type="button"
                     variant="outline"
                     size="sm"
                     onClick={() => {
@@ -198,7 +198,7 @@ export function AircraftCombobox({ value, onSelect, onClickAdd }: Props) {
 
           {onClickAdd && (
             <div className="border-t p-2 flex justify-end">
-              <Button
+              <Button type="button"
                 variant="ghost"
                 size="sm"
                 onClick={() => {

@@ -199,6 +199,7 @@ export function AirportCombobox({
             aria-expanded={open}
             className="w-full h-11 justify-between bg-background/40 backdrop-blur-sm border-border/30 hover:bg-background/60 hover:border-border/50 font-normal"
             onClick={() => setOpen((s) => !s)}
+            type="button"
           >
             <div className="flex items-center gap-1 min-w-0">
               <CountryFlag code={selectedCode} className="shrink-0" />

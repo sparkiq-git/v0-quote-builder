@@ -287,7 +287,7 @@ const handleDeleteLead = useCallback(async (leadId: string, e?: React.MouseEvent
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-              <Button variant="ghost" className="h-8 w-8 p-0">
+              <Button variant="ghost" className="h-8 w-8 p-0" data-no-row-click>
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -383,7 +383,11 @@ const handleDeleteLead = useCallback(async (leadId: string, e?: React.MouseEvent
               table.getRowModel().rows.map((row) => (
                 <TableRow
                   key={row.id}
-                  onClick={() => handleRowClick(row.original.id)}
+                  onClick={(e) => {
+                    const target = e.target as HTMLElement
+                    if (target.closest('[data-no-row-click]')) return
+                    handleRowClick(row.original.id)
+                  }}
                   className="cursor-pointer hover:bg-muted/30"
                 >
                   {row.getVisibleCells().map((cell) => (
