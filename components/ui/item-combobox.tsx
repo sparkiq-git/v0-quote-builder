@@ -55,7 +55,7 @@ export function ItemCombobox({ tenantId, value, onSelect }: ItemComboboxProps) {
       <PopoverContent className="p-0 w-[300px]">
         <Command>
           <CommandInput placeholder="Search item..." />
-          <CommandList>
+          <CommandList className="pointer-events-auto max-h-[300px] overflow-y-auto overflow-x-hidden">
             <CommandEmpty>No items found.</CommandEmpty>
             <CommandGroup>
               {items.map((item) => (

@@ -139,7 +139,7 @@ export function ContactCombobox({ value, selectedName, onSelect }: ContactCombob
         {!creating ? (
           <Command>
             <CommandInput placeholder="Search contacts..." onValueChange={setSearch} />
-            <CommandList>
+            <CommandList className="pointer-events-auto max-h-[320px] overflow-y-auto overflow-x-hidden">
               <CommandEmpty>
                 <div className="flex flex-col items-center py-6">
                   <p className="text-sm text-muted-foreground mb-2">No contacts found</p>
