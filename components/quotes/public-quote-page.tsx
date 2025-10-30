@@ -194,6 +194,15 @@ function LegRow({ leg, index }: { leg: any; index: number }) {
     <div className="px-2 py-1.5 grid items-center gap-x-2 gap-y-1 [grid-template-columns:max-content_1fr_max-content_auto]">
       <div className="col-span-4 row-start-1 text-xs text-gray-500 mt-0.5 font-light">
         {formatDate(leg.depart_dt || leg.departureDate)}
+        {" "}
+        {leg.depart_time || leg.departureTime ? (
+          <span className="text-gray-400">• {leg.depart_time || leg.departureTime}</span>
+        ) : null}
+        {typeof (leg.pax_count ?? leg.passengers) === "number" ? (
+          <span className="ml-2 inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-[10px] text-gray-600">
+            {(leg.pax_count ?? leg.passengers) as number} pax
+          </span>
+        ) : null}
       </div>
       <div className="col-start-1 row-start-2">
         <div className={codeCls}>{leg.origin_code || leg.origin}</div>
