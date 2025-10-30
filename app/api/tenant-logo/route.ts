@@ -37,11 +37,9 @@ export async function GET(req: NextRequest) {
     }
 
     // Assume path is in form: "<bucket>/<inner/path/to/file.ext>"
-    const publicUrl = `${baseUrl}/storage/v1/object/public/${path.replace(/^\/*/, "")}`
+    const publicUrl = `${baseUrl}/storage/v1/object/public/branding/${path.replace(/^\/*/, "")}`
     return NextResponse.json({ logoUrl: publicUrl })
   } catch (err: any) {
     return NextResponse.json({ error: err?.message || "Unknown error" }, { status: 500 })
   }
 }
-
-
