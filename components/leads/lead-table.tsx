@@ -286,12 +286,12 @@ const handleDeleteLead = useCallback(async (leadId: string, e?: React.MouseEvent
         const lead = row.original
         return (
           <DropdownMenu>
-            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()} onPointerDownCapture={(e) => e.stopPropagation()}>
               <Button variant="ghost" className="h-8 w-8 p-0">
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+            <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()} onPointerDownCapture={(e) => e.stopPropagation()}>
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
               {(lead.status === "new" || lead.status === "opened") && (
                 <DropdownMenuItem onClick={(e) => handleConvertToQuote(lead.id, e)}>
