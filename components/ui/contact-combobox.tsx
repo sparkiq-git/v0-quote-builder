@@ -8,7 +8,6 @@ import { Plus, User } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
-
 interface Contact {
   id: string
   full_name: string
@@ -33,18 +32,19 @@ export function ContactCombobox({ value, selectedName, onSelect }: ContactCombob
 
   // Initialize supabase client on client side
   useEffect(() => {
-    if (typeof window === "undefined") return
-
+    if (typeof window === 'undefined') return;
+    
     const initSupabase = async () => {
-      const { createClient } = await import("@/lib/supabase/client")
-      setSupabase(createClient())
-    }
-
-    initSupabase()
-  }, [])
+      const { createClientComponentClient } = await import("@supabase/auth-helpers-nextjs");
+      setSupabase(createClientComponentClient());
+    };
+    
+    initSupabase();
+  }, []);
 
   // 🔹 Read tenant_id from environment variable
-  const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || process.env.TENANT_ID
+  const tenantId =
+    process.env.NEXT_PUBLIC_TENANT_ID || process.env.TENANT_ID
 
   useEffect(() => {
     if (!tenantId) {
@@ -129,7 +129,7 @@ export function ContactCombobox({ value, selectedName, onSelect }: ContactCombob
     <Popover open={open} onOpenChange={setOpen} modal={true}>
       <PopoverTrigger asChild>
         {/* ✅ uses selectedName instead of searching in contacts[] */}
-        <Button variant="outline" className="justify-between w-full bg-transparent">
+        <Button variant="outline" className="justify-between w-full">
           {selectedName || "Select contact"}
           <User className="ml-2 h-4 w-4 opacity-50" />
         </Button>
@@ -143,7 +143,12 @@ export function ContactCombobox({ value, selectedName, onSelect }: ContactCombob
               <CommandEmpty>
                 <div className="flex flex-col items-center py-6">
                   <p className="text-sm text-muted-foreground mb-2">No contacts found</p>
-                  <Button variant="outline" size="sm" onClick={() => setCreating(true)} className="text-xs">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCreating(true)}
+                    className="text-xs"
+                  >
                     <Plus className="h-3 w-3 mr-1" /> Create new contact
                   </Button>
                 </div>
