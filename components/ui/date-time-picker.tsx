@@ -83,7 +83,7 @@ export function DateTimePicker({
               {selectedDate ? selectedDate.toLocaleDateString() : "mm / dd / yyyy"}
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-auto overflow-hidden p-0" align="start">
+          <PopoverContent className="w-auto overflow-hidden p-0 pointer-events-auto" align="start">
             <Calendar
               mode="single"
               selected={selectedDate}
@@ -91,6 +91,8 @@ export function DateTimePicker({
               onSelect={handleDateSelect}
               fromYear={2024}
               toYear={2030}
+              initialFocus
+              className="pointer-events-auto"
             />
           </PopoverContent>
         </Popover>
@@ -139,7 +141,7 @@ export function DateTimePicker({
               {selectedDate ? selectedDate.toLocaleDateString() : "mm / dd / yyyy"}
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-auto overflow-hidden p-0" align="start">
+          <PopoverContent className="w-auto overflow-hidden p-0 pointer-events-auto" align="start">
             <Calendar
               mode="single"
               selected={selectedDate}
@@ -147,6 +149,8 @@ export function DateTimePicker({
               onSelect={handleDateSelect}
               fromYear={2024}
               toYear={2030}
+              initialFocus
+              className="pointer-events-auto"
             />
           </PopoverContent>
         </Popover>
