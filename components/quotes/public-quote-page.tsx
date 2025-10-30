@@ -834,7 +834,7 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
                       <img
                         src={tenantLogoUrl || "/images/aero-iq-logo.png"}
                         alt={quote?.customer?.company || "Brand"}
-                        className="h-12 w-auto"
+                        className="h-14 w-auto"
                       />
                     </div>
 
