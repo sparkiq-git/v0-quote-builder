@@ -232,6 +232,7 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
   const { toast } = useToast()
   const deviceInfo = useDeviceDetection()
   const [hasViewed, setHasViewed] = useState(false)
+  const [tenantLogoUrl, setTenantLogoUrl] = useState<string | null>(null)
   const [isDeclineModalOpen, setIsDeclineModalOpen] = useState(false)
   const [declineReason, setDeclineReason] = useState("")
   const [declineNotes, setDeclineNotes] = useState("")
@@ -246,6 +247,22 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
       setHasViewed(true)
     }
   }, [quote, hasViewed, verifiedEmail])
+
+  // Load tenant logo if available
+  useEffect(() => {
+    const loadLogo = async () => {
+      try {
+        if (!quote?.tenant_id) return
+        const res = await fetch(`/api/tenant-logo?tenantId=${encodeURIComponent(quote.tenant_id)}`)
+        if (!res.ok) return
+        const json = await res.json()
+        if (json?.logoUrl) setTenantLogoUrl(json.logoUrl)
+      } catch (e) {
+        // silent fail
+      }
+    }
+    loadLogo()
+  }, [quote?.tenant_id])
 
   useEffect(() => {
     const isSubmitted =
@@ -569,7 +586,11 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
           <SectionCard>
             {/* Branding */}
             <div className="flex items-center gap-2">
-              <img src="/images/aero-iq-logo.png" alt="Aero IQ" className="h-5 w-auto mb-3" />
+              <img
+                src={tenantLogoUrl || "/images/aero-iq-logo.png"}
+                alt={quote?.customer?.company || "Brand"}
+                className="h-5 w-auto mb-3"
+              />
             </div>
 
             {/* Customer with Expiration Date */}
@@ -810,7 +831,11 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
                   <CardContent className="p-5 xl:p-7 space-y-5 xl:space-y-6">
                     {/* Branding */}
                     <div className="flex items-center gap-2">
-                      <img src="/images/aero-iq-logo.png" alt="Aero IQ" className="h-5 w-auto" />
+                      <img
+                        src={tenantLogoUrl || "/images/aero-iq-logo.png"}
+                        alt={quote?.customer?.company || "Brand"}
+                        className="h-5 w-auto"
+                      />
                     </div>
 
                     {/* Customer with Expiration Date */}
