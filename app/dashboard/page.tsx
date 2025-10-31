@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, FileText, Clock, Plane } from "lucide-react";
+import { Users, FileText, Clock, Plane, Mail, Phone, Calendar } from "lucide-react";
 import { RouteMap } from "@/components/dashboard/route-map";
 import DashboardMetrics from "@/components/dashboard/DashboardMetrics";
 import { RecentActivities } from "@/components/dashboard/recent-activities";
@@ -98,7 +98,20 @@ export default function DashboardPage() {
           // 🟩 Leads with status "new" today
           supabase
             .from("lead")
-            .select("id, customer_name, status, created_at")
+            .select(
+              `
+              id,
+              customer_name,
+              customer_email,
+              customer_phone,
+              status,
+              notes,
+              trip_type,
+              trip_summary,
+              earliest_departure,
+              created_at
+              `
+            )
             .eq("status", "new")
             .gte("created_at", start.toISOString())
             .lte("created_at", end.toISOString())
@@ -214,7 +227,7 @@ export default function DashboardPage() {
         <Card className="border border-gray-200 shadow-sm rounded-2xl flex flex-col">
           <CardHeader>
             <CardTitle className="text-lg font-semibold">
-              Today’s New Leads
+              Today’s New Leads (status = "new")
             </CardTitle>
           </CardHeader>
           <CardContent className="flex-1 p-4 space-y-3 overflow-y-auto max-h-[400px]">
@@ -226,7 +239,7 @@ export default function DashboardPage() {
               todayLeads.map((lead) => (
                 <div
                   key={lead.id}
-                  className="flex flex-col border-b pb-2 last:border-none"
+                  className="flex flex-col border-b pb-3 last:border-none"
                 >
                   <div className="flex items-center justify-between">
                     <p className="font-medium text-sm">{lead.customer_name}</p>
@@ -234,7 +247,53 @@ export default function DashboardPage() {
                       {lead.status}
                     </Badge>
                   </div>
+
+                  {lead.customer_email && (
+                    <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                      <Mail className="w-3 h-3" /> {lead.customer_email}
+                    </p>
+                  )}
+
+                  {lead.customer_phone && (
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Phone className="w-3 h-3" /> {lead.customer_phone}
+                    </p>
+                  )}
+
+                  {lead.trip_summary && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      <span className="font-semibold">Route:</span>{" "}
+                      {lead.trip_summary}
+                    </p>
+                  )}
+
+                  {lead.trip_type && (
+                    <p className="text-xs text-muted-foreground">
+                      <span className="font-semibold">Trip Type:</span>{" "}
+                      {lead.trip_type}
+                    </p>
+                  )}
+
+                  {lead.earliest_departure && (
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Calendar className="w-3 h-3" />{" "}
+                      {new Date(lead.earliest_departure).toLocaleString([], {
+                        month: "short",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </p>
+                  )}
+
+                  {lead.notes && (
+                    <p className="text-xs text-muted-foreground mt-1 italic">
+                      “{lead.notes}”
+                    </p>
+                  )}
+
                   <p className="text-xs text-muted-foreground mt-1">
+                    Created at:{" "}
                     {new Date(lead.created_at).toLocaleTimeString([], {
                       hour: "2-digit",
                       minute: "2-digit",
@@ -250,7 +309,7 @@ export default function DashboardPage() {
         <Card className="border border-gray-200 shadow-sm rounded-2xl flex flex-col">
           <CardHeader>
             <CardTitle className="text-lg font-semibold">
-              Today’s New Quotes 
+              Today’s New Quotes (status = "draft")
             </CardTitle>
           </CardHeader>
           <CardContent className="flex-1 p-4 space-y-3 overflow-y-auto max-h-[400px]">
