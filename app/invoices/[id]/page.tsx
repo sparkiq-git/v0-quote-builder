@@ -5,7 +5,6 @@ import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
 import {
   Loader2,
-  ArrowLeft,
   Calendar,
   DollarSign,
   Building2,
@@ -129,7 +128,7 @@ export default function InvoiceDetailPage() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-[70vh] text-muted-foreground">
+      <div className="flex justify-center items-center min-h-[calc(100vh-4rem)] text-muted-foreground">
         <Loader2 className="animate-spin mr-2" /> Loading invoice...
       </div>
     )
@@ -137,12 +136,8 @@ export default function InvoiceDetailPage() {
 
   if (!invoice) {
     return (
-      <div className="container max-w-7xl py-8">
-        <Button onClick={() => router.push("/invoices")} className="mb-6">
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Invoices
-        </Button>
-        <Card className="shadow-lg">
+      <div className="w-full px-4 sm:px-6 lg:px-8 py-8">
+        <Card className="shadow-lg max-w-2xl mx-auto">
           <CardContent className="pt-6">
             <div className="text-center text-muted-foreground py-12">
               <FileText className="h-16 w-16 mx-auto mb-4 text-muted-foreground/50" />
@@ -168,48 +163,42 @@ export default function InvoiceDetailPage() {
   }
 
   return (
-    <div className="container max-w-7xl py-8 space-y-8">
+    <div className="w-full px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6 border-b">
-        <div className="flex items-center gap-4">
-          <Button onClick={() => router.push("/invoices")} size="default" className="shrink-0">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Invoice {invoice.number}</h1>
-            <p className="text-sm text-muted-foreground mt-1.5 flex items-center gap-2">
-              <Calendar className="h-3.5 w-3.5" />
-              Issued {formatDate(invoice.issued_at)} • {formatTimeAgo(invoice.issued_at)}
-            </p>
-          </div>
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Invoice {invoice.number}</h1>
+          <p className="text-sm text-muted-foreground mt-1.5 flex items-center gap-2">
+            <Calendar className="h-3.5 w-3.5" />
+            Issued {formatDate(invoice.issued_at)} • {formatTimeAgo(invoice.issued_at)}
+          </p>
         </div>
         <InvoiceStatusBadge status={invoice.status} />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-4 sm:gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2 shadow-md border-border/50">
           <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl">Invoice Details</CardTitle>
+            <CardTitle className="text-xl sm:text-2xl">Invoice Details</CardTitle>
             <CardDescription>Complete breakdown and information</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             {invoice.details && invoice.details.length > 0 ? (
               <>
                 <div>
-                  <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
+                  <h3 className="font-semibold text-base sm:text-lg mb-4 flex items-center gap-2">
                     <Receipt className="h-5 w-5 text-primary" />
                     Line Items
                   </h3>
-                  <div className="border rounded-lg overflow-hidden shadow-sm">
+                  <div className="border rounded-lg overflow-x-auto shadow-sm">
                     <Table>
                       <TableHeader>
                         <TableRow className="bg-muted/50">
                           <TableHead className="w-[50px]">#</TableHead>
-                          <TableHead>Item</TableHead>
+                          <TableHead className="min-w-[200px]">Item</TableHead>
                           <TableHead className="text-right">Qty</TableHead>
-                          <TableHead className="text-right">Unit Price</TableHead>
+                          <TableHead className="text-right min-w-[100px]">Unit Price</TableHead>
                           <TableHead className="text-right">Tax</TableHead>
-                          <TableHead className="text-right">Amount</TableHead>
+                          <TableHead className="text-right min-w-[100px]">Amount</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -253,7 +242,7 @@ export default function InvoiceDetailPage() {
 
                 <Separator />
 
-                <div className="space-y-3 bg-muted/30 p-6 rounded-lg">
+                <div className="space-y-3 bg-muted/30 p-4 sm:p-6 rounded-lg">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Subtotal</span>
                     <span className="font-medium">
@@ -269,7 +258,7 @@ export default function InvoiceDetailPage() {
                     </div>
                   )}
                   <Separator />
-                  <div className="flex justify-between text-xl font-bold pt-2">
+                  <div className="flex justify-between text-lg sm:text-xl font-bold pt-2">
                     <span>Total Amount</span>
                     <span className="text-primary">{formatAmountWithCurrency(invoice.amount, invoice.currency)}</span>
                   </div>
@@ -279,10 +268,10 @@ export default function InvoiceDetailPage() {
               </>
             ) : (
               <>
-                <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5 p-8 shadow-sm">
+                <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5 p-6 sm:p-8 shadow-sm">
                   <div className="relative z-10">
                     <p className="text-sm font-medium text-muted-foreground mb-2">Total Amount</p>
-                    <p className="text-4xl font-bold text-primary mb-4">
+                    <p className="text-3xl sm:text-4xl font-bold text-primary mb-4">
                       {formatAmountWithCurrency(invoice.amount, invoice.currency)}
                     </p>
                     {invoice.subtotal !== undefined && invoice.subtotal !== invoice.amount && (
@@ -306,7 +295,7 @@ export default function InvoiceDetailPage() {
                       </div>
                     )}
                   </div>
-                  <DollarSign className="absolute right-6 bottom-6 h-24 w-24 text-primary/10" />
+                  <DollarSign className="absolute right-6 bottom-6 h-20 w-20 sm:h-24 sm:w-24 text-primary/10" />
                 </div>
 
                 <Separator />
@@ -314,12 +303,12 @@ export default function InvoiceDetailPage() {
             )}
 
             <div>
-              <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
+              <h3 className="font-semibold text-base sm:text-lg mb-4 flex items-center gap-2">
                 <User className="h-5 w-5 text-primary" />
                 Customer Information
               </h3>
               <div className="flex items-start gap-4 p-4 rounded-lg bg-muted/30 border border-border/50">
-                <Avatar className="h-12 w-12">
+                <Avatar className="h-12 w-12 shrink-0">
                   <AvatarFallback className="bg-primary/10 text-primary font-semibold">
                     {invoice.quote?.contact_name
                       ?.split(" ")
@@ -327,15 +316,15 @@ export default function InvoiceDetailPage() {
                       .join("") || "—"}
                   </AvatarFallback>
                 </Avatar>
-                <div className="flex-1">
-                  <p className="font-semibold text-base">{invoice.quote?.contact_name || "—"}</p>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-base truncate">{invoice.quote?.contact_name || "—"}</p>
                   {invoice.quote?.contact_email && (
-                    <p className="text-sm text-muted-foreground mt-1">{invoice.quote.contact_email}</p>
+                    <p className="text-sm text-muted-foreground mt-1 truncate">{invoice.quote.contact_email}</p>
                   )}
                   {invoice.quote?.contact_company && (
                     <p className="text-sm text-muted-foreground flex items-center gap-1.5 mt-1.5">
-                      <Building2 className="h-3.5 w-3.5" />
-                      {invoice.quote.contact_company}
+                      <Building2 className="h-3.5 w-3.5 shrink-0" />
+                      <span className="truncate">{invoice.quote.contact_company}</span>
                     </p>
                   )}
                 </div>
@@ -345,19 +334,19 @@ export default function InvoiceDetailPage() {
             <Separator />
 
             <div>
-              <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
+              <h3 className="font-semibold text-base sm:text-lg mb-4 flex items-center gap-2">
                 <Calendar className="h-5 w-5 text-primary" />
                 Important Dates
               </h3>
               <div className="space-y-3">
                 <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
                   <span className="text-sm text-muted-foreground">Issued Date</span>
-                  <span className="font-medium">{formatDate(invoice.issued_at)}</span>
+                  <span className="font-medium text-sm sm:text-base">{formatDate(invoice.issued_at)}</span>
                 </div>
                 {invoice.due_at && (
                   <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
                     <span className="text-sm text-muted-foreground">Due Date</span>
-                    <span className="font-medium">{formatDate(invoice.due_at)}</span>
+                    <span className="font-medium text-sm sm:text-base">{formatDate(invoice.due_at)}</span>
                   </div>
                 )}
               </div>
@@ -367,7 +356,7 @@ export default function InvoiceDetailPage() {
               <>
                 <Separator />
                 <div>
-                  <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
+                  <h3 className="font-semibold text-base sm:text-lg mb-4 flex items-center gap-2">
                     <Plane className="h-5 w-5 text-primary" />
                     Selected Aircraft Option
                   </h3>
@@ -411,7 +400,7 @@ export default function InvoiceDetailPage() {
               <>
                 <Separator />
                 <div>
-                  <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
+                  <h3 className="font-semibold text-base sm:text-lg mb-4 flex items-center gap-2">
                     <FileText className="h-5 w-5 text-primary" />
                     Itinerary Summary
                   </h3>
@@ -426,7 +415,7 @@ export default function InvoiceDetailPage() {
               <>
                 <Separator />
                 <div>
-                  <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
+                  <h3 className="font-semibold text-base sm:text-lg mb-4 flex items-center gap-2">
                     <StickyNote className="h-5 w-5 text-primary" />
                     Notes
                   </h3>
@@ -439,15 +428,15 @@ export default function InvoiceDetailPage() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-md border-border/50 h-fit sticky top-24">
+        <Card className="shadow-md border-border/50 lg:h-fit lg:sticky lg:top-24">
           <CardHeader className="space-y-1">
-            <CardTitle className="text-xl">Quick Info</CardTitle>
+            <CardTitle className="text-lg sm:text-xl">Quick Info</CardTitle>
             <CardDescription>Invoice summary</CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
             <div>
               <p className="text-xs font-medium text-muted-foreground mb-2">Invoice Number</p>
-              <p className="font-mono font-semibold text-base">{invoice.number}</p>
+              <p className="font-mono font-semibold text-sm sm:text-base">{invoice.number}</p>
             </div>
 
             <div>
@@ -494,14 +483,14 @@ export default function InvoiceDetailPage() {
               <div>
                 <p className="text-xs font-medium text-muted-foreground mb-2">Related Quote</p>
                 {invoice.quote.title ? (
-                  <p className="font-medium text-sm mb-2">{invoice.quote.title}</p>
+                  <p className="font-medium text-sm mb-2 truncate">{invoice.quote.title}</p>
                 ) : (
                   <p className="font-mono text-xs text-muted-foreground mb-2">{invoice.quote.id.slice(0, 8)}...</p>
                 )}
                 <Button variant="outline" size="sm" className="w-full bg-transparent" asChild>
                   <Link href={`/quotes/${invoice.quote.id}`}>
                     View Quote
-                    <ArrowLeft className="ml-2 h-3.5 w-3.5 rotate-180" />
+                    <ExternalLink className="ml-2 h-3.5 w-3.5" />
                   </Link>
                 </Button>
               </div>
