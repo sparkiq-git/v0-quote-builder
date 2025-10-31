@@ -15,6 +15,7 @@ import {
   ExternalLink,
   StickyNote,
   CreditCard,
+  LinkIcon,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -175,8 +176,8 @@ export default function InvoiceDetailPage() {
         <InvoiceStatusBadge status={invoice.status} />
       </div>
 
-      <div className="grid gap-4 sm:gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2 shadow-md border-border/50">
+      <div className="grid gap-4 sm:gap-6">
+        <Card className="shadow-md border-border/50">
           <CardHeader className="space-y-1">
             <CardTitle className="text-xl sm:text-2xl">Invoice Details</CardTitle>
             <CardDescription>Complete breakdown and information</CardDescription>
@@ -352,6 +353,60 @@ export default function InvoiceDetailPage() {
               </div>
             </div>
 
+            {(invoice.external_payment_url || invoice.quote?.id) && (
+              <>
+                <Separator />
+                <div>
+                  <h3 className="font-semibold text-base sm:text-lg mb-4 flex items-center gap-2">
+                    <LinkIcon className="h-5 w-5 text-primary" />
+                    Quick Actions
+                  </h3>
+                  <div className="space-y-4">
+                    {invoice.external_payment_url && (
+                      <div className="p-4 rounded-lg bg-muted/30 border border-border/50">
+                        <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1.5">
+                          <CreditCard className="h-3.5 w-3.5" />
+                          Payment Portal URL
+                        </p>
+                        <div className="flex items-center gap-2 p-2 bg-background rounded border text-sm font-mono break-all">
+                          <LinkIcon className="h-4 w-4 text-muted-foreground shrink-0" />
+                          <a
+                            href={invoice.external_payment_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-primary hover:underline"
+                          >
+                            {invoice.external_payment_url}
+                          </a>
+                        </div>
+                      </div>
+                    )}
+
+                    {invoice.quote?.id && (
+                      <div>
+                        {invoice.quote.title && (
+                          <p className="text-sm text-muted-foreground mb-2">
+                            Related Quote: <span className="font-medium text-foreground">{invoice.quote.title}</span>
+                          </p>
+                        )}
+                        <Button
+                          size="default"
+                          className="w-full bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-md"
+                          asChild
+                        >
+                          <Link href={`/quotes/${invoice.quote.id}`}>
+                            <FileText className="mr-2 h-4 w-4" />
+                            View Quote
+                            <ExternalLink className="ml-2 h-3.5 w-3.5" />
+                          </Link>
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+
             {invoice.selected_option && (
               <>
                 <Separator />
@@ -422,99 +477,6 @@ export default function InvoiceDetailPage() {
                   <p className="text-sm text-muted-foreground whitespace-pre-line p-4 bg-muted/30 rounded-lg border border-border/50">
                     {invoice.notes}
                   </p>
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-md border-border/50 lg:h-fit lg:sticky lg:top-24">
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-lg sm:text-xl">Quick Info</CardTitle>
-            <CardDescription>Invoice summary</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-5">
-            <div>
-              <p className="text-xs font-medium text-muted-foreground mb-2">Invoice Number</p>
-              <p className="font-mono font-semibold text-sm sm:text-base">{invoice.number}</p>
-            </div>
-
-            <div>
-              <p className="text-xs font-medium text-muted-foreground mb-2">Status</p>
-              <InvoiceStatusBadge status={invoice.status} />
-            </div>
-
-            <Separator />
-
-            <div>
-              <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1.5">
-                <Calendar className="h-3.5 w-3.5" />
-                Issued Date
-              </p>
-              <p className="font-medium text-sm">{formatDate(invoice.issued_at)}</p>
-              <p className="text-xs text-muted-foreground mt-1">{formatTimeAgo(invoice.issued_at)}</p>
-            </div>
-
-            {invoice.due_at && (
-              <div>
-                <p className="text-xs font-medium text-muted-foreground mb-2">Due Date</p>
-                <p className="font-medium text-sm">{formatDate(invoice.due_at)}</p>
-              </div>
-            )}
-
-            <Separator />
-
-            {invoice.aircraft_label && (
-              <div>
-                <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1.5">
-                  <Plane className="h-3.5 w-3.5" />
-                  Aircraft
-                </p>
-                <p className="font-medium text-sm">{invoice.aircraft_label}</p>
-              </div>
-            )}
-
-            <div>
-              <p className="text-xs font-medium text-muted-foreground mb-2">Currency</p>
-              <p className="font-medium text-sm">{invoice.currency?.toUpperCase() || "USD"}</p>
-            </div>
-
-            {invoice.quote?.id && (
-              <div>
-                <p className="text-xs font-medium text-muted-foreground mb-2">Related Quote</p>
-                {invoice.quote.title ? (
-                  <p className="font-medium text-sm mb-2 truncate">{invoice.quote.title}</p>
-                ) : (
-                  <p className="font-mono text-xs text-muted-foreground mb-2">{invoice.quote.id.slice(0, 8)}...</p>
-                )}
-                <Button variant="outline" size="sm" className="w-full bg-transparent" asChild>
-                  <Link href={`/quotes/${invoice.quote.id}`}>
-                    View Quote
-                    <ExternalLink className="ml-2 h-3.5 w-3.5" />
-                  </Link>
-                </Button>
-              </div>
-            )}
-
-            {invoice.external_payment_url && (
-              <>
-                <Separator />
-                <div className="space-y-3">
-                  <p className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
-                    <CreditCard className="h-3.5 w-3.5" />
-                    Payment Portal
-                  </p>
-                  <Button
-                    size="default"
-                    className="w-full bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-md"
-                    asChild
-                  >
-                    <a href={invoice.external_payment_url} target="_blank" rel="noopener noreferrer">
-                      <CreditCard className="mr-2 h-4 w-4" />
-                      Pay Invoice
-                      <ExternalLink className="ml-2 h-3.5 w-3.5" />
-                    </a>
-                  </Button>
                 </div>
               </>
             )}
