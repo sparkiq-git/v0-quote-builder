@@ -22,7 +22,7 @@ import {
   Filter,
   MoreHorizontal,
 } from "lucide-react"
-import { formatDate, formatTimeAgo } from "@/lib/utils/format"
+import { formatDate, formatTimeAgo, formatCurrency } from "@/lib/utils/format"
 import { useToast } from "@/hooks/use-toast"
 import {
   Dialog,
@@ -32,7 +32,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { deleteQuote } from "@/lib/supabase/queries/quotes"
+import { deleteQuote, getQuoteById } from "@/lib/supabase/queries/quotes"
+import { Label } from "@/components/ui/label"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -53,8 +54,10 @@ export default function QuotesPage() {
   const [quoteToDelete, setQuoteToDelete] = useState<string | null>(null)
   const [invoiceContractOpen, setInvoiceContractOpen] = useState(false)
   const [selectedQuote, setSelectedQuote] = useState<any | null>(null)
+  const [fullQuoteData, setFullQuoteData] = useState<any | null>(null)
+  const [loadingQuote, setLoadingQuote] = useState(false)
+  const [paymentUrl, setPaymentUrl] = useState("")
   const [sending, setSending] = useState(false)
-  const [converting, setConverting] = useState<string | null>(null)
 
   // ✅ Fetch quotes from Supabase (client-side only)
   useEffect(() => {
@@ -134,42 +137,30 @@ export default function QuotesPage() {
     }
   }, [quoteToDelete, toast])
 
-  const handleConvertToInvoice = useCallback(
-    async (quoteId: string) => {
-      try {
-        setConverting(quoteId)
-        const res = await fetch("/api/invoice", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ quote_id: quoteId }),
-        })
-
-        const data = await res.json()
-        if (!res.ok) throw new Error(data.error || "Failed to create invoice")
-
-        toast({
-          title: "Invoice created",
-          description: `Invoice ${data.data.invoice.number} created successfully.`,
-        })
-      } catch (err: any) {
-        console.error("❌ Invoice creation failed:", err)
-        toast({
-          title: "Failed to create invoice",
-          description: err.message || "Something went wrong.",
-          variant: "destructive",
-        })
-      } finally {
-        setConverting(null)
-      }
-    },
-    [toast],
-  )
 
   // Invoice & Contract handler
   const handleOpenInvoiceContractModal = useCallback(async (quote: any) => {
     setSelectedQuote(quote)
+    setPaymentUrl("")
+    setFullQuoteData(null)
+    setLoadingQuote(true)
     setInvoiceContractOpen(true)
-  }, [])
+
+    try {
+      // Fetch full quote data with options, items, etc.
+      const fullQuote = await getQuoteById(quote.id)
+      setFullQuoteData(fullQuote)
+    } catch (err: any) {
+      console.error("Failed to fetch quote details:", err)
+      toast({
+        title: "Failed to load quote",
+        description: err.message || "Could not load quote details.",
+        variant: "destructive",
+      })
+    } finally {
+      setLoadingQuote(false)
+    }
+  }, [toast])
 
   const handleSendInvoiceContract = useCallback(async () => {
     if (!selectedQuote) return
@@ -177,29 +168,26 @@ export default function QuotesPage() {
     try {
       setSending(true)
 
-      // Check authentication
       // Only run on client side
       if (typeof window === "undefined") return
 
-      const { createClient } = await import("@/lib/supabase/client")
-      const supabase = createClient()
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-      if (!session) throw new Error("Not authenticated")
-
-      // Call Edge Function
-      const { data, error } = await supabase.functions.invoke("send-contract", {
-        body: { quote_id: selectedQuote.id },
+      // Call the quote-to-invoice Edge Function via API route
+      const res = await fetch("/api/invoice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          quote_id: selectedQuote.id,
+          external_payment_url: paymentUrl || null
+        }),
       })
 
-      if (error) throw error
-      if (!data.success) throw new Error(data.error || "Failed to send")
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Failed to create invoice")
 
       // Show success message
       toast({
-        title: "Invoice & Contract sent",
-        description: `Invoice ${data.invoice?.number} and contract sent successfully.`,
+        title: "Invoice & Contract created",
+        description: `Invoice ${data.data?.invoice?.number || "created"} successfully.`,
       })
 
       // Update quote status in UI
@@ -208,17 +196,19 @@ export default function QuotesPage() {
       // Close modal and reset
       setInvoiceContractOpen(false)
       setSelectedQuote(null)
+      setFullQuoteData(null)
+      setPaymentUrl("")
     } catch (err: any) {
-      console.error("Failed to send invoice & contract:", err)
+      console.error("Failed to create invoice & contract:", err)
       toast({
-        title: "Failed to send",
+        title: "Failed to create invoice",
         description: err.message || "Something went wrong.",
         variant: "destructive",
       })
     } finally {
       setSending(false)
     }
-  }, [selectedQuote, toast])
+  }, [selectedQuote, paymentUrl, toast])
 
   // Check if quote can send invoice & contract
   const canSendInvoiceContract = useCallback((quote: any) => {
@@ -431,23 +421,6 @@ export default function QuotesPage() {
                               </>
                             )}
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              onClick={(e) => handleConvertToInvoice(quote.id)}
-                              disabled={converting === quote.id}
-                            >
-                              {converting === quote.id ? (
-                                <>
-                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                  Creating...
-                                </>
-                              ) : (
-                                <>
-                                  <FileText className="mr-2 h-4 w-4" />
-                                  Create Invoice
-                                </>
-                              )}
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
                             <DropdownMenuItem className="text-destructive" onClick={(e) => handleDeleteQuote(quote.id)}>
                               <Trash2 className="mr-2 h-4 w-4" />
                               Delete Quote
@@ -491,64 +464,181 @@ export default function QuotesPage() {
 
       {/* Invoice & Contract Modal */}
       <Dialog open={invoiceContractOpen} onOpenChange={setInvoiceContractOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Send Invoice & Contract</DialogTitle>
+            <DialogTitle>Create Invoice & Contract</DialogTitle>
             <DialogDescription>
-              Review the quote details and send invoice and contract to the customer.
+              Review the quote summary and create an invoice with contract.
             </DialogDescription>
           </DialogHeader>
 
-          {selectedQuote && (
+          {loadingQuote ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="animate-spin mr-2 h-5 w-5" />
+              <span className="text-sm text-muted-foreground">Loading quote details...</span>
+            </div>
+          ) : selectedQuote && fullQuoteData ? (
             <div className="space-y-4 py-4">
-              <div className="border rounded-lg p-4 space-y-3">
-                <h4 className="font-semibold">Customer</h4>
-                <p className="text-sm">{selectedQuote.customer.name}</p>
-                <p className="text-sm text-muted-foreground">{selectedQuote.customer.email}</p>
-                <p className="text-sm text-muted-foreground">{selectedQuote.customer.company}</p>
+              {/* Customer Information */}
+              <div className="border rounded-lg p-4 space-y-2">
+                <h4 className="font-semibold text-base mb-3">Customer Information</h4>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Name:</span>
+                    <p className="font-medium">{fullQuoteData.contact_name || selectedQuote.customer.name || "—"}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Email:</span>
+                    <p className="font-medium">{fullQuoteData.contact_email || selectedQuote.customer.email || "—"}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Phone:</span>
+                    <p className="font-medium">{fullQuoteData.contact_phone || selectedQuote.customer.phone || "—"}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Company:</span>
+                    <p className="font-medium">{fullQuoteData.contact_company || selectedQuote.customer.company || "—"}</p>
+                  </div>
+                </div>
               </div>
 
-              <div className="border rounded-lg p-4 space-y-2">
-                <h4 className="font-semibold mb-2">Quote Details</h4>
-                <div className="text-sm space-y-1">
-                  <p className="text-muted-foreground">
-                    <span className="font-medium">Status:</span> {selectedQuote.status}
-                  </p>
-                  <p className="text-muted-foreground">
-                    <span className="font-medium">Created:</span> {formatDate(selectedQuote.createdAt)}
-                  </p>
-                  <p className="text-muted-foreground">
-                    <span className="font-medium">Expires:</span> {formatDate(selectedQuote.expiresAt)}
-                  </p>
+              {/* Selected Option */}
+              {fullQuoteData.options && fullQuoteData.options.length > 0 && (
+                <div className="border rounded-lg p-4 space-y-2">
+                  <h4 className="font-semibold text-base mb-3">Selected Aircraft Option</h4>
+                  {fullQuoteData.options.map((option: any, idx: number) => (
+                    <div key={option.id || idx} className="space-y-1 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Option {idx + 1}:</span>
+                        <span className="font-medium">
+                          {option.aircraftModel?.name || option.aircraftTail?.tailNumber || "Aircraft Option"}
+                        </span>
+                      </div>
+                      {option.price_total && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Total Price:</span>
+                          <span className="font-medium">{formatCurrency(option.price_total || 0)}</span>
+                        </div>
+                      )}
+                      {option.flight_hours && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Flight Hours:</span>
+                          <span className="font-medium">{option.flight_hours}</span>
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
+              )}
+
+              {/* Items/Services */}
+              {fullQuoteData.services && fullQuoteData.services.length > 0 && (
+                <div className="border rounded-lg p-4 space-y-2">
+                  <h4 className="font-semibold text-base mb-3">Additional Services</h4>
+                  <div className="space-y-2">
+                    {fullQuoteData.services.map((service: any, idx: number) => (
+                      <div key={service.id || idx} className="flex justify-between text-sm">
+                        <span>{service.name || service.description || `Service ${idx + 1}`}</span>
+                        <span className="font-medium">
+                          {formatCurrency((service.amount || service.unit_price || 0) * (service.qty || 1))}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Totals */}
+              <div className="border rounded-lg p-4 space-y-2 bg-muted/30">
+                <h4 className="font-semibold text-base mb-3">Totals</h4>
+                <div className="space-y-1 text-sm">
+                  {fullQuoteData.options && fullQuoteData.options.length > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Aircraft Option:</span>
+                      <span className="font-medium">
+                        {formatCurrency(
+                          fullQuoteData.options.reduce((sum: number, opt: any) => sum + (opt.price_total || 0), 0)
+                        )}
+                      </span>
+                    </div>
+                  )}
+                  {fullQuoteData.services && fullQuoteData.services.length > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Additional Services:</span>
+                      <span className="font-medium">
+                        {formatCurrency(
+                          fullQuoteData.services.reduce(
+                            (sum: number, s: any) => sum + ((s.amount || s.unit_price || 0) * (s.qty || 1)),
+                            0
+                          )
+                        )}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex justify-between pt-2 border-t font-semibold">
+                    <span>Grand Total:</span>
+                    <span>
+                      {formatCurrency(
+                        (fullQuoteData.options?.reduce((sum: number, opt: any) => sum + (opt.price_total || 0), 0) || 0) +
+                          (fullQuoteData.services?.reduce(
+                            (sum: number, s: any) => sum + ((s.amount || s.unit_price || 0) * (s.qty || 1)),
+                            0
+                          ) || 0)
+                      )}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Payment URL Input */}
+              <div className="border rounded-lg p-4 space-y-2">
+                <Label htmlFor="payment-url" className="font-semibold text-base">
+                  Payment Link (Optional)
+                </Label>
+                <Input
+                  id="payment-url"
+                  type="url"
+                  placeholder="https://payment.example.com/..."
+                  value={paymentUrl}
+                  onChange={(e) => setPaymentUrl(e.target.value)}
+                  className="w-full"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Enter a payment URL that will be included in the invoice.
+                </p>
               </div>
 
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <p className="text-sm text-blue-900">
-                  <strong>Note:</strong> The customer will receive an email with:
+                  <strong>Note:</strong> This will create an invoice from the quote and prepare it for sending to the customer.
                 </p>
-                <ul className="list-disc list-inside text-sm text-blue-900 mt-2 space-y-1">
-                  <li>Invoice for the accepted quote</li>
-                  <li>DocuSign contract to sign electronically</li>
-                </ul>
               </div>
+            </div>
+          ) : (
+            <div className="py-8 text-center text-muted-foreground">
+              Failed to load quote details.
             </div>
           )}
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setInvoiceContractOpen(false)}>
+            <Button variant="outline" onClick={() => {
+              setInvoiceContractOpen(false)
+              setSelectedQuote(null)
+              setFullQuoteData(null)
+              setPaymentUrl("")
+            }}>
               Cancel
             </Button>
-            <Button onClick={handleSendInvoiceContract} disabled={sending}>
+            <Button onClick={handleSendInvoiceContract} disabled={sending || loadingQuote}>
               {sending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Sending...
+                  Creating...
                 </>
               ) : (
                 <>
                   <Send className="mr-2 h-4 w-4" />
-                  Send Invoice & Contract
+                  Create Invoice & Contract
                 </>
               )}
             </Button>
