@@ -21,7 +21,7 @@ export default function DashboardPage() {
     setIsClient(true);
   }, []);
 
-  // === Load Leads Count ===
+  // === Load Lead Count ===
   useEffect(() => {
     if (!isClient) return;
     let cancelled = false;
@@ -80,7 +80,7 @@ export default function DashboardPage() {
     };
   }, [isClient]);
 
-  // === Load today's Leads and Quotes ===
+  // === Load today's NEW Leads and DRAFT Quotes ===
   useEffect(() => {
     if (!isClient) return;
 
@@ -95,18 +95,22 @@ export default function DashboardPage() {
 
       try {
         const [{ data: leads }, { data: quotes }] = await Promise.all([
+          // 🟩 Leads with status "new" today
           supabase
             .from("lead")
             .select("id, customer_name, status, created_at")
+            .eq("status", "new")
             .gte("created_at", start.toISOString())
             .lte("created_at", end.toISOString())
             .order("created_at", { ascending: false }),
 
+          // 🟦 Quotes with status "draft" today
           supabase
             .from("quote")
             .select(
               "id, contact_name, status, created_at, title, trip_summary, trip_type, total_pax"
             )
+            .eq("status", "draft")
             .gte("created_at", start.toISOString())
             .lte("created_at", end.toISOString())
             .order("created_at", { ascending: false }),
@@ -204,13 +208,13 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* === Today's New Leads and Quotes === */}
+      {/* === Today's New Leads and Draft Quotes === */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Leads */}
         <Card className="border border-gray-200 shadow-sm rounded-2xl flex flex-col">
           <CardHeader>
             <CardTitle className="text-lg font-semibold">
-              Today’s New Leads
+              Today’s New Leads (status = "new")
             </CardTitle>
           </CardHeader>
           <CardContent className="flex-1 p-4 space-y-3 overflow-y-auto max-h-[400px]">
@@ -246,13 +250,13 @@ export default function DashboardPage() {
         <Card className="border border-gray-200 shadow-sm rounded-2xl flex flex-col">
           <CardHeader>
             <CardTitle className="text-lg font-semibold">
-              Today’s New Quotes
+              Today’s New Quotes (status = "draft")
             </CardTitle>
           </CardHeader>
           <CardContent className="flex-1 p-4 space-y-3 overflow-y-auto max-h-[400px]">
             {todayQuotes.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                No new quotes today.
+                No draft quotes today.
               </p>
             ) : (
               todayQuotes.map((quote) => (
