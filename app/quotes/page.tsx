@@ -159,6 +159,7 @@ export default function QuotesPage() {
       try {
         // Fetch full quote data with options, items, etc.
         const fullQuote = await getQuoteById(quote.id)
+        console.log("📊 Full quote data:", JSON.stringify(fullQuote, null, 2))
         setFullQuoteData(fullQuote)
       } catch (err: any) {
         console.error("Failed to fetch quote details:", err)
@@ -579,11 +580,16 @@ export default function QuotesPage() {
                                   {option.aircraftModel?.name || option.aircraftTail?.tailNumber || "Aircraft Option"}
                                 </span>
                               </div>
-                              {option.price_total && (
-                                <span className="font-bold text-lg text-slate-900 dark:text-slate-100">
-                                  {formatCurrency(option.price_total || 0)}
-                                </span>
-                              )}
+                              <span className="font-bold text-lg text-slate-900 dark:text-slate-100">
+                                {formatCurrency(
+                                  option.price_total ||
+                                    (option.price_base || 0) +
+                                      (option.price_commission || 0) +
+                                      (option.price_extras_total || 0) -
+                                      (option.price_discounts_total || 0) ||
+                                  0
+                                )}
+                              </span>
                             </div>
                             {option.flight_hours && (
                               <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
@@ -642,9 +648,19 @@ export default function QuotesPage() {
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-slate-600 dark:text-slate-400">Aircraft Option:</span>
                           <span className="font-semibold text-slate-900 dark:text-slate-100">
-                            {formatCurrency(
-                              fullQuoteData.options.reduce((sum: number, opt: any) => sum + (opt.price_total || 0), 0),
-                            )}
+                          {formatCurrency(
+                            fullQuoteData.options.reduce(
+                              (sum: number, opt: any) =>
+                                sum +
+                                (opt.price_total ||
+                                  (opt.price_base || 0) +
+                                    (opt.price_commission || 0) +
+                                    (opt.price_extras_total || 0) -
+                                    (opt.price_discounts_total || 0) ||
+                                  0),
+                              0,
+                            ),
+                          )}
                           </span>
                         </div>
                       )}
@@ -666,7 +682,14 @@ export default function QuotesPage() {
                         <span className="text-2xl font-bold text-slate-900 dark:text-slate-100">
                           {formatCurrency(
                             (fullQuoteData.options?.reduce(
-                              (sum: number, opt: any) => sum + (opt.price_total || 0),
+                              (sum: number, opt: any) =>
+                                sum +
+                                (opt.price_total ||
+                                  (opt.price_base || 0) +
+                                    (opt.price_commission || 0) +
+                                    (opt.price_extras_total || 0) -
+                                    (opt.price_discounts_total || 0) ||
+                                  0),
                               0,
                             ) || 0) +
                               (fullQuoteData.services?.reduce(
