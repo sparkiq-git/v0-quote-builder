@@ -19,25 +19,29 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
     const tenantId = user.app_metadata?.tenant_id || process.env.NEXT_PUBLIC_TENANT_ID
 
     // Fetch invoice with all related data
+    // Note: tenant_id, quote_id, and selected_option_id are used for filtering/relations but not selected directly
     const { data: invoiceData, error: invoiceError } = await supabase
       .from("invoice")
       .select(`
         id,
+        tenant_id,
+        quote_id,
+        selected_option_id,
         number,
-        status,
         issued_at,
         due_at,
         amount,
         currency,
-        subtotal,
-        tax_total,
-        aircraft_label,
-        summary_itinerary,
+        status,
         external_payment_url,
-        notes,
+        summary_itinerary,
+        aircraft_label,
         breakdown_json,
+        notes,
         created_at,
         updated_at,
+        subtotal,
+        tax_total,
         quote:quote_id(
           id,
           title,
@@ -48,13 +52,10 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
         selected_option:selected_option_id(
           id,
           aircraft_id,
-          flight_hours,
           cost_operator,
-          price_commission,
           price_base,
           price_total,
-          notes,
-          conditions
+          notes
         )
       `)
       .eq("id", id)
@@ -73,9 +74,25 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
     }
 
     // Fetch invoice detail line items
+    // Selecting all fields according to schema: id, invoice_id, seq, label, description, qty, unit_price, amount (generated), type, taxable, tax_rate, tax_amount, created_at, updated_at
     const { data: detailItems, error: detailError } = await supabase
       .from("invoice_detail")
-      .select("*")
+      .select(`
+        id,
+        invoice_id,
+        seq,
+        label,
+        description,
+        qty,
+        unit_price,
+        amount,
+        type,
+        taxable,
+        tax_rate,
+        tax_amount,
+        created_at,
+        updated_at
+      `)
       .eq("invoice_id", id)
       .order("seq", { ascending: true })
 

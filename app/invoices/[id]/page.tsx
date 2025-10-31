@@ -14,47 +14,55 @@ import { formatDate, formatTimeAgo, formatCurrency } from "@/lib/utils/format"
 import { InvoiceStatusBadge } from "@/components/invoices/InvoiceStatusBadge"
 import { useToast } from "@/hooks/use-toast"
 
+// invoice_detail table schema fields
 interface InvoiceDetailItem {
   id: string
+  invoice_id: string
   seq: number
   label: string
-  description?: string
+  description?: string | null
   qty: number
   unit_price: number
-  amount: number
+  amount: number // Generated column: qty * unit_price
   type: string
   taxable: boolean
-  tax_rate?: number
+  tax_rate?: number | null
   tax_amount: number
+  created_at?: string | null
+  updated_at?: string | null
 }
 
 interface QuoteOption {
   id: string
   aircraft_id?: string
-  flight_hours?: number
   cost_operator?: number
-  price_commission?: number
   price_base?: number
   price_total?: number
-  notes?: string
-  conditions?: string
+  notes?: string | null
 }
 
+// invoice table schema fields (all fields from schema)
 interface Invoice {
   id: string
+  tenant_id: string
+  quote_id: string
+  selected_option_id: string
   number: string
-  status: string
   issued_at: string
-  due_at?: string
+  due_at?: string | null
   amount: number
   currency: string
-  subtotal?: number
-  tax_total?: number
-  aircraft_label?: string
-  summary_itinerary?: string
-  external_payment_url?: string
-  notes?: string
-  breakdown_json?: any
+  status: string
+  external_payment_url?: string | null
+  summary_itinerary?: string | null
+  aircraft_label?: string | null
+  breakdown_json?: any | null
+  notes?: string | null
+  created_at: string
+  updated_at: string
+  subtotal?: number | null
+  tax_total?: number | null
+  // Related data (from joins)
   quote?: {
     id: string
     title?: string
@@ -75,78 +83,26 @@ export default function InvoiceDetailPage() {
   useEffect(() => {
     const fetchInvoice = async () => {
       try {
-        const { createClient } = await import("@/lib/supabase/client")
-        const supabase = createClient()
+        const response = await fetch(`/api/invoice/${id}`)
         
-        const tenantId = process.env.NEXT_PUBLIC_TENANT_ID!
-        
-        // Fetch invoice with related data
-        const { data: invoiceData, error: invoiceError } = await supabase
-          .from("invoice")
-          .select(`
-            id,
-            number,
-            status,
-            issued_at,
-            due_at,
-            amount,
-            currency,
-            subtotal,
-            tax_total,
-            aircraft_label,
-            summary_itinerary,
-            external_payment_url,
-            notes,
-            breakdown_json,
-            quote:quote_id(
-              id,
-              title,
-              contact_name,
-              contact_email,
-              contact_company
-            ),
-            selected_option:selected_option_id(
-              id,
-              aircraft_id,
-              flight_hours,
-              cost_operator,
-              price_commission,
-              price_base,
-              price_total,
-              notes,
-              conditions
-            )
-          `)
-          .eq("id", id)
-          .eq("tenant_id", tenantId)
-          .single()
-
-        if (invoiceError) throw invoiceError
-        if (!invoiceData) throw new Error("Invoice not found")
-
-        // Fetch invoice detail line items
-        const { data: detailItems, error: detailError } = await supabase
-          .from("invoice_detail")
-          .select("*")
-          .eq("invoice_id", id)
-          .order("seq", { ascending: true })
-
-        if (detailError) {
-          console.warn("⚠️ Error fetching invoice details:", detailError)
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}))
+          throw new Error(errorData.error || `Failed to fetch invoice: ${response.status}`)
         }
 
-        // Combine invoice and details
-        const invoice: Invoice = {
-          ...invoiceData,
-          details: detailItems || [],
+        const data = await response.json()
+        const invoiceData = data.invoice
+
+        if (!invoiceData) {
+          throw new Error("Invoice not found")
         }
 
-        setInvoice(invoice)
+        setInvoice(invoiceData)
       } catch (err: any) {
         console.error("❌ Error loading invoice:", err)
         toast({
           title: "Error loading invoice",
-          description: err.message || "Could not fetch invoice from Supabase.",
+          description: err.message || "Could not fetch invoice.",
           variant: "destructive",
         })
       } finally {
@@ -419,12 +375,6 @@ export default function InvoiceDetailPage() {
                     Selected Aircraft Option
                   </h3>
                   <div className="space-y-2 text-sm">
-                    {invoice.selected_option.flight_hours && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Flight Hours:</span>
-                        <span className="font-medium">{invoice.selected_option.flight_hours}</span>
-                      </div>
-                    )}
                     {invoice.selected_option.price_total && (
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Option Total:</span>
@@ -433,16 +383,26 @@ export default function InvoiceDetailPage() {
                         </span>
                       </div>
                     )}
+                    {invoice.selected_option.cost_operator && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Operator Cost:</span>
+                        <span className="font-medium">
+                          {formatAmountWithCurrency(invoice.selected_option.cost_operator, invoice.currency)}
+                        </span>
+                      </div>
+                    )}
+                    {invoice.selected_option.price_base && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Base Price:</span>
+                        <span className="font-medium">
+                          {formatAmountWithCurrency(invoice.selected_option.price_base, invoice.currency)}
+                        </span>
+                      </div>
+                    )}
                     {invoice.selected_option.notes && (
                       <div className="mt-3 p-3 bg-muted/50 rounded-lg">
                         <p className="text-xs font-medium text-muted-foreground mb-1">Notes:</p>
                         <p className="text-sm whitespace-pre-line">{invoice.selected_option.notes}</p>
-                      </div>
-                    )}
-                    {invoice.selected_option.conditions && (
-                      <div className="mt-3 p-3 bg-muted/50 rounded-lg">
-                        <p className="text-xs font-medium text-muted-foreground mb-1">Conditions:</p>
-                        <p className="text-sm whitespace-pre-line">{invoice.selected_option.conditions}</p>
                       </div>
                     )}
                   </div>
