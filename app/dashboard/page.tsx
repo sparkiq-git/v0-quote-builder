@@ -21,7 +21,7 @@ export default function DashboardPage() {
     setIsClient(true);
   }, []);
 
-  // === Load LEADS count
+  // === Load Leads Count ===
   useEffect(() => {
     if (!isClient) return;
     let cancelled = false;
@@ -29,24 +29,18 @@ export default function DashboardPage() {
     const loadLeadCount = async () => {
       const { createClient } = await import("@/lib/supabase/client");
       const supabase = createClient();
-      try {
-        const { count, error } = await supabase
-          .from("lead")
-          .select("*", { count: "exact", head: true })
-          .in("status", ["opened", "new"]);
 
-        if (!cancelled) {
-          if (error) {
-            console.error("Lead count error:", error);
-            setLeadCount(0);
-          } else {
-            setLeadCount(count ?? 0);
-          }
-        }
-      } catch (e) {
-        if (!cancelled) {
-          console.error("Lead count exception:", e);
+      const { count, error } = await supabase
+        .from("lead")
+        .select("*", { count: "exact", head: true })
+        .in("status", ["opened", "new"]);
+
+      if (!cancelled) {
+        if (error) {
+          console.error("Lead count error:", error);
           setLeadCount(0);
+        } else {
+          setLeadCount(count ?? 0);
         }
       }
     };
@@ -59,7 +53,7 @@ export default function DashboardPage() {
     };
   }, [isClient]);
 
-  // === Load Metrics
+  // === Load Metrics ===
   useEffect(() => {
     if (!isClient) return;
     let cancelled = false;
@@ -80,14 +74,13 @@ export default function DashboardPage() {
 
     loadMetrics();
     const id = setInterval(loadMetrics, 15000);
-
     return () => {
       cancelled = true;
       clearInterval(id);
     };
   }, [isClient]);
 
-  // === Load today's new Leads and Quotes
+  // === Load today's Leads and Quotes ===
   useEffect(() => {
     if (!isClient) return;
 
@@ -111,7 +104,9 @@ export default function DashboardPage() {
 
           supabase
             .from("quote")
-            .select("id, contact_name, status, created_at, number, trip_summary, trip_type, total_pax")
+            .select(
+              "id, contact_name, status, created_at, title, trip_summary, trip_type, total_pax"
+            )
             .gte("created_at", start.toISOString())
             .lte("created_at", end.toISOString())
             .order("created_at", { ascending: false }),
@@ -127,6 +122,7 @@ export default function DashboardPage() {
     loadTodayData();
   }, [isClient]);
 
+  // === Metric Card ===
   function MetricCard({
     title,
     icon: Icon,
@@ -198,7 +194,7 @@ export default function DashboardPage() {
       {/* === Monthly Metrics === */}
       <DashboardMetrics />
 
-      {/* === RouteMap + Recent Activities side by side === */}
+      {/* === RouteMap + Recent Activities === */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="h-[min(60vh,500px)]">
           <RouteMap />
@@ -266,7 +262,7 @@ export default function DashboardPage() {
                 >
                   <div className="flex items-center justify-between">
                     <p className="font-medium text-sm">
-                      #{quote.number ?? quote.id.slice(0, 6)} —{" "}
+                      {quote.title || `Quote ${quote.id.slice(0, 6)`} —{" "}
                       {quote.contact_name}
                     </p>
                     <Badge variant="secondary" className="text-[10px] uppercase">
