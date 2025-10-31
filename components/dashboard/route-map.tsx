@@ -388,7 +388,7 @@ export function RouteMap() {
   return (
     <div className="grid gap-4 grid-cols-1">
       <Card className="relative overflow-hidden p-0">
-        <div className="relative w-full h-[550px] bg-slate-50 rounded-2xl overflow-hidden">
+        <div className="relative w-full h-[min(65vh,500px)] bg-slate-50 rounded-2xl overflow-hidden">
           {/* Filters */}
           <div className="absolute top-4 left-4 z-[1000] flex items-center gap-2 bg-white/10 rounded-lg p-2 shadow-lg border border-white/10">
             {(["leads", "upcoming"] as FilterType[]).map((filter) => {
