@@ -1,25 +1,27 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, FileText, Clock, Plane } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { RouteMap } from "@/components/dashboard/route-map";
 import DashboardMetrics from "@/components/dashboard/DashboardMetrics";
 import { RecentActivities } from "@/components/dashboard/recent-activities";
+import { Badge } from "@/components/ui/badge";
 
 export default function DashboardPage() {
   const [leadCount, setLeadCount] = useState(0);
   const [quotesAwaitingResponse, setQuotesAwaitingResponse] = useState(0);
   const [unpaidQuotes, setUnpaidQuotes] = useState(0);
   const [upcomingDepartures, setUpcomingDepartures] = useState(0);
+  const [isClient, setIsClient] = useState(false);
   const [todayLeads, setTodayLeads] = useState<any[]>([]);
   const [todayQuotes, setTodayQuotes] = useState<any[]>([]);
-  const [isClient, setIsClient] = useState(false);
 
-  useEffect(() => setIsClient(true), []);
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
-  // === Load top metrics ===
+  // === Load LEADS count
   useEffect(() => {
     if (!isClient) return;
     let cancelled = false;
@@ -27,36 +29,57 @@ export default function DashboardPage() {
     const loadLeadCount = async () => {
       const { createClient } = await import("@/lib/supabase/client");
       const supabase = createClient();
-
-      const { count } = await supabase
-        .from("lead")
-        .select("*", { count: "exact", head: true })
-        .in("status", ["opened", "new"]);
-
-      if (!cancelled) setLeadCount(count ?? 0);
-    };
-
-    const loadMetrics = async () => {
       try {
-        const res = await fetch("/api/metrics", { cache: "no-store" });
-        const j = await res.json();
+        const { count, error } = await supabase
+          .from("lead")
+          .select("*", { count: "exact", head: true })
+          .in("status", ["opened", "new"]);
+
         if (!cancelled) {
-          setQuotesAwaitingResponse(j.quotesAwaitingResponse ?? 0);
-          setUnpaidQuotes(j.unpaidQuotes ?? 0);
-          setUpcomingDepartures(j.upcomingDepartures ?? 0);
+          if (error) {
+            console.error("Lead count error:", error);
+            setLeadCount(0);
+          } else {
+            setLeadCount(count ?? 0);
+          }
         }
       } catch (e) {
-        console.error("Failed to load metrics:", e);
+        if (!cancelled) {
+          console.error("Lead count exception:", e);
+          setLeadCount(0);
+        }
       }
     };
 
     loadLeadCount();
-    loadMetrics();
+    const id = setInterval(loadLeadCount, 15000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [isClient]);
 
-    const id = setInterval(() => {
-      loadLeadCount();
-      loadMetrics();
-    }, 15000);
+  // === Load Metrics
+  useEffect(() => {
+    if (!isClient) return;
+    let cancelled = false;
+
+    const loadMetrics = async () => {
+      try {
+        const res = await fetch("/api/metrics", { cache: "no-store" });
+        if (!res.ok) throw new Error(`metrics ${res.status}`);
+        const j = await res.json();
+        if (cancelled) return;
+        setQuotesAwaitingResponse(j.quotesAwaitingResponse ?? 0);
+        setUnpaidQuotes(j.unpaidQuotes ?? 0);
+        setUpcomingDepartures(j.upcomingDepartures ?? 0);
+      } catch (e) {
+        if (!cancelled) console.error("Failed to load metrics:", e);
+      }
+    };
+
+    loadMetrics();
+    const id = setInterval(loadMetrics, 15000);
 
     return () => {
       cancelled = true;
@@ -64,9 +87,10 @@ export default function DashboardPage() {
     };
   }, [isClient]);
 
-  // === Load today's new leads and quotes ===
+  // === Load today's new Leads and Quotes
   useEffect(() => {
     if (!isClient) return;
+
     const loadTodayData = async () => {
       const { createClient } = await import("@/lib/supabase/client");
       const supabase = createClient();
@@ -76,31 +100,33 @@ export default function DashboardPage() {
       const end = new Date();
       end.setHours(23, 59, 59, 999);
 
-      const [{ data: leads }, { data: quotes }] = await Promise.all([
-        supabase
-          .from("lead")
-          .select("id, customer_name, status, created_at")
-          .gte("created_at", start.toISOString())
-          .lte("created_at", end.toISOString())
-          .order("created_at", { ascending: false }),
-        supabase
-          .from("quote")
-          .select(
-            "id, contact_name, status, created_at, quote_number, trip_summary, trip_type, total_pax"
-          )
-          .gte("created_at", start.toISOString())
-          .lte("created_at", end.toISOString())
-          .order("created_at", { ascending: false }),
-      ]);
+      try {
+        const [{ data: leads }, { data: quotes }] = await Promise.all([
+          supabase
+            .from("lead")
+            .select("id, customer_name, status, created_at")
+            .gte("created_at", start.toISOString())
+            .lte("created_at", end.toISOString())
+            .order("created_at", { ascending: false }),
 
-      setTodayLeads(leads ?? []);
-      setTodayQuotes(quotes ?? []);
+          supabase
+            .from("quote")
+            .select("id, contact_name, status, created_at, number, trip_summary, trip_type, total_pax")
+            .gte("created_at", start.toISOString())
+            .lte("created_at", end.toISOString())
+            .order("created_at", { ascending: false }),
+        ]);
+
+        setTodayLeads(leads ?? []);
+        setTodayQuotes(quotes ?? []);
+      } catch (error) {
+        console.error("Error loading today's data:", error);
+      }
     };
 
     loadTodayData();
   }, [isClient]);
 
-  // === Metric Card ===
   function MetricCard({
     title,
     icon: Icon,
@@ -130,7 +156,6 @@ export default function DashboardPage() {
     );
   }
 
-  // === Main Layout ===
   return (
     <div className="space-y-6 sm:space-y-8">
       <div>
@@ -138,7 +163,7 @@ export default function DashboardPage() {
           Welcome back!
         </h1>
         <p className="text-muted-foreground text-xs sm:text-base">
-          Here’s what’s happening today.
+          Here's what's happening today.
         </p>
       </div>
 
@@ -170,21 +195,22 @@ export default function DashboardPage() {
         />
       </div>
 
+      {/* === Monthly Metrics === */}
       <DashboardMetrics />
 
-      {/* === Map & Activities === */}
-      <div className="grid gap-6 md:grid-cols-2 items-stretch">
-        <div className="flex flex-col h-[460px]">
+      {/* === RouteMap + Recent Activities side by side === */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="h-[min(60vh,500px)]">
           <RouteMap />
         </div>
-        <div className="flex flex-col h-[460px] overflow-hidden">
+        <div className="h-[min(60vh,500px)] overflow-hidden">
           <RecentActivities />
         </div>
       </div>
 
-      {/* === Today’s New Leads & Quotes === */}
-      <div className="grid gap-6 md:grid-cols-2 items-stretch">
-        {/* Today's New Leads */}
+      {/* === Today's New Leads and Quotes === */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Leads */}
         <Card className="border border-gray-200 shadow-sm rounded-2xl flex flex-col">
           <CardHeader>
             <CardTitle className="text-lg font-semibold">
@@ -200,69 +226,73 @@ export default function DashboardPage() {
               todayLeads.map((lead) => (
                 <div
                   key={lead.id}
-                  className="flex items-center justify-between border-b pb-2 last:border-none"
+                  className="flex flex-col border-b pb-2 last:border-none"
                 >
-                  <div>
+                  <div className="flex items-center justify-between">
                     <p className="font-medium text-sm">{lead.customer_name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {new Date(lead.created_at).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </p>
+                    <Badge variant="secondary" className="text-[10px] uppercase">
+                      {lead.status}
+                    </Badge>
                   </div>
-                  <Badge variant="outline" className="text-[10px] uppercase">
-                    {lead.status}
-                  </Badge>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {new Date(lead.created_at).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </p>
                 </div>
               ))
             )}
           </CardContent>
         </Card>
 
-       {/* Today's New Quotes */}
-<Card className="border border-gray-200 shadow-sm rounded-2xl flex flex-col">
-  <CardHeader>
-    <CardTitle className="text-lg font-semibold">
-      Today’s New Quotes
-    </CardTitle>
-  </CardHeader>
-  <CardContent className="flex-1 p-4 space-y-3 overflow-y-auto max-h-[400px]">
-    {todayQuotes.length === 0 ? (
-      <p className="text-sm text-muted-foreground">No new quotes today.</p>
-    ) : (
-      todayQuotes.map((quote) => (
-        <div
-          key={quote.id}
-          className="flex flex-col border-b pb-2 last:border-none"
-        >
-          <div className="flex items-center justify-between">
-            <p className="font-medium text-sm">
-              #{quote.number ?? quote.id.slice(0, 6)} — {quote.contact_name}
-            </p>
-            <Badge variant="secondary" className="text-[10px] uppercase">
-              {quote.status}
-            </Badge>
-          </div>
-          <div className="text-xs text-muted-foreground mt-1">
-            {quote.trip_summary ? quote.trip_summary : "No trip summary"}
-          </div>
-          <div className="text-xs text-muted-foreground flex justify-between mt-1">
-            <span>
-              Pax: {quote.total_pax ?? "—"} | {quote.trip_type ?? "one-way"}
-            </span>
-            <span>
-              {new Date(quote.created_at).toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-            </span>
-          </div>
-        </div>
-      ))
-    )}
-  </CardContent>
-</Card>
+        {/* Quotes */}
+        <Card className="border border-gray-200 shadow-sm rounded-2xl flex flex-col">
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold">
+              Today’s New Quotes
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex-1 p-4 space-y-3 overflow-y-auto max-h-[400px]">
+            {todayQuotes.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No new quotes today.
+              </p>
+            ) : (
+              todayQuotes.map((quote) => (
+                <div
+                  key={quote.id}
+                  className="flex flex-col border-b pb-2 last:border-none"
+                >
+                  <div className="flex items-center justify-between">
+                    <p className="font-medium text-sm">
+                      #{quote.number ?? quote.id.slice(0, 6)} —{" "}
+                      {quote.contact_name}
+                    </p>
+                    <Badge variant="secondary" className="text-[10px] uppercase">
+                      {quote.status}
+                    </Badge>
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {quote.trip_summary || "No trip summary"}
+                  </div>
+                  <div className="text-xs text-muted-foreground flex justify-between mt-1">
+                    <span>
+                      Pax: {quote.total_pax ?? "—"} |{" "}
+                      {quote.trip_type ?? "one-way"}
+                    </span>
+                    <span>
+                      {new Date(quote.created_at).toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </span>
+                  </div>
+                </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
