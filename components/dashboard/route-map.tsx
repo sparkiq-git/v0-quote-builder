@@ -78,7 +78,7 @@ export function RouteMap() {
               created_at
             )
           `)
-          .in("lead.status", ["new", "opened"])
+          .eq("lead.status", "new")
           .order("depart_dt", { ascending: true });
 
         if (error) {
