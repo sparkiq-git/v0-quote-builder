@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
@@ -60,8 +61,8 @@ export default function QuotesPage() {
     const fetchQuotes = async () => {
       try {
         // Only run on client side
-        if (typeof window === 'undefined') return
-        
+        if (typeof window === "undefined") return
+
         const { createClient } = await import("@/lib/supabase/client")
         const supabase = createClient()
         const tenantId = process.env.NEXT_PUBLIC_TENANT_ID!
@@ -178,8 +179,8 @@ export default function QuotesPage() {
 
       // Check authentication
       // Only run on client side
-      if (typeof window === 'undefined') return;
-      
+      if (typeof window === "undefined") return
+
       const { createClient } = await import("@/lib/supabase/client")
       const supabase = createClient()
       const {
@@ -278,8 +279,8 @@ export default function QuotesPage() {
   }
 
   return (
-    <div className="w-full">
-      <div className="flex items-center justify-between mb-6">
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Quotes</h1>
           <p className="text-muted-foreground">Track quote status and customer responses</p>
@@ -292,7 +293,7 @@ export default function QuotesPage() {
         </Button>
       </div>
 
-      <div className="flex items-center py-4 gap-4">
+      <div className="flex items-center gap-4">
         <div className="flex items-center space-x-2">
           <Search className="h-4 w-4 text-muted-foreground" />
           <Input
@@ -323,139 +324,151 @@ export default function QuotesPage() {
         </div>
       </div>
 
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>
-                <Button variant="ghost" className="h-8 px-2 lg:px-3">
-                  Quote Details <ArrowUpDown className="ml-2 h-4 w-4" />
-                </Button>
-              </TableHead>
-              <TableHead>
-                <Button variant="ghost" className="h-8 px-2 lg:px-3">
-                  Customer <ArrowUpDown className="ml-2 h-4 w-4" />
-                </Button>
-              </TableHead>
-              <TableHead>
-                <Button variant="ghost" className="h-8 px-2 lg:px-3">
-                  Status <ArrowUpDown className="ml-2 h-4 w-4" />
-                </Button>
-              </TableHead>
-              <TableHead>
-                <Button variant="ghost" className="h-8 px-2 lg:px-3">
-                  Last Updated <ArrowUpDown className="ml-2 h-4 w-4" />
-                </Button>
-              </TableHead>
-              <TableHead>
-                <Button variant="ghost" className="h-8 px-2 lg:px-3">
-                  Created <ArrowUpDown className="ml-2 h-4 w-4" />
-                </Button>
-              </TableHead>
-              <TableHead className="w-[100px]">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredQuotes.length > 0 ? (
-              filteredQuotes.map((quote) => (
-                <TableRow key={quote.id} className="hover:bg-muted/30">
-                  <TableCell>
-                    <div className="flex flex-col">
-                      <span className="font-medium text-sm">{quote.title}</span>
-                      <span className="text-xs text-muted-foreground">{quote.customer.company || "No company"}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-col">
-                      <span className="font-medium text-sm">{quote.customer.name || "Unknown"}</span>
-                      <span className="text-xs text-muted-foreground">{quote.customer.email || "No email"}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="relative inline-block">
-                      <Badge variant={getStatusBadgeVariant(quote.status)} className="text-xs">
-                        {quote.status}
-                      </Badge>
-                      {quote.status === "opened" && quote.openCount > 0 && (
-                        <div className="absolute -top-3 -right-3 bg-slate-50 border border-slate-100 rounded-full flex items-center justify-center w-5 h-5">
-                          <span className="text-[0.676875rem] font-medium text-slate-700">{quote.openCount}</span>
-                        </div>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="text-xs">
-                      <div>{formatDate(quote.updatedAt)}</div>
-                      <div className="text-muted-foreground">{formatTimeAgo(quote.updatedAt)}</div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="text-xs">
-                      <div>{formatDate(quote.createdAt)}</div>
-                      <div className="text-muted-foreground">{formatTimeAgo(quote.createdAt)}</div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuItem asChild>
-                          <Link href={`/quotes/${quote.id}`}>
-                            <Eye className="mr-2 h-4 w-4" />
-                            View/Edit
-                          </Link>
-                        </DropdownMenuItem>
-                        {canSendInvoiceContract(quote) && (
-                          <>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={(e) => handleOpenInvoiceContractModal(quote)}>
-                              <FileSignature className="mr-2 h-4 w-4" />
-                              Invoice & Contract
-                            </DropdownMenuItem>
-                          </>
-                        )}
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          onClick={(e) => handleConvertToInvoice(quote.id)}
-                          disabled={converting === quote.id}
-                        >
-                          {converting === quote.id ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Creating...
-                            </>
-                          ) : (
-                            <>
-                              <FileText className="mr-2 h-4 w-4" />
-                              Create Invoice
-                            </>
-                          )}
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-destructive" onClick={(e) => handleDeleteQuote(quote.id)}>
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Delete Quote
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
+      <Card>
+        <CardHeader>
+          <CardTitle>Quotes ({filteredQuotes.length})</CardTitle>
+          <CardDescription>
+            Showing {statusFilter === "all" ? "all" : statusFilter} quotes with real-time updates.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>
+                    <Button variant="ghost" className="h-8 px-2 lg:px-3">
+                      Quote Details <ArrowUpDown className="ml-2 h-4 w-4" />
+                    </Button>
+                  </TableHead>
+                  <TableHead>
+                    <Button variant="ghost" className="h-8 px-2 lg:px-3">
+                      Customer <ArrowUpDown className="ml-2 h-4 w-4" />
+                    </Button>
+                  </TableHead>
+                  <TableHead>
+                    <Button variant="ghost" className="h-8 px-2 lg:px-3">
+                      Status <ArrowUpDown className="ml-2 h-4 w-4" />
+                    </Button>
+                  </TableHead>
+                  <TableHead>
+                    <Button variant="ghost" className="h-8 px-2 lg:px-3">
+                      Last Updated <ArrowUpDown className="ml-2 h-4 w-4" />
+                    </Button>
+                  </TableHead>
+                  <TableHead>
+                    <Button variant="ghost" className="h-8 px-2 lg:px-3">
+                      Created <ArrowUpDown className="ml-2 h-4 w-4" />
+                    </Button>
+                  </TableHead>
+                  <TableHead className="w-[100px]">Actions</TableHead>
                 </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
-                  No quotes found.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
+              </TableHeader>
+              <TableBody>
+                {filteredQuotes.length > 0 ? (
+                  filteredQuotes.map((quote) => (
+                    <TableRow key={quote.id} className="hover:bg-muted/30">
+                      <TableCell>
+                        <div className="flex flex-col">
+                          <span className="font-medium text-sm">{quote.title}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {quote.customer.company || "No company"}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-col">
+                          <span className="font-medium text-sm">{quote.customer.name || "Unknown"}</span>
+                          <span className="text-xs text-muted-foreground">{quote.customer.email || "No email"}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="relative inline-block">
+                          <Badge variant={getStatusBadgeVariant(quote.status)} className="text-xs">
+                            {quote.status}
+                          </Badge>
+                          {quote.status === "opened" && quote.openCount > 0 && (
+                            <div className="absolute -top-3 -right-3 bg-slate-50 border border-slate-100 rounded-full flex items-center justify-center w-5 h-5">
+                              <span className="text-[0.676875rem] font-medium text-slate-700">{quote.openCount}</span>
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-xs">
+                          <div>{formatDate(quote.updatedAt)}</div>
+                          <div className="text-muted-foreground">{formatTimeAgo(quote.updatedAt)}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-xs">
+                          <div>{formatDate(quote.createdAt)}</div>
+                          <div className="text-muted-foreground">{formatTimeAgo(quote.createdAt)}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuItem asChild>
+                              <Link href={`/quotes/${quote.id}`}>
+                                <Eye className="mr-2 h-4 w-4" />
+                                View/Edit
+                              </Link>
+                            </DropdownMenuItem>
+                            {canSendInvoiceContract(quote) && (
+                              <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={(e) => handleOpenInvoiceContractModal(quote)}>
+                                  <FileSignature className="mr-2 h-4 w-4" />
+                                  Invoice & Contract
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={(e) => handleConvertToInvoice(quote.id)}
+                              disabled={converting === quote.id}
+                            >
+                              {converting === quote.id ? (
+                                <>
+                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                  Creating...
+                                </>
+                              ) : (
+                                <>
+                                  <FileText className="mr-2 h-4 w-4" />
+                                  Create Invoice
+                                </>
+                              )}
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem className="text-destructive" onClick={(e) => handleDeleteQuote(quote.id)}>
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete Quote
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                      No quotes found.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
 
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
