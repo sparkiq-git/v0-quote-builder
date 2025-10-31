@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Minus, RotateCcw, MapPin } from "lucide-react";
+import { Plus, Minus, RotateCcw, MapPin, Users, Plane } from "lucide-react";
 
 declare global {
   interface Window {
@@ -56,6 +56,7 @@ export function RouteMap() {
       const { createClient } = await import("@/lib/supabase/client");
       const supabase = createClient();
 
+      // ✅ Load "New" leads only
       const loadLeadRoutes = async () => {
         const { data, error } = await supabase
           .from("lead_detail")
@@ -78,7 +79,7 @@ export function RouteMap() {
               created_at
             )
           `)
-          .eq("lead.status", "new")
+          .eq("lead.status", "new") // ✅ Only NEW leads
           .order("depart_dt", { ascending: true });
 
         if (error) {
@@ -120,9 +121,10 @@ export function RouteMap() {
           }));
 
         setLeadRoutes(formatted);
-        console.log("✅ Leads loaded (drawable):", formatted.length);
+        console.log("✅ New Leads loaded (drawable):", formatted.length);
       };
 
+      // ✅ Load upcoming trips
       const loadUpcomingRoutes = async () => {
         const start = new Date();
         start.setHours(0, 0, 0, 0);
@@ -304,15 +306,19 @@ export function RouteMap() {
 
         allCoords.push(originLatLng, destLatLng);
 
-        // Route line
+        const color =
+          activeFilter === "leads"
+            ? "#2563eb" // blue for leads
+            : "#16a34a"; // green for upcoming trips
+
         const routeLine = window.L.polyline([originLatLng, destLatLng], {
-          color: activeFilter === "leads" ? "#2563eb" : "#16a34a",
+          color,
           weight: 1.5,
           opacity: 0.8,
           dashArray: "3, 2",
         }).addTo(map.current);
 
-        // Midpoint airplane
+        // Midpoint airplane icon
         const midLat = (leg.originCoords.lat + leg.destCoords.lat) / 2;
         const midLng = (leg.originCoords.lng + leg.destCoords.lng) / 2;
         const angle =
@@ -353,6 +359,7 @@ export function RouteMap() {
 
         routeLayers.current.push(routeLine, airplane);
 
+        // Airport markers
         const makeMarker = (coords: { lat: number; lng: number; name: string }) =>
           window.L.marker([coords.lat, coords.lng], {
             icon: window.L.divIcon({
@@ -386,65 +393,77 @@ export function RouteMap() {
   const handleRefresh = () => setRefreshKey((k) => k + 1);
 
   return (
-  <Card className="relative flex-1 overflow-hidden p-0 h-full border border-gray-200 rounded-2xl shadow-sm">
-    <div className="relative w-full h-full bg-slate-50 rounded-2xl overflow-hidden">
-      {/* Filters */}
-      <div className="absolute top-4 left-4 z-[1000] flex items-center gap-2 bg-white/10 rounded-lg p-2 shadow-lg border border-white/10">
-        {(["leads", "upcoming"] as FilterType[]).map((filter) => {
-          const isActive = activeFilter === filter;
-          const cnt = filter === "leads" ? leadRoutes.length : upcomingRoutes.length;
-          return (
-            <Button
-              key={filter}
-              variant={isActive ? "default" : "ghost"}
-              size="sm"
-              className={`h-8 px-3 text-xs ${isActive ? "shadow-sm" : "hover:bg-slate-300"}`}
-              onClick={() => setActiveFilter(filter)}
-            >
-              {filter.charAt(0).toUpperCase() + filter.slice(1)}
-              <Badge
-                variant={isActive ? "secondary" : "outline"}
-                className="ml-2 h-4 px-1 text-[10px]"
-              >
-                {cnt}
-              </Badge>
+    <div className="grid gap-4 grid-cols-1">
+      <Card className="relative overflow-hidden p-0">
+        <div className="relative w-full h-full bg-slate-50 rounded-2xl overflow-hidden">
+          {/* Filters */}
+          <div className="absolute top-4 left-4 z-[1000] flex items-center gap-2 bg-white/10 rounded-lg p-2 shadow-lg border border-white/10">
+            {(["leads", "upcoming"] as FilterType[]).map((filter) => {
+              const isActive = activeFilter === filter;
+              const cnt =
+                filter === "leads" ? leadRoutes.length : upcomingRoutes.length;
+
+              // ✅ Human-readable labels
+              const label =
+                filter === "leads" ? "New Leads" : "Upcoming Trips";
+
+              const Icon = filter === "leads" ? Users : Plane;
+
+              return (
+                <Button
+                  key={filter}
+                  variant={isActive ? "default" : "ghost"}
+                  size="sm"
+                  className={`h-8 px-3 text-xs flex items-center gap-1 ${
+                    isActive ? "shadow-sm" : "hover:bg-slate-300"
+                  }`}
+                  onClick={() => setActiveFilter(filter)}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  {label}
+                  <Badge
+                    variant={isActive ? "secondary" : "outline"}
+                    className="ml-1 h-4 px-1 text-[10px]"
+                  >
+                    {cnt}
+                  </Badge>
+                </Button>
+              );
+            })}
+          </div>
+
+          {/* Zoom / Refresh */}
+          <div className="absolute top-20 right-4 z-[1000] flex flex-col gap-1 bg-white/80 rounded-lg p-1 shadow-lg border border-gray-200">
+            <Button variant="ghost" size="sm" onClick={handleZoomIn}>
+              <Plus className="h-4 w-4" />
             </Button>
-          );
-        })}
-      </div>
-
-      {/* Zoom / Refresh */}
-      <div className="absolute top-20 right-4 z-[1000] flex flex-col gap-1 bg-white/80 rounded-lg p-1 shadow-lg border border-gray-200">
-        <Button variant="ghost" size="sm" onClick={handleZoomIn}>
-          <Plus className="h-4 w-4" />
-        </Button>
-        <Button variant="ghost" size="sm" onClick={handleZoomOut}>
-          <Minus className="h-4 w-4" />
-        </Button>
-        <Button variant="ghost" size="sm" onClick={handleRefresh}>
-          <RotateCcw className="h-4 w-4" />
-        </Button>
-      </div>
-
-      {/* Map container */}
-      <div ref={mapContainer} className="absolute inset-0 w-full h-full" />
-
-      {mapError && (
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="text-center space-y-3 bg-white/90 rounded-xl p-8 shadow-lg">
-            <div className="w-16 h-16 mx-auto bg-red-100 rounded-full flex items-center justify-center">
-              <MapPin className="h-8 w-8 text-red-500" />
-            </div>
-            <p className="text-slate-800 font-medium">Map Error</p>
-            <p className="text-xs text-slate-600">{mapError}</p>
-            <Button onClick={handleRefresh} size="sm" className="mt-4">
-              <RotateCcw className="mr-2 h-4 w-4" /> Try Again
+            <Button variant="ghost" size="sm" onClick={handleZoomOut}>
+              <Minus className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="sm" onClick={handleRefresh}>
+              <RotateCcw className="h-4 w-4" />
             </Button>
           </div>
-        </div>
-      )}
-    </div>
-  </Card>
-);
 
+          {/* Map container */}
+          <div ref={mapContainer} className="absolute inset-0 w-full h-full" />
+
+          {mapError && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="text-center space-y-3 bg-white/90 rounded-xl p-8 shadow-lg">
+                <div className="w-16 h-16 mx-auto bg-red-100 rounded-full flex items-center justify-center">
+                  <MapPin className="h-8 w-8 text-red-500" />
+                </div>
+                <p className="text-slate-800 font-medium">Map Error</p>
+                <p className="text-xs text-slate-600">{mapError}</p>
+                <Button onClick={handleRefresh} size="sm" className="mt-4">
+                  <RotateCcw className="mr-2 h-4 w-4" /> Try Again
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      </Card>
+    </div>
+  );
 }
