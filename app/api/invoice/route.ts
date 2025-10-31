@@ -41,10 +41,10 @@ export async function POST(req: Request) {
     if (!quote_id) return NextResponse.json({ error: "Missing quote_id" }, { status: 400 })
 
     // 🔁 Call your Supabase Edge Function
-    // external_payment_url is optional
-    const body: { quote_id: string; external_payment_url?: string | null } = { quote_id }
+    // Edge Function expects 'payment_url' parameter (optional)
+    const body: { quote_id: string; payment_url?: string | null } = { quote_id }
     if (external_payment_url) {
-      body.external_payment_url = external_payment_url
+      body.payment_url = external_payment_url
     }
 
     const { data, error } = await supabase.functions.invoke("quote-to-invoice", {
