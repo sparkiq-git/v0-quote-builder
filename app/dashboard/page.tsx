@@ -226,7 +226,7 @@ export default function DashboardPage() {
         <Card className="border border-gray-200 shadow-sm rounded-2xl flex flex-col">
           <CardHeader>
             <CardTitle className="text-lg font-semibold">
-              Today’s New Leads (status = "new")
+              Today’s New Leads 
             </CardTitle>
           </CardHeader>
           <CardContent className="flex-1 p-4 space-y-3 overflow-y-auto max-h-[400px]">
@@ -302,7 +302,7 @@ export default function DashboardPage() {
         <Card className="border border-gray-200 shadow-sm rounded-2xl flex flex-col">
           <CardHeader>
             <CardTitle className="text-lg font-semibold">
-              Today’s New Quotes (status = "draft")
+              Today’s New Quotes 
             </CardTitle>
           </CardHeader>
           <CardContent className="flex-1 p-4 space-y-3 overflow-y-auto max-h-[400px]">
