@@ -308,8 +308,8 @@ export function RouteMap() {
 
         const color =
           activeFilter === "leads"
-            ? "#2563eb" // blue for leads
-            : "#16a34a"; // green for upcoming trips
+            ? "#2563eb"
+            : "#16a34a";
 
         const routeLine = window.L.polyline([originLatLng, destLatLng], {
           color,
@@ -318,30 +318,21 @@ export function RouteMap() {
           dashArray: "3, 2",
         }).addTo(map.current);
 
-        // Midpoint airplane icon
         const midLat = (leg.originCoords.lat + leg.destCoords.lat) / 2;
         const midLng = (leg.originCoords.lng + leg.destCoords.lng) / 2;
-        const angle =
-          (Math.atan2(
-            leg.destCoords.lat - leg.originCoords.lat,
-            leg.destCoords.lng - leg.originCoords.lng
-          ) *
-            180) /
-          Math.PI;
 
         const airplane = window.L.marker([midLat, midLng], {
           icon: window.L.divIcon({
             html: `
-              <div style="transform: rotate(${angle + 90}deg);">
-                <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
-                  <circle cx="16" cy="16" r="10" fill="none" stroke="#374151" stroke-width="2"/>
-                  <path d="M16 8c-.5 0-1 .2-1 .5V12l-4 2.5v1l4-1.25V18l-1 .75V20l1.75-.5L17.25 20v-1.25L16.25 18v-3.75l4 1.25v-1L16.25 12V8.5c0-.3-.5-.5-1-.5z" fill="#374151" transform="translate(0, 1)"/>
+              <div>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="${color}">
+                  <path d="M2.5 19l19-7L2.5 5v5l14 2-14 2z" />
                 </svg>
               </div>
             `,
             className: "bg-transparent",
-            iconSize: [28, 28],
-            iconAnchor: [14, 14],
+            iconSize: [20, 20],
+            iconAnchor: [10, 10],
           }),
         }).addTo(map.current);
 
@@ -358,27 +349,6 @@ export function RouteMap() {
         `);
 
         routeLayers.current.push(routeLine, airplane);
-
-        // Airport markers
-        const makeMarker = (coords: { lat: number; lng: number; name: string }) =>
-          window.L.marker([coords.lat, coords.lng], {
-            icon: window.L.divIcon({
-              html: `
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                  <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="#1f2937" stroke="#ffffff" stroke-width="1.5"/>
-                  <circle cx="12" cy="9" r="2.5" fill="#ffffff"/>
-                </svg>
-              `,
-              className: "bg-transparent",
-              iconSize: [22, 22],
-              iconAnchor: [11, 22],
-            }),
-          }).addTo(map.current);
-
-        airportMarkers.current.push(
-          makeMarker(leg.originCoords),
-          makeMarker(leg.destCoords)
-        );
       });
     });
 
@@ -393,65 +363,72 @@ export function RouteMap() {
   const handleRefresh = () => setRefreshKey((k) => k + 1);
 
   return (
-  <Card className="relative flex-1 overflow-hidden h-full border border-gray-200 rounded-2xl shadow-sm">
-    <div className="relative w-full h-full bg-slate-50 rounded-2xl overflow-hidden">
-      {/* Filters */}
-      <div className="absolute top-4 left-4 z-[1000] flex items-center gap-2 bg-white/10 rounded-lg p-2 shadow-lg border border-white/10">
-        {(["leads", "upcoming"] as FilterType[]).map((filter) => {
-          const isActive = activeFilter === filter;
-          const cnt = filter === "leads" ? leadRoutes.length : upcomingRoutes.length;
-          return (
-            <Button
-              key={filter}
-              variant={isActive ? "default" : "ghost"}
-              size="sm"
-              className={`h-8 px-3 text-xs ${isActive ? "shadow-sm" : "hover:bg-slate-300"}`}
-              onClick={() => setActiveFilter(filter)}
-            >
-              {filter.charAt(0).toUpperCase() + filter.slice(1)}
-              <Badge
-                variant={isActive ? "secondary" : "outline"}
-                className="ml-2 h-4 px-1 text-[10px]"
+    <Card className="relative flex-1 overflow-hidden h-full border border-gray-200 rounded-2xl shadow-sm">
+      <div className="relative w-full h-full bg-slate-50 rounded-2xl overflow-hidden">
+        {/* Filters */}
+        <div className="absolute top-4 left-4 z-[1000] flex items-center gap-2 bg-white/10 rounded-lg p-2 shadow-lg border border-white/10">
+          {(["leads", "upcoming"] as FilterType[]).map((filter) => {
+            const isActive = activeFilter === filter;
+            const cnt =
+              filter === "leads" ? leadRoutes.length : upcomingRoutes.length;
+            const label =
+              filter === "leads" ? "New Leads" : "Upcoming Trips";
+            const Icon = filter === "leads" ? Users : Plane;
+
+            return (
+              <Button
+                key={filter}
+                variant={isActive ? "default" : "ghost"}
+                size="sm"
+                className={`h-8 px-3 text-xs flex items-center gap-1 ${
+                  isActive ? "shadow-sm" : "hover:bg-slate-300"
+                }`}
+                onClick={() => setActiveFilter(filter)}
               >
-                {cnt}
-              </Badge>
-            </Button>
-          );
-        })}
-      </div>
-
-      {/* Zoom / Refresh */}
-      <div className="absolute top-20 right-4 z-[1000] flex flex-col gap-1 bg-white/80 rounded-lg p-1 shadow-lg border border-gray-200">
-        <Button variant="ghost" size="sm" onClick={handleZoomIn}>
-          <Plus className="h-4 w-4" />
-        </Button>
-        <Button variant="ghost" size="sm" onClick={handleZoomOut}>
-          <Minus className="h-4 w-4" />
-        </Button>
-        <Button variant="ghost" size="sm" onClick={handleRefresh}>
-          <RotateCcw className="h-4 w-4" />
-        </Button>
-      </div>
-
-      {/* Map container */}
-      <div ref={mapContainer} className="absolute inset-0 w-full h-full" />
-
-      {mapError && (
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="text-center space-y-3 bg-white/90 rounded-xl p-8 shadow-lg">
-            <div className="w-16 h-16 mx-auto bg-red-100 rounded-full flex items-center justify-center">
-              <MapPin className="h-8 w-8 text-red-500" />
-            </div>
-            <p className="text-slate-800 font-medium">Map Error</p>
-            <p className="text-xs text-slate-600">{mapError}</p>
-            <Button onClick={handleRefresh} size="sm" className="mt-4">
-              <RotateCcw className="mr-2 h-4 w-4" /> Try Again
-            </Button>
-          </div>
+                <Icon className="h-3.5 w-3.5" />
+                {label}
+                <Badge
+                  variant={isActive ? "secondary" : "outline"}
+                  className="ml-1 h-4 px-1 text-[10px]"
+                >
+                  {cnt}
+                </Badge>
+              </Button>
+            );
+          })}
         </div>
-      )}
-    </div>
-  </Card>
-);
 
+        {/* Zoom / Refresh */}
+        <div className="absolute top-20 right-4 z-[1000] flex flex-col gap-1 bg-white/80 rounded-lg p-1 shadow-lg border border-gray-200">
+          <Button variant="ghost" size="sm" onClick={handleZoomIn}>
+            <Plus className="h-4 w-4" />
+          </Button>
+          <Button variant="ghost" size="sm" onClick={handleZoomOut}>
+            <Minus className="h-4 w-4" />
+          </Button>
+          <Button variant="ghost" size="sm" onClick={handleRefresh}>
+            <RotateCcw className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {/* Map container */}
+        <div ref={mapContainer} className="absolute inset-0 w-full h-full" />
+
+        {mapError && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="text-center space-y-3 bg-white/90 rounded-xl p-8 shadow-lg">
+              <div className="w-16 h-16 mx-auto bg-red-100 rounded-full flex items-center justify-center">
+                <MapPin className="h-8 w-8 text-red-500" />
+              </div>
+              <p className="text-slate-800 font-medium">Map Error</p>
+              <p className="text-xs text-slate-600">{mapError}</p>
+              <Button onClick={handleRefresh} size="sm" className="mt-4">
+                <RotateCcw className="mr-2 h-4 w-4" /> Try Again
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+    </Card>
+  );
 }
