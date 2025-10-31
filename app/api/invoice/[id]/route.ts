@@ -10,45 +10,15 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
   try {
     const { id } = params
 
-    // Get user and tenant for security
+    // Get user for authentication (RLS will handle tenant filtering)
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const tenantId = user.app_metadata?.tenant_id || process.env.NEXT_PUBLIC_TENANT_ID
+    console.log(`🔍 Fetching invoice ${id} (RLS will handle tenant filtering)`)
 
-    if (!tenantId) {
-      return NextResponse.json({ error: "Missing tenant ID" }, { status: 400 })
-    }
-
-    console.log(`🔍 Fetching invoice ${id} for tenant ${tenantId}`)
-
-    // First, try without tenant filter to see if invoice exists at all
-    const { data: invoiceCheck, error: checkError } = await supabase
-      .from("invoice")
-      .select("id, tenant_id")
-      .eq("id", id)
-      .maybeSingle()
-
-    if (checkError && checkError.code !== 'PGRST116') {
-      console.error("❌ Error checking invoice:", checkError)
-      return NextResponse.json({ error: checkError.message || "Failed to check invoice" }, { status: 500 })
-    }
-
-    // If invoice doesn't exist at all
-    if (!invoiceCheck) {
-      console.log(`❌ Invoice ${id} does not exist`)
-      return NextResponse.json({ error: "Invoice not found" }, { status: 404 })
-    }
-
-    // If invoice exists but for different tenant
-    if (invoiceCheck.tenant_id !== tenantId) {
-      console.log(`❌ Invoice ${id} belongs to tenant ${invoiceCheck.tenant_id}, but requested by ${tenantId}`)
-      return NextResponse.json({ error: "Invoice not found" }, { status: 404 })
-    }
-
-    // Now fetch the full invoice data
+    // Fetch the invoice - RLS policies will automatically filter by tenant_id
     const { data: invoiceData, error: invoiceError } = await supabase
       .from("invoice")
       .select(`
@@ -73,12 +43,13 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
         tax_total
       `)
       .eq("id", id)
-      .eq("tenant_id", tenantId)
       .single()
 
     if (invoiceError) {
+      // PGRST116 = no rows found (could be RLS blocking access or invoice doesn't exist)
+      // PGRST200 = multiple rows found (shouldn't happen with single() on UUID)
       if (invoiceError.code === 'PGRST116' || invoiceError.code === 'PGRST200') {
-        console.log(`❌ Invoice ${id} not found for tenant ${tenantId} (single() returned no rows)`)
+        console.log(`❌ Invoice ${id} not found (likely blocked by RLS or doesn't exist)`)
         return NextResponse.json({ error: "Invoice not found" }, { status: 404 })
       }
       console.error("❌ Invoice fetch error:", invoiceError)
@@ -90,7 +61,7 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
       return NextResponse.json({ error: "Invoice not found" }, { status: 404 })
     }
 
-    console.log(`✅ Invoice ${id} found, fetching related data...`)
+    console.log(`✅ Invoice ${id} found (tenant: ${invoiceData.tenant_id}), fetching related data...`)
 
     // Fetch related quote data separately
     let quoteData = null
@@ -178,14 +149,12 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const tenantId = user.app_metadata?.tenant_id || process.env.NEXT_PUBLIC_TENANT_ID
-
     const updates = await req.json()
+    // RLS will handle tenant filtering automatically
     const { error } = await supabase
       .from("invoice")
       .update(updates)
       .eq("id", id)
-      .eq("tenant_id", tenantId) // Ensure tenant scoping
 
     if (error) {
       if (error.code === 'PGRST116') {
@@ -213,13 +182,11 @@ export async function DELETE(_: Request, { params }: { params: { id: string } })
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const tenantId = user.app_metadata?.tenant_id || process.env.NEXT_PUBLIC_TENANT_ID
-
+    // RLS will handle tenant filtering automatically
     const { error } = await supabase
       .from("invoice")
       .delete()
       .eq("id", id)
-      .eq("tenant_id", tenantId) // Ensure tenant scoping
 
     if (error) {
       if (error.code === 'PGRST116') {
