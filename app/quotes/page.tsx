@@ -475,7 +475,7 @@ export default function QuotesPage() {
       </Dialog>
 
       <Dialog open={invoiceContractOpen} onOpenChange={setInvoiceContractOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogContent className="w-[65vw] sm:max-w-[92vw] md:max-w-[70vw]lg:max-w-[700px] max-h-[95vh] p-0 flex flex-col overflow-hidden bg-white/95 ark:bg-gray-900/95 backdrop-blur-xl border border-gray-200 dark:border-gray-800 shadow-2xl">
           <DialogHeader className="border-b border-slate-200 dark:border-slate-800 pb-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
