@@ -182,16 +182,15 @@ export default function DashboardPage() {
      {/* === Map & Recent Activity Section === */}
 <div className="grid gap-6 md:grid-cols-2 items-stretch">
   {/* Left: Route Map */}
-  <div className="flex flex-col h-full">
+  <div className="flex flex-col h-[480px]">
     <RouteMap />
   </div>
 
   {/* Right: Recent Activities */}
-  <div className="flex flex-col h-full">
+  <div className="flex flex-col h-[480px]">
     <RecentActivities />
   </div>
 </div>
-
     </div>
   );
 }
