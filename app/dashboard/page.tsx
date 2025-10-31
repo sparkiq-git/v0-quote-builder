@@ -17,9 +17,7 @@ export default function DashboardPage() {
   const [todayLeads, setTodayLeads] = useState<any[]>([]);
   const [todayQuotes, setTodayQuotes] = useState<any[]>([]);
 
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
+  useEffect(() => setIsClient(true), []);
 
   // === Load Lead Count ===
   useEffect(() => {
@@ -98,8 +96,7 @@ export default function DashboardPage() {
           // 🟩 Leads with status "new" today
           supabase
             .from("lead")
-            .select(
-              `
+            .select(`
               id,
               customer_name,
               customer_email,
@@ -109,8 +106,7 @@ export default function DashboardPage() {
               trip_summary,
               earliest_departure,
               created_at
-              `
-            )
+            `)
             .eq("status", "new")
             .gte("created_at", start.toISOString())
             .lte("created_at", end.toISOString())
@@ -119,9 +115,16 @@ export default function DashboardPage() {
           // 🟦 Quotes with status "draft" today
           supabase
             .from("quote")
-            .select(
-              "id, contact_name, status, created_at, title, trip_summary, trip_type, total_pax"
-            )
+            .select(`
+              id,
+              contact_name,
+              status,
+              created_at,
+              title,
+              trip_summary,
+              trip_type,
+              total_pax
+            `)
             .eq("status", "draft")
             .gte("created_at", start.toISOString())
             .lte("created_at", end.toISOString())
@@ -138,7 +141,7 @@ export default function DashboardPage() {
     loadTodayData();
   }, [isClient]);
 
-  // === Metric Card ===
+  // === Metric Card Component ===
   function MetricCard({
     title,
     icon: Icon,
@@ -211,22 +214,22 @@ export default function DashboardPage() {
       <DashboardMetrics />
 
       {/* === RouteMap + Recent Activities === */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="h-[min(60vh,500px)]">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        <div className="col-span-2">
           <RouteMap />
         </div>
-        <div className="h-[min(60vh,500px)] overflow-y-auto">
+        <div className="h-[min(65vh,550px)] overflow-y-auto">
           <RecentActivities />
         </div>
       </div>
 
       {/* === Today's New Leads and Draft Quotes === */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Leads */}
         <Card className="border border-gray-200 shadow-sm rounded-2xl flex flex-col">
           <CardHeader>
             <CardTitle className="text-lg font-semibold">
-              Today’s New Leads 
+              Today’s New Leads
             </CardTitle>
           </CardHeader>
           <CardContent className="flex-1 p-4 space-y-3 overflow-y-auto max-h-[400px]">
@@ -302,7 +305,7 @@ export default function DashboardPage() {
         <Card className="border border-gray-200 shadow-sm rounded-2xl flex flex-col">
           <CardHeader>
             <CardTitle className="text-lg font-semibold">
-              Today’s New Quotes 
+              Today’s New Quotes
             </CardTitle>
           </CardHeader>
           <CardContent className="flex-1 p-4 space-y-3 overflow-y-auto max-h-[400px]">
