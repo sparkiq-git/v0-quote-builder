@@ -476,14 +476,16 @@ export default function QuotesPage() {
 
       <Dialog open={invoiceContractOpen} onOpenChange={setInvoiceContractOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-          <DialogHeader className="border-b pb-4">
+          <DialogHeader className="border-b border-slate-200 dark:border-slate-800 pb-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600">
-                <FileSignature className="h-5 w-5 text-white" />
+              <div className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                <FileSignature className="h-5 w-5 text-slate-700 dark:text-slate-300" />
               </div>
               <div>
-                <DialogTitle className="text-2xl font-bold">Create Invoice & Contract</DialogTitle>
-                <DialogDescription className="text-base mt-1">
+                <DialogTitle className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                  Create Invoice & Contract
+                </DialogTitle>
+                <DialogDescription className="text-base mt-1 text-slate-600 dark:text-slate-400">
                   Review the quote summary and generate an invoice with contract
                 </DialogDescription>
               </div>
@@ -494,54 +496,53 @@ export default function QuotesPage() {
             {loadingQuote ? (
               <div className="flex flex-col items-center justify-center py-16 space-y-4">
                 <div className="relative">
-                  <Loader2 className="animate-spin h-12 w-12 text-blue-500" />
-                  <div className="absolute inset-0 blur-xl bg-blue-500/20 animate-pulse" />
+                  <Loader2 className="animate-spin h-12 w-12 text-slate-600 dark:text-slate-400" />
+                  <div className="absolute inset-0 blur-xl bg-slate-500/20 animate-pulse" />
                 </div>
                 <span className="text-sm text-muted-foreground font-medium">Loading quote details...</span>
               </div>
             ) : selectedQuote && fullQuoteData ? (
               <div className="space-y-6">
                 {/* Customer Information Card */}
-                <div className="relative overflow-hidden rounded-xl border border-border/50 bg-gradient-to-br from-card to-muted/20 shadow-sm hover:shadow-md transition-shadow">
-                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500" />
+                <div className="relative overflow-hidden rounded-xl border-2 border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 shadow-sm hover:shadow-md transition-shadow">
                   <div className="p-6">
                     <div className="flex items-center gap-2 mb-4">
-                      <User className="h-5 w-5 text-blue-600" />
-                      <h4 className="font-semibold text-lg">Customer Information</h4>
+                      <User className="h-5 w-5 text-slate-600 dark:text-slate-400" />
+                      <h4 className="font-semibold text-lg text-slate-900 dark:text-slate-100">Customer Information</h4>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="flex items-start gap-3 p-3 rounded-lg bg-background/50 border border-border/30">
-                        <User className="h-4 w-4 text-muted-foreground mt-0.5" />
+                      <div className="flex items-start gap-3 p-3 rounded-lg bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+                        <User className="h-4 w-4 text-slate-500 mt-0.5" />
                         <div className="flex-1 min-w-0">
-                          <span className="text-xs text-muted-foreground block mb-1">Name</span>
-                          <p className="font-medium text-sm truncate">
+                          <span className="text-xs text-slate-500 dark:text-slate-400 block mb-1">Name</span>
+                          <p className="font-medium text-sm truncate text-slate-900 dark:text-slate-100">
                             {fullQuoteData.contact_name || selectedQuote.customer.name || "—"}
                           </p>
                         </div>
                       </div>
-                      <div className="flex items-start gap-3 p-3 rounded-lg bg-background/50 border border-border/30">
-                        <Mail className="h-4 w-4 text-muted-foreground mt-0.5" />
+                      <div className="flex items-start gap-3 p-3 rounded-lg bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+                        <Mail className="h-4 w-4 text-slate-500 mt-0.5" />
                         <div className="flex-1 min-w-0">
-                          <span className="text-xs text-muted-foreground block mb-1">Email</span>
-                          <p className="font-medium text-sm truncate">
+                          <span className="text-xs text-slate-500 dark:text-slate-400 block mb-1">Email</span>
+                          <p className="font-medium text-sm truncate text-slate-900 dark:text-slate-100">
                             {fullQuoteData.contact_email || selectedQuote.customer.email || "—"}
                           </p>
                         </div>
                       </div>
-                      <div className="flex items-start gap-3 p-3 rounded-lg bg-background/50 border border-border/30">
-                        <Phone className="h-4 w-4 text-muted-foreground mt-0.5" />
+                      <div className="flex items-start gap-3 p-3 rounded-lg bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+                        <Phone className="h-4 w-4 text-slate-500 mt-0.5" />
                         <div className="flex-1 min-w-0">
-                          <span className="text-xs text-muted-foreground block mb-1">Phone</span>
-                          <p className="font-medium text-sm truncate">
+                          <span className="text-xs text-slate-500 dark:text-slate-400 block mb-1">Phone</span>
+                          <p className="font-medium text-sm truncate text-slate-900 dark:text-slate-100">
                             {fullQuoteData.contact_phone || selectedQuote.customer.phone || "—"}
                           </p>
                         </div>
                       </div>
-                      <div className="flex items-start gap-3 p-3 rounded-lg bg-background/50 border border-border/30">
-                        <Building2 className="h-4 w-4 text-muted-foreground mt-0.5" />
+                      <div className="flex items-start gap-3 p-3 rounded-lg bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+                        <Building2 className="h-4 w-4 text-slate-500 mt-0.5" />
                         <div className="flex-1 min-w-0">
-                          <span className="text-xs text-muted-foreground block mb-1">Company</span>
-                          <p className="font-medium text-sm truncate">
+                          <span className="text-xs text-slate-500 dark:text-slate-400 block mb-1">Company</span>
+                          <p className="font-medium text-sm truncate text-slate-900 dark:text-slate-100">
                             {fullQuoteData.contact_company || selectedQuote.customer.company || "—"}
                           </p>
                         </div>
@@ -552,36 +553,40 @@ export default function QuotesPage() {
 
                 {/* Selected Aircraft Option Card */}
                 {fullQuoteData.options && fullQuoteData.options.length > 0 && (
-                  <div className="relative overflow-hidden rounded-xl border border-border/50 bg-gradient-to-br from-card to-muted/20 shadow-sm hover:shadow-md transition-shadow">
-                    <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500" />
+                  <div className="relative overflow-hidden rounded-xl border-2 border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 shadow-sm hover:shadow-md transition-shadow">
                     <div className="p-6">
                       <div className="flex items-center gap-2 mb-4">
-                        <Plane className="h-5 w-5 text-emerald-600" />
-                        <h4 className="font-semibold text-lg">Selected Aircraft Option</h4>
+                        <Plane className="h-5 w-5 text-slate-600 dark:text-slate-400" />
+                        <h4 className="font-semibold text-lg text-slate-900 dark:text-slate-100">
+                          Selected Aircraft Option
+                        </h4>
                       </div>
                       <div className="space-y-3">
                         {fullQuoteData.options.map((option: any, idx: number) => (
                           <div
                             key={option.id || idx}
-                            className="p-4 rounded-lg bg-background/50 border border-border/30 space-y-2"
+                            className="p-4 rounded-lg bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-2"
                           >
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-2">
-                                <Badge variant="secondary" className="text-xs">
+                                <Badge
+                                  variant="secondary"
+                                  className="text-xs bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300"
+                                >
                                   Option {idx + 1}
                                 </Badge>
-                                <span className="font-semibold text-sm">
+                                <span className="font-semibold text-sm text-slate-900 dark:text-slate-100">
                                   {option.aircraftModel?.name || option.aircraftTail?.tailNumber || "Aircraft Option"}
                                 </span>
                               </div>
                               {option.price_total && (
-                                <span className="font-bold text-lg text-emerald-600">
+                                <span className="font-bold text-lg text-slate-900 dark:text-slate-100">
                                   {formatCurrency(option.price_total || 0)}
                                 </span>
                               )}
                             </div>
                             {option.flight_hours && (
-                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
                                 <Clock className="h-3.5 w-3.5" />
                                 <span>{option.flight_hours} flight hours</span>
                               </div>
@@ -595,26 +600,27 @@ export default function QuotesPage() {
 
                 {/* Additional Services Card */}
                 {fullQuoteData.services && fullQuoteData.services.length > 0 && (
-                  <div className="relative overflow-hidden rounded-xl border border-border/50 bg-gradient-to-br from-card to-muted/20 shadow-sm hover:shadow-md transition-shadow">
-                    <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-orange-500 to-red-500" />
+                  <div className="relative overflow-hidden rounded-xl border-2 border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 shadow-sm hover:shadow-md transition-shadow">
                     <div className="p-6">
                       <div className="flex items-center gap-2 mb-4">
-                        <Package className="h-5 w-5 text-amber-600" />
-                        <h4 className="font-semibold text-lg">Additional Services</h4>
+                        <Package className="h-5 w-5 text-slate-600 dark:text-slate-400" />
+                        <h4 className="font-semibold text-lg text-slate-900 dark:text-slate-100">
+                          Additional Services
+                        </h4>
                       </div>
                       <div className="space-y-2">
                         {fullQuoteData.services.map((service: any, idx: number) => (
                           <div
                             key={service.id || idx}
-                            className="flex items-center justify-between p-3 rounded-lg bg-background/50 border border-border/30 hover:bg-background/80 transition-colors"
+                            className="flex items-center justify-between p-3 rounded-lg bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors"
                           >
                             <div className="flex items-center gap-2">
-                              <div className="h-2 w-2 rounded-full bg-amber-500" />
-                              <span className="text-sm font-medium">
+                              <div className="h-2 w-2 rounded-full bg-slate-400 dark:bg-slate-600" />
+                              <span className="text-sm font-medium text-slate-900 dark:text-slate-100">
                                 {service.name || service.description || `Service ${idx + 1}`}
                               </span>
                             </div>
-                            <span className="font-semibold text-sm">
+                            <span className="font-semibold text-sm text-slate-900 dark:text-slate-100">
                               {formatCurrency((service.amount || service.unit_price || 0) * (service.qty || 1))}
                             </span>
                           </div>
@@ -625,18 +631,17 @@ export default function QuotesPage() {
                 )}
 
                 {/* Totals Card */}
-                <div className="relative overflow-hidden rounded-xl border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10 shadow-lg">
-                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600" />
+                <div className="relative overflow-hidden rounded-xl border-2 border-slate-300 dark:border-slate-700 bg-slate-100/50 dark:bg-slate-900/50 shadow-lg">
                   <div className="p-6">
                     <div className="flex items-center gap-2 mb-4">
-                      <DollarSign className="h-5 w-5 text-primary" />
-                      <h4 className="font-semibold text-lg">Invoice Summary</h4>
+                      <DollarSign className="h-5 w-5 text-slate-700 dark:text-slate-300" />
+                      <h4 className="font-semibold text-lg text-slate-900 dark:text-slate-100">Invoice Summary</h4>
                     </div>
                     <div className="space-y-3">
                       {fullQuoteData.options && fullQuoteData.options.length > 0 && (
                         <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">Aircraft Option:</span>
-                          <span className="font-semibold">
+                          <span className="text-slate-600 dark:text-slate-400">Aircraft Option:</span>
+                          <span className="font-semibold text-slate-900 dark:text-slate-100">
                             {formatCurrency(
                               fullQuoteData.options.reduce((sum: number, opt: any) => sum + (opt.price_total || 0), 0),
                             )}
@@ -645,8 +650,8 @@ export default function QuotesPage() {
                       )}
                       {fullQuoteData.services && fullQuoteData.services.length > 0 && (
                         <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">Additional Services:</span>
-                          <span className="font-semibold">
+                          <span className="text-slate-600 dark:text-slate-400">Additional Services:</span>
+                          <span className="font-semibold text-slate-900 dark:text-slate-100">
                             {formatCurrency(
                               fullQuoteData.services.reduce(
                                 (sum: number, s: any) => sum + (s.amount || s.unit_price || 0) * (s.qty || 1),
@@ -656,9 +661,9 @@ export default function QuotesPage() {
                           </span>
                         </div>
                       )}
-                      <div className="flex items-center justify-between pt-3 border-t-2 border-primary/20">
-                        <span className="text-lg font-bold">Grand Total:</span>
-                        <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                      <div className="flex items-center justify-between pt-3 border-t-2 border-slate-300 dark:border-slate-700">
+                        <span className="text-lg font-bold text-slate-900 dark:text-slate-100">Grand Total:</span>
+                        <span className="text-2xl font-bold text-slate-900 dark:text-slate-100">
                           {formatCurrency(
                             (fullQuoteData.options?.reduce(
                               (sum: number, opt: any) => sum + (opt.price_total || 0),
@@ -676,12 +681,14 @@ export default function QuotesPage() {
                 </div>
 
                 {/* Payment URL Input Card */}
-                <div className="relative overflow-hidden rounded-xl border border-border/50 bg-gradient-to-br from-card to-muted/20 shadow-sm">
-                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500" />
+                <div className="relative overflow-hidden rounded-xl border-2 border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 shadow-sm">
                   <div className="p-6 space-y-3">
                     <div className="flex items-center gap-2">
-                      <LinkIcon className="h-5 w-5 text-indigo-600" />
-                      <Label htmlFor="payment-url" className="font-semibold text-base">
+                      <LinkIcon className="h-5 w-5 text-slate-600 dark:text-slate-400" />
+                      <Label
+                        htmlFor="payment-url"
+                        className="font-semibold text-base text-slate-900 dark:text-slate-100"
+                      >
                         Payment Link (Optional)
                       </Label>
                     </div>
@@ -693,24 +700,24 @@ export default function QuotesPage() {
                       onChange={(e) => setPaymentUrl(e.target.value)}
                       className="w-full h-11 text-sm"
                     />
-                    <p className="text-xs text-muted-foreground flex items-start gap-2">
-                      <CheckCircle2 className="h-3.5 w-3.5 mt-0.5 text-indigo-500" />
+                    <p className="text-xs text-slate-600 dark:text-slate-400 flex items-start gap-2">
+                      <CheckCircle2 className="h-3.5 w-3.5 mt-0.5 text-slate-500" />
                       <span>Enter a payment URL that will be included in the invoice for easy customer access.</span>
                     </p>
                   </div>
                 </div>
 
                 {/* Info Banner */}
-                <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border border-blue-200 dark:border-blue-800 p-5">
+                <div className="relative overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-800 p-5">
                   <div className="flex items-start gap-3">
-                    <div className="p-2 rounded-lg bg-blue-500/10">
-                      <FileSignature className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                    <div className="p-2 rounded-lg bg-slate-200 dark:bg-slate-800">
+                      <FileSignature className="h-5 w-5 text-slate-700 dark:text-slate-300" />
                     </div>
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-1">
+                      <p className="text-sm font-medium text-slate-900 dark:text-slate-100 mb-1">
                         Ready to Create Invoice
                       </p>
-                      <p className="text-xs text-blue-700 dark:text-blue-300">
+                      <p className="text-xs text-slate-600 dark:text-slate-400">
                         This will generate an invoice from the quote and prepare it for sending to the customer. The
                         contract will be automatically attached.
                       </p>
@@ -728,7 +735,7 @@ export default function QuotesPage() {
             )}
           </div>
 
-          <DialogFooter className="border-t pt-4 gap-2">
+          <DialogFooter className="border-t border-slate-200 dark:border-slate-800 pt-4 gap-2">
             <Button
               variant="outline"
               onClick={() => {
@@ -744,7 +751,7 @@ export default function QuotesPage() {
             <Button
               onClick={handleSendInvoiceContract}
               disabled={sending || loadingQuote}
-              className="min-w-[200px] bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all"
+              className="min-w-[200px] bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-slate-200 text-white dark:text-slate-900 shadow-lg hover:shadow-xl transition-all"
             >
               {sending ? (
                 <>
