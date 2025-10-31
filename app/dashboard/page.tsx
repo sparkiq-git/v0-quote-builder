@@ -181,17 +181,13 @@ export default function DashboardPage() {
 
       {/* === Map & Recent Activity Section === */}
 <div className="grid gap-6 md:grid-cols-2 items-stretch">
-  {/* Left: Route Map */}
-  <Card className="flex flex-col overflow-hidden h-[min(65vh,550px)] border border-gray-200 bg-white rounded-2xl shadow-sm">
-    <div className="flex-1 relative rounded-2xl overflow-hidden">
-      <RouteMap />
-    </div>
+  <Card className="flex flex-col p-0 overflow-hidden h-[min(65vh,550px)]">
+    <RouteMap />
   </Card>
 
-  {/* Right: Recent Activities */}
-  <Card className="flex flex-col h-[min(65vh,550px)] border border-gray-200 bg-white rounded-2xl shadow-sm">
+  <div className="h-[min(65vh,550px)]">
     <RecentActivities />
-  </Card>
+  </div>
 </div>
 
     </div>
