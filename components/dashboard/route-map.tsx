@@ -79,7 +79,7 @@ export function RouteMap() {
               created_at
             )
           `)
-          .eq("lead.status", "new") // ✅ Only NEW leads
+          .eq("lead.status", "new") // ✅ Only new leads
           .order("depart_dt", { ascending: true });
 
         if (error) {
@@ -248,9 +248,6 @@ export function RouteMap() {
           zoom: US_ZOOM,
           zoomControl: false,
           attributionControl: false,
-          scrollWheelZoom: false,
-          doubleClickZoom: false,
-          touchZoom: false,
         });
 
         window.L.tileLayer(
@@ -263,6 +260,9 @@ export function RouteMap() {
         ).addTo(map.current);
 
         setMapLoaded(true);
+        setTimeout(() => {
+          map.current?.invalidateSize?.();
+        }, 500);
       } catch (err) {
         console.error("Map init error:", err);
         setMapError("Failed to initialize map instance.");
@@ -280,7 +280,7 @@ export function RouteMap() {
     };
   }, [refreshKey]);
 
-  // -------- Draw routes and markers --------
+  // -------- Draw routes --------
   useEffect(() => {
     if (!map.current || !mapLoaded) return;
 
@@ -307,9 +307,7 @@ export function RouteMap() {
         allCoords.push(originLatLng, destLatLng);
 
         const color =
-          activeFilter === "leads"
-            ? "#2563eb" // blue for leads
-            : "#16a34a"; // green for upcoming trips
+          activeFilter === "leads" ? "#2563eb" : "#16a34a";
 
         const routeLine = window.L.polyline([originLatLng, destLatLng], {
           color,
@@ -318,30 +316,21 @@ export function RouteMap() {
           dashArray: "3, 2",
         }).addTo(map.current);
 
-        // Midpoint airplane icon
         const midLat = (leg.originCoords.lat + leg.destCoords.lat) / 2;
         const midLng = (leg.originCoords.lng + leg.destCoords.lng) / 2;
-        const angle =
-          (Math.atan2(
-            leg.destCoords.lat - leg.originCoords.lat,
-            leg.destCoords.lng - leg.originCoords.lng
-          ) *
-            180) /
-          Math.PI;
 
         const airplane = window.L.marker([midLat, midLng], {
           icon: window.L.divIcon({
             html: `
-              <div style="transform: rotate(${angle + 90}deg);">
-                <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
-                  <circle cx="16" cy="16" r="10" fill="none" stroke="#374151" stroke-width="2"/>
-                  <path d="M16 8c-.5 0-1 .2-1 .5V12l-4 2.5v1l4-1.25V18l-1 .75V20l1.75-.5L17.25 20v-1.25L16.25 18v-3.75l4 1.25v-1L16.25 12V8.5c0-.3-.5-.5-1-.5z" fill="#374151" transform="translate(0, 1)"/>
+              <div>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="${color}">
+                  <path d="M2.5 19l19-7L2.5 5v5l14 2-14 2z" />
                 </svg>
               </div>
             `,
             className: "bg-transparent",
-            iconSize: [28, 28],
-            iconAnchor: [14, 14],
+            iconSize: [20, 20],
+            iconAnchor: [10, 10],
           }),
         }).addTo(map.current);
 
@@ -358,27 +347,6 @@ export function RouteMap() {
         `);
 
         routeLayers.current.push(routeLine, airplane);
-
-        // Airport markers
-        const makeMarker = (coords: { lat: number; lng: number; name: string }) =>
-          window.L.marker([coords.lat, coords.lng], {
-            icon: window.L.divIcon({
-              html: `
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                  <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="#1f2937" stroke="#ffffff" stroke-width="1.5"/>
-                  <circle cx="12" cy="9" r="2.5" fill="#ffffff"/>
-                </svg>
-              `,
-              className: "bg-transparent",
-              iconSize: [22, 22],
-              iconAnchor: [11, 22],
-            }),
-          }).addTo(map.current);
-
-        airportMarkers.current.push(
-          makeMarker(leg.originCoords),
-          makeMarker(leg.destCoords)
-        );
       });
     });
 
@@ -393,17 +361,14 @@ export function RouteMap() {
   const handleRefresh = () => setRefreshKey((k) => k + 1);
 
   return (
-  <div className="grid gap-4 grid-cols-1">
     <Card className="relative overflow-hidden p-0">
-      {/* ✅ Give the map an explicit height */}
       <div className="relative w-full h-[min(65vh,550px)] bg-slate-50 rounded-2xl overflow-hidden">
-        {/* === Filters === */}
+        {/* Filters */}
         <div className="absolute top-4 left-4 z-[1000] flex items-center gap-2 bg-white/10 rounded-lg p-2 shadow-lg border border-white/10">
           {(["leads", "upcoming"] as FilterType[]).map((filter) => {
             const isActive = activeFilter === filter;
             const cnt =
               filter === "leads" ? leadRoutes.length : upcomingRoutes.length;
-
             const label =
               filter === "leads" ? "New Leads" : "Upcoming Trips";
             const Icon = filter === "leads" ? Users : Plane;
@@ -431,7 +396,7 @@ export function RouteMap() {
           })}
         </div>
 
-        {/* === Zoom / Refresh controls === */}
+        {/* Zoom / Refresh */}
         <div className="absolute top-20 right-4 z-[1000] flex flex-col gap-1 bg-white/80 rounded-lg p-1 shadow-lg border border-gray-200">
           <Button variant="ghost" size="sm" onClick={handleZoomIn}>
             <Plus className="h-4 w-4" />
@@ -444,7 +409,7 @@ export function RouteMap() {
           </Button>
         </div>
 
-        {/* ✅ Map container with explicit height */}
+        {/* Map container */}
         <div ref={mapContainer} className="absolute inset-0 w-full h-full" />
 
         {mapError && (
@@ -463,8 +428,5 @@ export function RouteMap() {
         )}
       </div>
     </Card>
-  </div>
-);
-
-
+  );
 }
