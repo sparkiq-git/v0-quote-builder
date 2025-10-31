@@ -3,21 +3,10 @@
 import { useMemo, useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, FileText, Clock, Plane } from "lucide-react";
-import { useMockStore } from "@/lib/mock/store";
-import { RouteMap } from "@/components/dashboard/route-map";
-import DashboardMetrics from "@/components/dashboard/DashboardMetrics";
-import { RecentActivities } from "@/components/dashboard/recent-activities";
-
-"use client";
-
-import { useMemo, useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, FileText, Clock, Plane } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { RouteMap } from "@/components/dashboard/route-map";
 import DashboardMetrics from "@/components/dashboard/DashboardMetrics";
 import { RecentActivities } from "@/components/dashboard/recent-activities";
-import { Button } from "@/components/ui/button";
 
 export default function DashboardPage() {
   const [leadCount, setLeadCount] = useState(0);
@@ -96,7 +85,9 @@ export default function DashboardPage() {
           .order("created_at", { ascending: false }),
         supabase
           .from("quote")
-          .select("id, contact_name, status, total_amount, created_at, quote_number")
+          .select(
+            "id, contact_name, status, created_at, quote_number, trip_summary, trip_type, total_pax"
+          )
           .gte("created_at", start.toISOString())
           .lte("created_at", end.toISOString())
           .order("created_at", { ascending: false }),
@@ -109,6 +100,7 @@ export default function DashboardPage() {
     loadTodayData();
   }, [isClient]);
 
+  // === Metric Card ===
   function MetricCard({
     title,
     icon: Icon,
@@ -130,16 +122,21 @@ export default function DashboardPage() {
         </CardHeader>
         <CardContent className="grid grid-rows-[auto_auto] gap-1 flex-1">
           <div className="text-2xl font-bold leading-none">{currentValue}</div>
-          <p className="text-xs text-muted-foreground mb-0 min-h-4 truncate">{description}</p>
+          <p className="text-xs text-muted-foreground mb-0 min-h-4 truncate">
+            {description}
+          </p>
         </CardContent>
       </Card>
     );
   }
 
+  // === Main Layout ===
   return (
     <div className="space-y-6 sm:space-y-8">
       <div>
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Welcome back!</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+          Welcome back!
+        </h1>
         <p className="text-muted-foreground text-xs sm:text-base">
           Here’s what’s happening today.
         </p>
@@ -180,7 +177,7 @@ export default function DashboardPage() {
         <div className="flex flex-col h-[460px]">
           <RouteMap />
         </div>
-        <div className="flex flex-col h-[460px]">
+        <div className="flex flex-col h-[460px] overflow-hidden">
           <RecentActivities />
         </div>
       </div>
@@ -190,11 +187,15 @@ export default function DashboardPage() {
         {/* Today's New Leads */}
         <Card className="border border-gray-200 shadow-sm rounded-2xl flex flex-col">
           <CardHeader>
-            <CardTitle className="text-lg font-semibold">Today’s New Leads</CardTitle>
+            <CardTitle className="text-lg font-semibold">
+              Today’s New Leads
+            </CardTitle>
           </CardHeader>
-          <CardContent className="flex-1 p-4 space-y-3 overflow-y-auto">
+          <CardContent className="flex-1 p-4 space-y-3 overflow-y-auto max-h-[400px]">
             {todayLeads.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No new leads today.</p>
+              <p className="text-sm text-muted-foreground">
+                No new leads today.
+              </p>
             ) : (
               todayLeads.map((lead) => (
                 <div
@@ -222,35 +223,47 @@ export default function DashboardPage() {
         {/* Today's New Quotes */}
         <Card className="border border-gray-200 shadow-sm rounded-2xl flex flex-col">
           <CardHeader>
-            <CardTitle className="text-lg font-semibold">Today’s New Quotes</CardTitle>
+            <CardTitle className="text-lg font-semibold">
+              Today’s New Quotes
+            </CardTitle>
           </CardHeader>
-          <CardContent className="flex-1 p-4 space-y-3 overflow-y-auto">
+          <CardContent className="flex-1 p-4 space-y-3 overflow-y-auto max-h-[400px]">
             {todayQuotes.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No new quotes today.</p>
+              <p className="text-sm text-muted-foreground">
+                No new quotes today.
+              </p>
             ) : (
               todayQuotes.map((quote) => (
                 <div
                   key={quote.id}
-                  className="flex items-center justify-between border-b pb-2 last:border-none"
+                  className="flex flex-col border-b pb-2 last:border-none"
                 >
-                  <div>
+                  <div className="flex items-center justify-between">
                     <p className="font-medium text-sm">
-                      #{quote.quote_number ?? quote.id} — {quote.contact_name}
+                      #{quote.quote_number ?? quote.id.slice(0, 6)} —{" "}
+                      {quote.contact_name}
                     </p>
-                    <p className="text-xs text-muted-foreground">
+                    <Badge
+                      variant="secondary"
+                      className="text-[10px] uppercase"
+                    >
+                      {quote.status}
+                    </Badge>
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {quote.trip_summary ? quote.trip_summary : "No trip summary"}
+                  </div>
+                  <div className="text-xs text-muted-foreground flex justify-between mt-1">
+                    <span>
+                      Pax: {quote.total_pax ?? "—"} |{" "}
+                      {quote.trip_type ?? "one-way"}
+                    </span>
+                    <span>
                       {new Date(quote.created_at).toLocaleTimeString([], {
                         hour: "2-digit",
                         minute: "2-digit",
                       })}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-semibold">
-                      ${quote.total_amount?.toLocaleString() ?? "—"}
-                    </p>
-                    <Badge variant="secondary" className="text-[10px] uppercase">
-                      {quote.status}
-                    </Badge>
+                    </span>
                   </div>
                 </div>
               ))
