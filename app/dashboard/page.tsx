@@ -105,7 +105,6 @@ export default function DashboardPage() {
               customer_email,
               customer_phone,
               status,
-              notes,
               trip_type,
               trip_summary,
               earliest_departure,
@@ -283,12 +282,6 @@ export default function DashboardPage() {
                         hour: "2-digit",
                         minute: "2-digit",
                       })}
-                    </p>
-                  )}
-
-                  {lead.notes && (
-                    <p className="text-xs text-muted-foreground mt-1 italic">
-                      “{lead.notes}”
                     </p>
                   )}
 
