@@ -1,93 +1,94 @@
-"use client"
+"use client";
 
-import { useMemo, useState, useEffect } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Users, FileText, Clock, Plane } from "lucide-react"
-import { useMockStore } from "@/lib/mock/store"
-import { RouteMap } from "@/components/dashboard/route-map"
-import DashboardMetrics from "@/components/dashboard/DashboardMetrics"
+import { useMemo, useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Users, FileText, Clock, Plane } from "lucide-react";
+import { useMockStore } from "@/lib/mock/store";
+import { RouteMap } from "@/components/dashboard/route-map";
+import DashboardMetrics from "@/components/dashboard/DashboardMetrics";
+import { RecentActivities } from "@/components/dashboard/recent-activities";
 
 export default function DashboardPage() {
-  const [leadCount, setLeadCount] = useState(0)
-  const [quotesAwaitingResponse, setQuotesAwaitingResponse] = useState(0)
-  const [unpaidQuotes, setUnpaidQuotes] = useState(0)
-  const [upcomingDepartures, setUpcomingDepartures] = useState(0)
-  const [isClient, setIsClient] = useState(false)
+  const [leadCount, setLeadCount] = useState(0);
+  const [quotesAwaitingResponse, setQuotesAwaitingResponse] = useState(0);
+  const [unpaidQuotes, setUnpaidQuotes] = useState(0);
+  const [upcomingDepartures, setUpcomingDepartures] = useState(0);
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
-    setIsClient(true)
-  }, [])
+    setIsClient(true);
+  }, []);
 
-  // === Load LEADS
+  // === Load LEADS ===
   useEffect(() => {
-    if (!isClient) return
-    let cancelled = false
+    if (!isClient) return;
+    let cancelled = false;
 
     const loadLeadCount = async () => {
-      const { createClient } = await import("@/lib/supabase/client")
-      const supabase = createClient()
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
 
       try {
         const { count, error } = await supabase
           .from("lead")
           .select("*", { count: "exact", head: true })
-          .in("status", ["opened", "new"])
+          .in("status", ["opened", "new"]);
 
         if (!cancelled) {
           if (error) {
-            console.error("Lead count error:", error)
-            setLeadCount(0)
+            console.error("Lead count error:", error);
+            setLeadCount(0);
           } else {
-            setLeadCount(count ?? 0)
+            setLeadCount(count ?? 0);
           }
         }
       } catch (e) {
         if (!cancelled) {
-          console.error("Lead count exception:", e)
-          setLeadCount(0)
+          console.error("Lead count exception:", e);
+          setLeadCount(0);
         }
       }
-    }
+    };
 
-    loadLeadCount()
-    const id = setInterval(loadLeadCount, 15000)
+    loadLeadCount();
+    const id = setInterval(loadLeadCount, 15000);
     return () => {
-      cancelled = true
-      clearInterval(id)
-    }
-  }, [isClient])
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [isClient]);
 
-  // === Load Metrics (Quotes, Unpaid, Upcoming)
+  // === Load Metrics (Quotes, Unpaid, Upcoming) ===
   useEffect(() => {
-    if (!isClient) return
-    let cancelled = false
+    if (!isClient) return;
+    let cancelled = false;
 
     const loadMetrics = async () => {
       try {
-        const res = await fetch("/api/metrics", { cache: "no-store" })
-        if (!res.ok) throw new Error(`metrics ${res.status}`)
-        const j = await res.json()
-        if (cancelled) return
+        const res = await fetch("/api/metrics", { cache: "no-store" });
+        if (!res.ok) throw new Error(`metrics ${res.status}`);
+        const j = await res.json();
+        if (cancelled) return;
 
-        setQuotesAwaitingResponse(j.quotesAwaitingResponse ?? 0)
-        setUnpaidQuotes(j.unpaidQuotes ?? 0)
-        setUpcomingDepartures(j.upcomingDepartures ?? 0)
+        setQuotesAwaitingResponse(j.quotesAwaitingResponse ?? 0);
+        setUnpaidQuotes(j.unpaidQuotes ?? 0);
+        setUpcomingDepartures(j.upcomingDepartures ?? 0);
       } catch (e) {
-        if (!cancelled) console.error("Failed to load metrics:", e)
+        if (!cancelled) console.error("Failed to load metrics:", e);
       }
-    }
+    };
 
-    loadMetrics()
-    const id = setInterval(loadMetrics, 15000)
+    loadMetrics();
+    const id = setInterval(loadMetrics, 15000);
 
     return () => {
-      cancelled = true
-      clearInterval(id)
-    }
-  }, [isClient])
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [isClient]);
 
-  const { state, getMetrics, loading } = useMockStore()
-  const metrics = getMetrics()
+  const { state, getMetrics } = useMockStore();
+  const metrics = getMetrics();
 
   const recentLeads = useMemo(
     () =>
@@ -95,13 +96,16 @@ export default function DashboardPage() {
         .filter((l) => l.status !== "deleted")
         .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))
         .slice(0, 3),
-    [state.leads],
-  )
+    [state.leads]
+  );
 
   const recentQuotes = useMemo(
-    () => state.quotes.sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)).slice(0, 3),
-    [state.quotes],
-  )
+    () =>
+      state.quotes
+        .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))
+        .slice(0, 3),
+    [state.quotes]
+  );
 
   function MetricCard({
     title,
@@ -109,10 +113,10 @@ export default function DashboardPage() {
     currentValue,
     description,
   }: {
-    title: string
-    icon: any
-    currentValue: number | string
-    description: string
+    title: string;
+    icon: any;
+    currentValue: number | string;
+    description: string;
   }) {
     return (
       <Card className="col-span-1 h-full flex flex-col hover:shadow-md transition-shadow border border-gray-200">
@@ -124,29 +128,46 @@ export default function DashboardPage() {
         </CardHeader>
         <CardContent className="grid grid-rows-[auto_auto] gap-1 flex-1">
           <div className="text-2xl font-bold leading-none">{currentValue}</div>
-          <p className="text-xs text-muted-foreground mb-0 min-h-4 truncate">{description}</p>
+          <p className="text-xs text-muted-foreground mb-0 min-h-4 truncate">
+            {description}
+          </p>
         </CardContent>
       </Card>
-    )
+    );
   }
 
   return (
     <div className="space-y-6 sm:space-y-8">
+      {/* === Dashboard Header === */}
       <div>
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Welcome back!</h1>
-        <p className="text-muted-foreground text-xs sm:text-base">Here's what's happening today.</p>
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+          Welcome back!
+        </h1>
+        <p className="text-muted-foreground text-xs sm:text-base">
+          Here's what's happening today.
+        </p>
       </div>
 
       {/* === Top Metric Cards (4 total) === */}
       <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-        <MetricCard title="Leads" icon={Users} currentValue={leadCount} description="Pending conversion to quote" />
+        <MetricCard
+          title="Leads"
+          icon={Users}
+          currentValue={leadCount}
+          description="Pending conversion to quote"
+        />
         <MetricCard
           title="Quotes"
           icon={FileText}
           currentValue={quotesAwaitingResponse}
           description="Awaiting client response"
         />
-        <MetricCard title="Unpaid" icon={Clock} currentValue={unpaidQuotes} description="Awaiting payment" />
+        <MetricCard
+          title="Unpaid"
+          icon={Clock}
+          currentValue={unpaidQuotes}
+          description="Awaiting payment"
+        />
         <MetricCard
           title="Upcoming Trips"
           icon={Plane}
@@ -155,13 +176,21 @@ export default function DashboardPage() {
         />
       </div>
 
-      {/* === Additional Monthly Metrics Section (matches top style) === */}
+      {/* === Monthly Metrics === */}
       <DashboardMetrics />
 
-      {/* === Chart + Map === */}
-      <div className="w-full">
-        <RouteMap />
+      {/* === Map & Recent Activity Section === */}
+      <div className="grid gap-6 md:grid-cols-2">
+        {/* Left: Route Map */}
+        <div className="flex flex-col gap-4">
+          <RouteMap />
+        </div>
+
+        {/* Right: Recent Activities */}
+        <div className="flex flex-col gap-4">
+          <RecentActivities />
+        </div>
       </div>
     </div>
-  )
+  );
 }
