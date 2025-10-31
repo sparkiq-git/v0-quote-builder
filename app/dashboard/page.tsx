@@ -220,56 +220,49 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Today's New Quotes */}
-        <Card className="border border-gray-200 shadow-sm rounded-2xl flex flex-col">
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold">
-              Today’s New Quotes
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex-1 p-4 space-y-3 overflow-y-auto max-h-[400px]">
-            {todayQuotes.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No new quotes today.
-              </p>
-            ) : (
-              todayQuotes.map((quote) => (
-                <div
-                  key={quote.id}
-                  className="flex flex-col border-b pb-2 last:border-none"
-                >
-                  <div className="flex items-center justify-between">
-                    <p className="font-medium text-sm">
-                      #{quote.quote_number ?? quote.id.slice(0, 6)} —{" "}
-                      {quote.contact_name}
-                    </p>
-                    <Badge
-                      variant="secondary"
-                      className="text-[10px] uppercase"
-                    >
-                      {quote.status}
-                    </Badge>
-                  </div>
-                  <div className="text-xs text-muted-foreground mt-1">
-                    {quote.trip_summary ? quote.trip_summary : "No trip summary"}
-                  </div>
-                  <div className="text-xs text-muted-foreground flex justify-between mt-1">
-                    <span>
-                      Pax: {quote.total_pax ?? "—"} |{" "}
-                      {quote.trip_type ?? "one-way"}
-                    </span>
-                    <span>
-                      {new Date(quote.created_at).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </span>
-                  </div>
-                </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
+       {/* Today's New Quotes */}
+<Card className="border border-gray-200 shadow-sm rounded-2xl flex flex-col">
+  <CardHeader>
+    <CardTitle className="text-lg font-semibold">
+      Today’s New Quotes
+    </CardTitle>
+  </CardHeader>
+  <CardContent className="flex-1 p-4 space-y-3 overflow-y-auto max-h-[400px]">
+    {todayQuotes.length === 0 ? (
+      <p className="text-sm text-muted-foreground">No new quotes today.</p>
+    ) : (
+      todayQuotes.map((quote) => (
+        <div
+          key={quote.id}
+          className="flex flex-col border-b pb-2 last:border-none"
+        >
+          <div className="flex items-center justify-between">
+            <p className="font-medium text-sm">
+              #{quote.number ?? quote.id.slice(0, 6)} — {quote.contact_name}
+            </p>
+            <Badge variant="secondary" className="text-[10px] uppercase">
+              {quote.status}
+            </Badge>
+          </div>
+          <div className="text-xs text-muted-foreground mt-1">
+            {quote.trip_summary ? quote.trip_summary : "No trip summary"}
+          </div>
+          <div className="text-xs text-muted-foreground flex justify-between mt-1">
+            <span>
+              Pax: {quote.total_pax ?? "—"} | {quote.trip_type ?? "one-way"}
+            </span>
+            <span>
+              {new Date(quote.created_at).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </span>
+          </div>
+        </div>
+      ))
+    )}
+  </CardContent>
+</Card>
       </div>
     </div>
   );
