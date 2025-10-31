@@ -36,12 +36,9 @@ type Route = {
 
 export function RouteMap() {
   const [activeFilter, setActiveFilter] = useState<FilterType>("leads");
-
-  // Keep routes per category so badges reflect only what’s actually drawable on the map.
   const [leadRoutes, setLeadRoutes] = useState<Route[]>([]);
   const [upcomingRoutes, setUpcomingRoutes] = useState<Route[]>([]);
-  const [routes, setRoutes] = useState<Route[]>([]); // currently displayed set
-
+  const [routes, setRoutes] = useState<Route[]>([]);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -51,161 +48,163 @@ export function RouteMap() {
   const routeLayers = useRef<any[]>([]);
   const airportMarkers = useRef<any[]>([]);
 
-  // -------- Load BOTH datasets so badge counts are stable and correct --------
+  // -------- Load data from Supabase --------
   useEffect(() => {
-    const loadLeadRoutes = async () => {
-      // Only run on client side
-      if (typeof window === 'undefined') return;
-      
+    const loadRoutes = async () => {
+      if (typeof window === "undefined") return;
+
       const { createClient } = await import("@/lib/supabase/client");
       const supabase = createClient();
-      
-      const { data, error } = await supabase
-        .from("lead_detail")
-        .select(`
-          id,
-          lead_id,
-          origin,
-          origin_code,
-          destination,
-          destination_code,
-          depart_dt,
-          origin_lat,
-          origin_long,
-          destination_lat,
-          destination_long,
-          lead:lead_id (
+
+      const loadLeadRoutes = async () => {
+        const { data, error } = await supabase
+          .from("lead_detail")
+          .select(`
             id,
-            customer_name,
-            status,
-            created_at
+            lead_id,
+            origin,
+            origin_code,
+            destination,
+            destination_code,
+            depart_dt,
+            origin_lat,
+            origin_long,
+            destination_lat,
+            destination_long,
+            lead:lead_id (
+              id,
+              customer_name,
+              status,
+              created_at
+            )
+          `)
+          .in("lead.status", ["new", "opened"])
+          .order("depart_dt", { ascending: true });
+
+        if (error) {
+          console.error("Lead load error:", error);
+          setLeadRoutes([]);
+          return;
+        }
+
+        const formatted: Route[] = (data ?? [])
+          .filter(
+            (r) =>
+              r.origin_lat &&
+              r.origin_long &&
+              r.destination_lat &&
+              r.destination_long
           )
-        `)
-        .in("lead.status", ["new", "opened"])
-        .order("depart_dt", { ascending: true });
-
-      if (error) {
-        console.error("Lead load error:", error);
-        setLeadRoutes([]);
-        return;
-      }
-
-      const formatted: Route[] = (data ?? [])
-        .filter(
-          (r) =>
-            r.origin_lat &&
-            r.origin_long &&
-            r.destination_lat &&
-            r.destination_long
-        )
-        .map((r) => ({
-          id: String(r.lead_id),
-          customerName: r.lead?.customer_name ?? "Unknown",
-          status: r.lead?.status ?? "unknown",
-          createdAt: r.lead?.created_at ?? "",
-          legs: [
-            {
-              origin: r.origin,
-              destination: r.destination,
-              originCoords: {
-                lat: r.origin_lat,
-                lng: r.origin_long,
-                name: r.origin_code,
+          .map((r) => ({
+            id: String(r.lead_id),
+            customerName: r.lead?.customer_name ?? "Unknown",
+            status: r.lead?.status ?? "unknown",
+            createdAt: r.lead?.created_at ?? "",
+            legs: [
+              {
+                origin: r.origin,
+                destination: r.destination,
+                originCoords: {
+                  lat: r.origin_lat,
+                  lng: r.origin_long,
+                  name: r.origin_code,
+                },
+                destCoords: {
+                  lat: r.destination_lat,
+                  lng: r.destination_long,
+                  name: r.destination_code,
+                },
+                departDt: r.depart_dt,
               },
-              destCoords: {
-                lat: r.destination_lat,
-                lng: r.destination_long,
-                name: r.destination_code,
-              },
-              departDt: r.depart_dt,
-            },
-          ],
-        }));
+            ],
+          }));
 
-      setLeadRoutes(formatted);
-      console.log("✅ Leads loaded (drawable):", formatted.length);
+        setLeadRoutes(formatted);
+        console.log("✅ Leads loaded (drawable):", formatted.length);
+      };
+
+      const loadUpcomingRoutes = async () => {
+        const start = new Date();
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+        end.setHours(23, 59, 59, 999);
+
+        const { data, error } = await supabase
+          .from("quote_detail")
+          .select(`
+            id,
+            quote_id,
+            origin,
+            origin_code,
+            destination,
+            destination_code,
+            depart_dt,
+            origin_lat,
+            origin_long,
+            destination_lat,
+            destination_long,
+            quote:quote_id (
+              id,
+              contact_name,
+              contact_email,
+              status,
+              created_at
+            )
+          `)
+          .gte("depart_dt", start.toISOString())
+          .lte("depart_dt", end.toISOString())
+          .order("depart_dt", { ascending: true });
+
+        if (error) {
+          console.error("Upcoming load error:", error);
+          setUpcomingRoutes([]);
+          return;
+        }
+
+        const formatted: Route[] = (data ?? [])
+          .filter(
+            (r) =>
+              r.origin_lat &&
+              r.origin_long &&
+              r.destination_lat &&
+              r.destination_long
+          )
+          .map((r) => ({
+            id: String(r.quote_id),
+            customerName: r.quote?.contact_name ?? "Unknown",
+            contactEmail: r.quote?.contact_email ?? "",
+            status: r.quote?.status ?? "unknown",
+            createdAt: r.quote?.created_at ?? "",
+            legs: [
+              {
+                origin: r.origin,
+                destination: r.destination,
+                originCoords: {
+                  lat: r.origin_lat,
+                  lng: r.origin_long,
+                  name: r.origin_code,
+                },
+                destCoords: {
+                  lat: r.destination_lat,
+                  lng: r.destination_long,
+                  name: r.destination_code,
+                },
+                departDt: r.depart_dt,
+              },
+            ],
+          }));
+
+        setUpcomingRoutes(formatted);
+        console.log("✈️ Upcoming trips loaded (drawable):", formatted.length);
+      };
+
+      await Promise.all([loadLeadRoutes(), loadUpcomingRoutes()]);
     };
 
-    const loadUpcomingRoutes = async () => {
-      const start = new Date();
-      start.setHours(0, 0, 0, 0);
-      const end = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-      end.setHours(23, 59, 59, 999);
-
-      const { data, error } = await supabase
-        .from("quote_detail")
-        .select(`
-          id,
-          quote_id,
-          origin,
-          origin_code,
-          destination,
-          destination_code,
-          depart_dt,
-          origin_lat,
-          origin_long,
-          destination_lat,
-          destination_long,
-          quote:quote_id (
-            id,
-            contact_name,
-            contact_email,
-            status,
-            created_at
-          )
-        `)
-        .gte("depart_dt", start.toISOString())
-        .lte("depart_dt", end.toISOString())
-        .order("depart_dt", { ascending: true });
-
-      if (error) {
-        console.error("Upcoming load error:", error);
-        setUpcomingRoutes([]);
-        return;
-      }
-
-      const formatted: Route[] = (data ?? [])
-        .filter(
-          (r) =>
-            r.origin_lat &&
-            r.origin_long &&
-            r.destination_lat &&
-            r.destination_long
-        )
-        .map((r) => ({
-          id: String(r.quote_id),
-          customerName: r.quote?.contact_name ?? "Unknown",
-          contactEmail: r.quote?.contact_email ?? "",
-          status: r.quote?.status ?? "unknown",
-          createdAt: r.quote?.created_at ?? "",
-          legs: [
-            {
-              origin: r.origin,
-              destination: r.destination,
-              originCoords: {
-                lat: r.origin_lat,
-                lng: r.origin_long,
-                name: r.origin_code,
-              },
-              destCoords: {
-                lat: r.destination_lat,
-                lng: r.destination_long,
-                name: r.destination_code,
-              },
-              departDt: r.depart_dt,
-            },
-          ],
-        }));
-
-      setUpcomingRoutes(formatted);
-      console.log("✈️ Upcoming trips loaded (drawable):", formatted.length);
-    };
-
-    loadLeadRoutes();
-    loadUpcomingRoutes();
+    loadRoutes();
   }, [refreshKey]);
 
-  // Choose which set to display (but keep both for badge counts)
+  // -------- Choose which routes to display --------
   useEffect(() => {
     setRoutes(activeFilter === "leads" ? leadRoutes : upcomingRoutes);
   }, [activeFilter, leadRoutes, upcomingRoutes]);
@@ -233,7 +232,6 @@ export function RouteMap() {
     };
 
     const initializeMap = () => {
-      // Clean any prior instance
       if (map.current) {
         map.current.off();
         map.current.remove();
@@ -280,11 +278,10 @@ export function RouteMap() {
     };
   }, [refreshKey]);
 
-  // -------- Draw routes and markers (only when routes exist) --------
+  // -------- Draw routes and markers --------
   useEffect(() => {
     if (!map.current || !mapLoaded) return;
 
-    // Clear everything so markers only exist when routes exist
     routeLayers.current.forEach((l) => map.current.removeLayer(l));
     airportMarkers.current.forEach((m) => map.current.removeLayer(m));
     routeLayers.current = [];
@@ -356,7 +353,6 @@ export function RouteMap() {
 
         routeLayers.current.push(routeLine, airplane);
 
-        // Airport pins — only added because a route exists (and was drawn)
         const makeMarker = (coords: { lat: number; lng: number; name: string }) =>
           window.L.marker([coords.lat, coords.lng], {
             icon: window.L.divIcon({
@@ -385,7 +381,6 @@ export function RouteMap() {
     }
   }, [routes, mapLoaded, activeFilter]);
 
-  // UI handlers
   const handleZoomIn = () => map.current?.zoomIn();
   const handleZoomOut = () => map.current?.zoomOut();
   const handleRefresh = () => setRefreshKey((k) => k + 1);
@@ -398,7 +393,6 @@ export function RouteMap() {
           <div className="absolute top-4 left-4 z-[1000] flex items-center gap-2 bg-white/10 rounded-lg p-2 shadow-lg border border-white/10">
             {(["leads", "upcoming"] as FilterType[]).map((filter) => {
               const isActive = activeFilter === filter;
-              // Badge shows count for its own dataset, not the currently selected set.
               const cnt =
                 filter === "leads" ? leadRoutes.length : upcomingRoutes.length;
               return (
