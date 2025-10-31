@@ -148,7 +148,7 @@ export default function DashboardPage() {
         />
         <MetricCard title="Unpaid" icon={Clock} currentValue={unpaidQuotes} description="Awaiting payment" />
         <MetricCard
-          title="Upcoming Trip"
+          title="Upcoming Trips"
           icon={Plane}
           currentValue={upcomingDepartures}
           description="Departures in next 7 days"
