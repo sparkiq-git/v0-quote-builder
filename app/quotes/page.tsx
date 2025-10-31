@@ -21,6 +21,16 @@ import {
   ArrowUpDown,
   Filter,
   MoreHorizontal,
+  User,
+  Building2,
+  Mail,
+  Phone,
+  Plane,
+  Clock,
+  DollarSign,
+  Package,
+  LinkIcon,
+  CheckCircle2,
 } from "lucide-react"
 import { formatDate, formatTimeAgo, formatCurrency } from "@/lib/utils/format"
 import { useToast } from "@/hooks/use-toast"
@@ -137,30 +147,32 @@ export default function QuotesPage() {
     }
   }, [quoteToDelete, toast])
 
-
   // Invoice & Contract handler
-  const handleOpenInvoiceContractModal = useCallback(async (quote: any) => {
-    setSelectedQuote(quote)
-    setPaymentUrl("")
-    setFullQuoteData(null)
-    setLoadingQuote(true)
-    setInvoiceContractOpen(true)
+  const handleOpenInvoiceContractModal = useCallback(
+    async (quote: any) => {
+      setSelectedQuote(quote)
+      setPaymentUrl("")
+      setFullQuoteData(null)
+      setLoadingQuote(true)
+      setInvoiceContractOpen(true)
 
-    try {
-      // Fetch full quote data with options, items, etc.
-      const fullQuote = await getQuoteById(quote.id)
-      setFullQuoteData(fullQuote)
-    } catch (err: any) {
-      console.error("Failed to fetch quote details:", err)
-      toast({
-        title: "Failed to load quote",
-        description: err.message || "Could not load quote details.",
-        variant: "destructive",
-      })
-    } finally {
-      setLoadingQuote(false)
-    }
-  }, [toast])
+      try {
+        // Fetch full quote data with options, items, etc.
+        const fullQuote = await getQuoteById(quote.id)
+        setFullQuoteData(fullQuote)
+      } catch (err: any) {
+        console.error("Failed to fetch quote details:", err)
+        toast({
+          title: "Failed to load quote",
+          description: err.message || "Could not load quote details.",
+          variant: "destructive",
+        })
+      } finally {
+        setLoadingQuote(false)
+      }
+    },
+    [toast],
+  )
 
   const handleSendInvoiceContract = useCallback(async () => {
     if (!selectedQuote) return
@@ -175,9 +187,9 @@ export default function QuotesPage() {
       const res = await fetch("/api/invoice", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           quote_id: selectedQuote.id,
-          external_payment_url: paymentUrl || null
+          external_payment_url: paymentUrl || null,
         }),
       })
 
@@ -462,178 +474,282 @@ export default function QuotesPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Invoice & Contract Modal */}
       <Dialog open={invoiceContractOpen} onOpenChange={setInvoiceContractOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Create Invoice & Contract</DialogTitle>
-            <DialogDescription>
-              Review the quote summary and create an invoice with contract.
-            </DialogDescription>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader className="border-b pb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600">
+                <FileSignature className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <DialogTitle className="text-2xl font-bold">Create Invoice & Contract</DialogTitle>
+                <DialogDescription className="text-base mt-1">
+                  Review the quote summary and generate an invoice with contract
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
 
-          {loadingQuote ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="animate-spin mr-2 h-5 w-5" />
-              <span className="text-sm text-muted-foreground">Loading quote details...</span>
-            </div>
-          ) : selectedQuote && fullQuoteData ? (
-            <div className="space-y-4 py-4">
-              {/* Customer Information */}
-              <div className="border rounded-lg p-4 space-y-2">
-                <h4 className="font-semibold text-base mb-3">Customer Information</h4>
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <span className="text-muted-foreground">Name:</span>
-                    <p className="font-medium">{fullQuoteData.contact_name || selectedQuote.customer.name || "—"}</p>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Email:</span>
-                    <p className="font-medium">{fullQuoteData.contact_email || selectedQuote.customer.email || "—"}</p>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Phone:</span>
-                    <p className="font-medium">{fullQuoteData.contact_phone || selectedQuote.customer.phone || "—"}</p>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Company:</span>
-                    <p className="font-medium">{fullQuoteData.contact_company || selectedQuote.customer.company || "—"}</p>
+          <div className="flex-1 overflow-y-auto py-6 px-1">
+            {loadingQuote ? (
+              <div className="flex flex-col items-center justify-center py-16 space-y-4">
+                <div className="relative">
+                  <Loader2 className="animate-spin h-12 w-12 text-blue-500" />
+                  <div className="absolute inset-0 blur-xl bg-blue-500/20 animate-pulse" />
+                </div>
+                <span className="text-sm text-muted-foreground font-medium">Loading quote details...</span>
+              </div>
+            ) : selectedQuote && fullQuoteData ? (
+              <div className="space-y-6">
+                {/* Customer Information Card */}
+                <div className="relative overflow-hidden rounded-xl border border-border/50 bg-gradient-to-br from-card to-muted/20 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500" />
+                  <div className="p-6">
+                    <div className="flex items-center gap-2 mb-4">
+                      <User className="h-5 w-5 text-blue-600" />
+                      <h4 className="font-semibold text-lg">Customer Information</h4>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="flex items-start gap-3 p-3 rounded-lg bg-background/50 border border-border/30">
+                        <User className="h-4 w-4 text-muted-foreground mt-0.5" />
+                        <div className="flex-1 min-w-0">
+                          <span className="text-xs text-muted-foreground block mb-1">Name</span>
+                          <p className="font-medium text-sm truncate">
+                            {fullQuoteData.contact_name || selectedQuote.customer.name || "—"}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3 p-3 rounded-lg bg-background/50 border border-border/30">
+                        <Mail className="h-4 w-4 text-muted-foreground mt-0.5" />
+                        <div className="flex-1 min-w-0">
+                          <span className="text-xs text-muted-foreground block mb-1">Email</span>
+                          <p className="font-medium text-sm truncate">
+                            {fullQuoteData.contact_email || selectedQuote.customer.email || "—"}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3 p-3 rounded-lg bg-background/50 border border-border/30">
+                        <Phone className="h-4 w-4 text-muted-foreground mt-0.5" />
+                        <div className="flex-1 min-w-0">
+                          <span className="text-xs text-muted-foreground block mb-1">Phone</span>
+                          <p className="font-medium text-sm truncate">
+                            {fullQuoteData.contact_phone || selectedQuote.customer.phone || "—"}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3 p-3 rounded-lg bg-background/50 border border-border/30">
+                        <Building2 className="h-4 w-4 text-muted-foreground mt-0.5" />
+                        <div className="flex-1 min-w-0">
+                          <span className="text-xs text-muted-foreground block mb-1">Company</span>
+                          <p className="font-medium text-sm truncate">
+                            {fullQuoteData.contact_company || selectedQuote.customer.company || "—"}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Selected Option */}
-              {fullQuoteData.options && fullQuoteData.options.length > 0 && (
-                <div className="border rounded-lg p-4 space-y-2">
-                  <h4 className="font-semibold text-base mb-3">Selected Aircraft Option</h4>
-                  {fullQuoteData.options.map((option: any, idx: number) => (
-                    <div key={option.id || idx} className="space-y-1 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Option {idx + 1}:</span>
-                        <span className="font-medium">
-                          {option.aircraftModel?.name || option.aircraftTail?.tailNumber || "Aircraft Option"}
-                        </span>
+                {/* Selected Aircraft Option Card */}
+                {fullQuoteData.options && fullQuoteData.options.length > 0 && (
+                  <div className="relative overflow-hidden rounded-xl border border-border/50 bg-gradient-to-br from-card to-muted/20 shadow-sm hover:shadow-md transition-shadow">
+                    <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500" />
+                    <div className="p-6">
+                      <div className="flex items-center gap-2 mb-4">
+                        <Plane className="h-5 w-5 text-emerald-600" />
+                        <h4 className="font-semibold text-lg">Selected Aircraft Option</h4>
                       </div>
-                      {option.price_total && (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Total Price:</span>
-                          <span className="font-medium">{formatCurrency(option.price_total || 0)}</span>
+                      <div className="space-y-3">
+                        {fullQuoteData.options.map((option: any, idx: number) => (
+                          <div
+                            key={option.id || idx}
+                            className="p-4 rounded-lg bg-background/50 border border-border/30 space-y-2"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <Badge variant="secondary" className="text-xs">
+                                  Option {idx + 1}
+                                </Badge>
+                                <span className="font-semibold text-sm">
+                                  {option.aircraftModel?.name || option.aircraftTail?.tailNumber || "Aircraft Option"}
+                                </span>
+                              </div>
+                              {option.price_total && (
+                                <span className="font-bold text-lg text-emerald-600">
+                                  {formatCurrency(option.price_total || 0)}
+                                </span>
+                              )}
+                            </div>
+                            {option.flight_hours && (
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <Clock className="h-3.5 w-3.5" />
+                                <span>{option.flight_hours} flight hours</span>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Additional Services Card */}
+                {fullQuoteData.services && fullQuoteData.services.length > 0 && (
+                  <div className="relative overflow-hidden rounded-xl border border-border/50 bg-gradient-to-br from-card to-muted/20 shadow-sm hover:shadow-md transition-shadow">
+                    <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-orange-500 to-red-500" />
+                    <div className="p-6">
+                      <div className="flex items-center gap-2 mb-4">
+                        <Package className="h-5 w-5 text-amber-600" />
+                        <h4 className="font-semibold text-lg">Additional Services</h4>
+                      </div>
+                      <div className="space-y-2">
+                        {fullQuoteData.services.map((service: any, idx: number) => (
+                          <div
+                            key={service.id || idx}
+                            className="flex items-center justify-between p-3 rounded-lg bg-background/50 border border-border/30 hover:bg-background/80 transition-colors"
+                          >
+                            <div className="flex items-center gap-2">
+                              <div className="h-2 w-2 rounded-full bg-amber-500" />
+                              <span className="text-sm font-medium">
+                                {service.name || service.description || `Service ${idx + 1}`}
+                              </span>
+                            </div>
+                            <span className="font-semibold text-sm">
+                              {formatCurrency((service.amount || service.unit_price || 0) * (service.qty || 1))}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Totals Card */}
+                <div className="relative overflow-hidden rounded-xl border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10 shadow-lg">
+                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600" />
+                  <div className="p-6">
+                    <div className="flex items-center gap-2 mb-4">
+                      <DollarSign className="h-5 w-5 text-primary" />
+                      <h4 className="font-semibold text-lg">Invoice Summary</h4>
+                    </div>
+                    <div className="space-y-3">
+                      {fullQuoteData.options && fullQuoteData.options.length > 0 && (
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">Aircraft Option:</span>
+                          <span className="font-semibold">
+                            {formatCurrency(
+                              fullQuoteData.options.reduce((sum: number, opt: any) => sum + (opt.price_total || 0), 0),
+                            )}
+                          </span>
                         </div>
                       )}
-                      {option.flight_hours && (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Flight Hours:</span>
-                          <span className="font-medium">{option.flight_hours}</span>
+                      {fullQuoteData.services && fullQuoteData.services.length > 0 && (
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">Additional Services:</span>
+                          <span className="font-semibold">
+                            {formatCurrency(
+                              fullQuoteData.services.reduce(
+                                (sum: number, s: any) => sum + (s.amount || s.unit_price || 0) * (s.qty || 1),
+                                0,
+                              ),
+                            )}
+                          </span>
                         </div>
                       )}
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Items/Services */}
-              {fullQuoteData.services && fullQuoteData.services.length > 0 && (
-                <div className="border rounded-lg p-4 space-y-2">
-                  <h4 className="font-semibold text-base mb-3">Additional Services</h4>
-                  <div className="space-y-2">
-                    {fullQuoteData.services.map((service: any, idx: number) => (
-                      <div key={service.id || idx} className="flex justify-between text-sm">
-                        <span>{service.name || service.description || `Service ${idx + 1}`}</span>
-                        <span className="font-medium">
-                          {formatCurrency((service.amount || service.unit_price || 0) * (service.qty || 1))}
+                      <div className="flex items-center justify-between pt-3 border-t-2 border-primary/20">
+                        <span className="text-lg font-bold">Grand Total:</span>
+                        <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                          {formatCurrency(
+                            (fullQuoteData.options?.reduce(
+                              (sum: number, opt: any) => sum + (opt.price_total || 0),
+                              0,
+                            ) || 0) +
+                              (fullQuoteData.services?.reduce(
+                                (sum: number, s: any) => sum + (s.amount || s.unit_price || 0) * (s.qty || 1),
+                                0,
+                              ) || 0),
+                          )}
                         </span>
                       </div>
-                    ))}
+                    </div>
                   </div>
                 </div>
-              )}
 
-              {/* Totals */}
-              <div className="border rounded-lg p-4 space-y-2 bg-muted/30">
-                <h4 className="font-semibold text-base mb-3">Totals</h4>
-                <div className="space-y-1 text-sm">
-                  {fullQuoteData.options && fullQuoteData.options.length > 0 && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Aircraft Option:</span>
-                      <span className="font-medium">
-                        {formatCurrency(
-                          fullQuoteData.options.reduce((sum: number, opt: any) => sum + (opt.price_total || 0), 0)
-                        )}
-                      </span>
+                {/* Payment URL Input Card */}
+                <div className="relative overflow-hidden rounded-xl border border-border/50 bg-gradient-to-br from-card to-muted/20 shadow-sm">
+                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500" />
+                  <div className="p-6 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <LinkIcon className="h-5 w-5 text-indigo-600" />
+                      <Label htmlFor="payment-url" className="font-semibold text-base">
+                        Payment Link (Optional)
+                      </Label>
                     </div>
-                  )}
-                  {fullQuoteData.services && fullQuoteData.services.length > 0 && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Additional Services:</span>
-                      <span className="font-medium">
-                        {formatCurrency(
-                          fullQuoteData.services.reduce(
-                            (sum: number, s: any) => sum + ((s.amount || s.unit_price || 0) * (s.qty || 1)),
-                            0
-                          )
-                        )}
-                      </span>
+                    <Input
+                      id="payment-url"
+                      type="url"
+                      placeholder="https://payment.example.com/..."
+                      value={paymentUrl}
+                      onChange={(e) => setPaymentUrl(e.target.value)}
+                      className="w-full h-11 text-sm"
+                    />
+                    <p className="text-xs text-muted-foreground flex items-start gap-2">
+                      <CheckCircle2 className="h-3.5 w-3.5 mt-0.5 text-indigo-500" />
+                      <span>Enter a payment URL that will be included in the invoice for easy customer access.</span>
+                    </p>
+                  </div>
+                </div>
+
+                {/* Info Banner */}
+                <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border border-blue-200 dark:border-blue-800 p-5">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 rounded-lg bg-blue-500/10">
+                      <FileSignature className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                     </div>
-                  )}
-                  <div className="flex justify-between pt-2 border-t font-semibold">
-                    <span>Grand Total:</span>
-                    <span>
-                      {formatCurrency(
-                        (fullQuoteData.options?.reduce((sum: number, opt: any) => sum + (opt.price_total || 0), 0) || 0) +
-                          (fullQuoteData.services?.reduce(
-                            (sum: number, s: any) => sum + ((s.amount || s.unit_price || 0) * (s.qty || 1)),
-                            0
-                          ) || 0)
-                      )}
-                    </span>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-1">
+                        Ready to Create Invoice
+                      </p>
+                      <p className="text-xs text-blue-700 dark:text-blue-300">
+                        This will generate an invoice from the quote and prepare it for sending to the customer. The
+                        contract will be automatically attached.
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
-
-              {/* Payment URL Input */}
-              <div className="border rounded-lg p-4 space-y-2">
-                <Label htmlFor="payment-url" className="font-semibold text-base">
-                  Payment Link (Optional)
-                </Label>
-                <Input
-                  id="payment-url"
-                  type="url"
-                  placeholder="https://payment.example.com/..."
-                  value={paymentUrl}
-                  onChange={(e) => setPaymentUrl(e.target.value)}
-                  className="w-full"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Enter a payment URL that will be included in the invoice.
-                </p>
+            ) : (
+              <div className="py-16 text-center">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-destructive/10 mb-4">
+                  <FileText className="h-8 w-8 text-destructive" />
+                </div>
+                <p className="text-muted-foreground font-medium">Failed to load quote details.</p>
               </div>
+            )}
+          </div>
 
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <p className="text-sm text-blue-900">
-                  <strong>Note:</strong> This will create an invoice from the quote and prepare it for sending to the customer.
-                </p>
-              </div>
-            </div>
-          ) : (
-            <div className="py-8 text-center text-muted-foreground">
-              Failed to load quote details.
-            </div>
-          )}
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => {
-              setInvoiceContractOpen(false)
-              setSelectedQuote(null)
-              setFullQuoteData(null)
-              setPaymentUrl("")
-            }}>
+          <DialogFooter className="border-t pt-4 gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setInvoiceContractOpen(false)
+                setSelectedQuote(null)
+                setFullQuoteData(null)
+                setPaymentUrl("")
+              }}
+              className="min-w-[100px]"
+            >
               Cancel
             </Button>
-            <Button onClick={handleSendInvoiceContract} disabled={sending || loadingQuote}>
+            <Button
+              onClick={handleSendInvoiceContract}
+              disabled={sending || loadingQuote}
+              className="min-w-[200px] bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all"
+            >
               {sending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Creating...
+                  Creating Invoice...
                 </>
               ) : (
                 <>
