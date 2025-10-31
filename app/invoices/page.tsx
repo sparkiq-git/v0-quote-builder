@@ -37,6 +37,9 @@ export default function InvoicesPage() {
   useEffect(() => {
     const fetchInvoices = async () => {
       try {
+        const { createClient } = await import("@/lib/supabase/client")
+        const supabase = createClient()
+        
         const tenantId = process.env.NEXT_PUBLIC_TENANT_ID!
         const { data, error } = await supabase
           .from("invoice")
@@ -112,11 +115,8 @@ export default function InvoicesPage() {
       // Only run on client side
       if (typeof window === 'undefined') return;
       
-      const { createClient } = await import("@supabase/supabase-js");
-      const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      );
+      const { createClient } = await import("@/lib/supabase/client")
+      const supabase = createClient()
       
       const { error } = await supabase.from("invoice").delete().eq("id", invoiceToDelete)
       if (error) throw error
