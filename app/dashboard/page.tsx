@@ -179,13 +179,15 @@ export default function DashboardPage() {
       {/* === Monthly Metrics === */}
       <DashboardMetrics />
 
-      {/* === Map & Recent Activity Section === */}
+     {/* === Map & Recent Activity Section === */}
 <div className="grid gap-6 md:grid-cols-2 items-stretch">
-  <Card className="flex flex-col p-0 overflow-hidden h-[min(65vh,550px)]">
+  {/* Left: Route Map */}
+  <div className="flex flex-col h-full">
     <RouteMap />
-  </Card>
+  </div>
 
-  <div className="h-[min(65vh,550px)]">
+  {/* Right: Recent Activities */}
+  <div className="flex flex-col h-full">
     <RecentActivities />
   </div>
 </div>
