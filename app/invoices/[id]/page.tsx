@@ -1,16 +1,29 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useParams } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
-import { Loader2, ArrowLeft, Calendar, DollarSign, Building2, User, Plane, FileText, Receipt, ExternalLink, StickyNote } from "lucide-react"
+import {
+  Loader2,
+  ArrowLeft,
+  Calendar,
+  DollarSign,
+  Building2,
+  User,
+  Plane,
+  FileText,
+  Receipt,
+  ExternalLink,
+  StickyNote,
+  CreditCard,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { formatDate, formatTimeAgo, formatCurrency } from "@/lib/utils/format"
+import { formatDate, formatTimeAgo } from "@/lib/utils/format"
 import { InvoiceStatusBadge } from "@/components/invoices/InvoiceStatusBadge"
 import { useToast } from "@/hooks/use-toast"
 
@@ -76,6 +89,7 @@ interface Invoice {
 
 export default function InvoiceDetailPage() {
   const { id } = useParams()
+  const router = useRouter()
   const { toast } = useToast()
   const [invoice, setInvoice] = useState<Invoice | null>(null)
   const [loading, setLoading] = useState(true)
@@ -84,7 +98,7 @@ export default function InvoiceDetailPage() {
     const fetchInvoice = async () => {
       try {
         const response = await fetch(`/api/invoice/${id}`)
-        
+
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}))
           throw new Error(errorData.error || `Failed to fetch invoice: ${response.status}`)
@@ -123,17 +137,17 @@ export default function InvoiceDetailPage() {
 
   if (!invoice) {
     return (
-      <div className="container py-8">
-        <Button variant="ghost" asChild className="mb-4">
-          <Link href="/invoices">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Invoices
-          </Link>
+      <div className="container max-w-7xl py-8">
+        <Button onClick={() => router.push("/invoices")} className="mb-6">
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to Invoices
         </Button>
-        <Card>
+        <Card className="shadow-lg">
           <CardContent className="pt-6">
-            <div className="text-center text-muted-foreground">
-              Invoice not found or deleted.
+            <div className="text-center text-muted-foreground py-12">
+              <FileText className="h-16 w-16 mx-auto mb-4 text-muted-foreground/50" />
+              <h3 className="text-lg font-semibold mb-2">Invoice not found</h3>
+              <p>This invoice may have been deleted or does not exist.</p>
             </div>
           </CardContent>
         </Card>
@@ -154,48 +168,42 @@ export default function InvoiceDetailPage() {
   }
 
   return (
-    <div className="container py-8 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div className="container max-w-7xl py-8 space-y-8">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6 border-b">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm" asChild>
-            <Link href="/invoices">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back
-            </Link>
+          <Button onClick={() => router.push("/invoices")} size="default" className="shrink-0">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back
           </Button>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">
-              Invoice {invoice.number}
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Issued on {formatDate(invoice.issued_at)} • {formatTimeAgo(invoice.issued_at)}
+            <h1 className="text-3xl font-bold tracking-tight">Invoice {invoice.number}</h1>
+            <p className="text-sm text-muted-foreground mt-1.5 flex items-center gap-2">
+              <Calendar className="h-3.5 w-3.5" />
+              Issued {formatDate(invoice.issued_at)} • {formatTimeAgo(invoice.issued_at)}
             </p>
           </div>
         </div>
         <InvoiceStatusBadge status={invoice.status} />
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {/* Main Invoice Details */}
-        <Card className="md:col-span-2">
-          <CardHeader>
-            <CardTitle>Invoice Details</CardTitle>
-            <CardDescription>Complete invoice information</CardDescription>
+      <div className="grid gap-6 lg:grid-cols-3">
+        <Card className="lg:col-span-2 shadow-md border-border/50">
+          <CardHeader className="space-y-1">
+            <CardTitle className="text-2xl">Invoice Details</CardTitle>
+            <CardDescription>Complete breakdown and information</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* Line Items Table */}
             {invoice.details && invoice.details.length > 0 ? (
               <>
                 <div>
-                  <h3 className="font-semibold mb-4 flex items-center gap-2">
-                    <Receipt className="h-4 w-4" />
+                  <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
+                    <Receipt className="h-5 w-5 text-primary" />
                     Line Items
                   </h3>
-                  <div className="border rounded-lg overflow-hidden">
+                  <div className="border rounded-lg overflow-hidden shadow-sm">
                     <Table>
                       <TableHeader>
-                        <TableRow>
+                        <TableRow className="bg-muted/50">
                           <TableHead className="w-[50px]">#</TableHead>
                           <TableHead>Item</TableHead>
                           <TableHead className="text-right">Qty</TableHead>
@@ -206,19 +214,15 @@ export default function InvoiceDetailPage() {
                       </TableHeader>
                       <TableBody>
                         {invoice.details.map((item) => (
-                          <TableRow key={item.id}>
-                            <TableCell className="font-mono text-xs text-muted-foreground">
-                              {item.seq}
-                            </TableCell>
+                          <TableRow key={item.id} className="hover:bg-muted/30 transition-colors">
+                            <TableCell className="font-mono text-xs text-muted-foreground">{item.seq}</TableCell>
                             <TableCell>
                               <div className="font-medium">{item.label}</div>
                               {item.description && (
-                                <div className="text-sm text-muted-foreground mt-1">
-                                  {item.description}
-                                </div>
+                                <div className="text-sm text-muted-foreground mt-1">{item.description}</div>
                               )}
                               {item.type && (
-                                <Badge variant="outline" className="text-xs mt-1">
+                                <Badge variant="outline" className="text-xs mt-1.5">
                                   {item.type}
                                 </Badge>
                               )}
@@ -249,8 +253,7 @@ export default function InvoiceDetailPage() {
 
                 <Separator />
 
-                {/* Summary Totals */}
-                <div className="space-y-2">
+                <div className="space-y-3 bg-muted/30 p-6 rounded-lg">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Subtotal</span>
                     <span className="font-medium">
@@ -266,9 +269,9 @@ export default function InvoiceDetailPage() {
                     </div>
                   )}
                   <Separator />
-                  <div className="flex justify-between text-lg font-bold">
+                  <div className="flex justify-between text-xl font-bold pt-2">
                     <span>Total Amount</span>
-                    <span>{formatAmountWithCurrency(invoice.amount, invoice.currency)}</span>
+                    <span className="text-primary">{formatAmountWithCurrency(invoice.amount, invoice.currency)}</span>
                   </div>
                 </div>
 
@@ -276,88 +279,83 @@ export default function InvoiceDetailPage() {
               </>
             ) : (
               <>
-                {/* Amount Section (when no line items) */}
-                <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Total Amount</p>
-                    <p className="text-3xl font-bold mt-1">
+                <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5 p-8 shadow-sm">
+                  <div className="relative z-10">
+                    <p className="text-sm font-medium text-muted-foreground mb-2">Total Amount</p>
+                    <p className="text-4xl font-bold text-primary mb-4">
                       {formatAmountWithCurrency(invoice.amount, invoice.currency)}
                     </p>
                     {invoice.subtotal !== undefined && invoice.subtotal !== invoice.amount && (
-                      <div className="mt-2 space-y-1 text-sm">
+                      <div className="mt-4 space-y-2 text-sm">
                         {invoice.subtotal > 0 && (
                           <div className="flex justify-between">
                             <span className="text-muted-foreground">Subtotal:</span>
-                            <span>{formatAmountWithCurrency(invoice.subtotal, invoice.currency)}</span>
+                            <span className="font-medium">
+                              {formatAmountWithCurrency(invoice.subtotal, invoice.currency)}
+                            </span>
                           </div>
                         )}
                         {invoice.tax_total && invoice.tax_total > 0 && (
                           <div className="flex justify-between">
                             <span className="text-muted-foreground">Tax:</span>
-                            <span>{formatAmountWithCurrency(invoice.tax_total, invoice.currency)}</span>
+                            <span className="font-medium">
+                              {formatAmountWithCurrency(invoice.tax_total, invoice.currency)}
+                            </span>
                           </div>
                         )}
                       </div>
                     )}
                   </div>
-                  <DollarSign className="h-12 w-12 text-muted-foreground opacity-50" />
+                  <DollarSign className="absolute right-6 bottom-6 h-24 w-24 text-primary/10" />
                 </div>
 
                 <Separator />
               </>
             )}
 
-            {/* Customer Information */}
             <div>
-              <h3 className="font-semibold mb-4 flex items-center gap-2">
-                <User className="h-4 w-4" />
+              <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
+                <User className="h-5 w-5 text-primary" />
                 Customer Information
               </h3>
-              <div className="space-y-3">
-                <div className="flex items-start gap-3">
-                  <Avatar>
-                    <AvatarFallback>
-                      {invoice.quote?.contact_name
-                        ?.split(" ")
-                        .map((n) => n[0])
-                        .join("") || "—"}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <p className="font-medium">
-                      {invoice.quote?.contact_name || "—"}
+              <div className="flex items-start gap-4 p-4 rounded-lg bg-muted/30 border border-border/50">
+                <Avatar className="h-12 w-12">
+                  <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+                    {invoice.quote?.contact_name
+                      ?.split(" ")
+                      .map((n) => n[0])
+                      .join("") || "—"}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                  <p className="font-semibold text-base">{invoice.quote?.contact_name || "—"}</p>
+                  {invoice.quote?.contact_email && (
+                    <p className="text-sm text-muted-foreground mt-1">{invoice.quote.contact_email}</p>
+                  )}
+                  {invoice.quote?.contact_company && (
+                    <p className="text-sm text-muted-foreground flex items-center gap-1.5 mt-1.5">
+                      <Building2 className="h-3.5 w-3.5" />
+                      {invoice.quote.contact_company}
                     </p>
-                    {invoice.quote?.contact_email && (
-                      <p className="text-sm text-muted-foreground">
-                        {invoice.quote.contact_email}
-                      </p>
-                    )}
-                    {invoice.quote?.contact_company && (
-                      <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
-                        <Building2 className="h-3 w-3" />
-                        {invoice.quote.contact_company}
-                      </p>
-                    )}
-                  </div>
+                  )}
                 </div>
               </div>
             </div>
 
             <Separator />
 
-            {/* Dates */}
             <div>
-              <h3 className="font-semibold mb-4 flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
+              <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
+                <Calendar className="h-5 w-5 text-primary" />
                 Important Dates
               </h3>
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
                   <span className="text-sm text-muted-foreground">Issued Date</span>
                   <span className="font-medium">{formatDate(invoice.issued_at)}</span>
                 </div>
                 {invoice.due_at && (
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
                     <span className="text-sm text-muted-foreground">Due Date</span>
                     <span className="font-medium">{formatDate(invoice.due_at)}</span>
                   </div>
@@ -365,16 +363,15 @@ export default function InvoiceDetailPage() {
               </div>
             </div>
 
-            {/* Selected Option Information */}
             {invoice.selected_option && (
               <>
                 <Separator />
                 <div>
-                  <h3 className="font-semibold mb-4 flex items-center gap-2">
-                    <Plane className="h-4 w-4" />
+                  <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
+                    <Plane className="h-5 w-5 text-primary" />
                     Selected Aircraft Option
                   </h3>
-                  <div className="space-y-2 text-sm">
+                  <div className="space-y-2 text-sm bg-muted/30 p-4 rounded-lg">
                     {invoice.selected_option.price_total && (
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Option Total:</span>
@@ -400,7 +397,7 @@ export default function InvoiceDetailPage() {
                       </div>
                     )}
                     {invoice.selected_option.notes && (
-                      <div className="mt-3 p-3 bg-muted/50 rounded-lg">
+                      <div className="mt-3 p-3 bg-background rounded-lg border">
                         <p className="text-xs font-medium text-muted-foreground mb-1">Notes:</p>
                         <p className="text-sm whitespace-pre-line">{invoice.selected_option.notes}</p>
                       </div>
@@ -414,11 +411,11 @@ export default function InvoiceDetailPage() {
               <>
                 <Separator />
                 <div>
-                  <h3 className="font-semibold mb-4 flex items-center gap-2">
-                    <FileText className="h-4 w-4" />
+                  <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
+                    <FileText className="h-5 w-5 text-primary" />
                     Itinerary Summary
                   </h3>
-                  <p className="text-sm text-muted-foreground whitespace-pre-line">
+                  <p className="text-sm text-muted-foreground whitespace-pre-line p-4 bg-muted/30 rounded-lg">
                     {invoice.summary_itinerary}
                   </p>
                 </div>
@@ -429,11 +426,11 @@ export default function InvoiceDetailPage() {
               <>
                 <Separator />
                 <div>
-                  <h3 className="font-semibold mb-4 flex items-center gap-2">
-                    <StickyNote className="h-4 w-4" />
+                  <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
+                    <StickyNote className="h-5 w-5 text-primary" />
                     Notes
                   </h3>
-                  <p className="text-sm text-muted-foreground whitespace-pre-line">
+                  <p className="text-sm text-muted-foreground whitespace-pre-line p-4 bg-muted/30 rounded-lg border border-border/50">
                     {invoice.notes}
                   </p>
                 </div>
@@ -442,39 +439,37 @@ export default function InvoiceDetailPage() {
           </CardContent>
         </Card>
 
-        {/* Sidebar - Additional Info */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Additional Information</CardTitle>
+        <Card className="shadow-md border-border/50 h-fit sticky top-24">
+          <CardHeader className="space-y-1">
+            <CardTitle className="text-xl">Quick Info</CardTitle>
+            <CardDescription>Invoice summary</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-5">
             <div>
-              <p className="text-sm text-muted-foreground mb-2">Invoice Number</p>
-              <p className="font-mono font-medium">{invoice.number}</p>
+              <p className="text-xs font-medium text-muted-foreground mb-2">Invoice Number</p>
+              <p className="font-mono font-semibold text-base">{invoice.number}</p>
             </div>
 
             <div>
-              <p className="text-sm text-muted-foreground mb-2">Status</p>
+              <p className="text-xs font-medium text-muted-foreground mb-2">Status</p>
               <InvoiceStatusBadge status={invoice.status} />
             </div>
 
             <Separator />
 
             <div>
-              <p className="text-sm text-muted-foreground mb-2 flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
+              <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1.5">
+                <Calendar className="h-3.5 w-3.5" />
                 Issued Date
               </p>
-              <p className="font-medium">{formatDate(invoice.issued_at)}</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {formatTimeAgo(invoice.issued_at)}
-              </p>
+              <p className="font-medium text-sm">{formatDate(invoice.issued_at)}</p>
+              <p className="text-xs text-muted-foreground mt-1">{formatTimeAgo(invoice.issued_at)}</p>
             </div>
 
             {invoice.due_at && (
               <div>
-                <p className="text-sm text-muted-foreground mb-2">Due Date</p>
-                <p className="font-medium">{formatDate(invoice.due_at)}</p>
+                <p className="text-xs font-medium text-muted-foreground mb-2">Due Date</p>
+                <p className="font-medium text-sm">{formatDate(invoice.due_at)}</p>
               </div>
             )}
 
@@ -482,29 +477,32 @@ export default function InvoiceDetailPage() {
 
             {invoice.aircraft_label && (
               <div>
-                <p className="text-sm text-muted-foreground mb-2 flex items-center gap-2">
-                  <Plane className="h-4 w-4" />
+                <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1.5">
+                  <Plane className="h-3.5 w-3.5" />
                   Aircraft
                 </p>
-                <p className="font-medium">{invoice.aircraft_label}</p>
+                <p className="font-medium text-sm">{invoice.aircraft_label}</p>
               </div>
             )}
 
             <div>
-              <p className="text-sm text-muted-foreground mb-2">Currency</p>
-              <p className="font-medium">{invoice.currency?.toUpperCase() || "USD"}</p>
+              <p className="text-xs font-medium text-muted-foreground mb-2">Currency</p>
+              <p className="font-medium text-sm">{invoice.currency?.toUpperCase() || "USD"}</p>
             </div>
 
             {invoice.quote?.id && (
               <div>
-                <p className="text-sm text-muted-foreground mb-2">Related Quote</p>
+                <p className="text-xs font-medium text-muted-foreground mb-2">Related Quote</p>
                 {invoice.quote.title ? (
-                  <p className="font-medium text-sm">{invoice.quote.title}</p>
+                  <p className="font-medium text-sm mb-2">{invoice.quote.title}</p>
                 ) : (
-                  <p className="font-mono text-sm">{invoice.quote.id.slice(0, 8)}...</p>
+                  <p className="font-mono text-xs text-muted-foreground mb-2">{invoice.quote.id.slice(0, 8)}...</p>
                 )}
-                <Button variant="link" size="sm" className="px-0 mt-1" asChild>
-                  <Link href={`/quotes/${invoice.quote.id}`}>View Quote →</Link>
+                <Button variant="outline" size="sm" className="w-full bg-transparent" asChild>
+                  <Link href={`/quotes/${invoice.quote.id}`}>
+                    View Quote
+                    <ArrowLeft className="ml-2 h-3.5 w-3.5 rotate-180" />
+                  </Link>
                 </Button>
               </div>
             )}
@@ -512,19 +510,20 @@ export default function InvoiceDetailPage() {
             {invoice.external_payment_url && (
               <>
                 <Separator />
-                <div>
-                  <p className="text-sm text-muted-foreground mb-2 flex items-center gap-2">
-                    <ExternalLink className="h-4 w-4" />
-                    Payment URL
+                <div className="space-y-3">
+                  <p className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                    <CreditCard className="h-3.5 w-3.5" />
+                    Payment Portal
                   </p>
-                  <Button variant="outline" size="sm" asChild className="w-full">
-                    <a
-                      href={invoice.external_payment_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      Open Payment Link
-                      <ExternalLink className="ml-2 h-3 w-3" />
+                  <Button
+                    size="default"
+                    className="w-full bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-md"
+                    asChild
+                  >
+                    <a href={invoice.external_payment_url} target="_blank" rel="noopener noreferrer">
+                      <CreditCard className="mr-2 h-4 w-4" />
+                      Pay Invoice
+                      <ExternalLink className="ml-2 h-3.5 w-3.5" />
                     </a>
                   </Button>
                 </div>
@@ -536,4 +535,3 @@ export default function InvoiceDetailPage() {
     </div>
   )
 }
-
