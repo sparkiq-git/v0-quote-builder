@@ -180,17 +180,15 @@ export default function DashboardPage() {
       <DashboardMetrics />
 
       {/* === Map & Recent Activity Section === */}
-      <div className="grid gap-6 md:grid-cols-2">
-        {/* Left: Route Map */}
-        <div className="flex flex-col gap-4">
-          <RouteMap />
-        </div>
+      <div className="grid gap-6 md:grid-cols-2 items-stretch">
+  <Card className="flex flex-col p-0 overflow-hidden h-[min(65vh,550px)]">
+    <RouteMap />
+  </Card>
 
-        {/* Right: Recent Activities */}
-        <div className="flex flex-col gap-4">
-          <RecentActivities />
-        </div>
-      </div>
+  <div className="h-[min(65vh,550px)]">
+    <RecentActivities />
+  </div>
+</div>
     </div>
   );
 }
