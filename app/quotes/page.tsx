@@ -591,6 +591,22 @@ export default function QuotesPage() {
                                 )}
                               </span>
                             </div>
+                            {(option.cost_operator || option.price_commission) && (
+                              <div className="space-y-1 pt-2 border-t border-slate-200 dark:border-slate-800">
+                                {option.cost_operator && (
+                                  <div className="flex justify-between text-xs text-slate-600 dark:text-slate-400">
+                                    <span>Operator Cost:</span>
+                                    <span className="font-medium">{formatCurrency(option.cost_operator)}</span>
+                                  </div>
+                                )}
+                                {option.price_commission && (
+                                  <div className="flex justify-between text-xs text-slate-600 dark:text-slate-400">
+                                    <span>Commission:</span>
+                                    <span className="font-medium">{formatCurrency(option.price_commission)}</span>
+                                  </div>
+                                )}
+                              </div>
+                            )}
                             {option.flight_hours && (
                               <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
                                 <Clock className="h-3.5 w-3.5" />
