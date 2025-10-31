@@ -276,7 +276,7 @@ export function RecentActivities() {
             No recent activity.
           </div>
         ) : (
-          <ScrollArea className="flex-1">
+          <ScrollArea className="h-full">
             <div className="p-4 space-y-3">
               {activities.map((a) => (
                 <div
