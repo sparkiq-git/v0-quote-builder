@@ -423,7 +423,7 @@ function SidebarMenu({ className, ...props }: React.ComponentProps<"ul">) {
     <ul
       data-slot="sidebar-menu"
       data-sidebar="menu"
-      className={cn("flex w-full min-w-0 flex-col gap-3", className)}
+      className={cn("flex w-full min-w-0 flex-col gap-1", className)}
       {...props}
     />
   )
@@ -441,7 +441,7 @@ function SidebarMenuItem({ className, ...props }: React.ComponentProps<"li">) {
 }
 
 const sidebarMenuButtonVariants = cva(
-  "peer/menu-button flex w-full items-center gap-2 overflow-hidden rounded-lg p-2.5 text-left text-sm font-medium outline-hidden ring-sidebar-ring transition-all duration-200 ease-in-out hover:bg-[#EAEAEA] hover:text-[#1E1E1E] focus-visible:ring-2 active:bg-[#EAEAEA] active:text-[#1E1E1E] disabled:pointer-events-none disabled:opacity-50 group-has-data-[sidebar=menu-action]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-[active=true]:bg-[#EAEAEA] data-[active=true]:font-medium data-[active=true]:text-[#1E1E1E] data-[state=open]:hover:bg-[#EAEAEA] data-[state=open]:hover:text-[#1E1E1E] group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2! [&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0 [&>svg]:text-[#6B7280] data-[active=true]:[&>svg]:text-[#1E1E1E]",
+  "peer/menu-button flex w-full items-center gap-2 overflow-hidden rounded-lg px-2.5 py-1.5 text-left text-sm font-medium outline-hidden ring-sidebar-ring transition-all duration-200 ease-in-out hover:bg-[#EAEAEA] hover:text-[#1E1E1E] focus-visible:ring-2 active:bg-[#EAEAEA] active:text-[#1E1E1E] disabled:pointer-events-none disabled:opacity-50 group-has-data-[sidebar=menu-action]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-[active=true]:bg-[#EAEAEA] data-[active=true]:font-medium data-[active=true]:text-[#1E1E1E] data-[state=open]:hover:bg-[#EAEAEA] data-[state=open]:hover:text-[#1E1E1E] group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2! [&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0 [&>svg]:text-[#6B7280] data-[active=true]:[&>svg]:text-[#1E1E1E]",
   {
     variants: {
       variant: {
@@ -451,8 +451,8 @@ const sidebarMenuButtonVariants = cva(
           "bg-background shadow-[0_0_0_1px_hsl(var(--sidebar-border))] hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:shadow-[0_0_0_1px_hsl(var(--sidebar-accent))]",
       },
       size: {
-        default: "h-9 text-sm",
-        sm: "h-8 text-xs",
+        default: "h-8 text-sm",
+        sm: "h-7 text-xs",
         lg: "h-12 text-sm group-data-[collapsible=icon]:p-0!",
       },
     },
