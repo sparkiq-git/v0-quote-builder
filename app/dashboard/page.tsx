@@ -198,13 +198,12 @@ export default function DashboardPage() {
       <DashboardMetrics />
 
       {/* === RouteMap + Recent Activities === */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-        <div className="col-span-2">
-          <RouteMap />
-        </div>
-        <div className="h-[min(65vh,550px)] overflow-y-auto">
-          <RecentActivities />
-        </div>
+      <div className="w-full">
+        <RouteMap />
+      </div>
+
+      <div className="w-full">
+        <RecentActivities />
       </div>
 
       {/* === Today's New Leads and Draft Quotes === */}
