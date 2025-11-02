@@ -201,7 +201,7 @@ export function AppSidebar() {
                 return (
                   <SidebarMenuItem key={item.href}>
                     <SidebarMenuButton asChild isActive={isActive}>
-                      <Link href={item.href} className="flex items-center gap-3">
+                      <Link href={item.href} className="flex items-center gap-3 text-gray-500 hover:text-gray-900">
                         <item.icon className="h-4 w-4" />
                         <span>{item.title}</span>
                         {badge}
@@ -225,7 +225,7 @@ export function AppSidebar() {
               <SidebarMenuItem>
                 <SidebarMenuButton
                   onClick={handleOperationsClick}
-                  className="flex items-center gap-3 cursor-pointer font-medium"
+                  className="flex items-center gap-3 cursor-pointer font-medium text-gray-500 hover:text-gray-900"
                 >
                   <Plane className="h-4 w-4" />
                   <span>Operations</span>
@@ -251,7 +251,7 @@ export function AppSidebar() {
                   return (
                     <SidebarMenuItem key={item.href} className="pl-4">
                       <SidebarMenuButton asChild isActive={isActive}>
-                        <Link href={item.href} className="flex items-center gap-3">
+                        <Link href={item.href} className="flex items-center gap-3 text-gray-500 hover:text-gray-900">
                           <item.icon className="h-4 w-4" />
                           <span>{item.title}</span>
                         </Link>
@@ -274,7 +274,7 @@ export function AppSidebar() {
                 return (
                   <SidebarMenuItem key={item.href}>
                     <SidebarMenuButton asChild isActive={isActive}>
-                      <Link href={item.href} className="flex items-center gap-3">
+                      <Link href={item.href} className="flex items-center gap-3 text-gray-500 hover:text-gray-900">
                         <item.icon className="h-4 w-4" />
                         <span>{item.title}</span>
                       </Link>
