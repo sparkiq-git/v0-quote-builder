@@ -159,7 +159,8 @@
 
 :root {
   /* Updated color palette to match modern minimalist design guidelines */
-  --background: #f7f8fa;
+  /* Updated background color from #f7f8fa to #ffffff for clean white pages */
+  --background: #ffffff;
   --foreground: #1e1e1e;
   --card: #ffffff;
   --card-foreground: #1e1e1e;
