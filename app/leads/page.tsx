@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Users, Archive } from "lucide-react"
+import { Archive } from "lucide-react"
 import { LeadTable } from "@/components/leads/lead-table"
 import { ErrorBoundary } from "@/components/ui/error-boundary"
 import { LeadTableSkeleton } from "@/components/leads/lead-skeletons"
@@ -23,14 +23,17 @@ export default function LeadsPage() {
    */
   useEffect(() => {
     // Only run on client side
-    if (typeof window === 'undefined') return;
-    
-    let authListener: any = null;
+    if (typeof window === "undefined") return
+
+    let authListener: any = null
 
     const checkSession = async () => {
       const { createClient } = await import("@/lib/supabase/client")
       const supabase = createClient()
-      const { data: { session }, error } = await supabase.auth.getSession()
+      const {
+        data: { session },
+        error,
+      } = await supabase.auth.getSession()
       if (error) {
         console.error("Session check error:", error)
         setError("Failed to check session.")
@@ -65,11 +68,11 @@ export default function LeadsPage() {
   useEffect(() => {
     if (!sessionChecked) return
     // Only run on client side
-    if (typeof window === 'undefined') return;
+    if (typeof window === "undefined") return
 
-    let supabase: any = null;
-    let channel: any = null;
-    let subscription: any = null;
+    let supabase: any = null
+    let channel: any = null
+    let subscription: any = null
 
     const fetchLeads = async () => {
       const { createClient } = await import("@/lib/supabase/client")
@@ -97,12 +100,13 @@ export default function LeadsPage() {
         return
       }
 
-const leadsWithView = (data || []).map((l: any): LeadWithEngagement => ({
-  ...l,
-  status: l.lead_tenant_engagement?.[0]?.status ?? "new",
-  last_viewed_at: l.lead_tenant_engagement?.[0]?.last_viewed_at ?? null,
-}))
-
+      const leadsWithView = (data || []).map(
+        (l: any): LeadWithEngagement => ({
+          ...l,
+          status: l.lead_tenant_engagement?.[0]?.status ?? "new",
+          last_viewed_at: l.lead_tenant_engagement?.[0]?.last_viewed_at ?? null,
+        }),
+      )
 
       setLeads(leadsWithView)
       setLoading(false)
@@ -111,30 +115,22 @@ const leadsWithView = (data || []).map((l: any): LeadWithEngagement => ({
       channel = supabase.channel("leads-realtime")
 
       // 🔹 Lead INSERT / UPDATE / DELETE
-      channel.on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "lead" },
-        (payload) => {
-          setLeads((prev) => {
-            switch (payload.eventType) {
-              case "INSERT":
-                // prevent duplicates
-                if (prev.some((l) => l.id === payload.new.id)) return prev
-                return [{ ...payload.new, last_viewed_at: null }, ...prev]
-              case "UPDATE":
-                return prev.map((lead) =>
-                  lead.id === payload.new.id
-                    ? { ...lead, ...payload.new }
-                    : lead
-                )
-              case "DELETE":
-                return prev.filter((lead) => lead.id !== payload.old.id)
-              default:
-                return prev
-            }
-          })
-        }
-      )
+      channel.on("postgres_changes", { event: "*", schema: "public", table: "lead" }, (payload) => {
+        setLeads((prev) => {
+          switch (payload.eventType) {
+            case "INSERT":
+              // prevent duplicates
+              if (prev.some((l) => l.id === payload.new.id)) return prev
+              return [{ ...payload.new, last_viewed_at: null }, ...prev]
+            case "UPDATE":
+              return prev.map((lead) => (lead.id === payload.new.id ? { ...lead, ...payload.new } : lead))
+            case "DELETE":
+              return prev.filter((lead) => lead.id !== payload.old.id)
+            default:
+              return prev
+          }
+        })
+      })
 
       // 🔹 Engagement last_viewed_at update
       channel.on(
@@ -144,17 +140,11 @@ const leadsWithView = (data || []).map((l: any): LeadWithEngagement => ({
           const leadId = payload.new.lead_id
           const lastViewed = payload.new.last_viewed_at
           if (!leadId) return
-          setLeads((prev) =>
-            prev.map((lead) =>
-              lead.id === leadId ? { ...lead, last_viewed_at: lastViewed } : lead
-            )
-          )
-        }
+          setLeads((prev) => prev.map((lead) => (lead.id === leadId ? { ...lead, last_viewed_at: lastViewed } : lead)))
+        },
       )
 
-      subscription = channel.subscribe((status) =>
-        console.log("Realtime subscription status:", status)
-      )
+      subscription = channel.subscribe((status) => console.log("Realtime subscription status:", status))
     }
 
     fetchLeads()
@@ -196,60 +186,70 @@ const leadsWithView = (data || []).map((l: any): LeadWithEngagement => ({
   const { activeCount, expiredCount } = leadCounts
 
   if (error) return <div className="p-8 text-red-600">Error: {error}</div>
-  if (loading) return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Leads</h1>
-          <p className="text-muted-foreground">Track and manage customer inquiries in real time.</p>
+  if (loading)
+    return (
+      <div className="space-y-6 max-w-full overflow-x-hidden">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-[22px] font-semibold tracking-tight text-foreground leading-[1.5]">Leads</h1>
+            <p className="text-muted-foreground text-[15px] leading-[1.6] font-normal">
+              Track and manage customer inquiries in real time.
+            </p>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="h-9 w-[180px] bg-white border-[#e5e7eb] rounded-lg bg-muted animate-pulse rounded-md" />
+            <div className="h-9 w-24 bg-white border-[#e5e7eb] rounded-lg bg-muted animate-pulse rounded-md" />
+          </div>
         </div>
-        <div className="flex items-center gap-4">
-          <div className="h-9 w-[180px] bg-muted animate-pulse rounded-md" />
-          <div className="h-9 w-24 bg-muted animate-pulse rounded-md" />
-        </div>
+        <Card className="border border-border rounded-lg bg-white">
+          <CardHeader className="px-6 pt-6 pb-4">
+            <div className="h-6 w-32 bg-white border-[#e5e7eb] rounded-lg bg-muted animate-pulse rounded" />
+            <div className="h-4 w-64 bg-white border-[#e5e7eb] rounded-lg bg-muted animate-pulse rounded" />
+          </CardHeader>
+          <CardContent>
+            <LeadTableSkeleton />
+          </CardContent>
+        </Card>
       </div>
-      <Card>
-        <CardHeader>
-          <div className="h-6 w-32 bg-muted animate-pulse rounded" />
-          <div className="h-4 w-64 bg-muted animate-pulse rounded" />
-        </CardHeader>
-        <CardContent>
-          <LeadTableSkeleton />
-        </CardContent>
-      </Card>
-    </div>
-  )
+    )
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-full overflow-x-hidden">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Leads</h1>
-          <p className="text-muted-foreground">Track and manage customer inquiries in real time.</p>
+          <h1 className="text-[22px] font-semibold tracking-tight text-foreground leading-[1.5]">Leads</h1>
+          <p className="text-muted-foreground text-[15px] leading-[1.6] font-normal">
+            Track and manage customer inquiries in real time.
+          </p>
         </div>
 
         <div className="flex items-center gap-4">
-          <Select
-            value={statusFilter}
-            onValueChange={(v: "active" | "expired" | "all") => setStatusFilter(v)}
-          >
-            <SelectTrigger className="w-[180px]">
+          <Select value={statusFilter} onValueChange={(v: "active" | "expired" | "all") => setStatusFilter(v)}>
+            <SelectTrigger className="w-[180px] bg-white border-[#e5e7eb] rounded-lg">
               <Archive className="mr-2 h-4 w-4" />
               <SelectValue placeholder="Filter status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="active">Active ({activeCount})</SelectItem>
-              <SelectItem value="expired">Expired ({expiredCount})</SelectItem>
-              <SelectItem value="all">All Leads</SelectItem>
+              <SelectItem value="active" className="text-[14px]">
+                Active ({activeCount})
+              </SelectItem>
+              <SelectItem value="expired" className="text-[14px]">
+                Expired ({expiredCount})
+              </SelectItem>
+              <SelectItem value="all" className="text-[14px]">
+                All Leads
+              </SelectItem>
             </SelectContent>
           </Select>
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Leads ({filteredLeads.length})</CardTitle>
-          <CardDescription>
+      <Card className="border border-border rounded-lg bg-white">
+        <CardHeader className="px-6 pt-6 pb-4">
+          <CardTitle className="text-[18px] font-semibold text-foreground leading-[1.5]">
+            Leads ({filteredLeads.length})
+          </CardTitle>
+          <CardDescription className="text-[14px] text-muted-foreground leading-[1.6] font-normal">
             Showing {statusFilter === "all" ? "all" : statusFilter} leads (auto-updates in real time).
           </CardDescription>
         </CardHeader>

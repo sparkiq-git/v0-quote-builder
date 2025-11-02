@@ -193,7 +193,7 @@ export default function InvoiceDetailPage() {
                       <Receipt className="h-5 w-5 text-primary" />
                       Line Items
                     </h3>
-                    <div className="border rounded-lg overflow-x-auto shadow-sm max-w-full">
+                    <div className="border rounded-lg overflow-x-auto shadow-sm">
                       <Table>
                         <TableHeader>
                           <TableRow className="bg-muted/50">
@@ -371,13 +371,13 @@ export default function InvoiceDetailPage() {
                             <CreditCard className="h-3.5 w-3.5" />
                             Payment Portal URL
                           </p>
-                          <div className="flex items-center gap-2 p-2 bg-background rounded border text-sm font-mono break-all overflow-wrap-anywhere">
+                          <div className="flex items-center gap-2 p-2 bg-background rounded border text-sm font-mono break-all">
                             <LinkIcon className="h-4 w-4 text-muted-foreground shrink-0" />
                             <a
                               href={invoice.external_payment_url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-primary hover:underline break-all"
+                              className="text-primary hover:underline"
                             >
                               {invoice.external_payment_url}
                             </a>
