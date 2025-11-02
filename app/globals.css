@@ -184,12 +184,14 @@
   --chart-4: #d1d5db;
   --chart-5: #e5e7eb;
   --radius: 0.5rem;
+  /* Enhanced sidebar colors to match design specifications */
   --sidebar: #f2f3f5;
-  --sidebar-foreground: #1e1e1e;
+  --sidebar-foreground: #6b7280;
+  --sidebar-foreground-active: #1e1e1e;
   --sidebar-primary: #ffffff;
   --sidebar-primary-foreground: #1e1e1e;
-  --sidebar-accent: #000000;
-  --sidebar-accent-foreground: #ffffff;
+  --sidebar-accent: #eaeaea;
+  --sidebar-accent-foreground: #1e1e1e;
   --sidebar-border: #e5e7eb;
   --sidebar-ring: rgba(0, 0, 0, 0.1);
 }
@@ -262,6 +264,8 @@
   --radius-xl: calc(var(--radius) + 4px);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
+  /* Added active foreground color */
+  --color-sidebar-foreground-active: var(--sidebar-foreground-active);
   --color-sidebar-primary: var(--sidebar-primary);
   --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
   --color-sidebar-accent: var(--sidebar-accent);

@@ -109,8 +109,8 @@ export function AppSidebar() {
   useEffect(() => {
     const fetchUser = async () => {
       // Only run on client side
-      if (typeof window === 'undefined') return;
-      
+      if (typeof window === "undefined") return
+
       const { createClient } = await import("@/lib/supabase/client")
       const supabase = createClient()
       const {
@@ -160,7 +160,7 @@ export function AppSidebar() {
   return (
     <Sidebar>
       <SidebarHeader className="border-sidebar-border">
-        <div className="flex items-center gap-2 px-4 py-3">
+        <div className="flex items-center gap-2 px-5 py-4">
           <div className="flex flex-col">
             <div className="flex items-center">
               <Image src="/images/aeroiq-logo.png" alt="AeroIQ" width={120} height={32} className="h-6 w-auto" />
