@@ -293,3 +293,13 @@
   pointer-events: auto !important;
   z-index: 2147483647 !important;
 }
+
+/* Additional safeguard for dropdown visibility - ensure Radix portals are visible */
+[data-radix-dropdown-menu-content],
+[data-radix-dropdown-menu-content][data-state="open"],
+div[role="menu"] {
+  position: relative !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  display: block !important;
+}
