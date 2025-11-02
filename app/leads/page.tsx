@@ -2,13 +2,14 @@
 
 import { useState, useEffect, useMemo } from "react"
 import { useRouter } from "next/navigation"
-import { Card, CardContent, CardHeader } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Archive } from "lucide-react"
 import { LeadTable } from "@/components/leads/lead-table"
 import { ErrorBoundary } from "@/components/ui/error-boundary"
 import { LeadTableSkeleton } from "@/components/leads/lead-skeletons"
 import type { LeadWithEngagement } from "@/lib/types"
+import { useAppHeader } from "@/components/app-header-context"
 
 export default function LeadsPage() {
   const [leads, setLeads] = useState<LeadWithEngagement[]>([])
@@ -17,6 +18,7 @@ export default function LeadsPage() {
   const [error, setError] = useState<string | null>(null)
   const [sessionChecked, setSessionChecked] = useState(false)
   const router = useRouter()
+  const { setContent } = useAppHeader()
 
   /**
    * ✅ Session check
@@ -185,26 +187,36 @@ export default function LeadsPage() {
 
   const { activeCount, expiredCount } = leadCounts
 
+  useEffect(() => {
+    setContent({
+      title: "Leads",
+      subtitle: "Track and manage customer inquiries in real time.",
+      actions: (
+        <Select value={statusFilter} onValueChange={(v: "active" | "expired" | "all") => setStatusFilter(v)}>
+          <SelectTrigger className="w-[180px]">
+            <Archive className="mr-2 h-4 w-4" />
+            <SelectValue placeholder="Filter status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="active">Active ({activeCount})</SelectItem>
+            <SelectItem value="expired">Expired ({expiredCount})</SelectItem>
+            <SelectItem value="all">All Leads</SelectItem>
+          </SelectContent>
+        </Select>
+      ),
+    })
+
+    return () => {
+      setContent({})
+    }
+  }, [setContent, statusFilter, activeCount, expiredCount])
+
   if (error) return <div className="p-8 text-red-600">Error: {error}</div>
   if (loading)
     return (
       <div className="space-y-6">
-        <div className="flex items-center justify-between pb-2 border-b">
-          <div className="space-y-1">
-            <h1 className="text-2xl font-semibold tracking-tight text-[#1E1E1E]">Leads</h1>
-            <p className="text-sm text-[#6B7280] leading-relaxed">Track and manage customer inquiries in real time.</p>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="h-9 w-[180px] bg-muted animate-pulse rounded-md" />
-            <div className="h-9 w-24 bg-muted animate-pulse rounded-md" />
-          </div>
-        </div>
         <Card>
-          <CardHeader>
-            <div className="h-6 w-32 bg-muted animate-pulse rounded" />
-            <div className="h-4 w-64 bg-muted animate-pulse rounded" />
-          </CardHeader>
-          <CardContent>
+          <CardContent className="pt-6">
             <LeadTableSkeleton />
           </CardContent>
         </Card>
@@ -213,29 +225,8 @@ export default function LeadsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between pb-4 border-b border-[#E5E7EB]">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight text-[#1E1E1E]">Leads</h1>
-          <p className="text-sm text-[#6B7280] leading-relaxed">Track and manage customer inquiries in real time.</p>
-        </div>
-
-        <div className="flex items-center gap-4">
-          <Select value={statusFilter} onValueChange={(v: "active" | "expired" | "all") => setStatusFilter(v)}>
-            <SelectTrigger className="w-[180px]">
-              <Archive className="mr-2 h-4 w-4" />
-              <SelectValue placeholder="Filter status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="active">Active ({activeCount})</SelectItem>
-              <SelectItem value="expired">Expired ({expiredCount})</SelectItem>
-              <SelectItem value="all">All Leads</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
       <Card>
-        <CardContent>
+        <CardContent className="pt-6">
           <ErrorBoundary>
             <LeadTable data={filteredLeads} setLeads={setLeads} />
           </ErrorBoundary>
