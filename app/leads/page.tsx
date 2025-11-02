@@ -247,12 +247,7 @@ const leadsWithView = (data || []).map((l: any): LeadWithEngagement => ({
       </div>
 
       <Card>
-        <CardHeader>
-          
-          <CardDescription>
-            Showing {statusFilter === "all" ? "all" : statusFilter} leads (auto-updates in real time).
-          </CardDescription>
-        </CardHeader>
+        
         <CardContent>
           <ErrorBoundary>
             <LeadTable data={filteredLeads} setLeads={setLeads} />
