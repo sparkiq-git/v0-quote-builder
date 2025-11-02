@@ -181,10 +181,7 @@ export default function InvoiceDetailPage() {
 
         <div className="grid gap-4 sm:gap-6">
           <Card className="shadow-md border-border/50">
-            <CardHeader className="space-y-1">
-              <CardTitle className="text-xl sm:text-2xl">Invoice Details</CardTitle>
-              <CardDescription>Complete breakdown and information</CardDescription>
-            </CardHeader>
+            
             <CardContent className="space-y-6">
               {invoice.details && invoice.details.length > 0 ? (
                 <>
