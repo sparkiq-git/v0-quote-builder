@@ -334,8 +334,8 @@ export default function QuotesPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto overflow-y-auto max-w-full max-h-[600px] rounded-lg border border-[#e5e7eb]">
-            <Table>
+          <div className="relative overflow-auto max-w-full max-h-[600px] rounded-lg border border-[#e5e7eb]">
+            <Table className="min-w-[800px]">
               <TableHeader>
                 <TableRow>
                   <TableHead>

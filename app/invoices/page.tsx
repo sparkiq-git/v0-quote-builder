@@ -187,8 +187,8 @@ export default function InvoicesPage() {
 
         <CardContent>
           {filteredInvoices.length > 0 ? (
-            <div className="overflow-x-auto overflow-y-auto max-w-full max-h-[600px] rounded-lg border">
-              <Table>
+            <div className="relative overflow-auto max-w-full max-h-[600px] rounded-lg border">
+              <Table className="min-w-[800px]">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Details</TableHead>

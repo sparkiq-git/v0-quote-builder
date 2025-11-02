@@ -279,9 +279,10 @@
   * {
     @apply border-border outline-ring/50;
   }
+  /* Removed overflow-x-hidden to allow horizontal scrolling within table containers */
   html,
   body {
-    @apply bg-background text-foreground overflow-x-hidden;
+    @apply bg-background text-foreground;
   }
 }
 

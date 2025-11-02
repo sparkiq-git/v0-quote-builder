@@ -363,8 +363,8 @@ export function LeadTable({ data, setLeads, onOpenNewCountChange }: LeadTablePro
         </div>
       </div>
 
-      <div className="overflow-x-auto overflow-y-auto max-w-full max-h-[600px] rounded-md border">
-        <Table>
+      <div className="relative overflow-auto max-w-full max-h-[600px] rounded-md border">
+        <Table className="min-w-[1000px]">
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
@@ -405,7 +405,6 @@ export function LeadTable({ data, setLeads, onOpenNewCountChange }: LeadTablePro
 
         <LeadDetailModal leadId={selectedLeadId} open={isModalOpen} onClose={() => setIsModalOpen(false)} />
       </div>
-      {/* </CHANGE> */}
     </div>
   )
 }
