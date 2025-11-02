@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -151,15 +151,8 @@ export default function InvoicesPage() {
       </div>
 
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>All Invoices</CardTitle>
-              <CardDescription>Track payment status and issued documents</CardDescription>
-            </div>
-          </div>
-
-          <div className="flex gap-2 mt-4">
+        <CardContent className="pt-6">
+          <div className="flex gap-2 mb-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -183,9 +176,7 @@ export default function InvoicesPage() {
               </SelectContent>
             </Select>
           </div>
-        </CardHeader>
 
-        <CardContent>
           {filteredInvoices.length > 0 ? (
             <div className="relative overflow-auto max-w-full max-h-[600px] rounded-lg border">
               <Table className="min-w-[800px]">

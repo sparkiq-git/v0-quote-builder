@@ -5,7 +5,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
@@ -327,13 +327,7 @@ export default function QuotesPage() {
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Quotes ({filteredQuotes.length})</CardTitle>
-          <CardDescription>
-            Showing {statusFilter === "all" ? "all" : statusFilter} quotes with real-time updates.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           <div className="relative overflow-auto max-w-full max-h-[600px] rounded-lg border border-[#e5e7eb]">
             <Table className="min-w-[800px]">
               <TableHeader>
