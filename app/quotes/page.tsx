@@ -334,7 +334,7 @@ export default function QuotesPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border">
+          <div className="rounded-md border overflow-x-auto max-w-full">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -586,7 +586,7 @@ export default function QuotesPage() {
                                       (option.price_commission || 0) +
                                       (option.price_extras_total || 0) -
                                       (option.price_discounts_total || 0) ||
-                                  0
+                                    0,
                                 )}
                               </span>
                             </div>

@@ -170,7 +170,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 max-w-full overflow-x-hidden">
       <div className="space-y-2">
         <h1 className="text-3xl font-semibold tracking-tight text-foreground">Welcome back!</h1>
         <p className="text-muted-foreground text-base leading-relaxed">Here's what's happening today.</p>
