@@ -22,7 +22,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 
-
 export default function InvoicesPage() {
   const router = useRouter()
   const { toast } = useToast()
@@ -39,21 +38,13 @@ export default function InvoicesPage() {
       try {
         const { createClient } = await import("@/lib/supabase/client")
         const supabase = createClient()
-        
+
         const tenantId = process.env.NEXT_PUBLIC_TENANT_ID!
         const { data, error } = await supabase
           .from("invoice")
-          .select(`
-            id,
-            number,
-            issued_at,
-            amount,
-            currency,
-            status,
-            aircraft_label,
-            summary_itinerary,
-            quote:quote_id(contact_name, contact_company)
-          `)
+          .select(
+            `id, number, issued_at, amount, currency, status, aircraft_label, summary_itinerary, quote:quote_id(contact_name, contact_company)`,
+          )
           .eq("tenant_id", tenantId)
           .order("issued_at", { ascending: false })
 
@@ -113,11 +104,11 @@ export default function InvoicesPage() {
     if (!invoiceToDelete) return
     try {
       // Only run on client side
-      if (typeof window === 'undefined') return;
-      
+      if (typeof window === "undefined") return
+
       const { createClient } = await import("@/lib/supabase/client")
       const supabase = createClient()
-      
+
       const { error } = await supabase.from("invoice").delete().eq("id", invoiceToDelete)
       if (error) throw error
       setInvoices((prev) => prev.filter((i) => i.id !== invoiceToDelete))
@@ -195,102 +186,95 @@ export default function InvoicesPage() {
         </CardHeader>
 
         <CardContent>
-          {filteredInvoices.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Details</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Issued</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
+          <div className="rounded-lg border border-[#e5e7eb] overflow-x-auto max-w-full">
+            {filteredInvoices.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Details</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Issued</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
 
-              <TableBody>
-                {filteredInvoices.map((inv) => (
-                  <TableRow key={inv.id}>
-                    <TableCell>
-                      <div className="flex items-center space-x-3">
-                        <Avatar className="h-8 w-8">
-                          <AvatarFallback>
-                            {inv.customer.name
-                              ?.split(" ")
-                              .map((n: string) => n[0])
-                              .join("")}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <div className="font-medium">
-                            {inv.customer.name}{" "}
-                            <span className="text-muted-foreground text-xs ml-1">
-                              #{inv.number}
-                            </span>
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            {inv.customer.company || "—"}
+                <TableBody>
+                  {filteredInvoices.map((inv) => (
+                    <TableRow key={inv.id}>
+                      <TableCell>
+                        <div className="flex items-center space-x-3">
+                          <Avatar className="h-8 w-8">
+                            <AvatarFallback>
+                              {inv.customer.name
+                                ?.split(" ")
+                                .map((n: string) => n[0])
+                                .join("")}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <div className="font-medium">
+                              {inv.customer.name}{" "}
+                              <span className="text-muted-foreground text-xs ml-1">#{inv.number}</span>
+                            </div>
+                            <div className="text-sm text-muted-foreground">{inv.customer.company || "—"}</div>
                           </div>
                         </div>
-                      </div>
-                    </TableCell>
+                      </TableCell>
 
-                    <TableCell>
-                      <Badge
-                        variant={
-                          inv.status === "paid"
-                            ? "default"
-                            : inv.status === "issued"
-                            ? "secondary"
-                            : inv.status === "void"
-                            ? "destructive"
-                            : "outline"
-                        }
-                      >
-                        {inv.status}
-                      </Badge>
-                    </TableCell>
-
-                    <TableCell>
-                      <div className="text-sm font-medium">
-                        {formatCurrency(inv.amount, inv.currency)}
-                      </div>
-                      <div className="text-xs text-muted-foreground">{inv.aircraft}</div>
-                    </TableCell>
-
-                    <TableCell>
-                      <div className="text-sm">{formatDate(inv.issuedAt)}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {formatTimeAgo(inv.issuedAt)}
-                      </div>
-                    </TableCell>
-
-                    <TableCell>
-                      <div className="flex items-center space-x-2">
-                        <Button asChild variant="outline" size="sm">
-                          <Link href={`/invoices/${inv.id}`}>
-                            <Eye className="mr-2 h-4 w-4" />
-                            View
-                          </Link>
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDelete(inv.id)}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      <TableCell>
+                        <Badge
+                          variant={
+                            inv.status === "paid"
+                              ? "default"
+                              : inv.status === "issued"
+                                ? "secondary"
+                                : inv.status === "void"
+                                  ? "destructive"
+                                  : "outline"
+                          }
                         >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          ) : (
-            <div className="py-8 text-center text-muted-foreground">
-              No invoices found.
-            </div>
-          )}
+                          {inv.status}
+                        </Badge>
+                      </TableCell>
+
+                      <TableCell>
+                        <div className="text-sm font-medium">{formatCurrency(inv.amount, inv.currency)}</div>
+                        <div className="text-xs text-muted-foreground">{inv.aircraft}</div>
+                      </TableCell>
+
+                      <TableCell>
+                        <div className="text-sm">{formatDate(inv.issuedAt)}</div>
+                        <div className="text-xs text-muted-foreground">{formatTimeAgo(inv.issuedAt)}</div>
+                      </TableCell>
+
+                      <TableCell>
+                        <div className="flex items-center space-x-2">
+                          <Button asChild variant="outline" size="sm">
+                            <Link href={`/invoices/${inv.id}`}>
+                              <Eye className="mr-2 h-4 w-4" />
+                              View
+                            </Link>
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDelete(inv.id)}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <div className="py-8 text-center text-muted-foreground">No invoices found.</div>
+            )}
+          </div>
+          {/* </CHANGE> */}
         </CardContent>
       </Card>
 
