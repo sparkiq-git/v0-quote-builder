@@ -228,7 +228,7 @@ export function RecentActivities() {
 
   // ---------------- Render ----------------
   return (
-    <Card className="w-full h-full flex flex-col border border-border bg-card rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+    <Card className="w-full max-h-[600px] min-h-[400px] flex flex-col border border-border bg-card rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
       <CardHeader className="flex items-center justify-between px-6 pt-6 pb-4">
         <CardTitle className="flex items-center gap-2 text-lg font-semibold text-foreground">
           <Activity className="w-4 h-4 text-muted-foreground" />
