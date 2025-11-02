@@ -193,7 +193,7 @@ export default function InvoiceDetailPage() {
                       <Receipt className="h-5 w-5 text-primary" />
                       Line Items
                     </h3>
-                    <div className="border rounded-lg overflow-x-auto shadow-sm">
+                    <div className="overflow-x-auto overflow-y-auto max-w-full max-h-[500px] border rounded-lg shadow-sm">
                       <Table>
                         <TableHeader>
                           <TableRow className="bg-muted/50">

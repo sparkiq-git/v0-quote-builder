@@ -279,63 +279,9 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html,
   body {
-    @apply bg-background text-foreground;
-    /* Prevent horizontal scrolling globally */
-    overflow-x: hidden;
-  }
-
-  /* Typography enhancements per UI guidelines */
-  h1,
-  h2 {
-    @apply font-semibold;
-    font-size: clamp(18px, 2vw, 22px);
-    line-height: 1.5;
-  }
-
-  p,
-  span,
-  div {
-    line-height: 1.6;
-  }
-
-  /* Table styling enhancements */
-  table {
-    @apply bg-white;
-  }
-
-  tbody tr {
-    @apply border-b;
-    border-color: #f1f3f5;
-  }
-
-  tbody tr:hover {
-    @apply bg-[#fafafa];
-  }
-
-  /* Input styling per guidelines */
-  input[type="text"],
-  input[type="email"],
-  input[type="search"],
-  input[type="url"] {
-    @apply bg-white border-[#e5e7eb];
-    border-radius: 8px;
-    padding: 12px 14px;
-  }
-
-  input::placeholder {
-    @apply text-[#9ca3af];
-  }
-
-  /* Button styling per guidelines */
-  button[data-primary="true"] {
-    @apply bg-black text-white;
-    border-radius: 8px;
-    padding: 10px 16px;
-  }
-
-  button[data-primary="true"]:hover {
-    @apply bg-[#1e1e1e];
+    @apply bg-background text-foreground overflow-x-hidden;
   }
 }
 

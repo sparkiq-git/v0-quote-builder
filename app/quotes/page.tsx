@@ -281,15 +281,13 @@ export default function QuotesPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-full overflow-x-hidden">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-[22px] font-semibold tracking-tight text-foreground leading-[1.5]">Quotes</h1>
-          <p className="text-muted-foreground text-[15px] leading-[1.6] font-normal">
-            Track quote status and customer responses
-          </p>
+          <h1 className="text-3xl font-bold tracking-tight">Quotes</h1>
+          <p className="text-muted-foreground">Track quote status and customer responses</p>
         </div>
-        <Button asChild data-primary="true" className="bg-black text-white hover:bg-[#1e1e1e] rounded-lg px-4 py-2.5">
+        <Button asChild>
           <Link href="/quotes/new">
             <Plus className="mr-2 h-4 w-4" />
             Create Quote
@@ -297,20 +295,20 @@ export default function QuotesPage() {
         </Button>
       </div>
 
-      <div className="flex items-center gap-4 flex-wrap">
-        <div className="flex items-center space-x-2 flex-1 min-w-[200px]">
+      <div className="flex items-center gap-4">
+        <div className="flex items-center space-x-2">
           <Search className="h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search quotes by title, name, company, email, or status..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="max-w-sm bg-white border-[#e5e7eb] rounded-lg px-[14px] py-[12px] placeholder:text-[#9ca3af]"
+            className="max-w-sm"
           />
         </div>
         <div className="ml-auto flex items-center gap-2">
           <Filter className="h-4 w-4 text-muted-foreground" />
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[180px] bg-white border-[#e5e7eb] rounded-lg">
+            <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
@@ -328,42 +326,40 @@ export default function QuotesPage() {
         </div>
       </div>
 
-      <Card className="border border-border rounded-lg bg-white">
-        <CardHeader className="px-6 pt-6 pb-4">
-          <CardTitle className="text-[18px] font-semibold text-foreground leading-[1.5]">
-            Quotes ({filteredQuotes.length})
-          </CardTitle>
-          <CardDescription className="text-[14px] text-muted-foreground leading-[1.6] font-normal">
+      <Card>
+        <CardHeader>
+          <CardTitle>Quotes ({filteredQuotes.length})</CardTitle>
+          <CardDescription>
             Showing {statusFilter === "all" ? "all" : statusFilter} quotes with real-time updates.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="rounded-lg border border-[#e5e7eb] overflow-x-auto max-w-full">
+          <div className="overflow-x-auto overflow-y-auto max-w-full max-h-[600px] rounded-lg border border-[#e5e7eb]">
             <Table>
               <TableHeader>
-                <TableRow className="border-b border-[#f1f3f5]">
+                <TableRow>
                   <TableHead>
-                    <Button variant="ghost" className="h-8 px-2 lg:px-3 text-[14px] font-medium">
+                    <Button variant="ghost" className="h-8 px-2 lg:px-3">
                       Quote Details <ArrowUpDown className="ml-2 h-4 w-4" />
                     </Button>
                   </TableHead>
                   <TableHead>
-                    <Button variant="ghost" className="h-8 px-2 lg:px-3 text-[14px] font-medium">
+                    <Button variant="ghost" className="h-8 px-2 lg:px-3">
                       Customer <ArrowUpDown className="ml-2 h-4 w-4" />
                     </Button>
                   </TableHead>
                   <TableHead>
-                    <Button variant="ghost" className="h-8 px-2 lg:px-3 text-[14px] font-medium">
+                    <Button variant="ghost" className="h-8 px-2 lg:px-3">
                       Status <ArrowUpDown className="ml-2 h-4 w-4" />
                     </Button>
                   </TableHead>
                   <TableHead>
-                    <Button variant="ghost" className="h-8 px-2 lg:px-3 text-[14px] font-medium">
+                    <Button variant="ghost" className="h-8 px-2 lg:px-3">
                       Last Updated <ArrowUpDown className="ml-2 h-4 w-4" />
                     </Button>
                   </TableHead>
                   <TableHead>
-                    <Button variant="ghost" className="h-8 px-2 lg:px-3 text-[14px] font-medium">
+                    <Button variant="ghost" className="h-8 px-2 lg:px-3">
                       Created <ArrowUpDown className="ml-2 h-4 w-4" />
                     </Button>
                   </TableHead>
@@ -373,28 +369,24 @@ export default function QuotesPage() {
               <TableBody>
                 {filteredQuotes.length > 0 ? (
                   filteredQuotes.map((quote) => (
-                    <TableRow key={quote.id} className="hover:bg-[#fafafa] border-b border-[#f1f3f5]">
+                    <TableRow key={quote.id} className="hover:bg-muted/30">
                       <TableCell>
                         <div className="flex flex-col">
-                          <span className="font-medium text-[14px] leading-[1.6]">{quote.title}</span>
-                          <span className="text-[12px] text-muted-foreground leading-[1.6] font-normal">
+                          <span className="font-medium text-sm">{quote.title}</span>
+                          <span className="text-xs text-muted-foreground">
                             {quote.customer.company || "No company"}
                           </span>
                         </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-col">
-                          <span className="font-medium text-[14px] leading-[1.6]">
-                            {quote.customer.name || "Unknown"}
-                          </span>
-                          <span className="text-[12px] text-muted-foreground leading-[1.6] font-normal">
-                            {quote.customer.email || "No email"}
-                          </span>
+                          <span className="font-medium text-sm">{quote.customer.name || "Unknown"}</span>
+                          <span className="text-xs text-muted-foreground">{quote.customer.email || "No email"}</span>
                         </div>
                       </TableCell>
                       <TableCell>
                         <div className="relative inline-block">
-                          <Badge variant={getStatusBadgeVariant(quote.status)} className="text-[12px]">
+                          <Badge variant={getStatusBadgeVariant(quote.status)} className="text-xs">
                             {quote.status}
                           </Badge>
                           {quote.status === "opened" && quote.openCount > 0 && (
@@ -405,13 +397,13 @@ export default function QuotesPage() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="text-[12px] leading-[1.6] font-normal">
+                        <div className="text-xs">
                           <div>{formatDate(quote.updatedAt)}</div>
                           <div className="text-muted-foreground">{formatTimeAgo(quote.updatedAt)}</div>
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="text-[12px] leading-[1.6] font-normal">
+                        <div className="text-xs">
                           <div>{formatDate(quote.createdAt)}</div>
                           <div className="text-muted-foreground">{formatTimeAgo(quote.createdAt)}</div>
                         </div>
@@ -424,8 +416,8 @@ export default function QuotesPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="z-[9999]" onClick={(e) => e.stopPropagation()}>
-                            <DropdownMenuLabel className="text-[14px] font-medium">Actions</DropdownMenuLabel>
-                            <DropdownMenuItem asChild className="text-[14px]">
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuItem asChild>
                               <Link href={`/quotes/${quote.id}`}>
                                 <Eye className="mr-2 h-4 w-4" />
                                 View/Edit
@@ -434,20 +426,14 @@ export default function QuotesPage() {
                             {canSendInvoiceContract(quote) && (
                               <>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  onClick={(e) => handleOpenInvoiceContractModal(quote)}
-                                  className="text-[14px]"
-                                >
+                                <DropdownMenuItem onClick={(e) => handleOpenInvoiceContractModal(quote)}>
                                   <FileSignature className="mr-2 h-4 w-4" />
                                   Invoice & Contract
                                 </DropdownMenuItem>
                               </>
                             )}
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              className="text-destructive text-[14px]"
-                              onClick={(e) => handleDeleteQuote(quote.id)}
-                            >
+                            <DropdownMenuItem className="text-destructive" onClick={(e) => handleDeleteQuote(quote.id)}>
                               <Trash2 className="mr-2 h-4 w-4" />
                               Delete Quote
                             </DropdownMenuItem>
@@ -458,10 +444,7 @@ export default function QuotesPage() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell
-                      colSpan={6}
-                      className="h-24 text-center text-muted-foreground text-[14px] leading-[1.6] font-normal"
-                    >
+                    <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
                       No quotes found.
                     </TableCell>
                   </TableRow>

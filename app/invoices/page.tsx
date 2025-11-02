@@ -186,8 +186,8 @@ export default function InvoicesPage() {
         </CardHeader>
 
         <CardContent>
-          <div className="rounded-lg border border-[#e5e7eb] overflow-x-auto max-w-full">
-            {filteredInvoices.length > 0 ? (
+          {filteredInvoices.length > 0 ? (
+            <div className="overflow-x-auto overflow-y-auto max-w-full max-h-[600px] rounded-lg border">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -270,11 +270,10 @@ export default function InvoicesPage() {
                   ))}
                 </TableBody>
               </Table>
-            ) : (
-              <div className="py-8 text-center text-muted-foreground">No invoices found.</div>
-            )}
-          </div>
-          {/* </CHANGE> */}
+            </div>
+          ) : (
+            <div className="py-8 text-center text-muted-foreground">No invoices found.</div>
+          )}
         </CardContent>
       </Card>
 
