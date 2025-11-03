@@ -432,6 +432,7 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
       // Call trip_notifications edge function for quote_accepted
       await callTripNotifications("quote_accepted", {
         quote_id: quote.id,
+        selected_option_id: selectedOptionId,
         created_by: quote.created_by_user_id || quote.created_by || null,
       })
 

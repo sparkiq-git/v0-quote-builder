@@ -32,20 +32,42 @@ export async function POST(req: NextRequest) {
     })
 
     console.log("🔔 Edge function response:", { data, error })
+    console.log("🔔 Error type:", error?.constructor?.name)
+    console.log("🔔 Error details:", error ? JSON.stringify(error, Object.getOwnPropertyNames(error), 2) : null)
 
-    if (error) {
-      console.error("❌ trip_notifications edge function error:", error)
-      const errorMessage = error.message || error.toString() || "Edge Function returned an error"
-      return NextResponse.json(
-        { error: errorMessage, details: error },
-        { status: 400 }
-      )
+    // Check if data has error (edge function returned error in response body)
+    if (data && typeof data === 'object') {
+      // Check for {ok: false, error: "..."} pattern
+      if ('ok' in data && !data.ok && data.error) {
+        console.error("❌ trip_notifications edge function returned ok: false with error:", data.error)
+        const errorMessage = typeof data.error === 'string' ? data.error : JSON.stringify(data.error)
+        return NextResponse.json(
+          { error: errorMessage, details: data },
+          { status: 400 }
+        )
+      }
+      
+      // Check for {error: "..."} pattern
+      if ('error' in data && data.error) {
+        console.error("❌ trip_notifications edge function returned error in data:", data.error)
+        const errorMessage = typeof data.error === 'string' ? data.error : JSON.stringify(data.error)
+        return NextResponse.json(
+          { error: errorMessage, details: data },
+          { status: 400 }
+        )
+      }
     }
 
-    if (data?.error) {
-      console.error("❌ trip_notifications edge function returned error:", data.error)
+    // If SDK returned an error object, extract message
+    if (error) {
+      console.error("❌ trip_notifications edge function SDK error:", error)
+      // The error from Supabase SDK might contain the response body
+      const errorMessage = error.message || 
+                         (error as any)?.message ||
+                         error.toString() || 
+                         "Edge Function returned an error"
       return NextResponse.json(
-        { error: data.error, details: data },
+        { error: errorMessage, details: { error, data } },
         { status: 400 }
       )
     }
