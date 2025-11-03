@@ -27,7 +27,6 @@ export default function FBOsPage() {
 
       {state.fbos && state.fbos.length > 0 ? (
         <Card>
-          
           <CardContent>
             <FBOsTable data={state.fbos} />
           </CardContent>
