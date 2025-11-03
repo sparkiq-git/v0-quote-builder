@@ -305,33 +305,54 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
     metadata: Record<string, any>
   ) => {
     try {
+      console.log("🔔 callTripNotifications called:", { actionType, metadata, quote: quote?.id })
+      
       if (!quote?.tenant_id || !quote?.customer?.email) {
-        console.warn("Missing required quote data for trip_notifications")
+        console.warn("⚠️ Missing required quote data for trip_notifications:", {
+          hasTenantId: !!quote?.tenant_id,
+          hasEmail: !!quote?.customer?.email,
+          verifiedEmail: !!verifiedEmail,
+        })
         return
       }
+
+      const payload = {
+        tenant_id: quote.tenant_id,
+        email: quote.customer.email || verifiedEmail || "",
+        action_type: actionType,
+        metadata,
+      }
+
+      console.log("🔔 Calling /api/trip-notifications with payload:", payload)
 
       const res = await fetch("/api/trip-notifications", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          tenant_id: quote.tenant_id,
-          email: quote.customer.email || verifiedEmail || "",
-          action_type: actionType,
-          metadata,
-        }),
+        body: JSON.stringify(payload),
       })
 
-      const json = await res.json().catch(() => ({}))
+      console.log("🔔 API response status:", res.status, res.statusText)
+
+      const json = await res.json().catch((err) => {
+        console.error("❌ Failed to parse API response:", err)
+        return {}
+      })
+
       if (!res.ok) {
-        console.error("trip_notifications API error:", json)
+        console.error("❌ trip_notifications API error:", {
+          status: res.status,
+          statusText: res.statusText,
+          body: json,
+        })
         // Don't throw - this is non-critical, log only
       } else {
-        console.log("trip_notifications called successfully:", { actionType, metadata })
+        console.log("✅ trip_notifications called successfully:", { actionType, metadata, response: json })
       }
     } catch (error) {
-      console.error("Failed to call trip_notifications API:", error)
+      console.error("❌ Failed to call trip_notifications API:", error)
+      console.error("❌ Error details:", error instanceof Error ? error.stack : error)
       // Don't throw - this is non-critical
     }
   }

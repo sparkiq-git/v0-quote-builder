@@ -1,63 +1,60 @@
 import { NextRequest, NextResponse } from "next/server"
+import { createClient } from "@/lib/supabase/server"
 
 export async function POST(req: NextRequest) {
   try {
+    console.log("🔔 trip_notifications API route called")
     const body = await req.json()
+    console.log("🔔 Request body:", JSON.stringify(body, null, 2))
     const { tenant_id, email, action_type, metadata } = body
 
     // Validate required fields
     if (!tenant_id || !email || !action_type) {
+      console.error("❌ Missing required fields:", { tenant_id: !!tenant_id, email: !!email, action_type: !!action_type })
       return NextResponse.json(
         { error: "Missing required fields: tenant_id, email, action_type" },
         { status: 400 }
       )
     }
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    const supabase = await createClient()
 
-    if (!supabaseUrl || !supabaseAnonKey) {
-      console.error("Missing Supabase environment variables")
-      return NextResponse.json(
-        { error: "Server configuration error" },
-        { status: 500 }
-      )
+    const payload = {
+      tenant_id,
+      email,
+      action_type,
+      metadata: metadata || {},
     }
+    console.log("🔔 Calling edge function 'trip_notifications' with payload:", JSON.stringify(payload, null, 2))
 
-    const fnUrl = `${supabaseUrl}/functions/v1/trip_notifications`
-
-    const response = await fetch(fnUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        apikey: supabaseAnonKey,
-        Authorization: `Bearer ${supabaseAnonKey}`,
-      },
-      body: JSON.stringify({
-        tenant_id,
-        email,
-        action_type,
-        metadata: metadata || {},
-      }),
+    const { data, error } = await supabase.functions.invoke("trip_notifications", {
+      body: payload,
     })
 
-    const json = await response.json().catch(() => ({}))
+    console.log("🔔 Edge function response:", { data, error })
 
-    if (!response.ok) {
-      console.error("trip_notifications edge function error:", {
-        status: response.status,
-        statusText: response.statusText,
-        body: json,
-      })
+    if (error) {
+      console.error("❌ trip_notifications edge function error:", error)
+      const errorMessage = error.message || error.toString() || "Edge Function returned an error"
       return NextResponse.json(
-        { error: json.error || "Failed to trigger notifications", details: json },
-        { status: response.status || 500 }
+        { error: errorMessage, details: error },
+        { status: 400 }
       )
     }
 
-    return NextResponse.json({ success: true, data: json })
+    if (data?.error) {
+      console.error("❌ trip_notifications edge function returned error:", data.error)
+      return NextResponse.json(
+        { error: data.error, details: data },
+        { status: 400 }
+      )
+    }
+
+    console.log("✅ trip_notifications edge function called successfully:", data)
+    return NextResponse.json({ success: true, data })
   } catch (error: any) {
-    console.error("Failed to call trip_notifications edge function:", error)
+    console.error("❌ Failed to call trip_notifications edge function:", error)
+    console.error("❌ Error stack:", error?.stack)
     return NextResponse.json(
       { error: error?.message || "Internal server error" },
       { status: 500 }
