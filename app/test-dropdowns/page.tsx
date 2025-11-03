@@ -19,7 +19,6 @@ import {
 } from "@/components/ui/select"
 import { MoreHorizontal } from "lucide-react"
 
-// Micro reflow para SSR + webfonts: ayuda a Floating UI a recalcular posición en prod
 const forceRecalc = () =>
   requestAnimationFrame(() =>
     requestAnimationFrame(() => window.dispatchEvent(new Event("resize")))
@@ -38,7 +37,6 @@ export default function TestDropdownsPage() {
           </p>
         </div>
 
-        {/* Test 1: Basic Dropdown */}
         <div className="bg-white p-8 rounded-lg shadow-sm border space-y-4">
           <h2 className="text-xl font-semibold">Test 1: Basic Dropdown Menu</h2>
           <DropdownMenu modal={false} onOpenChange={(open) => open && forceRecalc()}>
@@ -58,7 +56,6 @@ export default function TestDropdownsPage() {
           </DropdownMenu>
         </div>
 
-        {/* Test 2: Dropdown in Table */}
         <div className="bg-white p-8 rounded-lg shadow-sm border space-y-4">
           <h2 className="text-xl font-semibold">Test 2: Dropdown in Table</h2>
           <div className="border rounded-lg overflow-hidden">
@@ -103,7 +100,6 @@ export default function TestDropdownsPage() {
           </div>
         </div>
 
-        {/* Test 3: Select Component */}
         <div className="bg-white p-8 rounded-lg shadow-sm border space-y-4">
           <h2 className="text-xl font-semibold">Test 3: Select Component</h2>
           <Select modal={false}>
@@ -118,7 +114,6 @@ export default function TestDropdownsPage() {
           </Select>
         </div>
 
-        {/* Test 4: Dropdown with State */}
         <div className="bg-white p-8 rounded-lg shadow-sm border space-y-4">
           <h2 className="text-xl font-semibold">Test 4: Dropdown with Interactive State</h2>
           <p>Counter: {count}</p>
@@ -139,7 +134,6 @@ export default function TestDropdownsPage() {
           </div>
         </div>
 
-        {/* Test 5: Multiple Dropdowns */}
         <div className="bg-white p-8 rounded-lg shadow-sm border space-y-4">
           <h2 className="text-xl font-semibold">Test 5: Multiple Dropdowns</h2>
           <div className="flex gap-4">
