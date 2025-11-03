@@ -1,37 +1,48 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
-// Force dynamic rendering for this route since it requires authentication
-export const dynamic = 'force-dynamic'
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
   const supabase = await createClient();
 
   try {
-    // 2) Quotes: status = 'awaiting response'
+    // 1) Quotes awaiting response
     const { count: quotesAwaitingResponse, error: q1 } = await supabase
-      .from("quote") // 
+      .from("quote")
       .select("*", { count: "exact", head: true })
-      .in("status", ["awaiting response","opened"]);
+      .in("status", ["awaiting response", "opened"]);
     if (q1) console.error("quotesAwaitingResponse error:", q1);
 
-    // 3) Unpaid: payment_status = 'unpaid'
+    // 2) Unpaid quotes
     const { count: unpaidQuotes, error: q2 } = await supabase
-      .from("quote") // 
+      .from("quote")
       .select("*", { count: "exact", head: true })
       .eq("payment_status", "unpaid");
     if (q2) console.error("unpaidQuotes error:", q2);
 
-    // 4) Upcoming Departures: quote_detail.depart_dt within next 7 days
+    // 3) Upcoming departures within next 7 days, only for accepted/invoiced/paid/pending_approval
     const start = new Date(); start.setHours(0, 0, 0, 0);
     const end = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); end.setHours(23, 59, 59, 999);
 
-    const { count: upcomingDepartures, error: q3 } = await supabase
+    // Step 1: get all quote IDs with the right statuses
+    const { data: validQuotes, error: q3a } = await supabase
+      .from("quote")
+      .select("id")
+      .in("status", ["accepted", "invoiced", "paid", "pending_approval"]);
+
+    if (q3a) console.error("validQuotes error:", q3a);
+
+    const validQuoteIds = validQuotes?.map(q => q.id) ?? [];
+
+    // Step 2: filter quote_detail by date range + those quote IDs
+    const { count: upcomingDepartures, error: q3b } = await supabase
       .from("quote_detail")
       .select("*", { count: "exact", head: true })
+      .in("quote_id", validQuoteIds)
       .gte("depart_dt", start.toISOString())
       .lte("depart_dt", end.toISOString());
-    if (q3) console.error("upcomingDepartures error:", q3);
+    if (q3b) console.error("upcomingDepartures error:", q3b);
 
     return NextResponse.json({
       quotesAwaitingResponse: quotesAwaitingResponse ?? 0,
