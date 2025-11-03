@@ -106,7 +106,7 @@ export default function DashboardPage() {
               earliest_departure,
               created_at
             `)
-            .eq("status", "new")
+            .in("status", ["opened", "new"])
             .gte("created_at", start.toISOString())
             .lte("created_at", end.toISOString())
             .order("created_at", { ascending: false }),
