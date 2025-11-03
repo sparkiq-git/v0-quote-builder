@@ -52,10 +52,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { useAppHeader } from "@/components/app-header-context"
 
 export default function QuotesPage() {
   const router = useRouter()
   const { toast } = useToast()
+  const { setContent } = useAppHeader()
   const [quotes, setQuotes] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState("all")
@@ -68,6 +70,25 @@ export default function QuotesPage() {
   const [loadingQuote, setLoadingQuote] = useState(false)
   const [paymentUrl, setPaymentUrl] = useState("")
   const [sending, setSending] = useState(false)
+
+  useEffect(() => {
+    setContent({
+      title: "Quotes",
+      subtitle: "Track quote status and customer responses",
+      actions: (
+        <Button asChild>
+          <Link href="/quotes/new">
+            <Plus className="mr-2 h-4 w-4" />
+            Create Quote
+          </Link>
+        </Button>
+      ),
+    })
+
+    return () => {
+      setContent({})
+    }
+  }, [setContent])
 
   // ✅ Fetch quotes from Supabase (client-side only)
   useEffect(() => {
@@ -282,52 +303,39 @@ export default function QuotesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Quotes</h1>
-          <p className="text-muted-foreground">Track quote status and customer responses</p>
-        </div>
-        <Button asChild>
-          <Link href="/quotes/new">
-            <Plus className="mr-2 h-4 w-4" />
-            Create Quote
-          </Link>
-        </Button>
-      </div>
-
-      <div className="flex items-center gap-4">
-        <div className="flex items-center space-x-2">
-          <Search className="h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search quotes by title, name, company, email, or status..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="max-w-sm"
-          />
-        </div>
-        <div className="ml-auto flex items-center gap-2">
-          <Filter className="h-4 w-4 text-muted-foreground" />
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
-              <SelectItem value="draft">Draft</SelectItem>
-              <SelectItem value="sent">Sent</SelectItem>
-              <SelectItem value="opened">Opened</SelectItem>
-              <SelectItem value="accepted">Accepted</SelectItem>
-              <SelectItem value="declined">Declined</SelectItem>
-              <SelectItem value="cancelled">Cancelled</SelectItem>
-              <SelectItem value="invoiced">Invoiced</SelectItem>
-              <SelectItem value="expired">Expired</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
       <Card>
-        <CardContent className="pt-6">
+        <CardContent className="pt-6 space-y-4">
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center gap-2 w-full">
+              <Search className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+              <Input
+                placeholder="Search quotes by title, name, company, email, or status..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="flex-1"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="draft">Draft</SelectItem>
+                  <SelectItem value="sent">Sent</SelectItem>
+                  <SelectItem value="opened">Opened</SelectItem>
+                  <SelectItem value="accepted">Accepted</SelectItem>
+                  <SelectItem value="declined">Declined</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                  <SelectItem value="invoiced">Invoiced</SelectItem>
+                  <SelectItem value="expired">Expired</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
           <div className="relative overflow-auto max-w-full max-h-[600px] rounded-lg border border-[#e5e7eb]">
             <Table className="min-w-[800px]">
               <TableHeader>
