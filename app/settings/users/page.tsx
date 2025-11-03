@@ -5,11 +5,8 @@ export const fetchCache = "force-no-store"
 
 import { Suspense } from "react"
 import { getServerUser } from "@/lib/supabase/server"
-import { AppSidebar } from "@/components/app-sidebar"
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { UsersListClient } from "@/components/settings/users/users-list-client"
-import { AppHeader } from "@/components/app-header"
-import { AppHeaderProvider } from "@/components/app-header-context"
+import { UsersPageLayout } from "@/components/settings/users/users-page-layout"
 
 export default async function UsersManagementPage() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -72,19 +69,13 @@ export default async function UsersManagementPage() {
     }
 
     return (
-      <AppHeaderProvider>
-        <SidebarProvider>
-          <AppSidebar />
-          <SidebarInset>
-            <AppHeader />
-            <main className="flex-1 overflow-auto p-6">
-              <Suspense fallback={<div>Loading users...</div>}>
-                <UsersListClient />
-              </Suspense>
-            </main>
-          </SidebarInset>
-        </SidebarProvider>
-      </AppHeaderProvider>
+      <UsersPageLayout>
+        <main className="flex-1 overflow-auto p-6">
+          <Suspense fallback={<div>Loading users...</div>}>
+            <UsersListClient />
+          </Suspense>
+        </main>
+      </UsersPageLayout>
     )
   } catch (error) {
     console.error("Users management page error:", error)
