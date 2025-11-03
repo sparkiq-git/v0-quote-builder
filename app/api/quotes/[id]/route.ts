@@ -303,7 +303,6 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
 
 /* ---------------- PATCH handler ---------------- */
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
-  const supabase = await createActionLinkClient(true)
   const { id } = params
 
   try {
@@ -319,14 +318,25 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
       }, { status: 400 })
     }
 
-    const { selectedOptionId, status, declineReason, declineNotes } = body
+    const { selectedOptionId, status, declineReason, declineNotes, sent_at, valid_until } = body
 
     // Check if this is a public quote access (from action link)
     const referer = req.headers.get("referer")
     const isPublicAccess = referer?.includes("/action/") || req.headers.get("x-public-quote") === "true"
 
-    if (!isPublicAccess) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    // Determine which client to use based on access type
+    let supabase
+    if (isPublicAccess) {
+      // Public access: use service role client
+      supabase = await createActionLinkClient(true)
+    } else {
+      // Authenticated access: use regular client and check auth
+      const { createClient } = await import("@/lib/supabase/server")
+      supabase = await createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      }
     }
 
     // Update quote with new selection or status
@@ -336,6 +346,12 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     }
     if (status) {
       updates.status = status
+    }
+    if (sent_at) {
+      updates.sent_at = sent_at
+    }
+    if (valid_until) {
+      updates.valid_until = valid_until
     }
 
     const { data: updatedQuote, error: updateError } = await supabase

@@ -124,17 +124,15 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
       if (res.status === 200) {
         try {
           const updateRes = await fetch(`/api/quotes/${quote.id}`, {
-            method: "PUT",
+            method: "PATCH",
             headers: {
               "Content-Type": "application/json",
             },
+            credentials: "include",
             body: JSON.stringify({
-              quote: {
-                ...quote,
-                status: "awaiting response",
-                sent_at: new Date().toISOString(), // Set sent_at to current timestamp
-                valid_until: expirationDateTime, // Set valid_until to the expiration date/time
-              },
+              status: "awaiting response",
+              sent_at: new Date().toISOString(), // Set sent_at to current timestamp
+              valid_until: expirationDateTime, // Set valid_until to the expiration date/time
             }),
           })
 
