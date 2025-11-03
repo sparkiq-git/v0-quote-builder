@@ -65,8 +65,7 @@ export function InvoiceContractWizard({
   const [paymentUrl, setPaymentUrl] = useState("")
   const [sending, setSending] = useState(false)
   const [editedQuoteData, setEditedQuoteData] = useState<any | null>(null)
-  const [taxRate, setTaxRate] = useState<number>(0)
-  const [taxAmount, setTaxAmount] = useState<number>(0)
+  const [taxes, setTaxes] = useState<Array<{ id: string; name: string; amount: number }>>([])
 
   // Update edited quote data when fullQuoteData changes
   useEffect(() => {
@@ -105,8 +104,7 @@ export function InvoiceContractWizard({
         body: JSON.stringify({
           quote_id: selectedQuote.id,
           external_payment_url: paymentUrl || null,
-          tax_rate: taxRate || 0,
-          tax_amount: taxAmount || 0,
+          taxes: taxes || [],
         }),
       })
 
@@ -129,8 +127,7 @@ export function InvoiceContractWizard({
       setStep(1)
       setPaymentUrl("")
       setEditedQuoteData(null)
-      setTaxRate(0)
-      setTaxAmount(0)
+      setTaxes([])
     } catch (err: any) {
       console.error("Failed to create invoice & contract:", err)
       toast({
@@ -141,7 +138,7 @@ export function InvoiceContractWizard({
     } finally {
       setSending(false)
     }
-  }, [selectedQuote, paymentUrl, toast, onSuccess, onOpenChange, editedQuoteData, fullQuoteData, taxRate, taxAmount])
+  }, [selectedQuote, paymentUrl, toast, onSuccess, onOpenChange, editedQuoteData, fullQuoteData, taxes])
 
   const handleNext = useCallback(() => {
     if (step === 1) {
@@ -159,10 +156,9 @@ export function InvoiceContractWizard({
     onOpenChange(false)
     // Reset state when closing
     setStep(1)
-    setPaymentUrl("")
-    setEditedQuoteData(null)
-    setTaxRate(0)
-    setTaxAmount(0)
+      setPaymentUrl("")
+      setEditedQuoteData(null)
+      setTaxes([])
   }, [onOpenChange])
 
 
@@ -218,17 +214,14 @@ export function InvoiceContractWizard({
               paymentUrl={paymentUrl}
               onPaymentUrlChange={setPaymentUrl}
               onQuoteDataChange={setEditedQuoteData}
-              taxRate={taxRate}
-              onTaxRateChange={setTaxRate}
-              taxAmount={taxAmount}
-              onTaxAmountChange={setTaxAmount}
+              taxes={taxes}
+              onTaxesChange={setTaxes}
             />
           ) : (
             <ContractBuilderStep
               fullQuoteData={editedQuoteData || fullQuoteData}
               selectedQuote={selectedQuote}
-              taxRate={taxRate}
-              taxAmount={taxAmount}
+              taxes={taxes}
             />
           )}
         </div>
@@ -296,10 +289,8 @@ function InvoiceSummaryStep({
   paymentUrl: string
   onPaymentUrlChange: (url: string) => void
   onQuoteDataChange: (data: any) => void
-  taxRate: number
-  onTaxRateChange: (rate: number) => void
-  taxAmount: number
-  onTaxAmountChange: (amount: number) => void
+  taxes: Array<{ id: string; name: string; amount: number }>
+  onTaxesChange: (taxes: Array<{ id: string; name: string; amount: number }>) => void
 }) {
   const [newServiceDescription, setNewServiceDescription] = useState("")
   const [newServiceQty, setNewServiceQty] = useState(1)
@@ -317,19 +308,18 @@ function InvoiceSummaryStep({
     )
   }
 
-  // Calculate subtotals
-  const subtotalAircraft =
-    fullQuoteData.options?.reduce(
-      (sum: number, opt: any) =>
-        sum +
-        (opt.price_total ||
-          (opt.cost_operator || 0) +
-            (opt.price_commission || 0) +
-            (opt.price_extras_total || 0) -
-            (opt.price_discounts_total || 0) ||
-          0),
-      0,
-    ) || 0
+  // Calculate subtotals - only use selected option
+  const selectedOptionId = fullQuoteData.selected_option_id || selectedQuote?.selected_option_id
+  const selectedOption = fullQuoteData.options?.find((opt: any) => opt.id === selectedOptionId)
+
+  const subtotalAircraft = selectedOption
+    ? selectedOption.price_total ||
+      (selectedOption.cost_operator || 0) +
+        (selectedOption.price_commission || 0) +
+        (selectedOption.price_extras_total || 0) -
+        (selectedOption.price_discounts_total || 0) ||
+      0
+    : 0
 
   const subtotalServices =
     fullQuoteData.services?.reduce(
@@ -339,15 +329,10 @@ function InvoiceSummaryStep({
 
   const subtotal = subtotalAircraft + subtotalServices
 
-  // Calculate tax if using rate
-  useEffect(() => {
-    if (taxRate > 0 && subtotal > 0) {
-      const calculatedTax = (subtotal * taxRate) / 100
-      onTaxAmountChange(calculatedTax)
-    }
-  }, [taxRate, subtotal, onTaxAmountChange])
+  // Calculate total tax amount
+  const taxTotal = taxes.reduce((sum, tax) => sum + (tax.amount || 0), 0)
 
-  const grandTotal = subtotal + taxAmount
+  const grandTotal = subtotal + taxTotal
 
   const handleUpdateService = (serviceId: string, field: string, value: any) => {
     if (!fullQuoteData?.services) return
@@ -471,71 +456,73 @@ function InvoiceSummaryStep({
         </div>
       </div>
 
-      {/* Selected Aircraft Option Card */}
-      {fullQuoteData.options && fullQuoteData.options.length > 0 && (
-        <div className="relative overflow-hidden rounded-xl border-2 border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 shadow-sm hover:shadow-md transition-shadow">
-          <div className="p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <Plane className="h-5 w-5 text-slate-600 dark:text-slate-400" />
-              <h4 className="font-semibold text-lg text-slate-900 dark:text-slate-100">Selected Aircraft Option</h4>
-            </div>
-            <div className="space-y-3">
-              {fullQuoteData.options.map((option: any, idx: number) => (
-                <div
-                  key={option.id || idx}
-                  className="p-4 rounded-lg bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-2"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Badge
-                        variant="secondary"
-                        className="text-xs bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300"
-                      >
-                        Option {idx + 1}
-                      </Badge>
-                      <span className="font-semibold text-sm text-slate-900 dark:text-slate-100">
-                        {option.aircraftModel?.name || option.aircraftTail?.tailNumber || "Aircraft Option"}
-                      </span>
-                    </div>
-                    <span className="font-bold text-lg text-slate-900 dark:text-slate-100">
-                      {formatCurrency(
-                        option.price_total ||
-                          (option.cost_operator || 0) +
-                            (option.price_commission || 0) +
-                            (option.price_extras_total || 0) -
-                            (option.price_discounts_total || 0) ||
-                          0,
-                      )}
+      {/* Selected Aircraft Option Card - Only show selected option */}
+      {(() => {
+        const selectedOptionId = fullQuoteData.selected_option_id || selectedQuote?.selected_option_id
+        const selectedOption = fullQuoteData.options?.find((opt: any) => opt.id === selectedOptionId)
+
+        if (!selectedOption) {
+          return null
+        }
+
+        return (
+          <div className="relative overflow-hidden rounded-xl border-2 border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 shadow-sm hover:shadow-md transition-shadow">
+            <div className="p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <Plane className="h-5 w-5 text-slate-600 dark:text-slate-400" />
+                <h4 className="font-semibold text-lg text-slate-900 dark:text-slate-100">Selected Aircraft Option</h4>
+              </div>
+              <div className="p-4 rounded-lg bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Badge
+                      variant="secondary"
+                      className="text-xs bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300"
+                    >
+                      Selected Option
+                    </Badge>
+                    <span className="font-semibold text-sm text-slate-900 dark:text-slate-100">
+                      {selectedOption.aircraftModel?.name || selectedOption.aircraftTail?.tailNumber || "Aircraft Option"}
                     </span>
                   </div>
-                  {(option.cost_operator || option.price_commission) && (
-                    <div className="space-y-1 pt-2 border-t border-slate-200 dark:border-slate-800">
-                      {option.cost_operator && (
-                        <div className="flex justify-between text-xs text-slate-600 dark:text-slate-400">
-                          <span>Operator Cost:</span>
-                          <span className="font-medium">{formatCurrency(option.cost_operator)}</span>
-                        </div>
-                      )}
-                      {option.price_commission && (
-                        <div className="flex justify-between text-xs text-slate-600 dark:text-slate-400">
-                          <span>Commission:</span>
-                          <span className="font-medium">{formatCurrency(option.price_commission)}</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  {option.flight_hours && (
-                    <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
-                      <Clock className="h-3.5 w-3.5" />
-                      <span>{option.flight_hours} flight hours</span>
-                    </div>
-                  )}
+                  <span className="font-bold text-lg text-slate-900 dark:text-slate-100">
+                    {formatCurrency(
+                      selectedOption.price_total ||
+                        (selectedOption.cost_operator || 0) +
+                          (selectedOption.price_commission || 0) +
+                          (selectedOption.price_extras_total || 0) -
+                          (selectedOption.price_discounts_total || 0) ||
+                        0,
+                    )}
+                  </span>
                 </div>
-              ))}
+                {(selectedOption.cost_operator || selectedOption.price_commission) && (
+                  <div className="space-y-1 pt-2 border-t border-slate-200 dark:border-slate-800">
+                    {selectedOption.cost_operator && (
+                      <div className="flex justify-between text-xs text-slate-600 dark:text-slate-400">
+                        <span>Operator Cost:</span>
+                        <span className="font-medium">{formatCurrency(selectedOption.cost_operator)}</span>
+                      </div>
+                    )}
+                    {selectedOption.price_commission && (
+                      <div className="flex justify-between text-xs text-slate-600 dark:text-slate-400">
+                        <span>Commission:</span>
+                        <span className="font-medium">{formatCurrency(selectedOption.price_commission)}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {selectedOption.flight_hours && (
+                  <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+                    <Clock className="h-3.5 w-3.5" />
+                    <span>{selectedOption.flight_hours} flight hours</span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
 
       {/* Additional Services Card - Editable (like QuoteServicesTab) */}
       <div className="relative overflow-hidden rounded-xl border-2 border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 shadow-sm hover:shadow-md transition-shadow">
@@ -738,7 +725,7 @@ function InvoiceSummaryStep({
             <h4 className="font-semibold text-lg text-slate-900 dark:text-slate-100">Invoice Summary</h4>
           </div>
           <div className="space-y-3">
-            {subtotalAircraft > 0 && (
+            {selectedOption && subtotalAircraft > 0 && (
               <div className="flex items-center justify-between text-sm">
                 <span className="text-slate-600 dark:text-slate-400">Aircraft Option:</span>
                 <span className="font-semibold text-slate-900 dark:text-slate-100">
@@ -759,52 +746,79 @@ function InvoiceSummaryStep({
               <span className="font-semibold text-slate-900 dark:text-slate-100">{formatCurrency(subtotal)}</span>
             </div>
 
-            {/* Tax Section */}
+            {/* Taxes & Fees Section (like QuoteOptionsTab) */}
             <div className="pt-3 border-t border-slate-300 dark:border-slate-700 space-y-3">
-              <div className="flex items-center justify-between">
-                <Label className="text-sm font-medium text-slate-900 dark:text-slate-100">Tax</Label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={taxRate}
-                    onChange={(e) => {
-                      const rate = Number(e.target.value) || 0
-                      onTaxRateChange(rate)
-                      if (rate === 0) {
-                        onTaxAmountChange(0)
-                      }
-                    }}
-                    placeholder="Rate %"
-                    className="w-20 h-8 text-sm text-right"
-                  />
-                  <span className="text-sm text-slate-600 dark:text-slate-400">%</span>
-                  <span className="text-sm text-slate-400">or</span>
-                  <Input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={taxAmount}
-                    onChange={(e) => {
-                      const amount = Number(e.target.value) || 0
-                      onTaxAmountChange(amount)
-                      if (amount > 0) {
-                        onTaxRateChange(0) // Clear rate if using fixed amount
-                      }
-                    }}
-                    placeholder="Amount"
-                    className="w-24 h-8 text-sm text-right"
-                  />
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <Label className="text-sm font-medium text-slate-900 dark:text-slate-100">Taxes & Fees</Label>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+                    Add applicable taxes and fees for this invoice.
+                  </p>
                 </div>
               </div>
-              {taxAmount > 0 && (
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-slate-600 dark:text-slate-400">
-                    Tax {taxRate > 0 ? `(${taxRate}%)` : ""}:
-                  </span>
+
+              {taxes.length > 0 && (
+                <div className="space-y-2">
+                  {taxes.map((tax) => (
+                    <div
+                      key={tax.id}
+                      className="flex items-center gap-3 p-2 bg-slate-100 dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800"
+                    >
+                      <Input
+                        value={tax.name}
+                        onChange={(e) => {
+                          const updated = taxes.map((t) => (t.id === tax.id ? { ...t, name: e.target.value } : t))
+                          onTaxesChange(updated)
+                        }}
+                        placeholder="Tax/Fee Name"
+                        className="flex-1 h-9 text-sm"
+                      />
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={tax.amount ?? 0}
+                        onChange={(e) => {
+                          const updated = taxes.map((t) =>
+                            t.id === tax.id ? { ...t, amount: parseFloat(e.target.value) || 0 } : t,
+                          )
+                          onTaxesChange(updated)
+                        }}
+                        className="w-32 h-9 text-sm text-right"
+                        placeholder="Amount"
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const updated = taxes.filter((t) => t.id !== tax.id)
+                          onTaxesChange(updated)
+                        }}
+                        className="h-9 w-9 p-0"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const newTax = { id: crypto.randomUUID(), name: "Custom Tax", amount: 0 }
+                  onTaxesChange([...taxes, newTax])
+                }}
+                className="w-full"
+              >
+                <Plus className="mr-2 h-4 w-4" /> Add Tax/Fee
+              </Button>
+
+              {taxTotal > 0 && (
+                <div className="flex items-center justify-between text-sm pt-2 border-t border-slate-300 dark:border-slate-700">
+                  <span className="text-slate-600 dark:text-slate-400">Total Taxes & Fees:</span>
                   <span className="font-semibold text-slate-900 dark:text-slate-100">
-                    {formatCurrency(taxAmount)}
+                    {formatCurrency(taxTotal)}
                   </span>
                 </div>
               )}
@@ -864,13 +878,11 @@ function InvoiceSummaryStep({
 function ContractBuilderStep({
   fullQuoteData,
   selectedQuote,
-  taxRate,
-  taxAmount,
+  taxes,
 }: {
   fullQuoteData: any | null
   selectedQuote: any | null
-  taxRate: number
-  taxAmount: number
+  taxes: Array<{ id: string; name: string; amount: number }>
 }) {
   if (!fullQuoteData || !selectedQuote) {
     return (
@@ -883,19 +895,18 @@ function ContractBuilderStep({
     )
   }
 
-  // Calculate totals
-  const totalAircraftOption =
-    fullQuoteData.options?.reduce(
-      (sum: number, opt: any) =>
-        sum +
-        (opt.price_total ||
-          (opt.cost_operator || 0) +
-            (opt.price_commission || 0) +
-            (opt.price_extras_total || 0) -
-            (opt.price_discounts_total || 0) ||
-          0),
-      0,
-    ) || 0
+  // Calculate totals - only use selected option
+  const selectedOptionId = fullQuoteData.selected_option_id || selectedQuote?.selected_option_id
+  const selectedOption = fullQuoteData.options?.find((opt: any) => opt.id === selectedOptionId)
+
+  const totalAircraftOption = selectedOption
+    ? selectedOption.price_total ||
+      (selectedOption.cost_operator || 0) +
+        (selectedOption.price_commission || 0) +
+        (selectedOption.price_extras_total || 0) -
+        (selectedOption.price_discounts_total || 0) ||
+      0
+    : 0
 
   const totalServices =
     fullQuoteData.services?.reduce(
@@ -904,7 +915,8 @@ function ContractBuilderStep({
     ) || 0
 
   const subtotal = totalAircraftOption + totalServices
-  const grandTotal = subtotal + taxAmount
+  const taxTotal = taxes.reduce((sum, tax) => sum + (tax.amount || 0), 0)
+  const grandTotal = subtotal + taxTotal
 
   return (
     <div className="space-y-6">
@@ -1023,15 +1035,25 @@ function ContractBuilderStep({
                     {formatCurrency(subtotal)}
                   </span>
                 </div>
-                {taxAmount > 0 && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-600 dark:text-slate-400">
-                      Tax {taxRate > 0 ? `(${taxRate}%)` : ""}:
-                    </span>
-                    <span className="font-semibold text-slate-900 dark:text-slate-100">
-                      {formatCurrency(taxAmount)}
-                    </span>
-                  </div>
+                {taxes.length > 0 && (
+                  <>
+                    {taxes.map((tax) => (
+                      <div key={tax.id} className="flex justify-between text-sm">
+                        <span className="text-slate-600 dark:text-slate-400">{tax.name}:</span>
+                        <span className="font-semibold text-slate-900 dark:text-slate-100">
+                          {formatCurrency(tax.amount || 0)}
+                        </span>
+                      </div>
+                    ))}
+                    {taxTotal > 0 && (
+                      <div className="flex justify-between text-sm pt-1 border-t border-slate-300 dark:border-slate-700">
+                        <span className="text-slate-600 dark:text-slate-400 font-medium">Total Taxes & Fees:</span>
+                        <span className="font-semibold text-slate-900 dark:text-slate-100">
+                          {formatCurrency(taxTotal)}
+                        </span>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
               <div className="flex justify-between items-center mb-4 pt-2 border-t border-slate-300 dark:border-slate-700">
