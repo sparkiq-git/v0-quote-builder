@@ -293,26 +293,3 @@
   pointer-events: auto !important;
   z-index: 2147483647 !important;
 }
-
-/* Additional safeguard for dropdown visibility - ensure Radix portals are visible */
-[data-radix-dropdown-menu-content],
-[data-radix-dropdown-menu-content][data-state="open"],
-div[role="menu"] {
-  position: relative !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-  display: block !important;
-}
-
-/* Nuclear option: ensure ALL possible Radix dropdown selectors are visible */
-div[data-radix-dropdown-menu-content],
-[data-radix-dropdown-menu-content] div,
-[data-radix-dropdown-menu-content] ul,
-[data-radix-dropdown-menu-content] li,
-[data-slot="dropdown-menu-content"],
-[data-slot="dropdown-menu-content"] div,
-[data-slot="dropdown-menu-content"] ul,
-[data-slot="dropdown-menu-content"] li {
-  visibility: visible !important;
-  opacity: 1 !important;
-}
