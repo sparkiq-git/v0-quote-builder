@@ -17,8 +17,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Input } from "@/components/ui/input"
 import { MoreHorizontal } from "lucide-react"
+
+// micro reflow para SSR + fonts web: ayuda a Floating UI a recalcular posición
+const forceRecalc = () =>
+  requestAnimationFrame(() =>
+    requestAnimationFrame(() => window.dispatchEvent(new Event("resize")))
+  )
 
 export default function TestDropdownsPage() {
   const [count, setCount] = useState(0)
@@ -37,14 +42,21 @@ export default function TestDropdownsPage() {
         {/* Test 1: Basic Dropdown */}
         <div className="bg-white p-8 rounded-lg shadow-sm border space-y-4">
           <h2 className="text-xl font-semibold">Test 1: Basic Dropdown Menu</h2>
-          <DropdownMenu>
+
+          <DropdownMenu modal={false} onOpenChange={(open) => open && forceRecalc()}>
             <DropdownMenuTrigger asChild>
               <Button variant="outline">
                 <MoreHorizontal className="mr-2 h-4 w-4" />
                 Basic Dropdown
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent
+              align="end"
+              side="bottom"
+              sideOffset={8}
+              // clave: no bloquear el body en prod
+              disableOutsidePointerEvents={false}
+            >
               <DropdownMenuLabel>My Account</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem>Profile</DropdownMenuItem>
@@ -72,13 +84,19 @@ export default function TestDropdownsPage() {
                     <td className="p-4">Item {i}</td>
                     <td className="p-4">Active</td>
                     <td className="p-4 text-right">
-                      <DropdownMenu>
+                      <DropdownMenu modal={false} onOpenChange={(open) => open && forceRecalc()}>
                         <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                           <Button variant="ghost" className="h-8 w-8 p-0">
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenuContent
+                          align="end"
+                          side="bottom"
+                          sideOffset={8}
+                          onClick={(e) => e.stopPropagation()}
+                          disableOutsidePointerEvents={false}
+                        >
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
                           <DropdownMenuItem>View</DropdownMenuItem>
                           <DropdownMenuItem>Edit</DropdownMenuItem>
@@ -97,11 +115,11 @@ export default function TestDropdownsPage() {
         {/* Test 3: Select Component */}
         <div className="bg-white p-8 rounded-lg shadow-sm border space-y-4">
           <h2 className="text-xl font-semibold">Test 3: Select Component</h2>
-          <Select>
+          <Select modal={false}>
             <SelectTrigger className="w-[200px]">
               <SelectValue placeholder="Select an option" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent position="popper" side="bottom" sideOffset={8}>
               <SelectItem value="option1">Option 1</SelectItem>
               <SelectItem value="option2">Option 2</SelectItem>
               <SelectItem value="option3">Option 3</SelectItem>
@@ -115,14 +133,20 @@ export default function TestDropdownsPage() {
           <p>Counter: {count}</p>
           <div className="flex gap-4">
             <Button onClick={() => setCount(count + 1)}>Increment</Button>
-            <DropdownMenu>
+
+            <DropdownMenu modal={false} onOpenChange={(open) => open && forceRecalc()}>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline">
                   <MoreHorizontal className="mr-2 h-4 w-4" />
                   Reset Counter
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent>
+              <DropdownMenuContent
+                side="bottom"
+                align="start"
+                sideOffset={8}
+                disableOutsidePointerEvents={false}
+              >
                 <DropdownMenuItem onClick={() => setCount(0)}>Reset to 0</DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setCount(10)}>Set to 10</DropdownMenuItem>
               </DropdownMenuContent>
@@ -135,11 +159,16 @@ export default function TestDropdownsPage() {
           <h2 className="text-xl font-semibold">Test 5: Multiple Dropdowns</h2>
           <div className="flex gap-4">
             {[1, 2, 3, 4].map((i) => (
-              <DropdownMenu key={i}>
+              <DropdownMenu key={i} modal={false} onOpenChange={(open) => open && forceRecalc()}>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline">Dropdown {i}</Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent>
+                <DropdownMenuContent
+                  side="bottom"
+                  align="start"
+                  sideOffset={8}
+                  disableOutsidePointerEvents={false}
+                >
                   <DropdownMenuItem>Action A from {i}</DropdownMenuItem>
                   <DropdownMenuItem>Action B from {i}</DropdownMenuItem>
                 </DropdownMenuContent>
