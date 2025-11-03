@@ -99,10 +99,7 @@ export default function AircraftPage() {
 
           <TabsContent value="models">
             <Card>
-              <CardHeader>
-                <CardTitle>Aircraft Models</CardTitle>
-                <CardDescription>Browse and manage aircraft models</CardDescription>
-              </CardHeader>
+              
               <CardContent>
                 {view === "grid" ? <ModelsGrid /> : <ModelsTable />}
               </CardContent>
