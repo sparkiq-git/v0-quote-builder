@@ -303,3 +303,16 @@ div[role="menu"] {
   opacity: 1 !important;
   display: block !important;
 }
+
+/* Nuclear option: ensure ALL possible Radix dropdown selectors are visible */
+div[data-radix-dropdown-menu-content],
+[data-radix-dropdown-menu-content] div,
+[data-radix-dropdown-menu-content] ul,
+[data-radix-dropdown-menu-content] li,
+[data-slot="dropdown-menu-content"],
+[data-slot="dropdown-menu-content"] div,
+[data-slot="dropdown-menu-content"] ul,
+[data-slot="dropdown-menu-content"] li {
+  visibility: visible !important;
+  opacity: 1 !important;
+}
