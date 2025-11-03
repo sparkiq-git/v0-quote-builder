@@ -1,5 +1,7 @@
 @import "tailwindcss";
+/* DEBUG: desactivado temporalmente para aislar colisión con Radix Popper
 @import "tw-animate-css";
+*/
 
 /* Sonner Toast Custom Styling */
 .sonner-toast {
@@ -292,4 +294,15 @@
 [data-slot="dropdown-menu-content"] {
   pointer-events: auto !important;
   z-index: 2147483647 !important;
+}
+
+/* ------------------------- */
+/* 🔧 HOTFIX RADIX POPPER    */
+/* ------------------------- */
+/* Evita que cualquier animación/regla externa empuje el wrapper fuera del viewport */
+[data-radix-popper-content-wrapper] {
+  /* si alguna hoja aplica translate en %, lo anulamos */
+  translate: 0 0 !important;
+  /* y forzamos el posicionamiento de Floating UI (px) */
+  transform: translate(var(--radix-fixed-x, 0px), var(--radix-fixed-y, 0px)) !important;
 }
