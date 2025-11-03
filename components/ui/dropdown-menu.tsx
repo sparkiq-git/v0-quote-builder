@@ -39,6 +39,7 @@ function DropdownMenuContent({
   return (
     <DropdownMenuPrimitive.Portal>
       <DropdownMenuPrimitive.Content
+        {...props}
         data-slot="dropdown-menu-content"
         sideOffset={sideOffset}
         className={cn(
@@ -46,10 +47,10 @@ function DropdownMenuContent({
           className,
         )}
         style={{
+          ...(props as any).style,
           position: 'relative',
           display: 'block',
         }}
-        {...props}
       />
     </DropdownMenuPrimitive.Portal>
   )
