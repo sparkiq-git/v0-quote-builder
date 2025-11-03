@@ -18,7 +18,7 @@ Replace the quote fetching logic to use `metadata.selected_option_id` to fetch t
 
 Replace the quote fetching section in your edge function with this:
 
-```typescript
+\`\`\`typescript
 // --- QUOTE + SELECTED OPTION (FIXED) ---
 const { data: quote, error: qErr } = await supabase
   .from("quote")
@@ -75,7 +75,7 @@ if (optErr || !option) {
 
 const aircraft = option.aircraft
 const operator = aircraft?.operator
-```
+\`\`\`
 
 ## Key Changes
 
@@ -94,7 +94,7 @@ const operator = aircraft?.operator
 ## Testing
 
 After updating, test with:
-```json
+\`\`\`json
 {
   "tenant_id": "a3d94a3a-3b6b-4de4-bd13-571b57b37e0b",
   "email": "wverde@sparkiq.io",
@@ -105,7 +105,6 @@ After updating, test with:
     "created_by": "f13147c1-d92d-4863-a2a8-5962e260d167"
   }
 }
-```
+\`\`\`
 
 The edge function should now successfully find the option and send the notification.
-
