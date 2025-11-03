@@ -429,12 +429,28 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
         throw new Error(json?.error || "Failed to accept quote")
       }
 
-      // Call trip_notifications edge function for quote_accepted
-      await callTripNotifications("quote_accepted", {
-        quote_id: quote.id,
-        selected_option_id: selectedOptionId,
-        created_by: quote.created_by_user_id || quote.created_by || null,
-      })
+      // Verify the quote was updated successfully before calling notification
+      // Small delay to ensure database transaction is committed
+      await new Promise(resolve => setTimeout(resolve, 200))
+
+      // Verify selectedOptionId exists and is valid
+      if (!selectedOptionId) {
+        console.error("❌ Cannot send notification: selectedOptionId is missing")
+        // Don't throw - allow redirect to proceed even if notification fails
+      } else {
+        console.log("🔔 Sending notification with:", {
+          quote_id: quote.id,
+          selected_option_id: selectedOptionId,
+          optionExists: quote.options?.some(opt => opt.id === selectedOptionId),
+        })
+
+        // Call trip_notifications edge function for quote_accepted
+        await callTripNotifications("quote_accepted", {
+          quote_id: quote.id,
+          selected_option_id: selectedOptionId,
+          created_by: quote.created_by_user_id || quote.created_by || null,
+        })
+      }
 
       // Redirect to success page instead of showing toast
       const logo = quote.branding?.logo || "/images/aero-iq-logo.png"
