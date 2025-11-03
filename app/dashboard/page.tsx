@@ -1,318 +1,405 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Users, FileText, Clock, Plane, Mail, Phone, Calendar } from "lucide-react"
-import { RouteMap } from "@/components/dashboard/route-map"
-import DashboardMetrics from "@/components/dashboard/DashboardMetrics"
-import { RecentActivities } from "@/components/dashboard/recent-activities"
+import { useEffect, useState, useRef } from "react"
+import { Card } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Plus, Minus, RotateCcw, MapPin } from "lucide-react"
 
-export default function DashboardPage() {
-  const [leadCount, setLeadCount] = useState(0)
-  const [quotesAwaitingResponse, setQuotesAwaitingResponse] = useState(0)
-  const [unpaidQuotes, setUnpaidQuotes] = useState(0)
-  const [upcomingDepartures, setUpcomingDepartures] = useState(0)
-  const [isClient, setIsClient] = useState(false)
-  const [todayLeads, setTodayLeads] = useState<any[]>([])
-  const [todayQuotes, setTodayQuotes] = useState<any[]>([])
+declare global {
+  interface Window {
+    L: any
+  }
+}
 
-  useEffect(() => setIsClient(true), [])
+const US_CENTER: [number, number] = [39.8, -98.6]
+const US_ZOOM = 4
 
-  // === Load Lead Count ===
+type FilterType = "leads" | "upcoming"
+
+type RouteLeg = {
+  origin: string
+  destination: string
+  originCoords: { lat: number; lng: number; name: string }
+  destCoords: { lat: number; lng: number; name: string }
+  departDt: string
+}
+
+type Route = {
+  id: string
+  customerName: string
+  contactEmail?: string
+  status: string
+  createdAt: string
+  legs: RouteLeg[]
+}
+
+export function RouteMap() {
+  const [activeFilter, setActiveFilter] = useState<FilterType>("leads")
+  const [leadRoutes, setLeadRoutes] = useState<Route[]>([])
+  const [upcomingRoutes, setUpcomingRoutes] = useState<Route[]>([])
+  const [routes, setRoutes] = useState<Route[]>([])
+  const [mapLoaded, setMapLoaded] = useState(false)
+  const [mapError, setMapError] = useState<string | null>(null)
+  const [refreshKey, setRefreshKey] = useState(0)
+
+  const mapContainer = useRef<HTMLDivElement>(null)
+  const map = useRef<any>(null)
+  const routeLayers = useRef<any[]>([])
+  const airportMarkers = useRef<any[]>([])
+
+  // -------- Load data from Supabase --------
   useEffect(() => {
-    if (!isClient) return
-    let cancelled = false
+    const loadRoutes = async () => {
+      if (typeof window === "undefined") return
 
-    const loadLeadCount = async () => {
       const { createClient } = await import("@/lib/supabase/client")
       const supabase = createClient()
 
-      const { count, error } = await supabase
-        .from("lead")
-        .select("*", { count: "exact", head: true })
-        .in("status", ["opened", "new"])
+      // ✅ Load NEW leads
+      const { data: leadData } = await supabase
+        .from("lead_detail")
+        .select(`
+          id,
+          lead_id,
+          origin,
+          origin_code,
+          destination,
+          destination_code,
+          depart_dt,
+          origin_lat,
+          origin_long,
+          destination_lat,
+          destination_long,
+          lead:lead_id (
+            id,
+            customer_name,
+            status,
+            created_at
+          )
+        `)
+        .eq("lead.status", "new")
+        .order("depart_dt", { ascending: true })
 
-      if (!cancelled) {
-        if (error) {
-          console.error("Lead count error:", error)
-          setLeadCount(0)
-        } else {
-          setLeadCount(count ?? 0)
-        }
-      }
-    }
+      const leads: Route[] =
+        (leadData ?? [])
+          .filter(
+            (r) => r.origin_lat && r.origin_long && r.destination_lat && r.destination_long
+          )
+          .map((r) => ({
+            id: String(r.lead_id),
+            customerName: r.lead?.customer_name ?? "Unknown",
+            status: r.lead?.status ?? "unknown",
+            createdAt: r.lead?.created_at ?? "",
+            legs: [
+              {
+                origin: r.origin,
+                destination: r.destination,
+                originCoords: {
+                  lat: r.origin_lat,
+                  lng: r.origin_long,
+                  name: r.origin_code,
+                },
+                destCoords: {
+                  lat: r.destination_lat,
+                  lng: r.destination_long,
+                  name: r.destination_code,
+                },
+                departDt: r.depart_dt,
+              },
+            ],
+          })) ?? []
 
-    loadLeadCount()
-    const id = setInterval(loadLeadCount, 15000)
-    return () => {
-      cancelled = true
-      clearInterval(id)
-    }
-  }, [isClient])
-
-  // === Load Metrics ===
-  useEffect(() => {
-    if (!isClient) return
-    let cancelled = false
-
-    const loadMetrics = async () => {
-      try {
-        const res = await fetch("/api/metrics", { cache: "no-store" })
-        if (!res.ok) throw new Error(`metrics ${res.status}`)
-        const j = await res.json()
-        if (cancelled) return
-        setQuotesAwaitingResponse(j.quotesAwaitingResponse ?? 0)
-        setUnpaidQuotes(j.unpaidQuotes ?? 0)
-        setUpcomingDepartures(j.upcomingDepartures ?? 0)
-      } catch (e) {
-        if (!cancelled) console.error("Failed to load metrics:", e)
-      }
-    }
-
-    loadMetrics()
-    const id = setInterval(loadMetrics, 15000)
-    return () => {
-      cancelled = true
-      clearInterval(id)
-    }
-  }, [isClient])
-
-  // === Load today's NEW Leads and DRAFT Quotes ===
-  useEffect(() => {
-    if (!isClient) return
-
-    const loadTodayData = async () => {
-      const { createClient } = await import("@/lib/supabase/client")
-      const supabase = createClient()
-
+      // ✅ Load upcoming quotes (next 7 days)
       const start = new Date()
       start.setHours(0, 0, 0, 0)
-      const end = new Date()
+      const end = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
       end.setHours(23, 59, 59, 999)
 
+      const { data: quoteData } = await supabase
+        .from("quote_detail")
+        .select(`
+          id,
+          quote_id,
+          origin,
+          origin_code,
+          destination,
+          destination_code,
+          depart_dt,
+          origin_lat,
+          origin_long,
+          destination_lat,
+          destination_long,
+          quote:quote_id (
+            id,
+            contact_name,
+            contact_email,
+            status,
+            created_at
+          )
+        `)
+        .gte("depart_dt", start.toISOString())
+        .lte("depart_dt", end.toISOString())
+        .order("depart_dt", { ascending: true })
+
+      const quotes: Route[] =
+        (quoteData ?? [])
+          .filter(
+            (r) => r.origin_lat && r.origin_long && r.destination_lat && r.destination_long
+          )
+          .map((r) => ({
+            id: String(r.quote_id),
+            customerName: r.quote?.contact_name ?? "Unknown",
+            contactEmail: r.quote?.contact_email ?? "",
+            status: r.quote?.status ?? "unknown",
+            createdAt: r.quote?.created_at ?? "",
+            legs: [
+              {
+                origin: r.origin,
+                destination: r.destination,
+                originCoords: {
+                  lat: r.origin_lat,
+                  lng: r.origin_long,
+                  name: r.origin_code,
+                },
+                destCoords: {
+                  lat: r.destination_lat,
+                  lng: r.destination_long,
+                  name: r.destination_code,
+                },
+                departDt: r.depart_dt,
+              },
+            ],
+          })) ?? []
+
+      setLeadRoutes(leads)
+      setUpcomingRoutes(quotes)
+      console.log(`✅ Leads: ${leads.length} | ✈️ Upcoming: ${quotes.length}`)
+    }
+
+    loadRoutes()
+  }, [refreshKey])
+
+  // -------- Choose which routes to display --------
+  useEffect(() => {
+    setRoutes(activeFilter === "leads" ? leadRoutes : upcomingRoutes)
+  }, [activeFilter, leadRoutes, upcomingRoutes])
+
+  // -------- Initialize Leaflet --------
+  useEffect(() => {
+    if (!mapContainer.current) return
+
+    const loadLeaflet = async () => {
       try {
-        const [{ data: leads }, { data: quotes }] = await Promise.all([
-          supabase
-            .from("lead")
-            .select(`
-              id,
-              customer_name,
-              customer_email,
-              customer_phone,
-              status,
-              trip_type,
-              trip_summary,
-              earliest_departure,
-              created_at
-            `)
-            .eq("status", "new")
-            .gte("created_at", start.toISOString())
-            .lte("created_at", end.toISOString())
-            .order("created_at", { ascending: false }),
+        if (!window.L) {
+          const link = document.createElement("link")
+          link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+          link.rel = "stylesheet"
+          document.head.appendChild(link)
 
-          supabase
-            .from("quote")
-            .select(`
-              id,
-              contact_name,
-              status,
-              created_at,
-              title,
-              trip_summary,
-              trip_type,
-              total_pax
-            `)
-            .eq("status", "draft")
-            .gte("created_at", start.toISOString())
-            .lte("created_at", end.toISOString())
-            .order("created_at", { ascending: false }),
-        ])
-
-        setTodayLeads(leads ?? [])
-        setTodayQuotes(quotes ?? [])
-      } catch (error) {
-        console.error("Error loading today's data:", error)
+          const script = document.createElement("script")
+          script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+          script.onload = () => initializeMap()
+          document.head.appendChild(script)
+        } else initializeMap()
+      } catch {
+        setMapError("Failed to load map library. Please check your connection.")
       }
     }
 
-    loadTodayData()
-  }, [isClient])
+    const initializeMap = () => {
+      if (map.current) {
+        map.current.off()
+        map.current.remove()
+        map.current = null
+      }
 
-  // === Metric Card Component ===
-  function MetricCard({
-    title,
-    icon: Icon,
-    currentValue,
-    description,
-  }: {
-    title: string
-    icon: any
-    currentValue: number | string
-    description: string
-  }) {
-    return (
-      <Card className="col-span-1 h-full flex flex-col hover:shadow-lg transition-all duration-200 border border-border bg-card rounded-xl">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3 pt-6 px-6">
-          <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
-            <Icon className="h-4 w-4 text-muted-foreground" />
-            {title}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-rows-[auto_auto] gap-2 flex-1 px-6 pb-6">
-          <div className="text-3xl font-bold leading-none text-foreground tracking-tight">{currentValue}</div>
-          <p className="text-xs text-muted-foreground leading-relaxed min-h-4 truncate">{description}</p>
-        </CardContent>
-      </Card>
-    )
-  }
+      map.current = window.L.map(mapContainer.current!, {
+        center: US_CENTER,
+        zoom: US_ZOOM,
+        zoomControl: false,
+        attributionControl: false,
+      })
+
+      window.L.tileLayer(
+        "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+        {
+          attribution: "© OpenStreetMap contributors © CARTO",
+          maxZoom: 18,
+          subdomains: "abcd",
+        }
+      ).addTo(map.current)
+
+      setMapLoaded(true)
+    }
+
+    loadLeaflet()
+
+    return () => {
+      if (map.current) {
+        map.current.off()
+        map.current.remove()
+        map.current = null
+      }
+    }
+  }, [refreshKey])
+
+  // -------- Draw routes, airplanes, and markers --------
+  useEffect(() => {
+    if (!map.current || !mapLoaded) return
+
+    routeLayers.current.forEach((l) => map.current.removeLayer(l))
+    airportMarkers.current.forEach((m) => map.current.removeLayer(m))
+    routeLayers.current = []
+    airportMarkers.current = []
+
+    if (!routes.length) return
+
+    const allCoords: [number, number][] = []
+
+    routes.forEach((route) => {
+      route.legs.forEach((leg) => {
+        const origin = [leg.originCoords.lat, leg.originCoords.lng] as [number, number]
+        const dest = [leg.destCoords.lat, leg.destCoords.lng] as [number, number]
+        allCoords.push(origin, dest)
+
+        const color = activeFilter === "leads" ? "#2563eb" : "#16a34a"
+
+        const routeLine = window.L.polyline([origin, dest], {
+          color,
+          weight: 1.5,
+          opacity: 0.8,
+          dashArray: "3, 2",
+        }).addTo(map.current)
+        routeLayers.current.push(routeLine)
+
+        // ✈️ Add airplane at midpoint
+        const midLat = (leg.originCoords.lat + leg.destCoords.lat) / 2
+        const midLng = (leg.originCoords.lng + leg.destCoords.lng) / 2
+        const angle =
+          (Math.atan2(
+            leg.destCoords.lat - leg.originCoords.lat,
+            leg.destCoords.lng - leg.originCoords.lng
+          ) *
+            180) /
+          Math.PI
+
+        const airplane = window.L.marker([midLat, midLng], {
+          icon: window.L.divIcon({
+            html: `
+              <div style="transform: rotate(${angle + 90}deg);">
+                <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+                  <circle cx="16" cy="16" r="10" fill="none" stroke="#374151" stroke-width="2"/>
+                  <path d="M16 8c-.5 0-1 .2-1 .5V12l-4 2.5v1l4-1.25V18l-1 .75V20l1.75-.5L17.25 20v-1.25L16.25 18v-3.75l4 1.25v-1L16.25 12V8.5c0-.3-.5-.5-1-.5z" fill="#374151" transform="translate(0, 1)"/>
+                </svg>
+              </div>
+            `,
+            className: "bg-transparent",
+            iconSize: [28, 28],
+            iconAnchor: [14, 14],
+          }),
+        }).addTo(map.current)
+
+        airplane.bindPopup(`
+          <div class="text-sm space-y-2">
+            <div class="font-semibold text-base">${route.customerName}</div>
+            ${route.contactEmail ? `<div>${route.contactEmail}</div>` : ""}
+            <div><strong>Route:</strong> ${leg.origin} → ${leg.destination}</div>
+            <div><strong>Status:</strong> ${route.status}</div>
+            <div><strong>Departure:</strong> ${new Date(leg.departDt).toLocaleString()}</div>
+          </div>
+        `)
+        routeLayers.current.push(airplane)
+
+        // 🟩 Airport markers
+        const makeMarker = (coords: { lat: number; lng: number; name: string }) =>
+          window.L.marker([coords.lat, coords.lng], {
+            icon: window.L.divIcon({
+              html: `
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="#1f2937" stroke="#ffffff" stroke-width="1.5"/>
+                  <circle cx="12" cy="9" r="2.5" fill="#ffffff"/>
+                </svg>
+              `,
+              className: "bg-transparent",
+              iconSize: [22, 22],
+              iconAnchor: [11, 22],
+            }),
+          }).addTo(map.current)
+
+        airportMarkers.current.push(makeMarker(leg.originCoords), makeMarker(leg.destCoords))
+      })
+    })
+
+    if (allCoords.length) {
+      const group = window.L.featureGroup(routeLayers.current)
+      map.current.fitBounds(group.getBounds(), { padding: [20, 20], maxZoom: 6 })
+    }
+  }, [routes, mapLoaded, activeFilter])
+
+  const handleZoomIn = () => map.current?.zoomIn()
+  const handleZoomOut = () => map.current?.zoomOut()
+  const handleRefresh = () => setRefreshKey((k) => k + 1)
 
   return (
-    <div className="space-y-8">
-      <div className="space-y-2">
-        <h1 className="text-3xl font-semibold tracking-tight text-foreground">Welcome back!</h1>
-        <p className="text-muted-foreground text-base leading-relaxed">Here's what's happening today.</p>
+    <Card className="relative flex-1 h-full overflow-hidden border border-gray-200 rounded-2xl shadow-sm">
+      <div className="relative w-full h-full bg-slate-50 rounded-2xl overflow-hidden">
+        {/* Filters */}
+        <div className="absolute top-4 left-4 z-[1000] flex items-center gap-2 bg-white/10 rounded-lg p-2 shadow-lg border border-white/10">
+          {(["leads", "upcoming"] as FilterType[]).map((filter) => {
+            const isActive = activeFilter === filter
+            const cnt = filter === "leads" ? leadRoutes.length : upcomingRoutes.length
+            return (
+              <Button
+                key={filter}
+                variant={isActive ? "default" : "ghost"}
+                size="sm"
+                className={`h-8 px-3 text-xs ${isActive ? "shadow-sm" : "hover:bg-slate-300"}`}
+                onClick={() => setActiveFilter(filter)}
+              >
+                {filter.charAt(0).toUpperCase() + filter.slice(1)}
+                <Badge
+                  variant={isActive ? "secondary" : "outline"}
+                  className="ml-2 h-4 px-1 text-[10px]"
+                >
+                  {cnt}
+                </Badge>
+              </Button>
+            )
+          })}
+        </div>
+
+        {/* Zoom / Refresh */}
+        <div className="absolute top-20 right-4 z-[1000] flex flex-col gap-1 bg-white/80 rounded-lg p-1 shadow-lg border border-gray-200">
+          <Button variant="ghost" size="sm" onClick={handleZoomIn}>
+            <Plus className="h-4 w-4" />
+          </Button>
+          <Button variant="ghost" size="sm" onClick={handleZoomOut}>
+            <Minus className="h-4 w-4" />
+          </Button>
+          <Button variant="ghost" size="sm" onClick={handleRefresh}>
+            <RotateCcw className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {/* Map container */}
+        <div ref={mapContainer} className="absolute inset-0 w-full h-full" />
+
+        {mapError && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="text-center space-y-3 bg-white/90 rounded-xl p-8 shadow-lg">
+              <div className="w-16 h-16 mx-auto bg-red-100 rounded-full flex items-center justify-center">
+                <MapPin className="h-8 w-8 text-red-500" />
+              </div>
+              <p className="text-slate-800 font-medium">Map Error</p>
+              <p className="text-xs text-slate-600">{mapError}</p>
+              <Button onClick={handleRefresh} size="sm" className="mt-4">
+                <RotateCcw className="mr-2 h-4 w-4" /> Try Again
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
-
-      {/* === Top Metric Cards === */}
-      <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-        <MetricCard title="Leads" icon={Users} currentValue={leadCount} description="Pending conversion to quote" />
-        <MetricCard
-          title="Quotes"
-          icon={FileText}
-          currentValue={quotesAwaitingResponse}
-          description="Awaiting client response"
-        />
-        <MetricCard title="Unpaid" icon={Clock} currentValue={unpaidQuotes} description="Awaiting payment" />
-        <MetricCard
-          title="Upcoming Trips"
-          icon={Plane}
-          currentValue={upcomingDepartures}
-          description="Departures in next 7 days"
-        />
-      </div>
-
-      {/* === Monthly Metrics === */}
-      <DashboardMetrics />
-
-      {/* === RouteMap (with fixed height) === */}
-      <div className="w-full h-[500px] relative">
-        <RouteMap />
-      </div>
-
-      {/* === Recent Activities === */}
-      <div className="w-full">
-        <RecentActivities />
-      </div>
-
-      {/* === Today's New Leads and Draft Quotes === */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        {/* Leads */}
-        <Card className="border border-border shadow-sm rounded-xl flex flex-col bg-card hover:shadow-md transition-shadow">
-          <CardHeader className="px-6 pt-6 pb-4">
-            <CardTitle className="text-lg font-semibold text-foreground">Today's New Leads</CardTitle>
-          </CardHeader>
-          <CardContent className="flex-1 px-6 pb-6 space-y-4 overflow-y-auto max-h-[400px]">
-            {todayLeads.length === 0 ? (
-              <p className="text-sm text-muted-foreground leading-relaxed">No new leads today.</p>
-            ) : (
-              todayLeads.map((lead) => (
-                <div key={lead.id} className="flex flex-col border-b border-border pb-4 last:border-none">
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="font-semibold text-sm text-foreground">{lead.customer_name}</p>
-                    <Badge variant="secondary" className="text-[10px] uppercase font-medium">
-                      {lead.status}
-                    </Badge>
-                  </div>
-
-                  {lead.customer_email && (
-                    <p className="text-xs text-muted-foreground flex items-center gap-2 mt-1 leading-relaxed">
-                      <Mail className="w-3 h-3" /> {lead.customer_email}
-                    </p>
-                  )}
-
-                  {lead.customer_phone && (
-                    <p className="text-xs text-muted-foreground flex items-center gap-2 leading-relaxed">
-                      <Phone className="w-3 h-3" /> {lead.customer_phone}
-                    </p>
-                  )}
-
-                  {lead.trip_summary && (
-                    <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
-                      <span className="font-semibold text-foreground">Route:</span> {lead.trip_summary}
-                    </p>
-                  )}
-
-                  {lead.trip_type && (
-                    <p className="text-xs text-muted-foreground leading-relaxed">
-                      <span className="font-semibold text-foreground">Trip Type:</span> {lead.trip_type}
-                    </p>
-                  )}
-
-                  {lead.earliest_departure && (
-                    <p className="text-xs text-muted-foreground flex items-center gap-2 leading-relaxed">
-                      <Calendar className="w-3 h-3" />{" "}
-                      {new Date(lead.earliest_departure).toLocaleString([], {
-                        month: "short",
-                        day: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </p>
-                  )}
-
-                  <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
-                    Created at:{" "}
-                    {new Date(lead.created_at).toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </p>
-                </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Quotes */}
-        <Card className="border border-border shadow-sm rounded-xl flex flex-col bg-card hover:shadow-md transition-shadow">
-          <CardHeader className="px-6 pt-6 pb-4">
-            <CardTitle className="text-lg font-semibold text-foreground">Today's New Quotes</CardTitle>
-          </CardHeader>
-          <CardContent className="flex-1 px-6 pb-6 space-y-4 overflow-y-auto max-h-[400px]">
-            {todayQuotes.length === 0 ? (
-              <p className="text-sm text-muted-foreground leading-relaxed">No draft quotes today.</p>
-            ) : (
-              todayQuotes.map((quote) => (
-                <div key={quote.id} className="flex flex-col border-b border-border pb-3 last:border-none">
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="font-semibold text-sm text-foreground">
-                      {quote.title || `Quote ${quote.id.slice(0, 6)}`} — {quote.contact_name}
-                    </p>
-                    <Badge variant="secondary" className="text-[10px] uppercase font-medium">
-                      {quote.status}
-                    </Badge>
-                  </div>
-                  <div className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                    {quote.trip_summary || "No trip summary"}
-                  </div>
-                  <div className="text-xs text-muted-foreground flex justify-between mt-2 leading-relaxed">
-                    <span>
-                      Pax: {quote.total_pax ?? "—"} | {quote.trip_type ?? "one-way"}
-                    </span>
-                    <span>
-                      {new Date(quote.created_at).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </span>
-                  </div>
-                </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+    </Card>
   )
 }
