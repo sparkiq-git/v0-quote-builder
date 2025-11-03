@@ -33,10 +33,12 @@ export default function InvoicesPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [invoiceToDelete, setInvoiceToDelete] = useState<string | null>(null)
 
-  const { setHeaderContent } = useAppHeader()
+  // ✅ updated to use setContent instead of setHeaderContent
+  const { setContent } = useAppHeader()
 
   useEffect(() => {
-    setHeaderContent({
+    // Set header content using the context
+    setContent({
       title: "Invoices",
       subtitle: "Review and manage issued invoices",
       actions: (
@@ -58,7 +60,7 @@ export default function InvoicesPage() {
         const { data, error } = await supabase
           .from("invoice")
           .select(
-            `id, number, issued_at, amount, currency, status, aircraft_label, summary_itinerary, quote:quote_id(contact_name, contact_company)`,
+            `id, number, issued_at, amount, currency, status, aircraft_label, summary_itinerary, quote:quote_id(contact_name, contact_company)`
           )
           .eq("tenant_id", tenantId)
           .order("issued_at", { ascending: false })
@@ -94,8 +96,9 @@ export default function InvoicesPage() {
 
     fetchInvoices()
 
-    return () => setHeaderContent(null)
-  }, [setHeaderContent, toast])
+    // Reset header when unmounting
+    return () => setContent({})
+  }, [setContent, toast])
 
   const filteredInvoices = invoices.filter((inv) => {
     if (statusFilter !== "all" && inv.status !== statusFilter) return false
