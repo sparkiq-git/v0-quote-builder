@@ -67,10 +67,18 @@ export function InvoiceContractWizard({
   const [editedQuoteData, setEditedQuoteData] = useState<any | null>(null)
   const [taxes, setTaxes] = useState<Array<{ id: string; name: string; amount: number }>>([])
 
+  // Safety check: ensure taxes is always an array
+  const safeTaxes = Array.isArray(taxes) ? taxes : []
+
   // Update edited quote data when fullQuoteData changes
   useEffect(() => {
     if (fullQuoteData && open) {
-      setEditedQuoteData(JSON.parse(JSON.stringify(fullQuoteData)))
+      try {
+        setEditedQuoteData(JSON.parse(JSON.stringify(fullQuoteData)))
+      } catch (error) {
+        console.error("Error cloning quote data:", error)
+        setEditedQuoteData(fullQuoteData)
+      }
     }
   }, [fullQuoteData, open])
 
@@ -104,7 +112,7 @@ export function InvoiceContractWizard({
         body: JSON.stringify({
           quote_id: selectedQuote.id,
           external_payment_url: paymentUrl || null,
-          taxes: taxes || [],
+          taxes: safeTaxes,
         }),
       })
 
@@ -214,14 +222,14 @@ export function InvoiceContractWizard({
               paymentUrl={paymentUrl}
               onPaymentUrlChange={setPaymentUrl}
               onQuoteDataChange={setEditedQuoteData}
-              taxes={taxes}
+              taxes={safeTaxes}
               onTaxesChange={setTaxes}
             />
           ) : (
             <ContractBuilderStep
               fullQuoteData={editedQuoteData || fullQuoteData}
               selectedQuote={selectedQuote}
-              taxes={taxes}
+              taxes={safeTaxes}
             />
           )}
         </div>
@@ -279,19 +287,19 @@ function InvoiceSummaryStep({
   paymentUrl,
   onPaymentUrlChange,
   onQuoteDataChange,
-  taxRate,
-  onTaxRateChange,
-  taxAmount,
-  onTaxAmountChange,
+  taxes = [],
+  onTaxesChange,
 }: {
   selectedQuote: any | null
   fullQuoteData: any | null
   paymentUrl: string
   onPaymentUrlChange: (url: string) => void
   onQuoteDataChange: (data: any) => void
-  taxes: Array<{ id: string; name: string; amount: number }>
+  taxes?: Array<{ id: string; name: string; amount: number }>
   onTaxesChange: (taxes: Array<{ id: string; name: string; amount: number }>) => void
 }) {
+  // Ensure taxes is always an array
+  const safeTaxes = Array.isArray(taxes) ? taxes : []
   const [newServiceDescription, setNewServiceDescription] = useState("")
   const [newServiceQty, setNewServiceQty] = useState(1)
   const [newServicePrice, setNewServicePrice] = useState(0)
@@ -330,7 +338,7 @@ function InvoiceSummaryStep({
   const subtotal = subtotalAircraft + subtotalServices
 
   // Calculate total tax amount
-  const taxTotal = taxes.reduce((sum, tax) => sum + (tax.amount || 0), 0)
+  const taxTotal = safeTaxes.reduce((sum, tax) => sum + (tax.amount || 0), 0)
 
   const grandTotal = subtotal + taxTotal
 
@@ -757,9 +765,9 @@ function InvoiceSummaryStep({
                 </div>
               </div>
 
-              {taxes.length > 0 && (
+              {safeTaxes.length > 0 && (
                 <div className="space-y-2">
-                  {taxes.map((tax) => (
+                  {safeTaxes.map((tax) => (
                     <div
                       key={tax.id}
                       className="flex items-center gap-3 p-2 bg-slate-100 dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800"
@@ -767,7 +775,7 @@ function InvoiceSummaryStep({
                       <Input
                         value={tax.name}
                         onChange={(e) => {
-                          const updated = taxes.map((t) => (t.id === tax.id ? { ...t, name: e.target.value } : t))
+                          const updated = safeTaxes.map((t) => (t.id === tax.id ? { ...t, name: e.target.value } : t))
                           onTaxesChange(updated)
                         }}
                         placeholder="Tax/Fee Name"
@@ -778,7 +786,7 @@ function InvoiceSummaryStep({
                         step="0.01"
                         value={tax.amount ?? 0}
                         onChange={(e) => {
-                          const updated = taxes.map((t) =>
+                          const updated = safeTaxes.map((t) =>
                             t.id === tax.id ? { ...t, amount: parseFloat(e.target.value) || 0 } : t,
                           )
                           onTaxesChange(updated)
@@ -790,7 +798,7 @@ function InvoiceSummaryStep({
                         variant="outline"
                         size="sm"
                         onClick={() => {
-                          const updated = taxes.filter((t) => t.id !== tax.id)
+                          const updated = safeTaxes.filter((t) => t.id !== tax.id)
                           onTaxesChange(updated)
                         }}
                         className="h-9 w-9 p-0"
@@ -806,8 +814,12 @@ function InvoiceSummaryStep({
                 variant="outline"
                 size="sm"
                 onClick={() => {
-                  const newTax = { id: crypto.randomUUID(), name: "Custom Tax", amount: 0 }
-                  onTaxesChange([...taxes, newTax])
+                  const newTax = {
+                    id: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `temp-${Date.now()}-${Math.random()}`,
+                    name: "Custom Tax",
+                    amount: 0,
+                  }
+                  onTaxesChange([...safeTaxes, newTax])
                 }}
                 className="w-full"
               >
@@ -878,12 +890,14 @@ function InvoiceSummaryStep({
 function ContractBuilderStep({
   fullQuoteData,
   selectedQuote,
-  taxes,
+  taxes = [],
 }: {
   fullQuoteData: any | null
   selectedQuote: any | null
-  taxes: Array<{ id: string; name: string; amount: number }>
+  taxes?: Array<{ id: string; name: string; amount: number }>
 }) {
+  // Ensure taxes is always an array
+  const safeTaxes = Array.isArray(taxes) ? taxes : []
   if (!fullQuoteData || !selectedQuote) {
     return (
       <div className="py-16 text-center">
@@ -915,7 +929,7 @@ function ContractBuilderStep({
     ) || 0
 
   const subtotal = totalAircraftOption + totalServices
-  const taxTotal = taxes.reduce((sum, tax) => sum + (tax.amount || 0), 0)
+  const taxTotal = safeTaxes.reduce((sum, tax) => sum + (tax.amount || 0), 0)
   const grandTotal = subtotal + taxTotal
 
   return (
@@ -1035,9 +1049,9 @@ function ContractBuilderStep({
                     {formatCurrency(subtotal)}
                   </span>
                 </div>
-                {taxes.length > 0 && (
+                {safeTaxes.length > 0 && (
                   <>
-                    {taxes.map((tax) => (
+                    {safeTaxes.map((tax) => (
                       <div key={tax.id} className="flex justify-between text-sm">
                         <span className="text-slate-600 dark:text-slate-400">{tax.name}:</span>
                         <span className="font-semibold text-slate-900 dark:text-slate-100">
