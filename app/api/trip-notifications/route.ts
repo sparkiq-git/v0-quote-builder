@@ -28,6 +28,52 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // Validate metadata for quote_accepted
+    if (action_type === "quote_accepted") {
+      if (!metadata?.quote_id) {
+        return NextResponse.json(
+          { error: "Missing quote_id in metadata for quote_accepted action" },
+          { status: 400 }
+        )
+      }
+
+      if (!metadata?.selected_option_id) {
+        return NextResponse.json(
+          { error: "Missing selected_option_id in metadata for quote_accepted action" },
+          { status: 400 }
+        )
+      }
+
+      // Verify the selected option exists and belongs to the quote
+      const { data: option, error: optionCheckError } = await supabase
+        .from("quote_option")
+        .select("id, quote_id")
+        .eq("id", metadata.selected_option_id)
+        .eq("quote_id", metadata.quote_id)
+        .single()
+
+      if (optionCheckError || !option) {
+        console.error("❌ Selected option validation failed:", {
+          selected_option_id: metadata.selected_option_id,
+          quote_id: metadata.quote_id,
+          error: optionCheckError,
+        })
+        return NextResponse.json(
+          { 
+            error: `Selected option ${metadata.selected_option_id} not found or does not belong to quote ${metadata.quote_id}`,
+            details: { 
+              selected_option_id: metadata.selected_option_id,
+              quote_id: metadata.quote_id,
+              optionCheckError 
+            }
+          },
+          { status: 400 }
+        )
+      }
+
+      console.log("✅ Selected option validated:", { optionId: option.id, quoteId: option.quote_id })
+    }
+
     const payload = {
       tenant_id,
       email,
@@ -35,6 +81,11 @@ export async function POST(req: NextRequest) {
       metadata: metadata || {},
     }
     console.log("🔔 Calling edge function 'trip_notifications' with payload:", JSON.stringify(payload, null, 2))
+    console.log("🔔 Metadata details:", {
+      quote_id: metadata?.quote_id,
+      selected_option_id: metadata?.selected_option_id,
+      created_by: metadata?.created_by,
+    })
 
     // Try SDK method first
     let data: any = null
@@ -123,12 +174,33 @@ export async function POST(req: NextRequest) {
             }
           }
 
+          // Handle 429 (rate limit / duplicate) gracefully - this might be a retry after an error
+          if (directRes.status === 429) {
+            const errorMessage = responseData?.error || "Duplicate notification – please wait."
+            console.warn("⚠️ trip_notifications rate limited/duplicate:", errorMessage)
+            // Return success for duplicate notifications since the original might have succeeded
+            // or return the error if we want to retry later
+            return NextResponse.json(
+              { 
+                error: errorMessage, 
+                details: responseData,
+                note: "This may be a retry after a previous call. Check if notification was already sent."
+              },
+              { status: 429 }
+            )
+          }
+
           const errorMessage = responseData?.error || 
                               responseData?.message || 
                               responseText.slice(0, 200) ||
                               `Edge Function returned error (${directRes.status})`
           
           console.error("❌ trip_notifications edge function error:", errorMessage)
+          console.error("❌ Error context:", {
+            payload,
+            responseData,
+            status: directRes.status,
+          })
           return NextResponse.json(
             { error: errorMessage, details: responseData },
             { status: directRes.status >= 400 && directRes.status < 500 ? directRes.status : 400 }
