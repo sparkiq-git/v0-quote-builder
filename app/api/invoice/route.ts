@@ -110,12 +110,14 @@ export async function POST(req: Request) {
           .single()
 
         if (tenantData?.tenant_id) {
+          // Call the edge function to send email with PDF attachment
           const emailResult = await supabase.functions.invoke("send-invoice-email", {
             body: {
               invoice_id: data.invoice.id,
               tenant_id: tenantData.tenant_id,
               send_to_customer: true,
               send_to_tenant: true,
+              include_pdf: true, // Request PDF attachment
             },
           })
 
@@ -123,7 +125,7 @@ export async function POST(req: Request) {
             console.warn("⚠️ Failed to send invoice email:", emailResult.error)
             // Don't fail the invoice creation if email fails
           } else {
-            console.log("✅ Invoice email sent successfully")
+            console.log("✅ Invoice email with PDF sent successfully")
           }
         }
       } catch (emailErr: any) {
