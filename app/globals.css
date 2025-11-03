@@ -1,5 +1,5 @@
 @import "tailwindcss";
-/* DEBUG: desactivado temporalmente para aislar colisión con Radix Popper*/
+DEBUG: desactivado temporalmente para aislar colisión con Radix Popper
 @import "tw-animate-css";
 
 
@@ -128,36 +128,18 @@
 
 /* Custom animations for success page */
 @keyframes fade-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 @keyframes slide-up {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-.animate-fade-in {
-  animation: fade-in 0.6s ease-out;
-}
-
-.animate-slide-up {
-  animation: slide-up 0.8s ease-out;
-}
-
-.animate-slide-up-delayed {
-  animation: slide-up 0.8s ease-out 0.2s both;
-}
+.animate-fade-in { animation: fade-in 0.6s ease-out; }
+.animate-slide-up { animation: slide-up 0.8s ease-out; }
+.animate-slide-up-delayed { animation: slide-up 0.8s ease-out 0.2s both; }
 
 :root {
   /* Updated color palette to match modern minimalist design guidelines */
@@ -278,14 +260,9 @@
 }
 
 @layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
+  * { @apply border-border outline-ring/50; }
   /* Removed overflow-x-hidden to allow horizontal scrolling within table containers */
-  html,
-  body {
-    @apply bg-background text-foreground;
-  }
+  html, body { @apply bg-background text-foreground; }
 }
 
 /* Force Radix layers to be clickable and above any overlays */
@@ -296,13 +273,4 @@
   z-index: 2147483647 !important;
 }
 
-/* ------------------------- */
-/* 🔧 HOTFIX RADIX POPPER    */
-/* ------------------------- */
-/* Evita que cualquier animación/regla externa empuje el wrapper fuera del viewport */
-[data-radix-popper-content-wrapper] {
-  /* si alguna hoja aplica translate en %, lo anulamos */
-  translate: 0 0 !important;
-  /* y forzamos el posicionamiento de Floating UI (px) */
-  transform: translate(var(--radix-fixed-x, 0px), var(--radix-fixed-y, 0px)) !important;
-}
+/* (sin HOTFIX de transform aquí) */
