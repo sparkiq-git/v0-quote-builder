@@ -1,7 +1,7 @@
 @import "tailwindcss";
-/* DEBUG: desactivado temporalmente para aislar colisión con Radix Popper
+/* DEBUG: desactivado temporalmente para aislar colisión con Radix Popper*/
 @import "tw-animate-css";
-*/
+
 
 /* Sonner Toast Custom Styling */
 .sonner-toast {
