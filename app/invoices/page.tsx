@@ -21,6 +21,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { useAppHeader } from "@/components/app-header-context"
 
 export default function InvoicesPage() {
   const router = useRouter()
@@ -32,8 +33,22 @@ export default function InvoicesPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [invoiceToDelete, setInvoiceToDelete] = useState<string | null>(null)
 
-  // ✅ Fetch invoices from Supabase
+  const { setHeaderContent } = useAppHeader()
+
   useEffect(() => {
+    setHeaderContent({
+      title: "Invoices",
+      subtitle: "Review and manage issued invoices",
+      actions: (
+        <Button asChild>
+          <Link href="/quotes">
+            <Plus className="mr-2 h-4 w-4" />
+            Create from Quote
+          </Link>
+        </Button>
+      ),
+    })
+
     const fetchInvoices = async () => {
       try {
         const { createClient } = await import("@/lib/supabase/client")
@@ -78,9 +93,10 @@ export default function InvoicesPage() {
     }
 
     fetchInvoices()
-  }, [toast])
 
-  // 🔍 Filter logic
+    return () => setHeaderContent(null)
+  }, [setHeaderContent, toast])
+
   const filteredInvoices = invoices.filter((inv) => {
     if (statusFilter !== "all" && inv.status !== statusFilter) return false
     if (searchQuery) {
@@ -94,7 +110,6 @@ export default function InvoicesPage() {
     return true
   })
 
-  // 🗑️ Delete handling
   const handleDelete = (id: string) => {
     setInvoiceToDelete(id)
     setDeleteDialogOpen(true)
@@ -103,7 +118,6 @@ export default function InvoicesPage() {
   const confirmDelete = async () => {
     if (!invoiceToDelete) return
     try {
-      // Only run on client side
       if (typeof window === "undefined") return
 
       const { createClient } = await import("@/lib/supabase/client")
@@ -125,7 +139,6 @@ export default function InvoicesPage() {
     }
   }
 
-  // 🕒 Loading
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -134,25 +147,11 @@ export default function InvoicesPage() {
     )
   }
 
-  // 🧾 UI Layout
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Invoices</h1>
-          <p className="text-sm text-muted-foreground">Review and manage issued invoices</p>
-        </div>
-        <Button asChild>
-          <Link href="/quotes">
-            <Plus className="mr-2 h-4 w-4" />
-            Create from Quote
-          </Link>
-        </Button>
-      </div>
-
       <Card>
         <CardContent className="pt-6">
-          <div className="flex gap-2 mb-4">
+          <div className="flex items-center gap-4 mb-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -268,7 +267,6 @@ export default function InvoicesPage() {
         </CardContent>
       </Card>
 
-      {/* Delete Confirmation */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
