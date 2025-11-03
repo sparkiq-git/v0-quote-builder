@@ -264,7 +264,15 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
     loadLogo()
   }, [quote?.tenant_id])
 
+  // Initialize selectedOptionId from quote data and handle auto-selection
   useEffect(() => {
+    // Sync selectedOptionId with quote data if it exists (from database)
+    // Only update if it's different from current state to avoid unnecessary re-renders
+    if (quote?.selectedOptionId && quote.selectedOptionId !== selectedOptionId) {
+      setSelectedOptionId(quote.selectedOptionId)
+      return // Exit early if we've set a selection from database
+    }
+
     const isSubmitted =
       quote?.status === "client_accepted" ||
       quote?.status === "availability_confirmed" ||
@@ -274,10 +282,20 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
     const locked = Boolean(isSubmitted || isDeclined)
     setIsLocked(locked)
 
-    if (quote && quote.options?.length === 1 && !selectedOptionId && !locked) {
+    // Auto-select only if:
+    // - No selection exists (neither in state nor in quote data)
+    // - Quote is not locked
+    // - There's exactly one option
+    if (
+      quote &&
+      quote.options?.length === 1 &&
+      !quote.selectedOptionId &&
+      !selectedOptionId &&
+      !locked
+    ) {
       setSelectedOptionId(quote.options[0].id)
     }
-  }, [quote, selectedOptionId])
+  }, [quote?.selectedOptionId, quote?.options, quote?.status, selectedOptionId])
 
   const selectedOption = quote?.options?.find((o) => o.id === selectedOptionId) || null
 

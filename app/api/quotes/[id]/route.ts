@@ -157,6 +157,8 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     // Transform data with aircraft information preserved
     const transformedQuote = {
       ...quote,
+      // Map selected_option_id to selectedOptionId for frontend compatibility
+      selectedOptionId: quote.selected_option_id || null,
       legs: (legs || []).map((leg: any) => ({
         id: leg.id,
         origin: leg.origin_code,
