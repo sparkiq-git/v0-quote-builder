@@ -27,10 +27,7 @@ export default function FBOsPage() {
 
       {state.fbos && state.fbos.length > 0 ? (
         <Card>
-          <CardHeader>
-            <CardTitle>FBO Directory</CardTitle>
-            <CardDescription>View and manage FBO locations, contact information, and services</CardDescription>
-          </CardHeader>
+          
           <CardContent>
             <FBOsTable data={state.fbos} />
           </CardContent>
