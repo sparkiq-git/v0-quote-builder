@@ -158,7 +158,6 @@ export default function QuotesPage() {
   const handleOpenInvoiceContractModal = useCallback(
     async (quote: any) => {
       setSelectedQuote(quote)
-      setPaymentUrl("")
       setFullQuoteData(null)
       setLoadingQuote(true)
       setInvoiceContractOpen(true)
