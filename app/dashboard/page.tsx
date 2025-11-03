@@ -93,7 +93,6 @@ export default function DashboardPage() {
 
       try {
         const [{ data: leads }, { data: quotes }] = await Promise.all([
-          // 🟩 Leads with status "new" today
           supabase
             .from("lead")
             .select(`
@@ -112,7 +111,6 @@ export default function DashboardPage() {
             .lte("created_at", end.toISOString())
             .order("created_at", { ascending: false }),
 
-          // 🟦 Quotes with status "draft" today
           supabase
             .from("quote")
             .select(`
@@ -197,11 +195,12 @@ export default function DashboardPage() {
       {/* === Monthly Metrics === */}
       <DashboardMetrics />
 
-      {/* === RouteMap + Recent Activities === */}
-      <div className="w-full">
+      {/* === RouteMap (with fixed height) === */}
+      <div className="w-full h-[500px] relative">
         <RouteMap />
       </div>
 
+      {/* === Recent Activities === */}
       <div className="w-full">
         <RecentActivities />
       </div>
