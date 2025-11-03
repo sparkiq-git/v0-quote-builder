@@ -195,11 +195,6 @@ export default function DashboardPage() {
       {/* === Monthly Metrics === */}
       <DashboardMetrics />
 
-      {/* === RouteMap (with fixed height) === */}
-      <div className="w-full h-[500px] relative">
-        <RouteMap />
-      </div>
-
       {/* === Recent Activities === */}
       <div className="w-full">
         <RecentActivities />
@@ -312,6 +307,11 @@ export default function DashboardPage() {
             )}
           </CardContent>
         </Card>
+      </div>
+
+      {/* === RouteMap moved to the END === */}
+      <div className="w-full h-[500px] relative">
+        <RouteMap />
       </div>
     </div>
   )
