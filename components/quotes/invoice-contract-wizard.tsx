@@ -66,6 +66,7 @@ export function InvoiceContractWizard({
   const [sending, setSending] = useState(false)
   const [editedQuoteData, setEditedQuoteData] = useState<any | null>(null)
   const [taxes, setTaxes] = useState<Array<{ id: string; name: string; amount: number }>>([])
+  const [sendEmail, setSendEmail] = useState(true) // Default to sending email
 
   // Safety check: ensure taxes is always an array
   const safeTaxes = Array.isArray(taxes) ? taxes : []
@@ -113,6 +114,7 @@ export function InvoiceContractWizard({
           quote_id: selectedQuote.id,
           external_payment_url: paymentUrl || null,
           taxes: safeTaxes,
+          send_email: sendEmail,
         }),
       })
 
@@ -136,6 +138,7 @@ export function InvoiceContractWizard({
       setPaymentUrl("")
       setEditedQuoteData(null)
       setTaxes([])
+      setSendEmail(true)
     } catch (err: any) {
       console.error("Failed to create invoice & contract:", err)
       toast({
@@ -167,6 +170,7 @@ export function InvoiceContractWizard({
       setPaymentUrl("")
       setEditedQuoteData(null)
       setTaxes([])
+      setSendEmail(true)
   }, [onOpenChange])
 
 
@@ -224,6 +228,8 @@ export function InvoiceContractWizard({
               onQuoteDataChange={setEditedQuoteData}
               taxes={safeTaxes}
               onTaxesChange={setTaxes}
+              sendEmail={sendEmail}
+              onSendEmailChange={setSendEmail}
             />
           ) : (
             <ContractBuilderStep
@@ -289,6 +295,8 @@ function InvoiceSummaryStep({
   onQuoteDataChange,
   taxes = [],
   onTaxesChange,
+  sendEmail,
+  onSendEmailChange,
 }: {
   selectedQuote: any | null
   fullQuoteData: any | null
@@ -297,6 +305,8 @@ function InvoiceSummaryStep({
   onQuoteDataChange: (data: any) => void
   taxes?: Array<{ id: string; name: string; amount: number }>
   onTaxesChange: (taxes: Array<{ id: string; name: string; amount: number }>) => void
+  sendEmail: boolean
+  onSendEmailChange: (send: boolean) => void
 }) {
   // Ensure taxes is always an array
   const safeTaxes = Array.isArray(taxes) ? taxes : []
@@ -846,7 +856,7 @@ function InvoiceSummaryStep({
 
       {/* Payment URL Input Card */}
       <div className="relative overflow-hidden rounded-xl border-2 border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 shadow-sm">
-        <div className="p-6 space-y-3">
+        <div className="p-6 space-y-4">
           <div className="flex items-center gap-2">
             <LinkIcon className="h-5 w-5 text-slate-600 dark:text-slate-400" />
             <Label htmlFor="payment-url" className="font-semibold text-base text-slate-900 dark:text-slate-100">
@@ -865,6 +875,28 @@ function InvoiceSummaryStep({
             <CheckCircle2 className="h-3.5 w-3.5 mt-0.5 text-slate-500" />
             <span>Enter a payment URL that will be included in the invoice for easy customer access.</span>
           </p>
+
+          {/* Send Email Toggle */}
+          <div className="pt-3 border-t border-slate-200 dark:border-slate-800">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Mail className="h-5 w-5 text-slate-600 dark:text-slate-400" />
+                <div>
+                  <Label htmlFor="send-email" className="font-semibold text-base text-slate-900 dark:text-slate-100">
+                    Send Invoice Email
+                  </Label>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+                    Send invoice to customer and copy tenant emails
+                  </p>
+                </div>
+              </div>
+              <Switch
+                id="send-email"
+                checked={sendEmail}
+                onCheckedChange={onSendEmailChange}
+              />
+            </div>
+          </div>
         </div>
       </div>
 
