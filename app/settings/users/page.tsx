@@ -9,6 +9,7 @@ import { AppSidebar } from "@/components/app-sidebar"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { UsersListClient } from "@/components/settings/users/users-list-client"
 import { AppHeader } from "@/components/app-header"
+import { AppHeaderProvider } from "@/components/app-header-context"
 
 export default async function UsersManagementPage() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -71,17 +72,19 @@ export default async function UsersManagementPage() {
     }
 
     return (
-      <SidebarProvider>
-        <AppSidebar />
-        <SidebarInset>
-          <AppHeader />
-          <main className="flex-1 overflow-auto p-6">
-            <Suspense fallback={<div>Loading users...</div>}>
-              <UsersListClient />
-            </Suspense>
-          </main>
-        </SidebarInset>
-      </SidebarProvider>
+      <AppHeaderProvider>
+        <SidebarProvider>
+          <AppSidebar />
+          <SidebarInset>
+            <AppHeader />
+            <main className="flex-1 overflow-auto p-6">
+              <Suspense fallback={<div>Loading users...</div>}>
+                <UsersListClient />
+              </Suspense>
+            </main>
+          </SidebarInset>
+        </SidebarProvider>
+      </AppHeaderProvider>
     )
   } catch (error) {
     console.error("Users management page error:", error)
