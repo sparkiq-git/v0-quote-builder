@@ -83,8 +83,8 @@ export function InvoiceContractWizard({
     }
   }, [fullQuoteData, open])
 
-  const handleSendInvoiceContract = useCallback(async () => {
-    if (!selectedQuote) return
+  const handleNext = useCallback(async () => {
+    if (!selectedQuote || step !== 1) return
 
     try {
       setSending(true)
@@ -123,8 +123,8 @@ export function InvoiceContractWizard({
 
       // Show success message
       toast({
-        title: "Invoice & Contract created",
-        description: `Invoice ${data.data?.invoice?.number || "created"} successfully.`,
+        title: "Invoice created" + (sendEmail ? " & email sent" : ""),
+        description: `Invoice ${data.data?.invoice?.number || "created"} successfully${sendEmail ? " and email sent to customer" : ""}.`,
       })
 
       // Call success callback if provided
@@ -132,30 +132,20 @@ export function InvoiceContractWizard({
         onSuccess()
       }
 
-      // Close modal and reset
-      onOpenChange(false)
-      setStep(1)
-      setPaymentUrl("")
-      setEditedQuoteData(null)
-      setTaxes([])
-      setSendEmail(true)
+      // Move to step 2 (contract preview)
+      setStep(2)
     } catch (err: any) {
-      console.error("Failed to create invoice & contract:", err)
+      console.error("Failed to create invoice:", err)
       toast({
         title: "Failed to create invoice",
         description: err.message || "Something went wrong.",
         variant: "destructive",
       })
+      // Don't proceed to step 2 if invoice creation failed
     } finally {
       setSending(false)
     }
-  }, [selectedQuote, paymentUrl, toast, onSuccess, onOpenChange, editedQuoteData, fullQuoteData, taxes])
-
-  const handleNext = useCallback(() => {
-    if (step === 1) {
-      setStep(2)
-    }
-  }, [step])
+  }, [selectedQuote, step, paymentUrl, toast, onSuccess, editedQuoteData, fullQuoteData, safeTaxes, sendEmail])
 
   const handleBack = useCallback(() => {
     if (step === 2) {
@@ -248,21 +238,6 @@ export function InvoiceContractWizard({
               </Button>
               <Button
                 onClick={handleNext}
-                disabled={loadingQuote}
-                className="min-w-[200px] bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-slate-200 text-white dark:text-slate-900 shadow-lg hover:shadow-xl transition-all"
-              >
-                Next: Contract Builder
-                <ChevronRight className="ml-2 h-4 w-4" />
-              </Button>
-            </>
-          ) : (
-            <>
-              <Button variant="outline" onClick={handleBack} className="min-w-[100px]">
-                <ChevronLeft className="mr-2 h-4 w-4" />
-                Back
-              </Button>
-              <Button
-                onClick={handleSendInvoiceContract}
                 disabled={sending || loadingQuote}
                 className="min-w-[200px] bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-slate-200 text-white dark:text-slate-900 shadow-lg hover:shadow-xl transition-all"
               >
@@ -273,10 +248,23 @@ export function InvoiceContractWizard({
                   </>
                 ) : (
                   <>
-                    <Send className="mr-2 h-4 w-4" />
-                    Create Invoice & Contract
+                    <ChevronRight className="mr-2 h-4 w-4" />
+                    Next: Contract Builder
                   </>
                 )}
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="outline" onClick={handleBack} className="min-w-[100px]">
+                <ChevronLeft className="mr-2 h-4 w-4" />
+                Back
+              </Button>
+              <Button
+                onClick={handleClose}
+                className="min-w-[200px] bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-slate-200 text-white dark:text-slate-900 shadow-lg hover:shadow-xl transition-all"
+              >
+                Done
               </Button>
             </>
           )}
