@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/select"
 import { MoreHorizontal } from "lucide-react"
 
-// micro reflow para SSR + fonts web: ayuda a Floating UI a recalcular posición
+// Micro reflow para SSR + webfonts: ayuda a Floating UI a recalcular posición en prod
 const forceRecalc = () =>
   requestAnimationFrame(() =>
     requestAnimationFrame(() => window.dispatchEvent(new Event("resize")))
@@ -34,15 +34,13 @@ export default function TestDropdownsPage() {
         <div>
           <h1 className="text-3xl font-bold mb-4">Dropdown Test Page</h1>
           <p className="text-gray-600">
-            Clean test page to isolate dropdown visibility issues. This page uses NO sidebar or layout
-            components.
+            Clean test page to isolate dropdown visibility issues. This page uses NO sidebar or layout components.
           </p>
         </div>
 
         {/* Test 1: Basic Dropdown */}
         <div className="bg-white p-8 rounded-lg shadow-sm border space-y-4">
           <h2 className="text-xl font-semibold">Test 1: Basic Dropdown Menu</h2>
-
           <DropdownMenu modal={false} onOpenChange={(open) => open && forceRecalc()}>
             <DropdownMenuTrigger asChild>
               <Button variant="outline">
@@ -50,13 +48,7 @@ export default function TestDropdownsPage() {
                 Basic Dropdown
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent
-              align="end"
-              side="bottom"
-              sideOffset={8}
-              // clave: no bloquear el body en prod
-              disableOutsidePointerEvents={false}
-            >
+            <DropdownMenuContent align="end" side="bottom" sideOffset={8}>
               <DropdownMenuLabel>My Account</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem>Profile</DropdownMenuItem>
@@ -95,7 +87,6 @@ export default function TestDropdownsPage() {
                           side="bottom"
                           sideOffset={8}
                           onClick={(e) => e.stopPropagation()}
-                          disableOutsidePointerEvents={false}
                         >
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
                           <DropdownMenuItem>View</DropdownMenuItem>
@@ -133,7 +124,6 @@ export default function TestDropdownsPage() {
           <p>Counter: {count}</p>
           <div className="flex gap-4">
             <Button onClick={() => setCount(count + 1)}>Increment</Button>
-
             <DropdownMenu modal={false} onOpenChange={(open) => open && forceRecalc()}>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline">
@@ -141,12 +131,7 @@ export default function TestDropdownsPage() {
                   Reset Counter
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent
-                side="bottom"
-                align="start"
-                sideOffset={8}
-                disableOutsidePointerEvents={false}
-              >
+              <DropdownMenuContent side="bottom" align="start" sideOffset={8}>
                 <DropdownMenuItem onClick={() => setCount(0)}>Reset to 0</DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setCount(10)}>Set to 10</DropdownMenuItem>
               </DropdownMenuContent>
@@ -163,12 +148,7 @@ export default function TestDropdownsPage() {
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline">Dropdown {i}</Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  side="bottom"
-                  align="start"
-                  sideOffset={8}
-                  disableOutsidePointerEvents={false}
-                >
+                <DropdownMenuContent side="bottom" align="start" sideOffset={8}>
                   <DropdownMenuItem>Action A from {i}</DropdownMenuItem>
                   <DropdownMenuItem>Action B from {i}</DropdownMenuItem>
                 </DropdownMenuContent>
