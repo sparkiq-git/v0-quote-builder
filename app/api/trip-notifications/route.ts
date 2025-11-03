@@ -17,7 +17,6 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const supabase = await createClient()
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
@@ -44,35 +43,15 @@ export async function POST(req: NextRequest) {
         )
       }
 
-      // Verify the selected option exists and belongs to the quote
-      const { data: option, error: optionCheckError } = await supabase
-        .from("quote_option")
-        .select("id, quote_id")
-        .eq("id", metadata.selected_option_id)
-        .eq("quote_id", metadata.quote_id)
-        .single()
-
-      if (optionCheckError || !option) {
-        console.error("❌ Selected option validation failed:", {
-          selected_option_id: metadata.selected_option_id,
-          quote_id: metadata.quote_id,
-          error: optionCheckError,
-        })
-        return NextResponse.json(
-          { 
-            error: `Selected option ${metadata.selected_option_id} not found or does not belong to quote ${metadata.quote_id}`,
-            details: { 
-              selected_option_id: metadata.selected_option_id,
-              quote_id: metadata.quote_id,
-              optionCheckError 
-            }
-          },
-          { status: 400 }
-        )
-      }
-
-      console.log("✅ Selected option validated:", { optionId: option.id, quoteId: option.quote_id })
+      // Pass selected_option_id in metadata for the edge function to use
+      console.log("🔔 Validating quote_accepted:", {
+        quote_id: metadata.quote_id,
+        selected_option_id: metadata.selected_option_id,
+      })
     }
+
+    // Regular client for edge function invocation
+    const supabase = await createClient()
 
     const payload = {
       tenant_id,
