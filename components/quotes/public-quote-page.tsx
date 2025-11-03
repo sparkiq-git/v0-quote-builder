@@ -299,6 +299,43 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
 
   const selectedOption = quote?.options?.find((o) => o.id === selectedOptionId) || null
 
+  // Helper function to call trip_notifications edge function via API route
+  const callTripNotifications = async (
+    actionType: "quote_accepted" | "quote_declined",
+    metadata: Record<string, any>
+  ) => {
+    try {
+      if (!quote?.tenant_id || !quote?.customer?.email) {
+        console.warn("Missing required quote data for trip_notifications")
+        return
+      }
+
+      const res = await fetch("/api/trip-notifications", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          tenant_id: quote.tenant_id,
+          email: quote.customer.email || verifiedEmail || "",
+          action_type: actionType,
+          metadata,
+        }),
+      })
+
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        console.error("trip_notifications API error:", json)
+        // Don't throw - this is non-critical, log only
+      } else {
+        console.log("trip_notifications called successfully:", { actionType, metadata })
+      }
+    } catch (error) {
+      console.error("Failed to call trip_notifications API:", error)
+      // Don't throw - this is non-critical
+    }
+  }
+
   const handleSelectOption = async (optionId: string) => {
     if (isLocked) return
     setShowValidationAlert(false)
@@ -371,6 +408,12 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
         throw new Error(json?.error || "Failed to accept quote")
       }
 
+      // Call trip_notifications edge function for quote_accepted
+      await callTripNotifications("quote_accepted", {
+        quote_id: quote.id,
+        created_by: quote.created_by_user_id || quote.created_by || null,
+      })
+
       // Redirect to success page instead of showing toast
       const logo = quote.branding?.logo || "/images/aero-iq-logo.png"
       const successUrl = `/success?name=${encodeURIComponent(quote.customer?.name || "Valued Customer")}&quoteId=${quote.id}&logo=${encodeURIComponent(logo)}`
@@ -426,6 +469,13 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
       if (!response.ok) {
         throw new Error(json?.error || "Failed to decline quote")
       }
+
+      // Call trip_notifications edge function for quote_declined
+      await callTripNotifications("quote_declined", {
+        quote_id: quote.id,
+        reason: declineReason,
+        notes: declineNotes || null,
+      })
 
       toast({
         title: "Quote declined",
