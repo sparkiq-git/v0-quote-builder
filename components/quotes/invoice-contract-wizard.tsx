@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
@@ -30,9 +30,16 @@ import {
   FileText,
   ChevronLeft,
   ChevronRight,
+  Plus,
+  Trash2,
+  Edit2,
+  X,
+  Save,
 } from "lucide-react"
 import { formatCurrency } from "@/lib/utils/format"
 import { useToast } from "@/hooks/use-toast"
+import { ItemCombobox } from "@/components/ui/item-combobox"
+import { Switch } from "@/components/ui/switch"
 
 interface InvoiceContractWizardProps {
   open: boolean
@@ -41,6 +48,7 @@ interface InvoiceContractWizardProps {
   fullQuoteData: any | null
   loadingQuote: boolean
   onSuccess?: () => void
+  onQuoteDataUpdate?: (updatedData: any) => void
 }
 
 export function InvoiceContractWizard({
@@ -50,11 +58,22 @@ export function InvoiceContractWizard({
   fullQuoteData,
   loadingQuote,
   onSuccess,
+  onQuoteDataUpdate,
 }: InvoiceContractWizardProps) {
   const { toast } = useToast()
   const [step, setStep] = useState<1 | 2>(1)
   const [paymentUrl, setPaymentUrl] = useState("")
   const [sending, setSending] = useState(false)
+  const [editedQuoteData, setEditedQuoteData] = useState<any | null>(null)
+  const [taxRate, setTaxRate] = useState<number>(0)
+  const [taxAmount, setTaxAmount] = useState<number>(0)
+
+  // Update edited quote data when fullQuoteData changes
+  useEffect(() => {
+    if (fullQuoteData && open) {
+      setEditedQuoteData(JSON.parse(JSON.stringify(fullQuoteData)))
+    }
+  }, [fullQuoteData, open])
 
   const handleSendInvoiceContract = useCallback(async () => {
     if (!selectedQuote) return
@@ -65,6 +84,20 @@ export function InvoiceContractWizard({
       // Only run on client side
       if (typeof window === "undefined") return
 
+      // Use edited data if available, otherwise use original
+      const dataToUse = editedQuoteData || fullQuoteData
+
+      // Update quote items/services if they were edited
+      if (dataToUse?.services && dataToUse.services.length > 0) {
+        try {
+          const { upsertQuoteItems } = await import("@/lib/supabase/queries/quote-items")
+          await upsertQuoteItems(selectedQuote.id, dataToUse.services)
+        } catch (err: any) {
+          console.warn("Failed to update quote items:", err)
+          // Continue anyway - don't block invoice creation
+        }
+      }
+
       // Call the quote-to-invoice Edge Function via API route
       const res = await fetch("/api/invoice", {
         method: "POST",
@@ -72,6 +105,8 @@ export function InvoiceContractWizard({
         body: JSON.stringify({
           quote_id: selectedQuote.id,
           external_payment_url: paymentUrl || null,
+          tax_rate: taxRate || 0,
+          tax_amount: taxAmount || 0,
         }),
       })
 
@@ -93,6 +128,9 @@ export function InvoiceContractWizard({
       onOpenChange(false)
       setStep(1)
       setPaymentUrl("")
+      setEditedQuoteData(null)
+      setTaxRate(0)
+      setTaxAmount(0)
     } catch (err: any) {
       console.error("Failed to create invoice & contract:", err)
       toast({
@@ -103,7 +141,7 @@ export function InvoiceContractWizard({
     } finally {
       setSending(false)
     }
-  }, [selectedQuote, paymentUrl, toast, onSuccess, onOpenChange])
+  }, [selectedQuote, paymentUrl, toast, onSuccess, onOpenChange, editedQuoteData, fullQuoteData, taxRate, taxAmount])
 
   const handleNext = useCallback(() => {
     if (step === 1) {
@@ -122,7 +160,11 @@ export function InvoiceContractWizard({
     // Reset state when closing
     setStep(1)
     setPaymentUrl("")
+    setEditedQuoteData(null)
+    setTaxRate(0)
+    setTaxAmount(0)
   }, [onOpenChange])
+
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -172,12 +214,22 @@ export function InvoiceContractWizard({
           ) : step === 1 ? (
             <InvoiceSummaryStep
               selectedQuote={selectedQuote}
-              fullQuoteData={fullQuoteData}
+              fullQuoteData={editedQuoteData || fullQuoteData}
               paymentUrl={paymentUrl}
               onPaymentUrlChange={setPaymentUrl}
+              onQuoteDataChange={setEditedQuoteData}
+              taxRate={taxRate}
+              onTaxRateChange={setTaxRate}
+              taxAmount={taxAmount}
+              onTaxAmountChange={setTaxAmount}
             />
           ) : (
-            <ContractBuilderStep fullQuoteData={fullQuoteData} selectedQuote={selectedQuote} />
+            <ContractBuilderStep
+              fullQuoteData={editedQuoteData || fullQuoteData}
+              selectedQuote={selectedQuote}
+              taxRate={taxRate}
+              taxAmount={taxAmount}
+            />
           )}
         </div>
 
@@ -233,12 +285,27 @@ function InvoiceSummaryStep({
   fullQuoteData,
   paymentUrl,
   onPaymentUrlChange,
+  onQuoteDataChange,
+  taxRate,
+  onTaxRateChange,
+  taxAmount,
+  onTaxAmountChange,
 }: {
   selectedQuote: any | null
   fullQuoteData: any | null
   paymentUrl: string
   onPaymentUrlChange: (url: string) => void
+  onQuoteDataChange: (data: any) => void
+  taxRate: number
+  onTaxRateChange: (rate: number) => void
+  taxAmount: number
+  onTaxAmountChange: (amount: number) => void
 }) {
+  const [newServiceDescription, setNewServiceDescription] = useState("")
+  const [newServiceQty, setNewServiceQty] = useState(1)
+  const [newServicePrice, setNewServicePrice] = useState(0)
+  const [newServiceItemId, setNewServiceItemId] = useState<string | null>(null)
+
   if (!selectedQuote || !fullQuoteData) {
     return (
       <div className="py-16 text-center">
@@ -248,6 +315,110 @@ function InvoiceSummaryStep({
         <p className="text-muted-foreground font-medium">Failed to load quote details.</p>
       </div>
     )
+  }
+
+  // Calculate subtotals
+  const subtotalAircraft =
+    fullQuoteData.options?.reduce(
+      (sum: number, opt: any) =>
+        sum +
+        (opt.price_total ||
+          (opt.cost_operator || 0) +
+            (opt.price_commission || 0) +
+            (opt.price_extras_total || 0) -
+            (opt.price_discounts_total || 0) ||
+          0),
+      0,
+    ) || 0
+
+  const subtotalServices =
+    fullQuoteData.services?.reduce(
+      (sum: number, s: any) => sum + (s.amount || s.unit_price || 0) * (s.qty || 1),
+      0,
+    ) || 0
+
+  const subtotal = subtotalAircraft + subtotalServices
+
+  // Calculate tax if using rate
+  useEffect(() => {
+    if (taxRate > 0 && subtotal > 0) {
+      const calculatedTax = (subtotal * taxRate) / 100
+      onTaxAmountChange(calculatedTax)
+    }
+  }, [taxRate, subtotal, onTaxAmountChange])
+
+  const grandTotal = subtotal + taxAmount
+
+  const handleUpdateService = (serviceId: string, field: string, value: any) => {
+    if (!fullQuoteData?.services) return
+
+    const updatedServices = fullQuoteData.services.map((s: any) => {
+      const matchId = s.id || `temp-${fullQuoteData.services.indexOf(s)}`
+      if (matchId === serviceId) {
+        const updated = { ...s, [field]: value }
+        // If item_id is set, also update name/description from the item
+        if (field === "item_id" && value) {
+          // This will be handled by the ItemCombobox onSelect callback
+        }
+        return updated
+      }
+      return s
+    })
+
+    onQuoteDataChange({ ...fullQuoteData, services: updatedServices })
+  }
+
+  const handleServiceItemSelect = (serviceId: string, item: any) => {
+    if (!fullQuoteData?.services) return
+
+    const updatedServices = fullQuoteData.services.map((s: any) => {
+      const matchId = s.id || `temp-${fullQuoteData.services.indexOf(s)}`
+      if (matchId === serviceId) {
+        return {
+          ...s,
+          item_id: item.id,
+          name: item.name,
+          description: item.name || item.description || s.description,
+        }
+      }
+      return s
+    })
+
+    onQuoteDataChange({ ...fullQuoteData, services: updatedServices })
+  }
+
+  const handleDeleteService = (serviceId: string) => {
+    if (!fullQuoteData?.services) return
+
+    const updatedServices = fullQuoteData.services.filter(
+      (s: any) => s.id !== serviceId && serviceId !== `new-${fullQuoteData.services.indexOf(s)}`,
+    )
+
+    onQuoteDataChange({ ...fullQuoteData, services: updatedServices })
+  }
+
+  const handleAddService = () => {
+    if (!newServiceDescription.trim() && !newServiceItemId) return
+
+    const newService = {
+      id: `temp-${Date.now()}`,
+      item_id: newServiceItemId,
+      name: newServiceDescription || "",
+      description: newServiceDescription || "",
+      qty: newServiceQty,
+      amount: newServicePrice,
+      unit_price: newServicePrice,
+      taxable: true,
+    }
+
+    const updatedServices = [...(fullQuoteData.services || []), newService]
+    onQuoteDataChange({ ...fullQuoteData, services: updatedServices })
+
+    // Reset form
+    setNewServiceDescription("")
+    setNewServiceQty(1)
+    setNewServicePrice(0)
+    setNewServiceItemId(null)
   }
 
   return (
@@ -366,37 +537,200 @@ function InvoiceSummaryStep({
         </div>
       )}
 
-      {/* Additional Services Card */}
-      {fullQuoteData.services && fullQuoteData.services.length > 0 && (
-        <div className="relative overflow-hidden rounded-xl border-2 border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 shadow-sm hover:shadow-md transition-shadow">
-          <div className="p-6">
-            <div className="flex items-center gap-2 mb-4">
+      {/* Additional Services Card - Editable (like QuoteServicesTab) */}
+      <div className="relative overflow-hidden rounded-xl border-2 border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 shadow-sm hover:shadow-md transition-shadow">
+        <div className="p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
               <Package className="h-5 w-5 text-slate-600 dark:text-slate-400" />
               <h4 className="font-semibold text-lg text-slate-900 dark:text-slate-100">Additional Services</h4>
             </div>
-            <div className="space-y-2">
-              {fullQuoteData.services.map((service: any, idx: number) => (
-                <div
-                  key={service.id || idx}
-                  className="flex items-center justify-between p-3 rounded-lg bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors"
-                >
-                  <div className="flex items-center gap-2">
-                    <div className="h-2 w-2 rounded-full bg-slate-400 dark:bg-slate-600" />
-                    <span className="text-sm font-medium text-slate-900 dark:text-slate-100">
-                      {service.name || service.description || `Service ${idx + 1}`}
-                    </span>
+          </div>
+
+          {/* Existing Services - Always Editable */}
+          <div className="space-y-4 mb-4">
+            {fullQuoteData.services && fullQuoteData.services.length > 0 ? (
+              fullQuoteData.services.map((service: any, idx: number) => {
+                const serviceId = service.id || `temp-${idx}`
+                const serviceTotal = (service.amount || service.unit_price || 0) * (service.qty || 1)
+
+                return (
+                  <div
+                    key={serviceId}
+                    className="border rounded-lg p-4 bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 relative"
+                  >
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="font-medium text-sm text-slate-900 dark:text-slate-100">Service Item</div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDeleteService(serviceId)}
+                        className="text-muted-foreground hover:text-destructive h-8 w-8"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      {/* Service Name/Item Combobox */}
+                      <div>
+                        <Label className="text-sm mb-1 block text-slate-700 dark:text-slate-300">Service Name</Label>
+                        {fullQuoteData.tenant_id ? (
+                          <ItemCombobox
+                            tenantId={fullQuoteData.tenant_id}
+                            value={service.item_id || null}
+                            onSelect={(item) => handleServiceItemSelect(serviceId, item)}
+                          />
+                        ) : (
+                          <Input
+                            placeholder="Select or enter service name"
+                            value={service.name || service.description || ""}
+                            onChange={(e) => {
+                              const value = e.target.value
+                              handleUpdateService(serviceId, "name", value)
+                              handleUpdateService(serviceId, "description", value)
+                            }}
+                            className="h-9 text-sm"
+                          />
+                        )}
+                      </div>
+
+                      {/* Description */}
+                      <div>
+                        <Label className="text-sm mb-1 block text-slate-700 dark:text-slate-300">Description</Label>
+                        <Input
+                          placeholder="Enter service description"
+                          value={service.description || ""}
+                          onChange={(e) => handleUpdateService(serviceId, "description", e.target.value)}
+                          className="h-9 text-sm"
+                        />
+                      </div>
+
+                      {/* Quantity */}
+                      <div>
+                        <Label className="text-sm mb-1 block text-slate-700 dark:text-slate-300">Quantity</Label>
+                        <Input
+                          type="number"
+                          min="1"
+                          value={service.qty || 1}
+                          onChange={(e) =>
+                            handleUpdateService(serviceId, "qty", parseInt(e.target.value) || 1)
+                          }
+                          className="h-9 text-sm"
+                        />
+                      </div>
+
+                      {/* Unit Price */}
+                      <div>
+                        <Label className="text-sm mb-1 block text-slate-700 dark:text-slate-300">Unit Price</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={service.amount || service.unit_price || 0}
+                          onChange={(e) => {
+                            const price = parseFloat(e.target.value) || 0
+                            handleUpdateService(serviceId, "amount", price)
+                            handleUpdateService(serviceId, "unit_price", price)
+                          }}
+                          className="h-9 text-sm"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Taxable Toggle & Total */}
+                    <div className="flex items-center justify-between mt-4 pt-3 border-t border-slate-200 dark:border-slate-800">
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          checked={service.taxable !== false}
+                          onCheckedChange={(val) => handleUpdateService(serviceId, "taxable", val)}
+                        />
+                        <Label className="text-sm text-slate-700 dark:text-slate-300">Taxable</Label>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-xs text-slate-600 dark:text-slate-400 block">Line Total</span>
+                        <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                          {formatCurrency(serviceTotal)}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                  <span className="font-semibold text-sm text-slate-900 dark:text-slate-100">
-                    {formatCurrency((service.amount || service.unit_price || 0) * (service.qty || 1))}
-                  </span>
-                </div>
-              ))}
+                )
+              })
+            ) : (
+              <p className="text-sm text-slate-500 dark:text-slate-400 text-center py-4">
+                No additional services added yet.
+              </p>
+            )}
+          </div>
+
+          {/* Add New Service */}
+          <div className="p-4 rounded-lg bg-slate-100 dark:bg-slate-900 border-2 border-dashed border-slate-300 dark:border-slate-700">
+            <h5 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-3">Add New Service</h5>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div>
+                <Label className="text-sm mb-1 block text-slate-700 dark:text-slate-300">Service Name</Label>
+                {fullQuoteData.tenant_id ? (
+                  <ItemCombobox
+                    tenantId={fullQuoteData.tenant_id}
+                    value={newServiceItemId}
+                    onSelect={(item) => {
+                      setNewServiceItemId(item.id)
+                      setNewServiceDescription(item.name || "")
+                    }}
+                  />
+                ) : (
+                  <Input
+                    value={newServiceDescription}
+                    onChange={(e) => setNewServiceDescription(e.target.value)}
+                    className="h-9 text-sm"
+                    placeholder="Enter service name"
+                  />
+                )}
+              </div>
+              <div>
+                <Label className="text-sm mb-1 block text-slate-700 dark:text-slate-300">Description</Label>
+                <Input
+                  value={newServiceDescription}
+                  onChange={(e) => setNewServiceDescription(e.target.value)}
+                  className="h-9 text-sm"
+                  placeholder="Service description"
+                />
+              </div>
+              <div>
+                <Label className="text-sm mb-1 block text-slate-700 dark:text-slate-300">Quantity</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  value={newServiceQty}
+                  onChange={(e) => setNewServiceQty(parseInt(e.target.value) || 1)}
+                  className="h-9 text-sm"
+                />
+              </div>
+              <div>
+                <Label className="text-sm mb-1 block text-slate-700 dark:text-slate-300">Unit Price</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={newServicePrice}
+                  onChange={(e) => setNewServicePrice(parseFloat(e.target.value) || 0)}
+                  className="h-9 text-sm"
+                />
+              </div>
             </div>
+            <Button
+              onClick={handleAddService}
+              disabled={!newServiceDescription.trim() && !newServiceItemId}
+              className="mt-3 w-full"
+              variant="outline"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Service
+            </Button>
           </div>
         </div>
-      )}
+      </div>
 
-      {/* Totals Card */}
+      {/* Totals Card - Editable with Tax */}
       <div className="relative overflow-hidden rounded-xl border-2 border-slate-300 dark:border-slate-700 bg-slate-100/50 dark:bg-slate-900/50 shadow-lg">
         <div className="p-6">
           <div className="flex items-center gap-2 mb-4">
@@ -404,60 +738,81 @@ function InvoiceSummaryStep({
             <h4 className="font-semibold text-lg text-slate-900 dark:text-slate-100">Invoice Summary</h4>
           </div>
           <div className="space-y-3">
-            {fullQuoteData.options && fullQuoteData.options.length > 0 && (
+            {subtotalAircraft > 0 && (
               <div className="flex items-center justify-between text-sm">
                 <span className="text-slate-600 dark:text-slate-400">Aircraft Option:</span>
                 <span className="font-semibold text-slate-900 dark:text-slate-100">
-                  {formatCurrency(
-                    fullQuoteData.options.reduce(
-                      (sum: number, opt: any) =>
-                        sum +
-                        (opt.price_total ||
-                          (opt.cost_operator || 0) +
-                            (opt.price_commission || 0) +
-                            (opt.price_extras_total || 0) -
-                            (opt.price_discounts_total || 0) ||
-                          0),
-                      0,
-                    ),
-                  )}
+                  {formatCurrency(subtotalAircraft)}
                 </span>
               </div>
             )}
-            {fullQuoteData.services && fullQuoteData.services.length > 0 && (
+            {subtotalServices > 0 && (
               <div className="flex items-center justify-between text-sm">
                 <span className="text-slate-600 dark:text-slate-400">Additional Services:</span>
                 <span className="font-semibold text-slate-900 dark:text-slate-100">
-                  {formatCurrency(
-                    fullQuoteData.services.reduce(
-                      (sum: number, s: any) => sum + (s.amount || s.unit_price || 0) * (s.qty || 1),
-                      0,
-                    ),
-                  )}
+                  {formatCurrency(subtotalServices)}
                 </span>
               </div>
             )}
+            <div className="flex items-center justify-between text-sm pt-2 border-t border-slate-300 dark:border-slate-700">
+              <span className="text-slate-600 dark:text-slate-400">Subtotal:</span>
+              <span className="font-semibold text-slate-900 dark:text-slate-100">{formatCurrency(subtotal)}</span>
+            </div>
+
+            {/* Tax Section */}
+            <div className="pt-3 border-t border-slate-300 dark:border-slate-700 space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium text-slate-900 dark:text-slate-100">Tax</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={taxRate}
+                    onChange={(e) => {
+                      const rate = Number(e.target.value) || 0
+                      onTaxRateChange(rate)
+                      if (rate === 0) {
+                        onTaxAmountChange(0)
+                      }
+                    }}
+                    placeholder="Rate %"
+                    className="w-20 h-8 text-sm text-right"
+                  />
+                  <span className="text-sm text-slate-600 dark:text-slate-400">%</span>
+                  <span className="text-sm text-slate-400">or</span>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={taxAmount}
+                    onChange={(e) => {
+                      const amount = Number(e.target.value) || 0
+                      onTaxAmountChange(amount)
+                      if (amount > 0) {
+                        onTaxRateChange(0) // Clear rate if using fixed amount
+                      }
+                    }}
+                    placeholder="Amount"
+                    className="w-24 h-8 text-sm text-right"
+                  />
+                </div>
+              </div>
+              {taxAmount > 0 && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-slate-600 dark:text-slate-400">
+                    Tax {taxRate > 0 ? `(${taxRate}%)` : ""}:
+                  </span>
+                  <span className="font-semibold text-slate-900 dark:text-slate-100">
+                    {formatCurrency(taxAmount)}
+                  </span>
+                </div>
+              )}
+            </div>
+
             <div className="flex items-center justify-between pt-3 border-t-2 border-slate-300 dark:border-slate-700">
               <span className="text-lg font-bold text-slate-900 dark:text-slate-100">Grand Total:</span>
-              <span className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-                {formatCurrency(
-                  (fullQuoteData.options?.reduce(
-                    (sum: number, opt: any) =>
-                      sum +
-                      (opt.price_total ||
-                        (opt.cost_operator || 0) +
-                          (opt.price_commission || 0) +
-                          (opt.price_extras_total || 0) -
-                          (opt.price_discounts_total || 0) ||
-                        0),
-                    0,
-                  ) || 0) +
-                    (fullQuoteData.services?.reduce(
-                      (sum: number, s: any) => sum + (s.amount || s.unit_price || 0) * (s.qty || 1),
-                      0,
-                    ) || 0),
-                )}
-              </span>
+              <span className="text-2xl font-bold text-slate-900 dark:text-slate-100">{formatCurrency(grandTotal)}</span>
             </div>
           </div>
         </div>
@@ -509,9 +864,13 @@ function InvoiceSummaryStep({
 function ContractBuilderStep({
   fullQuoteData,
   selectedQuote,
+  taxRate,
+  taxAmount,
 }: {
   fullQuoteData: any | null
   selectedQuote: any | null
+  taxRate: number
+  taxAmount: number
 }) {
   if (!fullQuoteData || !selectedQuote) {
     return (
@@ -544,7 +903,8 @@ function ContractBuilderStep({
       0,
     ) || 0
 
-  const grandTotal = totalAircraftOption + totalServices
+  const subtotal = totalAircraftOption + totalServices
+  const grandTotal = subtotal + taxAmount
 
   return (
     <div className="space-y-6">
@@ -656,7 +1016,25 @@ function ContractBuilderStep({
 
             {/* Terms & Total */}
             <div className="border-t-2 border-slate-300 dark:border-slate-700 pt-6 mt-6">
-              <div className="flex justify-between items-center mb-4">
+              <div className="space-y-2 mb-4">
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-600 dark:text-slate-400">Subtotal:</span>
+                  <span className="font-semibold text-slate-900 dark:text-slate-100">
+                    {formatCurrency(subtotal)}
+                  </span>
+                </div>
+                {taxAmount > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-600 dark:text-slate-400">
+                      Tax {taxRate > 0 ? `(${taxRate}%)` : ""}:
+                    </span>
+                    <span className="font-semibold text-slate-900 dark:text-slate-100">
+                      {formatCurrency(taxAmount)}
+                    </span>
+                  </div>
+                )}
+              </div>
+              <div className="flex justify-between items-center mb-4 pt-2 border-t border-slate-300 dark:border-slate-700">
                 <span className="text-lg font-semibold text-slate-900 dark:text-slate-100">Total Contract Amount:</span>
                 <span className="text-2xl font-bold text-slate-900 dark:text-slate-100">
                   {formatCurrency(grandTotal)}
