@@ -123,7 +123,7 @@ export default function DashboardPage() {
               trip_type,
               total_pax
             `)
-            .in("status", ["opened", "draft"])
+            .in("status", ["opened", "awaiting response"])
             .gte("created_at", start.toISOString())
             .lte("created_at", end.toISOString())
             .order("created_at", { ascending: false }),
