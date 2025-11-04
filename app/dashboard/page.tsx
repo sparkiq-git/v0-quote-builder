@@ -7,7 +7,6 @@ import { RouteMap } from "@/components/dashboard/route-map"
 import DashboardMetrics from "@/components/dashboard/DashboardMetrics"
 import { RecentActivities } from "@/components/dashboard/recent-activities"
 import { Badge } from "@/components/ui/badge"
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts"
 
 export default function DashboardPage() {
   const [leadCount, setLeadCount] = useState(0)
@@ -17,7 +16,6 @@ export default function DashboardPage() {
   const [isClient, setIsClient] = useState(false)
   const [todayLeads, setTodayLeads] = useState<any[]>([])
   const [todayQuotes, setTodayQuotes] = useState<any[]>([])
-  const [chartData, setChartData] = useState<any[]>([])
 
   useEffect(() => setIsClient(true), [])
 
@@ -141,47 +139,6 @@ export default function DashboardPage() {
     loadTodayData()
   }, [isClient])
 
-  // === Load Yearly Chart Data ===
-  useEffect(() => {
-    if (!isClient) return
-
-    const loadChartData = async () => {
-      const { createClient } = await import("@/lib/supabase/client")
-      const supabase = createClient()
-
-      const currentYear = new Date().getFullYear()
-      const startOfYear = new Date(currentYear, 0, 1).toISOString()
-      const endOfYear = new Date(currentYear, 11, 31, 23, 59, 59).toISOString()
-
-      const { data, error } = await supabase
-        .from("quote_option")
-        .select("created_at, cost_operator, price_commission")
-        .gte("created_at", startOfYear)
-        .lte("created_at", endOfYear)
-
-      if (error) {
-        console.error("Error loading chart data:", error)
-        return
-      }
-
-      const monthlyData = Array.from({ length: 12 }, (_, i) => ({
-        month: new Date(0, i).toLocaleString("default", { month: "short" }),
-        cost_operator: 0,
-        price_commission: 0,
-      }))
-
-      data?.forEach((row) => {
-        const monthIndex = new Date(row.created_at).getMonth()
-        monthlyData[monthIndex].cost_operator += row.cost_operator || 0
-        monthlyData[monthIndex].price_commission += row.price_commission || 0
-      })
-
-      setChartData(monthlyData)
-    }
-
-    loadChartData()
-  }, [isClient])
-
   // === Metric Card Component ===
   function MetricCard({
     title,
@@ -238,34 +195,9 @@ export default function DashboardPage() {
       {/* === Monthly Metrics === */}
       <DashboardMetrics />
 
-      {/* === Chart + Recent Activities === */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Chart Card */}
-        <Card className="border border-border shadow-sm rounded-xl bg-card hover:shadow-md transition-shadow lg:col-span-1">
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold text-foreground">
-              Cost & Commission (Yearly)
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="cost_operator" fill="#60a5fa" name="Cost Operator" />
-                <Bar dataKey="price_commission" fill="#fbbf24" name="Price Commission" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        {/* Recent Activities */}
-        <div className="lg:col-span-2">
-          <RecentActivities />
-        </div>
+      {/* === Recent Activities === */}
+      <div className="w-full">
+        <RecentActivities />
       </div>
 
       {/* === Today's New Leads and Draft Quotes === */}
@@ -377,7 +309,7 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* === RouteMap === */}
+      {/* === RouteMap moved to the END === */}
       <div className="w-full h-[500px] relative">
         <RouteMap />
       </div>
