@@ -10,7 +10,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { DropdownMenuClient } from "@/components/ui/dropdown-menu-client"
+import {
+  DropdownMenuClient,
+  DropdownMenuClientItem,
+  DropdownMenuClientLabel,
+  DropdownMenuClientSeparator,
+} from "@/components/ui/dropdown-menu-client"
 import { ClientOnly } from "@/components/ui/client-only"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { MoreHorizontal } from "lucide-react"
@@ -164,11 +169,11 @@ export default function TestDropdownsPage() {
               </Button>
             }
           >
-            <DropdownMenuLabel>My Account</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>Profile</DropdownMenuItem>
-            <DropdownMenuItem>Settings</DropdownMenuItem>
-            <DropdownMenuItem>Logout</DropdownMenuItem>
+            <DropdownMenuClientLabel>My Account</DropdownMenuClientLabel>
+            <DropdownMenuClientSeparator />
+            <DropdownMenuClientItem>Profile</DropdownMenuClientItem>
+            <DropdownMenuClientItem>Settings</DropdownMenuClientItem>
+            <DropdownMenuClientItem>Logout</DropdownMenuClientItem>
           </DropdownMenuClient>
         </div>
 
@@ -219,11 +224,11 @@ export default function TestDropdownsPage() {
                           </Button>
                         }
                       >
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuItem>View</DropdownMenuItem>
-                        <DropdownMenuItem>Edit</DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem variant="destructive">Delete</DropdownMenuItem>
+                        <DropdownMenuClientLabel>Actions</DropdownMenuClientLabel>
+                        <DropdownMenuClientItem>View</DropdownMenuClientItem>
+                        <DropdownMenuClientItem>Edit</DropdownMenuClientItem>
+                        <DropdownMenuClientSeparator />
+                        <DropdownMenuClientItem variant="destructive">Delete</DropdownMenuClientItem>
                       </DropdownMenuClient>
                     </td>
                   </tr>
@@ -277,8 +282,8 @@ export default function TestDropdownsPage() {
           <div className="flex gap-4">
             {[1, 2, 3, 4].map((i) => (
               <DropdownMenuClient key={i} trigger={<Button variant="outline">Dropdown {i}</Button>}>
-                <DropdownMenuItem>Action A from {i}</DropdownMenuItem>
-                <DropdownMenuItem>Action B from {i}</DropdownMenuItem>
+                <DropdownMenuClientItem>Action A from {i}</DropdownMenuClientItem>
+                <DropdownMenuClientItem>Action B from {i}</DropdownMenuClientItem>
               </DropdownMenuClient>
             ))}
           </div>
