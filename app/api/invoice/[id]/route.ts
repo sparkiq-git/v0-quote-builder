@@ -122,6 +122,35 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
       console.warn("⚠️ Error fetching invoice details:", detailError)
     }
 
+    // Debug logging: Verify invoice data structure
+    console.log("📊 Invoice Data Audit:", {
+      invoiceId: invoiceData.id,
+      invoiceAmount: invoiceData.amount,
+      invoiceSubtotal: invoiceData.subtotal,
+      invoiceTaxTotal: invoiceData.tax_total,
+      detailItemsCount: detailItems?.length || 0,
+      detailItems: detailItems?.map(item => ({
+        seq: item.seq,
+        label: item.label,
+        type: item.type,
+        amount: item.amount,
+        taxable: item.taxable,
+        tax_amount: item.tax_amount,
+      })),
+      calculatedSubtotal: detailItems?.filter(item => 
+        item.type !== "tax" && 
+        item.type !== "fee" && 
+        !item.label?.toLowerCase().includes("tax") && 
+        !item.label?.toLowerCase().includes("fee")
+      ).reduce((sum, item) => sum + (Number(item.amount) || 0), 0) || 0,
+      calculatedTaxTotal: detailItems?.filter(item => 
+        item.type === "tax" || 
+        item.type === "fee" || 
+        item.label?.toLowerCase().includes("tax") || 
+        item.label?.toLowerCase().includes("fee")
+      ).reduce((sum, item) => sum + (Number(item.amount) || 0), 0) || 0,
+    })
+
     // Combine invoice and related data
     const invoice = {
       ...invoiceData,

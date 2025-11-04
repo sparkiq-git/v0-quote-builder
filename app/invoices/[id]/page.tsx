@@ -167,12 +167,17 @@ export default function InvoiceDetailPage() {
 
   // Calculate totals from invoice details (to verify against invoice.amount, subtotal, tax_total)
   // This ensures taxes are correctly separated from regular line items
+  // IMPORTANT: We use invoice_detail records as the source of truth, not quote data
   const calculatedTotals = (() => {
+    // If no invoice_detail records exist, fall back to database values
+    // This shouldn't happen if the edge function created the invoice correctly
     if (!invoice.details || invoice.details.length === 0) {
+      console.warn("⚠️ No invoice_detail records found - using database values as fallback")
       return {
         subtotal: invoice.subtotal || 0,
         taxTotal: invoice.tax_total || 0,
         grandTotal: invoice.amount || 0,
+        source: "database" as const,
       }
     }
 
@@ -207,7 +212,7 @@ export default function InvoiceDetailPage() {
 
     // Debug logging (can be removed in production)
     if (process.env.NODE_ENV === "development") {
-      console.log("📊 Invoice Totals Calculation:", {
+      console.log("📊 Invoice Totals Calculation (from invoice_detail):", {
         regularItems: regularItems.length,
         taxItems: taxItems.length,
         calculatedSubtotal,
@@ -217,6 +222,13 @@ export default function InvoiceDetailPage() {
         dbTaxTotal: invoice.tax_total,
         dbAmount: invoice.amount,
         taxItemLabels: taxItems.map((t) => ({ label: t.label, amount: t.amount, type: t.type })),
+        regularItemLabels: regularItems.map((r) => ({ label: r.label, amount: r.amount, type: r.type })),
+        // Show if there's a mismatch
+        mismatch: {
+          subtotal: Math.abs(calculatedSubtotal - (invoice.subtotal || 0)) > 0.01,
+          taxTotal: Math.abs(calculatedTaxTotal - (invoice.tax_total || 0)) > 0.01,
+          grandTotal: Math.abs(calculatedGrandTotal - (invoice.amount || 0)) > 0.01,
+        }
       })
     }
 
@@ -224,6 +236,7 @@ export default function InvoiceDetailPage() {
       subtotal: calculatedSubtotal,
       taxTotal: calculatedTaxTotal,
       grandTotal: calculatedGrandTotal,
+      source: "invoice_detail" as const,
     }
   })()
 
@@ -319,11 +332,33 @@ export default function InvoiceDetailPage() {
 
                   <Separator />
 
+                  {/* Warning if there's a mismatch between database and calculated values */}
+                  {calculatedTotals.source === "invoice_detail" && (
+                    Math.abs(calculatedTotals.grandTotal - (invoice.amount || 0)) > 0.01 ||
+                    Math.abs(calculatedTotals.subtotal - (invoice.subtotal || 0)) > 0.01 ||
+                    Math.abs(calculatedTotals.taxTotal - (invoice.tax_total || 0)) > 0.01
+                  ) && (
+                    <div className="rounded-lg border border-amber-500/50 bg-amber-50/50 dark:bg-amber-950/20 p-3 text-sm">
+                      <p className="text-amber-800 dark:text-amber-200 font-medium">
+                        ⚠️ Data Mismatch Detected
+                      </p>
+                      <p className="text-amber-700 dark:text-amber-300 mt-1 text-xs">
+                        Calculated totals from invoice_detail records don't match database values.
+                        Showing calculated values. Check edge function logs.
+                      </p>
+                    </div>
+                  )}
+
                   <div className="space-y-3 bg-muted/30 p-4 sm:p-6 rounded-lg">
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Subtotal</span>
                       <span className="font-medium">
                         {formatAmountWithCurrency(calculatedTotals.subtotal, invoice.currency)}
+                        {calculatedTotals.source === "invoice_detail" && Math.abs(calculatedTotals.subtotal - (invoice.subtotal || 0)) > 0.01 && (
+                          <span className="text-xs text-muted-foreground ml-2">
+                            (DB: {formatAmountWithCurrency(invoice.subtotal || 0, invoice.currency)})
+                          </span>
+                        )}
                       </span>
                     </div>
                     {/* Show individual tax line items if they exist */}
