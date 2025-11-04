@@ -66,10 +66,23 @@ serve(async (req) => {
 
     if (!quote) throw new Error("Quote not found");
 
-    const selectedOption =
-      options?.find((o) => o.is_selected) || options?.[0];
-    if (!selectedOption)
-      throw new Error("No selected aircraft option found");
+    // Find the selected option using quote.selected_option_id (not is_selected flag)
+    // According to schema: quote.selected_option_id references quote_option.id
+    console.log(`🔍 Finding selected option: quote.selected_option_id=${quote.selected_option_id}`);
+    console.log(`📋 Available options: ${options?.length || 0} options`, options?.map(o => ({ id: o.id, label: o.label })));
+    
+    const selectedOption = quote.selected_option_id
+      ? options?.find((o) => o.id === quote.selected_option_id)
+      : null;
+    
+    if (!selectedOption) {
+      const availableIds = options?.map(o => o.id).join(", ") || "none";
+      throw new Error(
+        `No selected aircraft option found. Quote has selected_option_id=${quote.selected_option_id}, but matching option not found in ${options?.length || 0} available options (IDs: ${availableIds}).`
+      );
+    }
+    
+    console.log(`✅ Selected option found: id=${selectedOption.id}, label=${selectedOption.label}, aircraft_id=${selectedOption.aircraft_id}`);
 
     // 🔎 Fetch tail_number if available
     let tailNumber = null;
@@ -109,11 +122,14 @@ serve(async (req) => {
     }
 
     // 3️⃣ Compute subtotal (without taxes)
+    // quote_option has: cost_operator, price_commission
     const aircraftSubtotal =
       Number(selectedOption.cost_operator ?? 0) +
       Number(selectedOption.price_commission ?? 0);
+    // quote_item has: unit_price, qty, line_total (generated as qty * unit_price)
+    // Note: quote_item doesn't have an 'amount' field, only unit_price
     const servicesSubtotal = (items || []).reduce(
-      (sum, i) => sum + Number(i.amount ?? i.unit_price ?? 0) * (i.qty ?? 1),
+      (sum, i) => sum + Number(i.unit_price ?? 0) * Number(i.qty ?? 1),
       0,
     );
     const subtotal = aircraftSubtotal + servicesSubtotal;
@@ -133,12 +149,12 @@ serve(async (req) => {
       .join(" | ");
 
     // 🛩 Aircraft label fallback
+    // quote_option has: label, aircraft_id (and other price fields)
+    // Use label from quote_option as primary fallback, then tail_number from aircraft table
     const aircraftLabel =
+      selectedOption.label?.trim() ||
       tailNumber ||
-      selectedOption.aircraft_name ||
-      selectedOption.aircraft_model ||
-      selectedOption.aircraft_id ||
-      "Aircraft Option";
+      `Aircraft ${selectedOption.aircraft_id || "Option"}`;
 
     // 6️⃣ Insert invoice
     const { data: invoice, error: invErr } = await supabase
@@ -164,8 +180,8 @@ serve(async (req) => {
               amount: aircraftSubtotal,
             },
             services: (items || []).map((i) => ({
-              label: i.label || i.name || "Service",
-              amount: i.amount ?? i.unit_price ?? 0,
+              label: i.name || i.description?.substring(0, 30) || "Service",
+              amount: Number(i.unit_price ?? 0) * Number(i.qty ?? 1),
             })),
             taxes: taxesArray.map((t) => ({
               id: t.id,
@@ -194,7 +210,7 @@ serve(async (req) => {
       description: summary || null,
       qty: 1,
       unit_price: aircraftSubtotal,
-      amount: aircraftSubtotal, // amount = qty * unit_price (handled by DB or computed here)
+      // amount is a generated column (qty * unit_price) - don't include it
       type: "aircraft",
       taxable: false, // Taxes are separate line items, not calculated here
       tax_rate: 0,
@@ -202,12 +218,11 @@ serve(async (req) => {
     });
 
     // Service lines (NO tax calculation - taxes are separate line items)
+    // quote_item has: name, description, unit_price, qty (no 'amount' or 'label' field)
     for (const s of items || []) {
-      const unitPrice = Number(s.amount ?? s.unit_price ?? 0);
-      const qty = s.qty ?? 1;
-      const lineTotal = unitPrice * qty;
+      const unitPrice = Number(s.unit_price ?? 0);
+      const qty = Number(s.qty ?? 1);
       const label =
-        s.label?.trim() ||
         s.name?.trim() ||
         s.description?.substring(0, 30) ||
         "Service";
@@ -219,7 +234,7 @@ serve(async (req) => {
         description: s.description || null,
         qty: qty,
         unit_price: unitPrice,
-        amount: lineTotal,
+        // amount is a generated column (qty * unit_price) - don't include it
         type: "service",
         taxable: false, // Taxes are separate line items, not calculated here
         tax_rate: 0,
@@ -237,7 +252,7 @@ serve(async (req) => {
           description: null,
           qty: 1,
           unit_price: Number(tax.amount),
-          amount: Number(tax.amount),
+          // amount is a generated column (qty * unit_price) - don't include it
           type: "tax",
           taxable: false,
           tax_rate: 0,

@@ -15,6 +15,14 @@ function toDateTime(date?: string | null, time?: string | null): string | null {
   }
 }
 
+function isUUID(v?: string | null): boolean {
+  return !!(
+    v &&
+    typeof v === "string" &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v)
+  )
+}
+
 function haversineDistanceNM(lat1: number, lon1: number, lat2: number, lon2: number): number | null {
   const toRad = (deg: number) => (deg * Math.PI) / 180
   if ([lat1, lon1, lat2, lon2].some((v) => v == null || isNaN(Number(v)))) return null
@@ -663,7 +671,7 @@ if (services && Array.isArray(services)) {
   }
 
   const validServices = services.map((s) => ({
-    id: s.id || crypto.randomUUID(),
+    id: isUUID(s.id) ? s.id : crypto.randomUUID(),
     quote_id: id, // ✅ always the URL id
     item_id: s.item_id || null,
     name: s.item_id ? itemMap[s.item_id] || "Unnamed item" : s.description || "Custom item",
@@ -689,16 +697,33 @@ if (services && Array.isArray(services)) {
 
   /* 🧹 Step 2: Delete cleanup — including full wipe when no services left */
   if (validServices.length > 0) {
-    const existingIds = validServices.map((s) => s.id).filter(Boolean)
-    const idList = `(${existingIds.join(",")})`
-    const { error: deleteError } = await supabase
+    // Only keep valid UUIDs for the deletion query
+    const idsToKeep = validServices.map((s) => s.id).filter((id) => isUUID(id))
+    
+    // Fetch all existing items for this quote
+    const { data: allItems, error: fetchError } = await supabase
       .from("quote_item")
-      .delete()
+      .select("id")
       .eq("quote_id", id)
-      .not("id", "in", idList)
 
-    if (deleteError)
-      return NextResponse.json({ error: deleteError.message }, { status: 500 })
+    if (fetchError) {
+      console.warn("⚠️ Error fetching quote items for cleanup:", fetchError)
+    } else {
+      // Find items to delete (items that exist but aren't in the keep list)
+      const idsToDelete = (allItems || [])
+        .map((item) => item.id)
+        .filter((id) => !idsToKeep.includes(id))
+
+      if (idsToDelete.length > 0) {
+        const { error: deleteError } = await supabase
+          .from("quote_item")
+          .delete()
+          .in("id", idsToDelete)
+
+        if (deleteError)
+          return NextResponse.json({ error: deleteError.message }, { status: 500 })
+      }
+    }
   } else {
     // 🧽 Delete all if none remain in UI
     const { error: deleteAllError } = await supabase

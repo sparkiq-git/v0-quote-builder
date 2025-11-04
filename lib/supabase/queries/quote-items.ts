@@ -3,16 +3,28 @@
 import { supabase } from "@/lib/supabase/client"
 
 /* =========================================================
+   Helper: Check if a string is a valid UUID
+========================================================= */
+function isUUID(v?: string | null): boolean {
+  return !!(
+    v &&
+    typeof v === "string" &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v)
+  )
+}
+
+/* =========================================================
    QUOTE ITEMS (services)
 ========================================================= */
 export async function upsertQuoteItems(quoteId: string, services: any[]) {
   if (!quoteId) throw new Error("Missing quoteId")
 
   // 🔁 Normalize & prepare data (accept either "amount" or "unit_price")
+  // ✅ Validate UUID: only use s.id if it's a valid UUID, otherwise generate a new one
   const validItems = (services || [])
     .filter((s) => s.name || s.description)
     .map((s) => ({
-      id: s.id || crypto.randomUUID(),
+      id: isUUID(s.id) ? s.id : crypto.randomUUID(),
       quote_id: quoteId,
       item_id: s.item_id ?? null,
       name: s.name ?? "",
@@ -38,17 +50,33 @@ export async function upsertQuoteItems(quoteId: string, services: any[]) {
   }
 
   // ✅ Step 2: Clean up deleted items safely
-  const idsToKeep = validItems.map((i) => i.id).filter(Boolean)
+  // Only keep valid UUIDs for the deletion query
+  const idsToKeep = validItems.map((i) => i.id).filter((id) => isUUID(id))
 
   if (Array.isArray(idsToKeep) && idsToKeep.length > 0) {
-    const { error: deleteError } = await supabase
+    // Use .in() with negation - get all items for this quote, then filter out the ones to keep
+    const { data: allItems, error: fetchError } = await supabase
       .from("quote_item")
-      .delete()
+      .select("id")
       .eq("quote_id", quoteId)
-      .not("id", "in", `(${idsToKeep.map((id) => `'${id}'`).join(",")})`)
 
-    if (deleteError) {
-      console.warn("⚠️ Error cleaning up old quote items:", deleteError)
+    if (fetchError) {
+      console.warn("⚠️ Error fetching quote items for cleanup:", fetchError)
+    } else {
+      const idsToDelete = (allItems || [])
+        .map((item) => item.id)
+        .filter((id) => !idsToKeep.includes(id))
+
+      if (idsToDelete.length > 0) {
+        const { error: deleteError } = await supabase
+          .from("quote_item")
+          .delete()
+          .in("id", idsToDelete)
+
+        if (deleteError) {
+          console.warn("⚠️ Error cleaning up old quote items:", deleteError)
+        }
+      }
     }
   } else {
     const { error: deleteAllError } = await supabase
