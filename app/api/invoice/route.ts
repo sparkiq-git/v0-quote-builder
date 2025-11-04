@@ -108,6 +108,24 @@ export async function POST(req: Request) {
       }, { status: 500 })
     }
 
+    // Update quote status to "invoiced"
+    try {
+      const { error: quoteUpdateError } = await supabase
+        .from("quote")
+        .update({ status: "invoiced" })
+        .eq("id", quote_id)
+
+      if (quoteUpdateError) {
+        console.warn("⚠️ Failed to update quote status to 'invoiced':", quoteUpdateError)
+        // Don't fail the invoice creation if quote status update fails
+      } else {
+        console.log(`✅ Quote ${quote_id} status updated to 'invoiced'`)
+      }
+    } catch (quoteUpdateErr: any) {
+      console.warn("⚠️ Error updating quote status:", quoteUpdateErr)
+      // Don't fail the invoice creation if quote status update fails
+    }
+
     // Send invoice email if requested (either legacy flag or new flags)
     const shouldSendEmail = send_email || send_to_customer || send_to_tenant
     if (shouldSendEmail && data.invoice?.id) {
