@@ -87,15 +87,5 @@
     "postcss": "^8.5",
     "tailwindcss": "^4.1.9",
     "typescript": "^5"
-  },
-  "pnpm": {
-    "overrides": {
-      "@floating-ui/core": "^1.6.0",
-      "@floating-ui/dom": "^1.6.0",
-      "@floating-ui/react": "^0.26.0",
-      "@floating-ui/react-dom": "^2.0.0",
-      "@floating-ui/utils": "^0.2.0",
-      "@radix-ui/react-popper": "^1.2.0"
-    }
   }
 }
