@@ -13,46 +13,42 @@ import { cn } from "@/lib/utils"
  * - Mantener z-index y pointer-events del panel, pero NO sobreescribir transform/translate (lo maneja Radix).
  */
 
-function forceLayout(element?: HTMLElement | null) {
-  // Forzar un layout síncrono leyendo getBoundingClientRect
-  if (element) {
-    element.getBoundingClientRect()
-  }
-  // También forzar en el documento
-  document.body.getBoundingClientRect()
-  // Disparar resize después de 2 RAFs
-  requestAnimationFrame(() =>
-    requestAnimationFrame(() => {
-      window.dispatchEvent(new Event("resize"))
-    }),
-  )
-}
+const DropdownMenuContext = React.createContext<{ triggerRef: React.MutableRefObject<HTMLElement | null> }>({
+  triggerRef: { current: null },
+})
 
-/* Root con reflow mejorado */
-function DropdownMenuRoot({
-  onOpenChange,
-  modal = false,
-  ...props
-}: React.ComponentProps<typeof DropdownMenuPrimitive.Root>) {
+function DropdownMenuRoot({ children, ...props }: React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Root>) {
+  const [open, setOpen] = React.useState(false)
   const triggerRef = React.useRef<HTMLElement | null>(null)
 
+  const handleOpenChange = React.useCallback((newOpen: boolean) => {
+    setOpen(newOpen)
+
+    if (newOpen) {
+      requestAnimationFrame(() => {
+        window.dispatchEvent(new Event("resize"))
+      })
+    }
+  }, [])
+
   return (
-    <DropdownMenuPrimitive.Root
-      data-slot="dropdown-menu"
-      modal={modal}
-      onOpenChange={(open) => {
-        if (open) {
-          forceLayout(triggerRef.current)
-        }
-        onOpenChange?.(open)
-      }}
-      {...props}
-    />
+    <DropdownMenuPrimitive.Root open={open} onOpenChange={handleOpenChange} modal={false} {...props}>
+      <DropdownMenuContext.Provider value={{ triggerRef }}>{children}</DropdownMenuContext.Provider>
+    </DropdownMenuPrimitive.Root>
   )
 }
 
-function DropdownMenuTrigger({ ...props }: React.ComponentProps<typeof DropdownMenuPrimitive.Trigger>) {
-  return <DropdownMenuPrimitive.Trigger data-slot="dropdown-menu-trigger" {...props} />
+function DropdownMenuTrigger({ ...props }: React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Trigger>) {
+  const { triggerRef } = React.useContext(DropdownMenuContext)
+
+  const combinedRef = React.useCallback(
+    (node: HTMLElement | null) => {
+      triggerRef.current = node
+    },
+    [triggerRef],
+  )
+
+  return <DropdownMenuPrimitive.Trigger ref={combinedRef} data-slot="dropdown-menu-trigger" {...props} />
 }
 
 function DropdownMenuContent({

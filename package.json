@@ -11,7 +11,7 @@
   "dependencies": {
     "@emotion/react": "latest",
     "@emotion/styled": "latest",
-    "@headlessui/react": "latest",
+    "@headlessui/react": "2.2.9",
     "@hookform/resolvers": "latest",
     "@mui/material": "latest",
     "@mui/material-pigment-css": "latest",
