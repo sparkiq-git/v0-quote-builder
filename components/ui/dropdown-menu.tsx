@@ -22,8 +22,11 @@ function DropdownMenuRoot({ children, ...props }: React.ComponentPropsWithoutRef
   const triggerRef = React.useRef<HTMLElement | null>(null)
 
   const handleOpenChange = React.useCallback((newOpen: boolean) => {
+    console.log("[v0] Dropdown open change:", newOpen)
+
     if (newOpen && triggerRef.current) {
-      triggerRef.current.getBoundingClientRect()
+      const rect = triggerRef.current.getBoundingClientRect()
+      console.log("[v0] Trigger rect:", rect)
       // Force a reflow
       void triggerRef.current.offsetHeight
     }
@@ -50,6 +53,9 @@ function DropdownMenuTrigger({ ...props }: React.ComponentPropsWithoutRef<typeof
   const combinedRef = React.useCallback(
     (node: HTMLElement | null) => {
       triggerRef.current = node
+      if (node) {
+        console.log("[v0] Trigger mounted:", node)
+      }
     },
     [triggerRef],
   )
@@ -66,25 +72,69 @@ function DropdownMenuContent({
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Content>) {
   const [mounted, setMounted] = React.useState(false)
   const contentRef = React.useRef<HTMLDivElement>(null)
+  const { triggerRef } = React.useContext(DropdownMenuContext)
 
   React.useEffect(() => {
     setMounted(true)
+    console.log("[v0] Content mounted")
   }, [])
 
   React.useLayoutEffect(() => {
-    if (contentRef.current && mounted) {
-      // Force a synchronous layout by reading getBoundingClientRect
-      contentRef.current.getBoundingClientRect()
-      // Dispatch resize to trigger Floating UI recalculation
-      window.dispatchEvent(new Event("resize"))
+    if (!contentRef.current || !mounted) return
 
-      setTimeout(() => {
-        window.dispatchEvent(new Event("resize"))
-      }, 10)
+    const contentElement = contentRef.current
+    const computedStyle = window.getComputedStyle(contentElement)
+
+    console.log("[v0] === DROPDOWN DEBUG ===")
+    console.log("[v0] Content element:", contentElement)
+    console.log("[v0] Visible:", !!(contentElement.offsetWidth || contentElement.offsetHeight))
+    console.log("[v0] Display:", computedStyle.display)
+    console.log("[v0] Opacity:", computedStyle.opacity)
+    console.log("[v0] Z-Index:", computedStyle.zIndex)
+    console.log("[v0] Position:", computedStyle.position)
+    console.log("[v0] Transform:", computedStyle.transform)
+
+    const transformOrigin = computedStyle.getPropertyValue("--radix-popper-transform-origin")
+    console.log("[v0] Radix transform-origin:", transformOrigin)
+
+    if (triggerRef.current) {
+      const triggerRect = triggerRef.current.getBoundingClientRect()
+      console.log("[v0] Trigger rect:", triggerRect)
     }
-  }, [mounted])
+
+    const contentRect = contentElement.getBoundingClientRect()
+    console.log("[v0] Content rect:", contentRect)
+
+    // Check if Radix positioning failed
+    if (!transformOrigin || transformOrigin.trim() === "") {
+      console.warn("[v0] ❌ Radix positioning FAILED - transform-origin is empty")
+
+      if (triggerRef.current) {
+        const triggerRect = triggerRef.current.getBoundingClientRect()
+        const top = triggerRect.bottom + sideOffset
+        const left = triggerRect.right - contentRect.width
+
+        console.log("[v0] Applying manual position:", { top, left })
+
+        // Apply manual positioning with inline styles
+        contentElement.style.position = "fixed"
+        contentElement.style.top = `${top}px`
+        contentElement.style.left = `${left}px`
+        contentElement.style.transform = "none"
+        contentElement.style.opacity = "1"
+        contentElement.style.pointerEvents = "auto"
+      }
+    } else {
+      console.log("[v0] ✅ Radix positioning working")
+    }
+
+    // Force reflow
+    contentElement.getBoundingClientRect()
+    window.dispatchEvent(new Event("resize"))
+  }, [mounted, side, align, sideOffset, triggerRef])
 
   if (!mounted) {
+    console.log("[v0] Content not mounted yet")
     return null
   }
 
@@ -99,7 +149,7 @@ function DropdownMenuContent({
         collisionPadding={8}
         avoidCollisions={true}
         sticky="always"
-        {...(props as any)}
+        {...props}
         className={cn(
           "bg-popover text-popover-foreground pointer-events-auto",
           "data-[state=open]:animate-in data-[state=closed]:animate-out",
@@ -114,6 +164,11 @@ function DropdownMenuContent({
           "overflow-x-hidden overflow-y-auto rounded-md border p-1 shadow-md",
           className,
         )}
+        style={{
+          opacity: 1,
+          pointerEvents: "auto",
+          ...props.style,
+        }}
       />
     </DropdownMenuPrimitive.Portal>
   )

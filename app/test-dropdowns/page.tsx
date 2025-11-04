@@ -16,6 +16,34 @@ import { MoreHorizontal } from "lucide-react"
 export default function TestDropdownsPage() {
   const [count, setCount] = useState(0)
 
+  const runDebugScript = () => {
+    console.log("=== DEBUG MENU ===")
+    const menus = document.querySelectorAll('[data-slot="dropdown-menu-content"]')
+    console.log("Dropdown menus encontrados:", menus.length)
+
+    if (menus.length === 0) {
+      console.warn("❌ No se encontró ningún dropdown en el DOM.")
+      console.log("👉 Probablemente un problema de SSR o Portal no renderizado.")
+    } else {
+      menus.forEach((menu, i) => {
+        console.group(`Dropdown #${i + 1}`)
+        const element = menu as HTMLElement
+        console.log("Visible:", !!(element.offsetWidth || element.offsetHeight))
+        console.log("Display:", getComputedStyle(element).display)
+        console.log("Opacity:", getComputedStyle(element).opacity)
+        console.log("Z-Index:", getComputedStyle(element).zIndex)
+        console.log("Position:", getComputedStyle(element).position)
+        console.log("Transform:", getComputedStyle(element).transform)
+        console.log("Overflow padre:", element.parentElement?.style.overflow || "(none)")
+        console.groupEnd()
+      })
+
+      console.log("💡 Si 'Visible:false' pero existe en el DOM → problema de estilos")
+      console.log("💡 Si 'Display:none' u 'Opacity:0' → clases de animación purgadas")
+      console.log("💡 Si está visible pero se corta → contenedor con overflow:hidden")
+    }
+  }
+
   return (
     <div className="min-h-screen p-12 bg-gray-50">
       <div className="max-w-4xl mx-auto space-y-12">
@@ -24,6 +52,9 @@ export default function TestDropdownsPage() {
           <p className="text-gray-600">
             Testing production-safe Radix dropdown with controlled open state and forced layout calculations.
           </p>
+          <Button onClick={runDebugScript} variant="outline" className="mt-4 bg-transparent">
+            Run Debug Script (Check Console)
+          </Button>
         </div>
 
         {/* Test 1 */}
