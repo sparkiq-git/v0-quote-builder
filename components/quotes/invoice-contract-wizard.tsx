@@ -328,6 +328,11 @@ function InvoiceSummaryStep({
   const [newServiceQty, setNewServiceQty] = useState(1)
   const [newServicePrice, setNewServicePrice] = useState(0)
   const [newServiceItemId, setNewServiceItemId] = useState<string | null>(null)
+  
+  // Federal Excise Tax state
+  const FEDERAL_EXCISE_TAX_ID = "federal-excise-tax-7.5"
+  const FEDERAL_EXCISE_TAX_RATE = 0.075 // 7.5%
+  const hasFederalExciseTax = safeTaxes.some(tax => tax.id === FEDERAL_EXCISE_TAX_ID)
 
   if (!selectedQuote || !fullQuoteData) {
     return (
@@ -361,8 +366,36 @@ function InvoiceSummaryStep({
 
   const subtotal = subtotalAircraft + subtotalServices
 
+  // Calculate Federal Excise Tax amount (7.5% of aircraft total only)
+  const federalExciseTaxAmount = subtotalAircraft * FEDERAL_EXCISE_TAX_RATE
+
+  // Sync Federal Excise Tax with taxes array when aircraft total changes (if enabled)
+  useEffect(() => {
+    if (!hasFederalExciseTax || subtotalAircraft <= 0) return
+    
+    const otherTaxes = safeTaxes.filter(tax => tax.id !== FEDERAL_EXCISE_TAX_ID)
+    const existingFederalTax = safeTaxes.find(tax => tax.id === FEDERAL_EXCISE_TAX_ID)
+    
+    // Only update if amount changed
+    if (!existingFederalTax || Math.abs(existingFederalTax.amount - federalExciseTaxAmount) > 0.01) {
+      const federalTax = {
+        id: FEDERAL_EXCISE_TAX_ID,
+        name: `Federal Excise Tax (7.5%)`,
+        amount: federalExciseTaxAmount,
+      }
+      onTaxesChange([federalTax, ...otherTaxes])
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subtotalAircraft, federalExciseTaxAmount])
+
   // Calculate total tax amount
-  const taxTotal = safeTaxes.reduce((sum, tax) => sum + (tax.amount || 0), 0)
+  const taxTotal = safeTaxes.reduce((sum, tax) => {
+    // Use calculated amount for Federal Excise Tax if it exists
+    if (tax.id === FEDERAL_EXCISE_TAX_ID) {
+      return sum + federalExciseTaxAmount
+    }
+    return sum + (tax.amount || 0)
+  }, 0)
 
   const grandTotal = subtotal + taxTotal
 
@@ -789,48 +822,98 @@ function InvoiceSummaryStep({
                 </div>
               </div>
 
-              {safeTaxes.length > 0 && (
-                <div className="space-y-2">
-                  {safeTaxes.map((tax) => (
-                    <div
-                      key={tax.id}
-                      className="flex items-center gap-3 p-2 bg-muted rounded-lg border border-border"
-                    >
-                      <Input
-                        value={tax.name}
-                        onChange={(e) => {
-                          const updated = safeTaxes.map((t) => (t.id === tax.id ? { ...t, name: e.target.value } : t))
-                          onTaxesChange(updated)
-                        }}
-                        placeholder="Tax/Fee Name"
-                        className="flex-1 h-9 text-sm"
-                      />
-                      <Input
-                        type="number"
-                        step="0.01"
-                        value={tax.amount ?? 0}
-                        onChange={(e) => {
-                          const updated = safeTaxes.map((t) =>
-                            t.id === tax.id ? { ...t, amount: parseFloat(e.target.value) || 0 } : t,
-                          )
-                          onTaxesChange(updated)
-                        }}
-                        className="w-32 h-9 text-sm text-right"
-                        placeholder="Amount"
-                      />
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          const updated = safeTaxes.filter((t) => t.id !== tax.id)
-                          onTaxesChange(updated)
-                        }}
-                        className="h-9 w-9 p-0"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+              {/* Federal Excise Tax Quick Toggle */}
+              {selectedOption && subtotalAircraft > 0 && (
+                <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border border-border">
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <Label htmlFor="federal-excise-tax" className="font-medium text-sm text-foreground cursor-pointer">
+                          Federal Excise Tax (7.5%)
+                        </Label>
+                        <span className="text-xs text-muted-foreground">(on aircraft only)</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Automatically calculated at 7.5% of aircraft total: {formatCurrency(subtotalAircraft)}
+                      </p>
+                      {hasFederalExciseTax && (
+                        <p className="text-xs font-medium text-foreground mt-1">
+                          Tax Amount: {formatCurrency(federalExciseTaxAmount)}
+                        </p>
+                      )}
                     </div>
-                  ))}
+                  </div>
+                  <Switch
+                    id="federal-excise-tax"
+                    checked={hasFederalExciseTax}
+                    onCheckedChange={(checked) => {
+                      const otherTaxes = safeTaxes.filter(tax => tax.id !== FEDERAL_EXCISE_TAX_ID)
+                      if (checked && subtotalAircraft > 0) {
+                        const federalTax = {
+                          id: FEDERAL_EXCISE_TAX_ID,
+                          name: `Federal Excise Tax (7.5%)`,
+                          amount: federalExciseTaxAmount,
+                        }
+                        onTaxesChange([federalTax, ...otherTaxes])
+                      } else {
+                        onTaxesChange(otherTaxes)
+                      }
+                    }}
+                  />
+                </div>
+              )}
+
+              {/* Manual Taxes & Fees */}
+              {safeTaxes.filter(tax => tax.id !== FEDERAL_EXCISE_TAX_ID).length > 0 && (
+                <div className="space-y-2">
+                  <Label className="text-xs font-medium text-foreground">Other Taxes & Fees</Label>
+                  {safeTaxes
+                    .filter(tax => tax.id !== FEDERAL_EXCISE_TAX_ID)
+                    .map((tax) => (
+                      <div
+                        key={tax.id}
+                        className="flex items-center gap-3 p-2 bg-muted rounded-lg border border-border"
+                      >
+                        <Input
+                          value={tax.name}
+                          onChange={(e) => {
+                            const federalTax = safeTaxes.find(t => t.id === FEDERAL_EXCISE_TAX_ID)
+                            const otherTaxes = safeTaxes.filter(t => t.id !== FEDERAL_EXCISE_TAX_ID)
+                            const updated = otherTaxes.map((t) => (t.id === tax.id ? { ...t, name: e.target.value } : t))
+                            onTaxesChange(federalTax ? [federalTax, ...updated] : updated)
+                          }}
+                          placeholder="Tax/Fee Name"
+                          className="flex-1 h-9 text-sm"
+                        />
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={tax.amount ?? 0}
+                          onChange={(e) => {
+                            const federalTax = safeTaxes.find(t => t.id === FEDERAL_EXCISE_TAX_ID)
+                            const otherTaxes = safeTaxes.filter(t => t.id !== FEDERAL_EXCISE_TAX_ID)
+                            const updated = otherTaxes.map((t) =>
+                              t.id === tax.id ? { ...t, amount: parseFloat(e.target.value) || 0 } : t,
+                            )
+                            onTaxesChange(federalTax ? [federalTax, ...updated] : updated)
+                          }}
+                          className="w-32 h-9 text-sm text-right"
+                          placeholder="Amount"
+                        />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const federalTax = safeTaxes.find(t => t.id === FEDERAL_EXCISE_TAX_ID)
+                            const updated = safeTaxes.filter((t) => t.id !== tax.id)
+                            onTaxesChange(updated)
+                          }}
+                          className="h-9 w-9 p-0"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
                 </div>
               )}
 
@@ -847,16 +930,42 @@ function InvoiceSummaryStep({
                 }}
                 className="w-full"
               >
-                <Plus className="mr-2 h-4 w-4" /> Add Tax/Fee
+                <Plus className="mr-2 h-4 w-4" /> Add Custom Tax/Fee
               </Button>
 
-              {taxTotal > 0 && (
-                <div className="flex items-center justify-between text-sm pt-2 border-t border-border">
-                  <span className="text-muted-foreground">Total Taxes & Fees:</span>
-                  <span className="font-semibold text-foreground">
-                    {formatCurrency(taxTotal)}
-                  </span>
-                </div>
+              {safeTaxes.length > 0 && (
+                <>
+                  {safeTaxes
+                    .filter(tax => tax.id === FEDERAL_EXCISE_TAX_ID)
+                    .map((tax) => (
+                      <div key={tax.id} className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">
+                          {tax.name} <span className="text-xs">(auto)</span>
+                        </span>
+                        <span className="font-semibold text-foreground">
+                          {formatCurrency(federalExciseTaxAmount)}
+                        </span>
+                      </div>
+                    ))}
+                  {safeTaxes
+                    .filter(tax => tax.id !== FEDERAL_EXCISE_TAX_ID)
+                    .map((tax) => (
+                      <div key={tax.id} className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">{tax.name}</span>
+                        <span className="font-semibold text-foreground">
+                          {formatCurrency(tax.amount || 0)}
+                        </span>
+                      </div>
+                    ))}
+                  {taxTotal > 0 && (
+                    <div className="flex items-center justify-between text-sm pt-2 border-t border-border">
+                      <span className="text-muted-foreground font-medium">Total Taxes & Fees:</span>
+                      <span className="font-semibold text-foreground">
+                        {formatCurrency(taxTotal)}
+                      </span>
+                    </div>
+                  )}
+                </>
               )}
             </div>
 
