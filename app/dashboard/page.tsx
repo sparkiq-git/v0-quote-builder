@@ -267,7 +267,7 @@ export default function DashboardPage() {
         {/* Chart Area (3/5 width) */}
         <Card className="border border-border shadow-sm rounded-xl bg-card hover:shadow-md transition-shadow lg:col-span-3 h-[400px]">
           <CardHeader className="pb-2 pt-4 px-5">
-            <CardTitle className="text-base font-semibold text-foreground">
+            <CardTitle className="mt-2 text-base font-semibold text-foreground">
               Cost & Commission
             </CardTitle>
           </CardHeader>
