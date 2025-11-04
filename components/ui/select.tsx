@@ -80,14 +80,18 @@ function SelectContent({
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Content>) {
   React.useEffect(() => {
-    const timer = setTimeout(() => {
-      window.dispatchEvent(new Event("resize"))
-    }, 0)
-    return () => clearTimeout(timer)
+    const timers = [
+      setTimeout(() => window.dispatchEvent(new Event("resize")), 0),
+      setTimeout(() => window.dispatchEvent(new Event("resize")), 10),
+      setTimeout(() => window.dispatchEvent(new Event("resize")), 50),
+    ]
+    return () => timers.forEach(clearTimeout)
   }, [])
 
+  const portalContainer = typeof document !== "undefined" ? document.getElementById("portal-root") : undefined
+
   return (
-    <SelectPrimitive.Portal>
+    <SelectPrimitive.Portal container={portalContainer}>
       <SelectPrimitive.Content
         data-slot="select-content"
         side={side}
@@ -95,6 +99,7 @@ function SelectContent({
         sideOffset={sideOffset}
         avoidCollisions={avoidCollisions}
         collisionPadding={collisionPadding}
+        {...({ strategy: "fixed" } as any)}
         className={cn(
           "bg-popover text-popover-foreground pointer-events-auto data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 relative z-[10000] max-h-[var(--radix-select-content-available-height)] min-w-[8rem] origin-[var(--radix-select-content-transform-origin)] overflow-x-hidden overflow-y-auto rounded-md border shadow-md",
           position === "popper" &&

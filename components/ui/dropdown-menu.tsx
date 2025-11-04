@@ -51,10 +51,6 @@ function DropdownMenuRoot({
   )
 }
 
-function DropdownMenuPortal({ ...props }: React.ComponentProps<typeof DropdownMenuPrimitive.Portal>) {
-  return <DropdownMenuPrimitive.Portal data-slot="dropdown-menu-portal" {...props} />
-}
-
 function DropdownMenuTrigger({ ...props }: React.ComponentProps<typeof DropdownMenuPrimitive.Trigger>) {
   return <DropdownMenuPrimitive.Trigger data-slot="dropdown-menu-trigger" {...props} />
 }
@@ -79,8 +75,10 @@ function DropdownMenuContent({
     return () => timers.forEach(clearTimeout)
   }, [])
 
+  const portalContainer = typeof document !== "undefined" ? document.getElementById("portal-root") : undefined
+
   return (
-    <DropdownMenuPrimitive.Portal>
+    <DropdownMenuPrimitive.Portal container={portalContainer}>
       <DropdownMenuPrimitive.Content
         data-slot="dropdown-menu-content"
         side={side}
@@ -303,7 +301,6 @@ function DropdownMenuSubContent({
 
 export {
   DropdownMenuRoot as DropdownMenu, // exportamos nuestro Root con fixes
-  DropdownMenuPortal,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuGroup,

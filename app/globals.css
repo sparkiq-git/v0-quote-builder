@@ -149,11 +149,11 @@
 }
 
 /* Enhanced Radix portal positioning fixes for production */
+/* Simplified CSS - removed aggressive transform overrides that were breaking Radix positioning */
 [data-radix-popper-content-wrapper] {
   z-index: 2147483647 !important;
   pointer-events: auto !important;
-  /* Let Radix handle positioning - don't override position or transform */
-  /* Radix needs to calculate and apply transforms for positioning */
+  /* Let Radix handle all positioning - don't interfere */
 }
 
 /* Ensure Radix content is interactive */
@@ -179,22 +179,4 @@ body[style*="pointer-events: none"] {
 
 #portal-root > * {
   pointer-events: auto;
-}
-
-/* Remove transform from main container to prevent breaking fixed positioning context */
-/* Fix for any parent with transform that breaks fixed positioning */
-#__next,
-main,
-[data-slot="main-content"] {
-  /* Ensure no parent transforms break fixed positioning of portals */
-  transform: none !important;
-  /* Prevent contain from breaking fixed positioning */
-  contain: none !important;
-}
-
-/* Ensure body and html don't have transforms */
-html,
-body {
-  transform: none !important;
-  contain: none !important;
 }
