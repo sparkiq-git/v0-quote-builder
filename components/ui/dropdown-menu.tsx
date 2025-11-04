@@ -92,6 +92,22 @@ function DropdownMenuContent({
     setContainer(el)
   }, [])
 
+  React.useEffect(() => {
+    const trigger = document.querySelector('[data-slot="dropdown-menu-trigger"][data-state="open"]')
+    const content = contentRef.current
+
+    if (trigger && content) {
+      const rect = trigger.getBoundingClientRect()
+      console.log("[v0] Positioning dropdown below trigger:", rect)
+
+      // Position the dropdown just below the trigger
+      content.style.position = "fixed"
+      content.style.top = `${rect.bottom + 8}px`
+      content.style.left = `${rect.left}px`
+      content.style.zIndex = "99999"
+    }
+  }, [container])
+
   if (!container) return null
 
   return (
