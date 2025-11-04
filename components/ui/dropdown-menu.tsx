@@ -60,37 +60,29 @@ function DropdownMenuContent({
   side = "bottom",
   align = "end",
   sideOffset = 8,
-  avoidCollisions = true,
-  collisionPadding = 8,
-  sticky = "always",
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Content>) {
-  React.useEffect(() => {
-    // Force multiple reflows to ensure Radix calculates position
-    const timers = [
-      setTimeout(() => window.dispatchEvent(new Event("resize")), 0),
-      setTimeout(() => window.dispatchEvent(new Event("resize")), 10),
-      setTimeout(() => window.dispatchEvent(new Event("resize")), 50),
-    ]
-    return () => timers.forEach(clearTimeout)
+  const contentRef = React.useRef<HTMLDivElement>(null)
+
+  React.useLayoutEffect(() => {
+    if (contentRef.current) {
+      // Force a synchronous layout by reading getBoundingClientRect
+      contentRef.current.getBoundingClientRect()
+      // Dispatch resize to trigger Floating UI recalculation
+      window.dispatchEvent(new Event("resize"))
+    }
   }, [])
 
-  const portalContainer = typeof document !== "undefined" ? document.getElementById("portal-root") : undefined
-
   return (
-    <DropdownMenuPrimitive.Portal container={portalContainer}>
+    <DropdownMenuPrimitive.Portal>
       <DropdownMenuPrimitive.Content
+        ref={contentRef}
         data-slot="dropdown-menu-content"
         side={side}
         align={align}
         sideOffset={sideOffset}
-        avoidCollisions={avoidCollisions}
-        collisionPadding={collisionPadding}
-        sticky={sticky as any}
-        {...({ strategy: "fixed" } as any)}
         {...(props as any)}
         className={cn(
-          // estilos shadcn + capa alta y clicks activos
           "bg-popover text-popover-foreground pointer-events-auto",
           "data-[state=open]:animate-in data-[state=closed]:animate-out",
           "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
