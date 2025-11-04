@@ -284,7 +284,7 @@ const handleDeleteLead = async () => {
               {/* Customer Details */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2 mt-2">
+                  <CardTitle className="flex items-center gap-2">
                     <User className="h-5 w-5" />
                     Details
                   </CardTitle>
