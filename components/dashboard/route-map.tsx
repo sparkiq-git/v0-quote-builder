@@ -342,6 +342,8 @@ export function RouteMap() {
           {(["leads", "upcoming"] as FilterType[]).map((filter) => {
             const isActive = activeFilter === filter
             const cnt = filter === "leads" ? leadRoutes.length : upcomingRoutes.length
+            const label =
+              filter === "leads" ? "New Leads" : "Upcoming Trips"
             return (
               <Button
                 key={filter}
@@ -350,7 +352,7 @@ export function RouteMap() {
                 className={`h-8 px-3 text-xs ${isActive ? "shadow-sm" : "hover:bg-slate-300"}`}
                 onClick={() => setActiveFilter(filter)}
               >
-                {filter.charAt(0).toUpperCase() + filter.slice(1)}
+                {label}
                 <Badge
                   variant={isActive ? "secondary" : "outline"}
                   className="ml-2 h-4 px-1 text-[10px]"
