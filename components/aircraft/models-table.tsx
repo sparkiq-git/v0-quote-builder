@@ -3,39 +3,10 @@
 import { useState } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
-import {
-  Search,
-  MoreHorizontal,
-  Edit,
-  Archive,
-  Trash2,
-  ArchiveRestore,
-} from "lucide-react"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { DropdownMenuClient } from "@/components/ui/dropdown-menu-client"
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
+import { Search, MoreHorizontal, Edit } from "lucide-react"
 
 import { useToast } from "@/hooks/use-toast"
 import { useAircraftModels } from "@/hooks/use-aircraft-models"
@@ -78,24 +49,16 @@ export function ModelsTable() {
   return (
     <>
       {/* ✈️ Controlled Edit dialog only */}
-        {imageModelId && (
-          <ModelImageDialog
-            modelId={imageModelId}
-            open={imageDialogOpen}
-            onOpenChange={setImageDialogOpen}
-          />
-        )}
+      {imageModelId && (
+        <ModelImageDialog modelId={imageModelId} open={imageDialogOpen} onOpenChange={setImageDialogOpen} />
+      )}
 
       <div className="space-y-4">
         {/* 🔍 Search */}
         <div className="flex justify-between items-center">
           <div className="flex items-center space-x-2 w-full">
             <Search className="h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search models..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+            <Input placeholder="Search models..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
           </div>
         </div>
 
@@ -104,11 +67,11 @@ export function ModelsTable() {
           <div className="rounded-md border">
             <Table>
               <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Specifications</TableHead>
-                    <TableHead className="w-[70px]">Actions</TableHead>
-                  </TableRow>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Specifications</TableHead>
+                  <TableHead className="w-[70px]">Actions</TableHead>
+                </TableRow>
               </TableHeader>
               <TableBody>
                 {filtered.map((m) => (
@@ -122,14 +85,8 @@ export function ModelsTable() {
                   >
                     <TableCell>
                       <div>
-                        <p className="font-medium">
-                          {m.name}
-                        </p>
-                        {m.manufacturer && (
-                          <p className="text-sm text-muted-foreground">
-                            {m.manufacturer}
-                          </p>
-                        )}
+                        <p className="font-medium">{m.name}</p>
+                        {m.manufacturer && <p className="text-sm text-muted-foreground">{m.manufacturer}</p>}
                       </div>
                     </TableCell>
                     <TableCell className="text-sm space-y-1">
@@ -139,28 +96,23 @@ export function ModelsTable() {
                       {m.mtowKg && <div>MTOW: {m.mtowKg} kg</div>}
                     </TableCell>
                     <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            className="h-8 w-8 p-0"
-                            onClick={(e) => e.stopPropagation()}
-                          >
+                      <DropdownMenuClient
+                        trigger={
+                          <Button variant="ghost" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setImageModelId(m.id)
-                              setImageDialogOpen(true)
-                            }}
-                          >
-                            <Edit className="mr-2 h-4 w-4" /> Add Images
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                        }
+                      >
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setImageModelId(m.id)
+                            setImageDialogOpen(true)
+                          }}
+                        >
+                          <Edit className="mr-2 h-4 w-4" /> Add Images
+                        </DropdownMenuItem>
+                      </DropdownMenuClient>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -170,9 +122,7 @@ export function ModelsTable() {
         ) : (
           <div className="text-center py-10">
             <p className="text-muted-foreground mb-4">No models found.</p>
-            <p className="text-sm text-muted-foreground">
-              No aircraft models match your search criteria.
-            </p>
+            <p className="text-sm text-muted-foreground">No aircraft models match your search criteria.</p>
           </div>
         )}
 

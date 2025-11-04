@@ -10,6 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { DropdownMenuClient } from "@/components/ui/dropdown-menu-client"
 import { ClientOnly } from "@/components/ui/client-only"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { MoreHorizontal } from "lucide-react"
@@ -149,6 +150,28 @@ export default function TestDropdownsPage() {
           )}
         </div>
 
+        {/* Test 0 - Added new test using DropdownMenuClient wrapper */}
+        <div className="bg-green-50 p-8 rounded-lg shadow-sm border-2 border-green-400 space-y-4">
+          <h3 className="text-xl font-semibold text-green-900">Test 0: DropdownMenuClient Wrapper (NEW)</h3>
+          <p className="text-green-800 text-sm">
+            This uses the new DropdownMenuClient wrapper that encapsulates the entire Radix tree in a client component.
+          </p>
+          <DropdownMenuClient
+            trigger={
+              <Button variant="outline">
+                <MoreHorizontal className="mr-2 h-4 w-4" />
+                Client Wrapper Dropdown
+              </Button>
+            }
+          >
+            <DropdownMenuLabel>My Account</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem>Profile</DropdownMenuItem>
+            <DropdownMenuItem>Settings</DropdownMenuItem>
+            <DropdownMenuItem>Logout</DropdownMenuItem>
+          </DropdownMenuClient>
+        </div>
+
         {/* Test 1 - Wrapped in ClientOnly */}
         <div className="bg-white p-8 rounded-lg shadow-sm border space-y-4">
           <h3 className="text-xl font-semibold">Test 1: Basic Dropdown Menu (with ClientOnly)</h3>
@@ -171,9 +194,9 @@ export default function TestDropdownsPage() {
           </ClientOnly>
         </div>
 
-        {/* Test 2 - Wrapped in ClientOnly */}
+        {/* Test 2 - Updated to use DropdownMenuClient */}
         <div className="bg-white p-8 rounded-lg shadow-sm border space-y-4">
-          <h3 className="text-xl font-semibold">Test 2: Dropdown in Table (with ClientOnly)</h3>
+          <h3 className="text-xl font-semibold">Test 2: Dropdown in Table (with DropdownMenuClient)</h3>
           <div className="border rounded-lg overflow-hidden">
             <table className="w-full">
               <thead className="bg-gray-100">
@@ -189,27 +212,19 @@ export default function TestDropdownsPage() {
                     <td className="p-4">Item {i}</td>
                     <td className="p-4">Active</td>
                     <td className="p-4 text-right">
-                      <ClientOnly>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent
-                            side="bottom"
-                            align="end"
-                            sideOffset={8}
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem>View</DropdownMenuItem>
-                            <DropdownMenuItem>Edit</DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem variant="destructive">Delete</DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </ClientOnly>
+                      <DropdownMenuClient
+                        trigger={
+                          <Button variant="ghost" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        }
+                      >
+                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                        <DropdownMenuItem>View</DropdownMenuItem>
+                        <DropdownMenuItem>Edit</DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem variant="destructive">Delete</DropdownMenuItem>
+                      </DropdownMenuClient>
                     </td>
                   </tr>
                 ))}
@@ -256,22 +271,15 @@ export default function TestDropdownsPage() {
           </div>
         </div>
 
-        {/* Test 5 - Wrapped in ClientOnly */}
+        {/* Test 5 - Updated to use DropdownMenuClient */}
         <div className="bg-white p-8 rounded-lg shadow-sm border space-y-4">
-          <h3 className="text-xl font-semibold">Test 5: Multiple Dropdowns (with ClientOnly)</h3>
+          <h3 className="text-xl font-semibold">Test 5: Multiple Dropdowns (with DropdownMenuClient)</h3>
           <div className="flex gap-4">
             {[1, 2, 3, 4].map((i) => (
-              <ClientOnly key={i}>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline">Dropdown {i}</Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent side="bottom" align="start" sideOffset={8}>
-                    <DropdownMenuItem>Action A from {i}</DropdownMenuItem>
-                    <DropdownMenuItem>Action B from {i}</DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </ClientOnly>
+              <DropdownMenuClient key={i} trigger={<Button variant="outline">Dropdown {i}</Button>}>
+                <DropdownMenuItem>Action A from {i}</DropdownMenuItem>
+                <DropdownMenuItem>Action B from {i}</DropdownMenuItem>
+              </DropdownMenuClient>
             ))}
           </div>
         </div>
