@@ -9,18 +9,8 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
-import {
-  Plus,
-  FileText,
-  Eye,
-  Search,
-  Trash2,
-  FileSignature,
-  ArrowUpDown,
-  Filter,
-  MoreHorizontal,
-} from "lucide-react"
-import { formatDate, formatTimeAgo, formatCurrency } from "@/lib/utils/format"
+import { Plus, Eye, Search, Trash2, FileSignature, ArrowUpDown, Filter, MoreHorizontal } from "lucide-react"
+import { formatDate, formatTimeAgo } from "@/lib/utils/format"
 import { useToast } from "@/hooks/use-toast"
 import {
   Dialog,
@@ -39,7 +29,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu-dynamic"
 import { useAppHeader } from "@/components/app-header-context"
 
 export default function QuotesPage() {
@@ -76,7 +66,7 @@ export default function QuotesPage() {
     }
   }, [setContent])
 
-  // ✅ Fetch quotes from Supabase (client-side only)
+  // Fetch quotes from Supabase (client-side only)
   useEffect(() => {
     const fetchQuotes = async () => {
       try {
@@ -196,7 +186,7 @@ export default function QuotesPage() {
     return quote.status === "accepted"
   }, [])
 
-  // ✅ Enhanced filtering with better search experience
+  // Enhanced filtering with better search experience
   const filteredQuotes = useMemo(() => {
     return quotes.filter((quote) => {
       if (statusFilter !== "all" && quote.status !== statusFilter) return false
