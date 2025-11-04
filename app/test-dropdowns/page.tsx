@@ -9,13 +9,9 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu-hui"
+} from "@/components/ui/dropdown-menu-fixed"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { MoreHorizontal } from "lucide-react"
-
-/** Kick a layout recalculation right after open (webfont/SSR first-frame guard). */
-const forceRecalc = () =>
-  requestAnimationFrame(() => requestAnimationFrame(() => window.dispatchEvent(new Event("resize"))))
 
 export default function TestDropdownsPage() {
   const [count, setCount] = useState(0)
@@ -24,9 +20,9 @@ export default function TestDropdownsPage() {
     <div className="min-h-screen p-12 bg-gray-50">
       <div className="max-w-4xl mx-auto space-y-12">
         <div>
-          <h1 className="text-3xl font-bold mb-4">Dropdown Test Page (Headless UI)</h1>
+          <h1 className="text-3xl font-bold mb-4">Dropdown Test Page (Production-Safe Radix)</h1>
           <p className="text-gray-600">
-            Testing Headless UI dropdown implementation. This page uses NO sidebar or layout components.
+            Testing production-safe Radix dropdown with controlled open state and forced layout calculations.
           </p>
         </div>
 
@@ -99,7 +95,7 @@ export default function TestDropdownsPage() {
         {/* Test 3 */}
         <div className="bg-white p-8 rounded-lg shadow-sm border space-y-4">
           <h2 className="text-xl font-semibold">Test 3: Select Component</h2>
-          <Select modal={false}>
+          <Select>
             <SelectTrigger className="w-[200px]">
               <SelectValue placeholder="Select an option" />
             </SelectTrigger>
