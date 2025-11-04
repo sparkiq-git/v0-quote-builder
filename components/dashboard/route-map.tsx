@@ -272,7 +272,7 @@ export function RouteMap() {
     }
   }, [refreshKey])
 
-  // -------- Draw routes and markers --------
+  // -------- Draw routes and minimalist circle markers --------
   useEffect(() => {
     if (!map.current || !mapLoaded) return
 
@@ -293,34 +293,34 @@ export function RouteMap() {
 
         const color = activeFilter === "leads" ? "#2563eb" : "#16a34a"
 
+        // Draw route line
         const routeLine = window.L.polyline([originLatLng, destLatLng], {
           color,
           weight: 1.5,
-          opacity: 0.8,
+          opacity: 0.9,
           dashArray: "3, 2",
         }).addTo(map.current)
 
         routeLayers.current.push(routeLine)
 
-        const makeMarker = (coords: { lat: number; lng: number; name: string }) =>
-          window.L.marker([coords.lat, coords.lng], {
-            icon: window.L.divIcon({
-              html: `
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                  <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="#1f2937" stroke="#ffffff" stroke-width="1.5"/>
-                  <circle cx="12" cy="9" r="2.5" fill="#ffffff"/>
-                </svg>
-              `,
-              className: "bg-transparent",
-              iconSize: [22, 22],
-              iconAnchor: [11, 22],
-            }),
-          }).addTo(map.current)
+        // --- Minimalist start/end circle markers ---
+        const originCircle = window.L.circleMarker(originLatLng, {
+          radius: 4,
+          color,
+          fillColor: color,
+          fillOpacity: 1,
+          weight: 0,
+        }).addTo(map.current)
 
-        airportMarkers.current.push(
-          makeMarker(leg.originCoords),
-          makeMarker(leg.destCoords)
-        )
+        const destCircle = window.L.circleMarker(destLatLng, {
+          radius: 4,
+          color,
+          fillColor: color,
+          fillOpacity: 1,
+          weight: 0,
+        }).addTo(map.current)
+
+        airportMarkers.current.push(originCircle, destCircle)
       })
     })
 
@@ -342,8 +342,7 @@ export function RouteMap() {
           {(["leads", "upcoming"] as FilterType[]).map((filter) => {
             const isActive = activeFilter === filter
             const cnt = filter === "leads" ? leadRoutes.length : upcomingRoutes.length
-            const label =
-              filter === "leads" ? "New Leads" : "Upcoming Trips"
+            const label = filter === "leads" ? "New Leads" : "Upcoming Trips"
             return (
               <Button
                 key={filter}
