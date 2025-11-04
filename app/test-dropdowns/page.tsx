@@ -1,7 +1,7 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,23 +9,24 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { MoreHorizontal } from "lucide-react"
+} from "@/components/ui/select";
+import { MoreHorizontal } from "lucide-react";
 
+/** Kick a layout recalculation right after open (webfont/SSR first-frame guard). */
 const forceRecalc = () =>
   requestAnimationFrame(() =>
     requestAnimationFrame(() => window.dispatchEvent(new Event("resize")))
-  )
+  );
 
 export default function TestDropdownsPage() {
-  const [count, setCount] = useState(0)
+  const [count, setCount] = useState(0);
 
   return (
     <div className="min-h-screen p-12 bg-gray-50">
@@ -37,16 +38,24 @@ export default function TestDropdownsPage() {
           </p>
         </div>
 
+        {/* Test 1 */}
         <div className="bg-white p-8 rounded-lg shadow-sm border space-y-4">
           <h2 className="text-xl font-semibold">Test 1: Basic Dropdown Menu</h2>
-          <DropdownMenu modal={false} onOpenChange={(open) => open && forceRecalc()}>
+
+          <DropdownMenu modal={false} onOpenChange={(o) => o && forceRecalc()}>
             <DropdownMenuTrigger asChild>
               <Button variant="outline">
                 <MoreHorizontal className="mr-2 h-4 w-4" />
                 Basic Dropdown
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" side="bottom" sideOffset={8}>
+            <DropdownMenuContent
+              side="bottom"
+              align="end"
+              sideOffset={8}
+              /** keep body interactive in prod */
+              disableOutsidePointerEvents={false}
+            >
               <DropdownMenuLabel>My Account</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem>Profile</DropdownMenuItem>
@@ -56,6 +65,7 @@ export default function TestDropdownsPage() {
           </DropdownMenu>
         </div>
 
+        {/* Test 2 */}
         <div className="bg-white p-8 rounded-lg shadow-sm border space-y-4">
           <h2 className="text-xl font-semibold">Test 2: Dropdown in Table</h2>
           <div className="border rounded-lg overflow-hidden">
@@ -73,17 +83,18 @@ export default function TestDropdownsPage() {
                     <td className="p-4">Item {i}</td>
                     <td className="p-4">Active</td>
                     <td className="p-4 text-right">
-                      <DropdownMenu modal={false} onOpenChange={(open) => open && forceRecalc()}>
+                      <DropdownMenu modal={false} onOpenChange={(o) => o && forceRecalc()}>
                         <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                           <Button variant="ghost" className="h-8 w-8 p-0">
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent
-                          align="end"
                           side="bottom"
+                          align="end"
                           sideOffset={8}
                           onClick={(e) => e.stopPropagation()}
+                          disableOutsidePointerEvents={false}
                         >
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
                           <DropdownMenuItem>View</DropdownMenuItem>
@@ -100,6 +111,7 @@ export default function TestDropdownsPage() {
           </div>
         </div>
 
+        {/* Test 3 */}
         <div className="bg-white p-8 rounded-lg shadow-sm border space-y-4">
           <h2 className="text-xl font-semibold">Test 3: Select Component</h2>
           <Select modal={false}>
@@ -114,19 +126,20 @@ export default function TestDropdownsPage() {
           </Select>
         </div>
 
+        {/* Test 4 */}
         <div className="bg-white p-8 rounded-lg shadow-sm border space-y-4">
           <h2 className="text-xl font-semibold">Test 4: Dropdown with Interactive State</h2>
           <p>Counter: {count}</p>
           <div className="flex gap-4">
-            <Button onClick={() => setCount(count + 1)}>Increment</Button>
-            <DropdownMenu modal={false} onOpenChange={(open) => open && forceRecalc()}>
+            <Button onClick={() => setCount((n) => n + 1)}>Increment</Button>
+            <DropdownMenu modal={false} onOpenChange={(o) => o && forceRecalc()}>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline">
                   <MoreHorizontal className="mr-2 h-4 w-4" />
                   Reset Counter
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent side="bottom" align="start" sideOffset={8}>
+              <DropdownMenuContent side="bottom" align="start" sideOffset={8} disableOutsidePointerEvents={false}>
                 <DropdownMenuItem onClick={() => setCount(0)}>Reset to 0</DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setCount(10)}>Set to 10</DropdownMenuItem>
               </DropdownMenuContent>
@@ -134,15 +147,16 @@ export default function TestDropdownsPage() {
           </div>
         </div>
 
+        {/* Test 5 */}
         <div className="bg-white p-8 rounded-lg shadow-sm border space-y-4">
           <h2 className="text-xl font-semibold">Test 5: Multiple Dropdowns</h2>
           <div className="flex gap-4">
-            {[1, 2, 3, 4].map((i) => (
-              <DropdownMenu key={i} modal={false} onOpenChange={(open) => open && forceRecalc()}>
+            {[1,2,3,4].map((i) => (
+              <DropdownMenu key={i} modal={false} onOpenChange={(o) => o && forceRecalc()}>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline">Dropdown {i}</Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent side="bottom" align="start" sideOffset={8}>
+                <DropdownMenuContent side="bottom" align="start" sideOffset={8} disableOutsidePointerEvents={false}>
                   <DropdownMenuItem>Action A from {i}</DropdownMenuItem>
                   <DropdownMenuItem>Action B from {i}</DropdownMenuItem>
                 </DropdownMenuContent>
@@ -152,5 +166,5 @@ export default function TestDropdownsPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }
