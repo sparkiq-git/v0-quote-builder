@@ -304,15 +304,10 @@ export default function DashboardPage() {
           </div>
         </Card>
 
-        {/* Recent Activities (2/5 width, same height) */}
-        <Card className="border border-border shadow-sm rounded-xl bg-card hover:shadow-md transition-shadow lg:col-span-2 h-[400px]">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg font-semibold text-foreground">Recent Activities</CardTitle>
-          </CardHeader>
-          <CardContent className="h-[340px] overflow-y-auto pt-0">
-            <RecentActivities />
-          </CardContent>
-        </Card>
+        {/* Recent Activities (2/5 width, same height, no extra container) */}
+<div className="lg:col-span-2 h-[400px] overflow-y-auto">
+  <RecentActivities />
+</div>
       </div>
 
       {/* === Leads and Quotes === */}
