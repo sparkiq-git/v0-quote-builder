@@ -165,6 +165,68 @@ export default function InvoiceDetailPage() {
     }).format(amount)
   }
 
+  // Calculate totals from invoice details (to verify against invoice.amount, subtotal, tax_total)
+  // This ensures taxes are correctly separated from regular line items
+  const calculatedTotals = (() => {
+    if (!invoice.details || invoice.details.length === 0) {
+      return {
+        subtotal: invoice.subtotal || 0,
+        taxTotal: invoice.tax_total || 0,
+        grandTotal: invoice.amount || 0,
+      }
+    }
+
+    // Separate tax items from regular items
+    // Tax items are identified by: type="tax" or type="fee", or label contains "tax"/"fee"
+    const taxItems = invoice.details.filter(
+      (item) =>
+        item.type === "tax" ||
+        item.type === "fee" ||
+        item.label?.toLowerCase().includes("tax") ||
+        item.label?.toLowerCase().includes("fee")
+    )
+    const regularItems = invoice.details.filter(
+      (item) =>
+        item.type !== "tax" &&
+        item.type !== "fee" &&
+        !item.label?.toLowerCase().includes("tax") &&
+        !item.label?.toLowerCase().includes("fee")
+    )
+
+    // Calculate subtotal from regular items only (excluding taxes)
+    // This should match: aircraft + services (without taxes)
+    const calculatedSubtotal = regularItems.reduce((sum, item) => sum + (item.amount || 0), 0)
+
+    // Calculate tax total from tax items only
+    // This should include: Federal Excise Tax + any custom taxes
+    const calculatedTaxTotal = taxItems.reduce((sum, item) => sum + (item.amount || 0), 0)
+
+    // Grand total = subtotal + tax total
+    // This should match the invoice.amount field from the database
+    const calculatedGrandTotal = calculatedSubtotal + calculatedTaxTotal
+
+    // Debug logging (can be removed in production)
+    if (process.env.NODE_ENV === "development") {
+      console.log("📊 Invoice Totals Calculation:", {
+        regularItems: regularItems.length,
+        taxItems: taxItems.length,
+        calculatedSubtotal,
+        calculatedTaxTotal,
+        calculatedGrandTotal,
+        dbSubtotal: invoice.subtotal,
+        dbTaxTotal: invoice.tax_total,
+        dbAmount: invoice.amount,
+        taxItemLabels: taxItems.map((t) => ({ label: t.label, amount: t.amount, type: t.type })),
+      })
+    }
+
+    return {
+      subtotal: calculatedSubtotal,
+      taxTotal: calculatedTaxTotal,
+      grandTotal: calculatedGrandTotal,
+    }
+  })()
+
   return (
     <div className="w-full flex justify-center px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
       <div className="w-full lg:w-[75vw] space-y-6 sm:space-y-8">
@@ -261,7 +323,7 @@ export default function InvoiceDetailPage() {
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Subtotal</span>
                       <span className="font-medium">
-                        {formatAmountWithCurrency(invoice.subtotal || 0, invoice.currency)}
+                        {formatAmountWithCurrency(calculatedTotals.subtotal, invoice.currency)}
                       </span>
                     </div>
                     {/* Show individual tax line items if they exist */}
@@ -280,23 +342,23 @@ export default function InvoiceDetailPage() {
                                 </span>
                               </div>
                             ))}
-                            {invoice.tax_total && invoice.tax_total > 0 && (
+                            {calculatedTotals.taxTotal > 0 && (
                               <div className="flex justify-between text-sm pt-1 border-t border-border/50">
                                 <span className="text-muted-foreground font-medium">Total Taxes & Fees</span>
                                 <span className="font-semibold">
-                                  {formatAmountWithCurrency(invoice.tax_total, invoice.currency)}
+                                  {formatAmountWithCurrency(calculatedTotals.taxTotal, invoice.currency)}
                                 </span>
                               </div>
                             )}
                           </>
                         )
-                      } else if (invoice.tax_total && invoice.tax_total > 0) {
+                      } else if (calculatedTotals.taxTotal > 0) {
                         // Fallback: show single tax total if no individual tax items
                         return (
                           <div className="flex justify-between text-sm">
                             <span className="text-muted-foreground">Tax Total</span>
                             <span className="font-medium">
-                              {formatAmountWithCurrency(invoice.tax_total, invoice.currency)}
+                              {formatAmountWithCurrency(calculatedTotals.taxTotal, invoice.currency)}
                             </span>
                           </div>
                         )
@@ -306,7 +368,7 @@ export default function InvoiceDetailPage() {
                     <Separator />
                     <div className="flex justify-between text-lg sm:text-xl font-bold pt-2">
                       <span>Total Amount</span>
-                      <span className="text-primary">{formatAmountWithCurrency(invoice.amount, invoice.currency)}</span>
+                      <span className="text-primary">{formatAmountWithCurrency(calculatedTotals.grandTotal, invoice.currency)}</span>
                     </div>
                   </div>
 
@@ -318,18 +380,16 @@ export default function InvoiceDetailPage() {
                     <div className="relative z-10">
                       <p className="text-sm font-medium text-muted-foreground mb-2">Total Amount</p>
                       <p className="text-3xl sm:text-4xl font-bold text-primary mb-4">
-                        {formatAmountWithCurrency(invoice.amount, invoice.currency)}
+                        {formatAmountWithCurrency(calculatedTotals.grandTotal, invoice.currency)}
                       </p>
-                      {invoice.subtotal !== null && invoice.subtotal !== undefined && invoice.subtotal !== invoice.amount && (
+                      {calculatedTotals.subtotal > 0 && calculatedTotals.subtotal !== calculatedTotals.grandTotal && (
                         <div className="mt-4 space-y-2 text-sm">
-                          {invoice.subtotal > 0 && (
-                            <div className="flex justify-between">
-                              <span className="text-muted-foreground">Subtotal:</span>
-                              <span className="font-medium">
-                                {formatAmountWithCurrency(invoice.subtotal, invoice.currency)}
-                              </span>
-                            </div>
-                          )}
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Subtotal:</span>
+                            <span className="font-medium">
+                              {formatAmountWithCurrency(calculatedTotals.subtotal, invoice.currency)}
+                            </span>
+                          </div>
                           {/* Show individual tax items if available */}
                           {(() => {
                             const taxItems = invoice.details?.filter((item) => item.type === "tax" || item.type === "fee" || item.label?.toLowerCase().includes("tax") || item.label?.toLowerCase().includes("fee")) || []
@@ -346,22 +406,22 @@ export default function InvoiceDetailPage() {
                                       </span>
                                     </div>
                                   ))}
-                                  {invoice.tax_total && invoice.tax_total > 0 && (
+                                  {calculatedTotals.taxTotal > 0 && (
                                     <div className="flex justify-between pt-1 border-t border-border/30">
                                       <span className="text-muted-foreground font-medium">Total Taxes & Fees:</span>
                                       <span className="font-semibold">
-                                        {formatAmountWithCurrency(invoice.tax_total, invoice.currency)}
+                                        {formatAmountWithCurrency(calculatedTotals.taxTotal, invoice.currency)}
                                       </span>
                                     </div>
                                   )}
                                 </>
                               )
-                            } else if (invoice.tax_total && invoice.tax_total > 0) {
+                            } else if (calculatedTotals.taxTotal > 0) {
                               return (
                                 <div className="flex justify-between">
                                   <span className="text-muted-foreground">Tax:</span>
                                   <span className="font-medium">
-                                    {formatAmountWithCurrency(invoice.tax_total, invoice.currency)}
+                                    {formatAmountWithCurrency(calculatedTotals.taxTotal, invoice.currency)}
                                   </span>
                                 </div>
                               )

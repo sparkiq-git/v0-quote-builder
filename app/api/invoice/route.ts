@@ -50,12 +50,25 @@ export async function POST(req: Request) {
 
     // 🔁 Call your Supabase Edge Function
     // Edge Function expects 'payment_url' and 'taxes' parameters (optional)
+    // 
+    // IMPORTANT: Taxes handling in edge function should:
+    // 1. Create invoice_detail records for each tax with type="tax" or type="fee"
+    // 2. Set label to the tax name (e.g., "Federal Excise Tax (7.5%)")
+    // 3. Set amount to the tax amount
+    // 4. Do NOT calculate tax on taxable items - taxes are passed explicitly
+    // 5. Calculate invoice.subtotal = sum of all non-tax items
+    // 6. Calculate invoice.tax_total = sum of all tax items
+    // 7. Calculate invoice.amount = subtotal + tax_total
+    //
+    // The 'taxes' array format: [{ id: string, name: string, amount: number }]
+    // Example: [{ id: "federal-excise-tax-7.5", name: "Federal Excise Tax (7.5%)", amount: 750 }]
     const body: { quote_id: string; payment_url?: string | null; taxes?: Array<{ id: string; name: string; amount: number }> } = { quote_id }
     if (external_payment_url) {
       body.payment_url = external_payment_url
     }
     if (taxes && Array.isArray(taxes) && taxes.length > 0) {
       body.taxes = taxes
+      console.log("📋 Sending taxes to edge function:", taxes.map(t => ({ name: t.name, amount: t.amount })))
     }
 
     const { data, error } = await supabase.functions.invoke("quote-to-invoice", {
