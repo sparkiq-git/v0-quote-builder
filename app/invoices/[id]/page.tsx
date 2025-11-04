@@ -206,39 +206,50 @@ export default function InvoiceDetailPage() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {invoice.details.map((item) => (
-                            <TableRow key={item.id} className="hover:bg-muted/30 transition-colors">
-                              <TableCell className="font-mono text-xs text-muted-foreground">{item.seq}</TableCell>
-                              <TableCell>
-                                <div className="font-medium">{item.label}</div>
-                                {item.description && (
-                                  <div className="text-sm text-muted-foreground mt-1">{item.description}</div>
-                                )}
-                                {item.type && (
-                                  <Badge variant="outline" className="text-xs mt-1.5">
-                                    {item.type}
-                                  </Badge>
-                                )}
-                              </TableCell>
-                              <TableCell className="text-right">{item.qty}</TableCell>
-                              <TableCell className="text-right">
-                                {formatAmountWithCurrency(item.unit_price, invoice.currency)}
-                              </TableCell>
-                              <TableCell className="text-right">
-                                {item.taxable && item.tax_amount > 0 ? (
-                                  <span className="text-sm">
-                                    {formatAmountWithCurrency(item.tax_amount, invoice.currency)}
-                                    {item.tax_rate ? ` (${item.tax_rate}%)` : ""}
-                                  </span>
-                                ) : (
-                                  <span className="text-muted-foreground">—</span>
-                                )}
-                              </TableCell>
-                              <TableCell className="text-right font-medium">
-                                {formatAmountWithCurrency(item.amount, invoice.currency)}
-                              </TableCell>
-                            </TableRow>
-                          ))}
+                          {invoice.details.map((item) => {
+                            const isTaxItem = item.type === "tax" || item.type === "fee" || item.label?.toLowerCase().includes("tax") || item.label?.toLowerCase().includes("fee")
+                            return (
+                              <TableRow 
+                                key={item.id} 
+                                className={`hover:bg-muted/30 transition-colors ${isTaxItem ? "bg-muted/20" : ""}`}
+                              >
+                                <TableCell className="font-mono text-xs text-muted-foreground">{item.seq}</TableCell>
+                                <TableCell>
+                                  <div className="font-medium">{item.label}</div>
+                                  {item.description && (
+                                    <div className="text-sm text-muted-foreground mt-1">{item.description}</div>
+                                  )}
+                                  {item.type && (
+                                    <Badge 
+                                      variant={isTaxItem ? "secondary" : "outline"} 
+                                      className="text-xs mt-1.5"
+                                    >
+                                      {item.type}
+                                    </Badge>
+                                  )}
+                                </TableCell>
+                                <TableCell className="text-right">{isTaxItem ? "—" : item.qty}</TableCell>
+                                <TableCell className="text-right">
+                                  {isTaxItem ? "—" : formatAmountWithCurrency(item.unit_price, invoice.currency)}
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  {isTaxItem ? (
+                                    <span className="text-muted-foreground">—</span>
+                                  ) : item.taxable && item.tax_amount > 0 ? (
+                                    <span className="text-sm">
+                                      {formatAmountWithCurrency(item.tax_amount, invoice.currency)}
+                                      {item.tax_rate ? ` (${item.tax_rate}%)` : ""}
+                                    </span>
+                                  ) : (
+                                    <span className="text-muted-foreground">—</span>
+                                  )}
+                                </TableCell>
+                                <TableCell className="text-right font-medium">
+                                  {formatAmountWithCurrency(item.amount, invoice.currency)}
+                                </TableCell>
+                              </TableRow>
+                            )
+                          })}
                         </TableBody>
                       </Table>
                     </div>
@@ -253,14 +264,45 @@ export default function InvoiceDetailPage() {
                         {formatAmountWithCurrency(invoice.subtotal || 0, invoice.currency)}
                       </span>
                     </div>
-                    {invoice.tax_total && invoice.tax_total > 0 && (
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Tax Total</span>
-                        <span className="font-medium">
-                          {formatAmountWithCurrency(invoice.tax_total, invoice.currency)}
-                        </span>
-                      </div>
-                    )}
+                    {/* Show individual tax line items if they exist */}
+                    {(() => {
+                      const taxItems = invoice.details?.filter((item) => item.type === "tax" || item.type === "fee" || item.label?.toLowerCase().includes("tax") || item.label?.toLowerCase().includes("fee")) || []
+                      const hasTaxItems = taxItems.length > 0
+                      
+                      if (hasTaxItems) {
+                        return (
+                          <>
+                            {taxItems.map((taxItem) => (
+                              <div key={taxItem.id} className="flex justify-between text-sm">
+                                <span className="text-muted-foreground">{taxItem.label || "Tax"}</span>
+                                <span className="font-medium">
+                                  {formatAmountWithCurrency(taxItem.amount || taxItem.tax_amount || 0, invoice.currency)}
+                                </span>
+                              </div>
+                            ))}
+                            {invoice.tax_total && invoice.tax_total > 0 && (
+                              <div className="flex justify-between text-sm pt-1 border-t border-border/50">
+                                <span className="text-muted-foreground font-medium">Total Taxes & Fees</span>
+                                <span className="font-semibold">
+                                  {formatAmountWithCurrency(invoice.tax_total, invoice.currency)}
+                                </span>
+                              </div>
+                            )}
+                          </>
+                        )
+                      } else if (invoice.tax_total && invoice.tax_total > 0) {
+                        // Fallback: show single tax total if no individual tax items
+                        return (
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">Tax Total</span>
+                            <span className="font-medium">
+                              {formatAmountWithCurrency(invoice.tax_total, invoice.currency)}
+                            </span>
+                          </div>
+                        )
+                      }
+                      return null
+                    })()}
                     <Separator />
                     <div className="flex justify-between text-lg sm:text-xl font-bold pt-2">
                       <span>Total Amount</span>
@@ -278,7 +320,7 @@ export default function InvoiceDetailPage() {
                       <p className="text-3xl sm:text-4xl font-bold text-primary mb-4">
                         {formatAmountWithCurrency(invoice.amount, invoice.currency)}
                       </p>
-                      {invoice.subtotal !== undefined && invoice.subtotal !== invoice.amount && (
+                      {invoice.subtotal !== null && invoice.subtotal !== undefined && invoice.subtotal !== invoice.amount && (
                         <div className="mt-4 space-y-2 text-sm">
                           {invoice.subtotal > 0 && (
                             <div className="flex justify-between">
@@ -288,14 +330,44 @@ export default function InvoiceDetailPage() {
                               </span>
                             </div>
                           )}
-                          {invoice.tax_total && invoice.tax_total > 0 && (
-                            <div className="flex justify-between">
-                              <span className="text-muted-foreground">Tax:</span>
-                              <span className="font-medium">
-                                {formatAmountWithCurrency(invoice.tax_total, invoice.currency)}
-                              </span>
-                            </div>
-                          )}
+                          {/* Show individual tax items if available */}
+                          {(() => {
+                            const taxItems = invoice.details?.filter((item) => item.type === "tax" || item.type === "fee" || item.label?.toLowerCase().includes("tax") || item.label?.toLowerCase().includes("fee")) || []
+                            const hasTaxItems = taxItems.length > 0
+                            
+                            if (hasTaxItems) {
+                              return (
+                                <>
+                                  {taxItems.map((taxItem) => (
+                                    <div key={taxItem.id} className="flex justify-between">
+                                      <span className="text-muted-foreground">{taxItem.label || "Tax"}:</span>
+                                      <span className="font-medium">
+                                        {formatAmountWithCurrency(taxItem.amount || taxItem.tax_amount || 0, invoice.currency)}
+                                      </span>
+                                    </div>
+                                  ))}
+                                  {invoice.tax_total && invoice.tax_total > 0 && (
+                                    <div className="flex justify-between pt-1 border-t border-border/30">
+                                      <span className="text-muted-foreground font-medium">Total Taxes & Fees:</span>
+                                      <span className="font-semibold">
+                                        {formatAmountWithCurrency(invoice.tax_total, invoice.currency)}
+                                      </span>
+                                    </div>
+                                  )}
+                                </>
+                              )
+                            } else if (invoice.tax_total && invoice.tax_total > 0) {
+                              return (
+                                <div className="flex justify-between">
+                                  <span className="text-muted-foreground">Tax:</span>
+                                  <span className="font-medium">
+                                    {formatAmountWithCurrency(invoice.tax_total, invoice.currency)}
+                                  </span>
+                                </div>
+                              )
+                            }
+                            return null
+                          })()}
                         </div>
                       )}
                     </div>
