@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useEffect } from "react"
+import { useState, useCallback, useEffect, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
@@ -369,30 +369,90 @@ function InvoiceSummaryStep({
   // Calculate Federal Excise Tax amount (7.5% of aircraft total only)
   const federalExciseTaxAmount = subtotalAircraft * FEDERAL_EXCISE_TAX_RATE
 
-  // Sync Federal Excise Tax with taxes array when aircraft total changes (if enabled)
-  useEffect(() => {
-    if (!hasFederalExciseTax || subtotalAircraft <= 0) return
-    
-    const otherTaxes = safeTaxes.filter(tax => tax.id !== FEDERAL_EXCISE_TAX_ID)
-    const existingFederalTax = safeTaxes.find(tax => tax.id === FEDERAL_EXCISE_TAX_ID)
-    
-    // Only update if amount changed
-    if (!existingFederalTax || Math.abs(existingFederalTax.amount - federalExciseTaxAmount) > 0.01) {
-      const federalTax = {
-        id: FEDERAL_EXCISE_TAX_ID,
-        name: `Federal Excise Tax (7.5%)`,
-        amount: federalExciseTaxAmount,
+  // Calculate tax on taxable service items (7.5% same as Federal Excise Tax)
+  const SERVICE_TAX_RATE = 0.075 // 7.5%
+  // Use useMemo to calculate taxable services tax based on service data
+  const taxableServicesTax = useMemo(() => {
+    return (fullQuoteData.services || []).reduce((sum: number, s: any) => {
+      if (s.taxable !== false) {
+        const serviceTotal = (s.amount || s.unit_price || 0) * (s.qty || 1)
+        return sum + (serviceTotal * SERVICE_TAX_RATE)
       }
-      onTaxesChange([federalTax, ...otherTaxes])
+      return sum
+    }, 0)
+  }, [fullQuoteData.services])
+
+  // Sync Federal Excise Tax and taxable services tax with taxes array
+  useEffect(() => {
+    const otherTaxes = safeTaxes.filter(tax => 
+      tax.id !== FEDERAL_EXCISE_TAX_ID && 
+      !tax.id.startsWith('taxable-service-tax-')
+    )
+    
+    const taxesToAdd: Array<{ id: string; name: string; amount: number }> = []
+    
+    // Add/update Federal Excise Tax if enabled
+    if (hasFederalExciseTax && subtotalAircraft > 0) {
+      const existingFederalTax = safeTaxes.find(tax => tax.id === FEDERAL_EXCISE_TAX_ID)
+      if (!existingFederalTax || Math.abs(existingFederalTax.amount - federalExciseTaxAmount) > 0.01) {
+        taxesToAdd.push({
+          id: FEDERAL_EXCISE_TAX_ID,
+          name: `Federal Excise Tax (7.5%)`,
+          amount: federalExciseTaxAmount,
+        })
+      } else {
+        taxesToAdd.push(existingFederalTax)
+      }
+    }
+    
+    // Add/update taxable services tax if there are taxable services
+    if (taxableServicesTax > 0) {
+      const taxableServicesId = 'taxable-service-tax'
+      const existingTaxableTax = safeTaxes.find(tax => tax.id.startsWith('taxable-service-tax-'))
+      
+      // Calculate which services are taxable for the label
+      const taxableServices = (fullQuoteData.services || []).filter((s: any) => s.taxable !== false)
+      const taxName = taxableServices.length === 1 
+        ? `Tax (7.5%) on ${taxableServices[0].name || taxableServices[0].description || 'Service'}`
+        : `Tax (7.5%) on Taxable Services`
+      
+      if (!existingTaxableTax || Math.abs(existingTaxableTax.amount - taxableServicesTax) > 0.01) {
+        taxesToAdd.push({
+          id: `${taxableServicesId}-${Date.now()}`,
+          name: taxName,
+          amount: taxableServicesTax,
+        })
+      } else {
+        taxesToAdd.push(existingTaxableTax)
+      }
+    }
+    
+    // Update taxes if anything changed
+    const newTaxes = [...taxesToAdd, ...otherTaxes]
+    
+    // Compare taxes by ID and amount to avoid unnecessary updates
+    const taxMap = new Map(safeTaxes.map(t => [t.id, t]))
+    const hasChanged = newTaxes.length !== safeTaxes.length ||
+      newTaxes.some((tax) => {
+        const oldTax = taxMap.get(tax.id)
+        return !oldTax || Math.abs(tax.amount - (oldTax.amount || 0)) > 0.01 || tax.name !== oldTax.name
+      })
+    
+    if (hasChanged) {
+      onTaxesChange(newTaxes)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [subtotalAircraft, federalExciseTaxAmount])
+  }, [subtotalAircraft, federalExciseTaxAmount, taxableServicesTax])
 
   // Calculate total tax amount
   const taxTotal = safeTaxes.reduce((sum, tax) => {
     // Use calculated amount for Federal Excise Tax if it exists
     if (tax.id === FEDERAL_EXCISE_TAX_ID) {
       return sum + federalExciseTaxAmount
+    }
+    // Use calculated amount for taxable services tax
+    if (tax.id.startsWith('taxable-service-tax-')) {
+      return sum + taxableServicesTax
     }
     return sum + (tax.amount || 0)
   }, 0)
@@ -864,11 +924,11 @@ function InvoiceSummaryStep({
               )}
 
               {/* Manual Taxes & Fees */}
-              {safeTaxes.filter(tax => tax.id !== FEDERAL_EXCISE_TAX_ID).length > 0 && (
+              {safeTaxes.filter(tax => tax.id !== FEDERAL_EXCISE_TAX_ID && !tax.id.startsWith('taxable-service-tax-')).length > 0 && (
                 <div className="space-y-2">
                   <Label className="text-xs font-medium text-foreground">Other Taxes & Fees</Label>
                   {safeTaxes
-                    .filter(tax => tax.id !== FEDERAL_EXCISE_TAX_ID)
+                    .filter(tax => tax.id !== FEDERAL_EXCISE_TAX_ID && !tax.id.startsWith('taxable-service-tax-'))
                     .map((tax) => (
                       <div
                         key={tax.id}
@@ -948,7 +1008,19 @@ function InvoiceSummaryStep({
                       </div>
                     ))}
                   {safeTaxes
-                    .filter(tax => tax.id !== FEDERAL_EXCISE_TAX_ID)
+                    .filter(tax => tax.id.startsWith('taxable-service-tax-'))
+                    .map((tax) => (
+                      <div key={tax.id} className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">
+                          {tax.name} <span className="text-xs">(auto)</span>
+                        </span>
+                        <span className="font-semibold text-foreground">
+                          {formatCurrency(taxableServicesTax)}
+                        </span>
+                      </div>
+                    ))}
+                  {safeTaxes
+                    .filter(tax => tax.id !== FEDERAL_EXCISE_TAX_ID && !tax.id.startsWith('taxable-service-tax-'))
                     .map((tax) => (
                       <div key={tax.id} className="flex justify-between text-sm">
                         <span className="text-muted-foreground">{tax.name}</span>

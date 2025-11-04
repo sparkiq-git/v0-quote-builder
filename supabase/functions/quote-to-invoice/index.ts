@@ -217,8 +217,9 @@ serve(async (req) => {
       tax_amount: 0,
     });
 
-    // Service lines (NO tax calculation - taxes are separate line items)
-    // quote_item has: name, description, unit_price, qty (no 'amount' or 'label' field)
+    // Service lines (preserve taxable flag from quote_item)
+    // Taxes are calculated in the wizard and passed as separate line items
+    // quote_item has: name, description, unit_price, qty, taxable (no 'amount' or 'label' field)
     for (const s of items || []) {
       const unitPrice = Number(s.unit_price ?? 0);
       const qty = Number(s.qty ?? 1);
@@ -226,6 +227,8 @@ serve(async (req) => {
         s.name?.trim() ||
         s.description?.substring(0, 30) ||
         "Service";
+      // Preserve taxable flag from quote_item (default to true if not specified)
+      const isTaxable = s.taxable !== false;
 
       details.push({
         invoice_id: invoiceId,
@@ -236,9 +239,9 @@ serve(async (req) => {
         unit_price: unitPrice,
         // amount is a generated column (qty * unit_price) - don't include it
         type: "service",
-        taxable: false, // Taxes are separate line items, not calculated here
-        tax_rate: 0,
-        tax_amount: 0,
+        taxable: isTaxable, // Preserve taxable flag from quote_item
+        tax_rate: isTaxable ? 7.5 : 0, // 7.5% tax rate if taxable (matches Federal Excise Tax rate)
+        tax_amount: 0, // Tax is calculated separately and added as a tax line item
       });
     }
 
