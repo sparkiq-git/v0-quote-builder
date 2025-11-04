@@ -7,12 +7,7 @@ import { RouteMap } from "@/components/dashboard/route-map"
 import DashboardMetrics from "@/components/dashboard/DashboardMetrics"
 import { RecentActivities } from "@/components/dashboard/recent-activities"
 import { Badge } from "@/components/ui/badge"
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "@/components/ui/chart"
-import { Area, AreaChart, CartesianGrid, XAxis, Tooltip, ResponsiveContainer } from "recharts"
+import { AreaChart, Area, CartesianGrid, XAxis, Tooltip, ResponsiveContainer } from "recharts"
 
 export default function DashboardPage() {
   const [leadCount, setLeadCount] = useState(0)
@@ -262,46 +257,47 @@ export default function DashboardPage() {
             <CardTitle>Cost & Commission (Yearly)</CardTitle>
           </CardHeader>
           <CardContent className="h-[300px] pt-2">
-            <ChartContainer
-              config={{
-                cost_operator: { label: "Cost Operator", color: "var(--chart-1)" },
-                price_commission: { label: "Price Commission", color: "var(--chart-2)" },
-              }}
-            >
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData} margin={{ left: 12, right: 12 }}>
-                  <CartesianGrid vertical={false} strokeDasharray="3 3" />
-                  <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8} />
-                  <Tooltip content={<ChartTooltipContent />} />
-                  <defs>
-                    <linearGradient id="fillCost" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="var(--chart-1)" stopOpacity={0.8} />
-                      <stop offset="95%" stopColor="var(--chart-1)" stopOpacity={0.1} />
-                    </linearGradient>
-                    <linearGradient id="fillCommission" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="var(--chart-2)" stopOpacity={0.8} />
-                      <stop offset="95%" stopColor="var(--chart-2)" stopOpacity={0.1} />
-                    </linearGradient>
-                  </defs>
-                  <Area
-                    type="natural"
-                    dataKey="price_commission"
-                    stroke="var(--chart-2)"
-                    fill="url(#fillCommission)"
-                    fillOpacity={0.4}
-                    stackId="a"
-                  />
-                  <Area
-                    type="natural"
-                    dataKey="cost_operator"
-                    stroke="var(--chart-1)"
-                    fill="url(#fillCost)"
-                    fillOpacity={0.4}
-                    stackId="a"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </ChartContainer>
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={chartData} margin={{ left: 12, right: 12 }}>
+                <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "hsl(var(--card))",
+                    borderColor: "hsl(var(--border))",
+                    borderRadius: "0.5rem",
+                  }}
+                />
+                <defs>
+                  <linearGradient id="fillCost" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="var(--chart-1)" stopOpacity={0.8} />
+                    <stop offset="95%" stopColor="var(--chart-1)" stopOpacity={0.1} />
+                  </linearGradient>
+                  <linearGradient id="fillCommission" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="var(--chart-2)" stopOpacity={0.8} />
+                    <stop offset="95%" stopColor="var(--chart-2)" stopOpacity={0.1} />
+                  </linearGradient>
+                </defs>
+                <Area
+                  type="natural"
+                  dataKey="price_commission"
+                  stroke="var(--chart-2)"
+                  fill="url(#fillCommission)"
+                  fillOpacity={0.4}
+                  stackId="a"
+                  name="Price Commission"
+                />
+                <Area
+                  type="natural"
+                  dataKey="cost_operator"
+                  stroke="var(--chart-1)"
+                  fill="url(#fillCost)"
+                  fillOpacity={0.4}
+                  stackId="a"
+                  name="Cost Operator"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
           </CardContent>
           <div className="px-6 pb-4 text-sm text-muted-foreground flex items-center gap-2">
             <TrendingUp className="h-4 w-4 text-green-500" /> Trending up 12.4% this year
