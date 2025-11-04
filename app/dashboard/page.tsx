@@ -268,7 +268,7 @@ export default function DashboardPage() {
         <Card className="border border-border shadow-sm rounded-xl bg-card hover:shadow-md transition-shadow lg:col-span-3 h-[400px]">
           <CardHeader className="pb-2 pt-4 px-5">
             <CardTitle className="text-base font-semibold text-foreground">
-              Cost & Commission (Yearly)
+              Cost & Commission
             </CardTitle>
           </CardHeader>
 
