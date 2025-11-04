@@ -152,11 +152,13 @@
 [data-radix-popper-content-wrapper] {
   z-index: 2147483647 !important;
   pointer-events: auto !important;
-  /* Ensure the wrapper itself doesn't interfere with positioning */
+  /* Removed transform: none - Radix NEEDS the transform for positioning */
+  /* Ensure the wrapper uses fixed positioning */
   position: fixed !important;
-  /* Remove any inherited transforms that could break positioning */
-  transform: none !important;
+  /* Help browser optimize transforms */
   will-change: transform;
+  /* Ensure wrapper doesn't have any size constraints */
+  contain: none !important;
 }
 
 /* Ensure Radix content calculates position correctly */
@@ -185,14 +187,27 @@ body[style*="pointer-events: none"] {
   width: 0;
   height: 0;
   pointer-events: none;
+  z-index: 2147483647;
 }
 
 #portal-root > * {
   pointer-events: auto;
 }
 
+/* Remove transform from main container to prevent breaking fixed positioning context */
 /* Fix for any parent with transform that breaks fixed positioning */
-body > * {
+#__next,
+main,
+[data-slot="main-content"] {
   /* Ensure no parent transforms break fixed positioning of portals */
-  transform: none;
+  transform: none !important;
+  /* Prevent contain from breaking fixed positioning */
+  contain: none !important;
+}
+
+/* Ensure body and html don't have transforms */
+html,
+body {
+  transform: none !important;
+  contain: none !important;
 }

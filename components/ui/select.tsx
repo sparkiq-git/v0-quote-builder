@@ -1,13 +1,21 @@
 "use client"
 
-import type * as React from "react"
+import * as React from "react"
 import * as SelectPrimitive from "@radix-ui/react-select"
 import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
-function microReflow() {
-  requestAnimationFrame(() => requestAnimationFrame(() => window.dispatchEvent(new Event("resize"))))
+function forceLayout(element?: HTMLElement | null) {
+  if (element) {
+    element.getBoundingClientRect()
+  }
+  document.body.getBoundingClientRect()
+  requestAnimationFrame(() =>
+    requestAnimationFrame(() => {
+      window.dispatchEvent(new Event("resize"))
+    }),
+  )
 }
 
 function Select({ onOpenChange, modal = false, ...props }: React.ComponentProps<typeof SelectPrimitive.Root>) {
@@ -16,8 +24,10 @@ function Select({ onOpenChange, modal = false, ...props }: React.ComponentProps<
       data-slot="select"
       modal={modal}
       onOpenChange={(open) => {
+        if (open) {
+          forceLayout()
+        }
         onOpenChange?.(open)
-        if (open) microReflow()
       }}
       {...props}
     />
@@ -69,6 +79,13 @@ function SelectContent({
   collisionPadding = 8,
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Content>) {
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      window.dispatchEvent(new Event("resize"))
+    }, 0)
+    return () => clearTimeout(timer)
+  }, [])
+
   return (
     <SelectPrimitive.Portal>
       <SelectPrimitive.Content
