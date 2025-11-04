@@ -74,38 +74,17 @@ function DropdownMenuContent({
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Content>) {
   const contentRef = React.useRef<HTMLDivElement | null>(null)
-
-  const microReflow = () => {
-    // Fuerza un reflow más prolongado para que Floating UI recalcule posición correctamente
-    requestAnimationFrame(() =>
-      requestAnimationFrame(() => requestAnimationFrame(() => window.dispatchEvent(new Event("resize")))),
-    )
-  }
+  const [mounted, setMounted] = React.useState(false)
 
   React.useEffect(() => {
-    const el = contentRef.current
-    if (!el) return
-
-    // Esperar un frame extra tras apertura para medir posición real
-    const fixPosition = () => {
-      const rect = el.getBoundingClientRect()
-      if (rect.top < 0 || rect.bottom < 0 || rect.height === 0) {
-        console.warn("⚠️ Dropdown fuera de pantalla — aplicando fallback manual")
-        el.style.position = "fixed"
-        el.style.top = "48px" // ajusta según tu diseño
-        el.style.left = "auto"
-        el.style.right = "16px" // alinéalo si deseas al borde derecho
-        el.style.transform = "none"
-        el.style.opacity = "1"
-        el.style.pointerEvents = "auto"
-      }
-    }
-
-    requestAnimationFrame(fixPosition)
+    setMounted(true)
   }, [])
 
+  // 🚀 Prevent rendering during SSR - this ensures document.body exists
+  if (!mounted) return null
+
   return (
-    <DropdownMenuPrimitive.Portal>
+    <DropdownMenuPrimitive.Portal container={document.body}>
       <DropdownMenuPrimitive.Content
         ref={contentRef}
         data-slot="dropdown-menu-content"
@@ -131,7 +110,8 @@ function DropdownMenuContent({
         )}
         {...props}
         onOpenAutoFocus={(e) => {
-          microReflow() // reflow en apertura
+          // Force a reflow to ensure content is measured
+          contentRef.current?.offsetHeight
           props.onOpenAutoFocus?.(e)
         }}
       />
