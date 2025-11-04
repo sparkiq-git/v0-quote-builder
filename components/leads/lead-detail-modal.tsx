@@ -344,7 +344,7 @@ const handleDeleteLead = async () => {
               {/* Trip Summary */}
 <Card>
   <CardHeader>
-    <CardTitle className="text-xl font-bold mt-2">Lead Summary</CardTitle>
+    <CardTitle className="mt-2">Lead Summary</CardTitle>
     <CardDescription>
       Quick overview of the trip request
     </CardDescription>
