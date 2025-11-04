@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils"
  * - Disparamos un micro “reflow” al abrir para que Floating UI recalcule posición (webfonts/SSR).
  * - Defaults seguros en <Content>: side="bottom", align="end", sideOffset=8, avoidCollisions, collisionPadding=8, sticky="always".
  * - Mantener z-index y pointer-events del panel, pero NO sobreescribir transform/translate (lo maneja Radix).
+ * - BYPASS RADIX PORTAL: Creamos nuestro propio contenedor en document.body para evitar problemas de SSR/hidratación.
  */
 
 const DropdownMenuContext = React.createContext<{ triggerRef: React.MutableRefObject<HTMLElement | null> }>({
@@ -74,49 +75,60 @@ function DropdownMenuContent({
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Content>) {
   const contentRef = React.useRef<HTMLDivElement | null>(null)
-  const [mounted, setMounted] = React.useState(false)
+  const [container, setContainer] = React.useState<HTMLElement | null>(null)
 
   React.useEffect(() => {
     console.log("[v0] DropdownMenuContent mounted ✅")
-    setMounted(true)
+
+    let el = document.getElementById("dropdown-root")
+    if (!el) {
+      el = document.createElement("div")
+      el.id = "dropdown-root"
+      el.style.position = "relative"
+      el.style.zIndex = "99999"
+      document.body.appendChild(el)
+      console.log("[v0] Created dropdown-root container")
+    }
+    setContainer(el)
   }, [])
 
-  // 🚀 Prevent rendering during SSR - this ensures document.body exists
-  if (!mounted) return null
+  if (!container) return null
 
   return (
-    <DropdownMenuPrimitive.Portal container={document.body}>
-      <DropdownMenuPrimitive.Content
-        ref={contentRef}
-        data-slot="dropdown-menu-content"
-        side={side}
-        align={align}
-        sideOffset={sideOffset}
-        avoidCollisions={avoidCollisions}
-        collisionPadding={collisionPadding}
-        sticky={sticky as any}
-        className={cn(
-          "bg-popover text-popover-foreground pointer-events-auto",
-          "data-[state=open]:animate-in data-[state=closed]:animate-out",
-          "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
-          "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
-          "data-[side=bottom]:slide-in-from-top-2",
-          "data-[side=left]:slide-in-from-right-2",
-          "data-[side=right]:slide-in-from-left-2",
-          "data-[side=top]:slide-in-from-bottom-2",
-          "z-[99999] max-h-[var(--radix-dropdown-menu-content-available-height)]",
-          "min-w-[8rem] origin-[var(--radix-dropdown-menu-content-transform-origin)]",
-          "overflow-x-hidden overflow-y-auto rounded-md border p-1 shadow-md",
-          className,
-        )}
-        {...props}
-        onOpenAutoFocus={(e) => {
-          // Force a reflow to ensure content is measured
-          contentRef.current?.offsetHeight
-          props.onOpenAutoFocus?.(e)
-        }}
-      />
-    </DropdownMenuPrimitive.Portal>
+    <DropdownMenuPrimitive.Content
+      ref={contentRef}
+      data-slot="dropdown-menu-content"
+      side={side}
+      align={align}
+      sideOffset={sideOffset}
+      avoidCollisions={avoidCollisions}
+      collisionPadding={collisionPadding}
+      sticky={sticky as any}
+      className={cn(
+        "bg-popover text-popover-foreground pointer-events-auto",
+        "data-[state=open]:animate-in data-[state=closed]:animate-out",
+        "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+        "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
+        "data-[side=bottom]:slide-in-from-top-2",
+        "data-[side=left]:slide-in-from-right-2",
+        "data-[side=right]:slide-in-from-left-2",
+        "data-[side=top]:slide-in-from-bottom-2",
+        "z-[99999] max-h-[var(--radix-dropdown-menu-content-available-height)]",
+        "min-w-[8rem] origin-[var(--radix-dropdown-menu-content-transform-origin)]",
+        "overflow-x-hidden overflow-y-auto rounded-md border p-1 shadow-md",
+        className,
+      )}
+      {...props}
+      style={{
+        position: "absolute",
+        ...props.style,
+      }}
+      onOpenAutoFocus={(e) => {
+        contentRef.current?.offsetHeight
+        console.log("[v0] Content auto-focused, rect:", contentRef.current?.getBoundingClientRect())
+        props.onOpenAutoFocus?.(e)
+      }}
+    />
   )
 }
 
@@ -311,7 +323,7 @@ function DropdownMenuSubContent({
 }
 
 export {
-  DropdownMenuRoot as DropdownMenu, // exportamos nuestro Root con fixes
+  DropdownMenuRoot as DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuGroup,
