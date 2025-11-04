@@ -57,89 +57,70 @@ function DropdownMenuContent({
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Content>) {
   const contentRef = React.useRef<HTMLDivElement | null>(null)
-  const [container, setContainer] = React.useState<HTMLElement | null>(null)
   const [mounted, setMounted] = React.useState(false)
-
-  React.useLayoutEffect(() => {
-    let el = document.getElementById("dropdown-root")
-    if (!el) {
-      el = document.createElement("div")
-      el.id = "dropdown-root"
-      el.style.position = "relative"
-      el.style.zIndex = "99999"
-      document.body.appendChild(el)
-    }
-    setContainer(el)
-  }, [])
 
   React.useEffect(() => setMounted(true), [])
 
   React.useLayoutEffect(() => {
-    const updatePosition = () => {
-      const trigger = document.querySelector(
-        '[data-slot="dropdown-menu-trigger"][data-state="open"]',
-      ) as HTMLElement | null
-      const content = contentRef.current
-      if (!trigger || !content) return
+    const trigger = document.querySelector(
+      '[data-slot="dropdown-menu-trigger"][data-state="open"]',
+    ) as HTMLElement | null
+    const content = contentRef.current
+    if (!trigger || !content) return
 
-      const rect = trigger.getBoundingClientRect()
-      const offset = 6
-      let left = rect.left
-      const top = rect.bottom + offset
+    const rect = trigger.getBoundingClientRect()
+    const offset = 6
 
-      content.style.position = "fixed"
-      content.style.top = `${top}px`
+    // Position below the trigger
+    let left = rect.left
+    const top = rect.bottom + offset
+    content.style.position = "fixed"
+    content.style.top = `${top}px`
+    content.style.left = `${left}px`
+    content.style.minWidth = `${rect.width}px`
+    content.style.zIndex = "99999"
+    content.style.opacity = "1"
+    content.style.pointerEvents = "auto"
+
+    // Prevent overflow to the right
+    const menuRect = content.getBoundingClientRect()
+    if (menuRect.right > window.innerWidth) {
+      const shift = menuRect.right - window.innerWidth + 8
+      left = Math.max(0, left - shift)
       content.style.left = `${left}px`
-      content.style.minWidth = `${rect.width}px`
-      content.style.opacity = "1"
-      content.style.pointerEvents = "auto"
-      content.style.zIndex = "99999"
-
-      const menuRect = content.getBoundingClientRect()
-      if (menuRect.right > window.innerWidth) {
-        const shift = menuRect.right - window.innerWidth + 8
-        left = Math.max(0, left - shift)
-        content.style.left = `${left}px`
-      }
     }
+  })
 
-    updatePosition()
-    window.addEventListener("scroll", updatePosition, true)
-    window.addEventListener("resize", updatePosition)
-    return () => {
-      window.removeEventListener("scroll", updatePosition, true)
-      window.removeEventListener("resize", updatePosition)
-    }
-  }, [mounted, container])
-
-  if (!mounted || !container) return null
+  if (!mounted) return null
 
   return (
-    <DropdownMenuPrimitive.Content
-      ref={contentRef}
-      data-slot="dropdown-menu-content"
-      side={side}
-      align={align}
-      sideOffset={sideOffset}
-      avoidCollisions={avoidCollisions}
-      collisionPadding={collisionPadding}
-      sticky={sticky as any}
-      className={cn(
-        "bg-popover text-popover-foreground pointer-events-auto",
-        "data-[state=open]:animate-in data-[state=closed]:animate-out",
-        "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
-        "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
-        "data-[side=bottom]:slide-in-from-top-2",
-        "data-[side=left]:slide-in-from-right-2",
-        "data-[side=right]:slide-in-from-left-2",
-        "data-[side=top]:slide-in-from-bottom-2",
-        "z-[99999] max-h-[var(--radix-dropdown-menu-content-available-height)]",
-        "min-w-[8rem] origin-[var(--radix-dropdown-menu-content-transform-origin)]",
-        "overflow-x-hidden overflow-y-auto rounded-md border p-1 shadow-md",
-        className,
-      )}
-      {...props}
-    />
+    <DropdownMenuPrimitive.Portal container={document.body}>
+      <DropdownMenuPrimitive.Content
+        ref={contentRef}
+        data-slot="dropdown-menu-content"
+        side={side}
+        align={align}
+        sideOffset={sideOffset}
+        avoidCollisions={avoidCollisions}
+        collisionPadding={collisionPadding}
+        sticky={sticky as any}
+        className={cn(
+          "bg-popover text-popover-foreground pointer-events-auto",
+          "data-[state=open]:animate-in data-[state=closed]:animate-out",
+          "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+          "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
+          "data-[side=bottom]:slide-in-from-top-2",
+          "data-[side=left]:slide-in-from-right-2",
+          "data-[side=right]:slide-in-from-left-2",
+          "data-[side=top]:slide-in-from-bottom-2",
+          "z-[99999] max-h-[var(--radix-dropdown-menu-content-available-height)]",
+          "min-w-[8rem] origin-[var(--radix-dropdown-menu-content-transform-origin)]",
+          "overflow-x-hidden overflow-y-auto rounded-md border p-1 shadow-md",
+          className,
+        )}
+        {...props}
+      />
+    </DropdownMenuPrimitive.Portal>
   )
 }
 
