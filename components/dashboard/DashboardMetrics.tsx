@@ -1,4 +1,5 @@
 "use client"
+
 import { useEffect, useState } from "react"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { DollarSign, TrendingUp } from "lucide-react"
@@ -7,6 +8,7 @@ import { DollarSign, TrendingUp } from "lucide-react"
  * DashboardMetrics
  * - Displays Cost Operator (sum for this month)
  * - Displays Price Commission (sum for this month)
+ * - Only includes quotes where status is 'accepted', 'invoiced', 'paid', or 'pending_approval'
  */
 export default function DashboardMetrics() {
   const [costOperator, setCostOperator] = useState(0)
@@ -25,17 +27,26 @@ export default function DashboardMetrics() {
       const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0)
 
       try {
+        // ✅ Single query using relationship join to "quote"
         const { data: quoteOptions, error } = await supabase
           .from("quote_option")
-          .select("cost_operator, price_commission, created_at")
+          .select("cost_operator, price_commission, created_at, quote!inner(status)")
           .gte("created_at", firstDay.toISOString())
           .lte("created_at", lastDay.toISOString())
+          .in("quote.status", ["accepted", "invoiced", "paid", "pending_approval"])
 
         if (error) {
           console.error("quote_option query error:", error)
         } else if (quoteOptions?.length) {
-          const totalCost = quoteOptions.reduce((sum, q) => sum + (Number.parseFloat(q.cost_operator) || 0), 0)
-          const totalCommission = quoteOptions.reduce((sum, q) => sum + (Number.parseFloat(q.price_commission) || 0), 0)
+          const totalCost = quoteOptions.reduce(
+            (sum, q) => sum + (Number.parseFloat(q.cost_operator) || 0),
+            0
+          )
+          const totalCommission = quoteOptions.reduce(
+            (sum, q) => sum + (Number.parseFloat(q.price_commission) || 0),
+            0
+          )
+
           setCostOperator(totalCost)
           setPriceCommission(totalCommission)
         }
@@ -49,7 +60,7 @@ export default function DashboardMetrics() {
     loadMetrics()
   }, [])
 
-  // --- Reusable Metric Card (matches top dashboard cards)
+  // --- Reusable Metric Card
   function MetricCard({
     title,
     icon: Icon,
@@ -73,7 +84,11 @@ export default function DashboardMetrics() {
         </CardHeader>
         <CardContent className="grid grid-rows-[auto_auto] gap-2 flex-1 px-6 pb-6">
           <div className={`text-3xl font-bold leading-none tracking-tight ${color}`}>{value}</div>
-          {description && <p className="text-xs text-muted-foreground leading-relaxed mb-0 truncate">{description}</p>}
+          {description && (
+            <p className="text-xs text-muted-foreground leading-relaxed mb-0 truncate">
+              {description}
+            </p>
+          )}
         </CardContent>
       </Card>
     )
@@ -83,7 +98,10 @@ export default function DashboardMetrics() {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 justify-center">
         {[...Array(2)].map((_, i) => (
-          <Card key={i} className="h-full flex flex-col border border-border rounded-xl animate-pulse bg-card">
+          <Card
+            key={i}
+            className="h-full flex flex-col border border-border rounded-xl animate-pulse bg-card"
+          >
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3 pt-6 px-6">
               <div className="h-4 bg-muted rounded w-16" />
               <div className="h-6 bg-muted rounded w-12" />
