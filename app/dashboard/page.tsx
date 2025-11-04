@@ -237,9 +237,7 @@ export default function DashboardPage() {
       ? chartData.reduce(
           (max, cur) => {
             const total = (cur.cost_operator || 0) + (cur.price_commission || 0)
-            return total > max.total
-              ? { month: cur.month, total }
-              : max
+            return total > max.total ? { month: cur.month, total } : max
           },
           { month: "", total: 0 }
         )
@@ -247,6 +245,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8">
+      {/* === Header === */}
       <div className="space-y-2">
         <h1 className="text-3xl font-semibold tracking-tight text-foreground">Welcome back!</h1>
         <p className="text-muted-foreground text-base leading-relaxed">Here's what's happening today.</p>
@@ -267,29 +266,39 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         {/* Chart Area (3/5 width) */}
         <Card className="border border-border shadow-sm rounded-xl bg-card hover:shadow-md transition-shadow lg:col-span-3 h-[400px]">
-          <CardHeader>
-            <CardTitle>Cost & Commission (Yearly)</CardTitle>
+          <CardHeader className="pb-2 pt-4 px-5">
+            <CardTitle className="text-base font-semibold text-foreground">
+              Cost & Commission (Yearly)
+            </CardTitle>
           </CardHeader>
-          <CardContent className="h-[300px] pt-2">
+
+          <CardContent className="h-[280px] px-4 pb-2">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData} margin={{ left: 12, right: 12 }}>
+              <AreaChart data={chartData} margin={{ top: 10, right: 16, left: 0, bottom: 0 }}>
                 <CartesianGrid vertical={false} strokeDasharray="3 3" />
-                <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8} />
+                <XAxis
+                  dataKey="month"
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={6}
+                  style={{ fontSize: "12px" }}
+                />
                 <Tooltip
                   contentStyle={{
                     backgroundColor: "hsl(var(--card))",
                     borderColor: "hsl(var(--border))",
                     borderRadius: "0.5rem",
+                    fontSize: "12px",
                   }}
                 />
                 <defs>
                   <linearGradient id="fillCost" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="var(--chart-1)" stopOpacity={0.8} />
-                    <stop offset="95%" stopColor="var(--chart-1)" stopOpacity={0.1} />
+                    <stop offset="95%" stopColor="var(--chart-1)" stopOpacity={0.05} />
                   </linearGradient>
                   <linearGradient id="fillCommission" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="var(--chart-2)" stopOpacity={0.8} />
-                    <stop offset="95%" stopColor="var(--chart-2)" stopOpacity={0.1} />
+                    <stop offset="95%" stopColor="var(--chart-2)" stopOpacity={0.05} />
                   </linearGradient>
                 </defs>
                 <Area
@@ -298,7 +307,7 @@ export default function DashboardPage() {
                   stroke="var(--chart-2)"
                   fill="url(#fillCommission)"
                   fillOpacity={0.4}
-                  stackId="a"
+                  strokeWidth={1.6}
                   name="Price Commission"
                 />
                 <Area
@@ -307,7 +316,7 @@ export default function DashboardPage() {
                   stroke="var(--chart-1)"
                   fill="url(#fillCost)"
                   fillOpacity={0.4}
-                  stackId="a"
+                  strokeWidth={1.6}
                   name="Cost Operator"
                 />
               </AreaChart>
@@ -316,8 +325,8 @@ export default function DashboardPage() {
 
           {/* === Chart Footer: Show Best Month === */}
           {bestMonth.month && (
-            <div className="px-6 pb-4 text-sm text-muted-foreground flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-green-500" />
+            <div className="px-5 pb-4 text-sm text-muted-foreground flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-green-500 shrink-0" />
               <span className="font-medium text-foreground">
                 Best month: {bestMonth.month}
               </span>
@@ -333,8 +342,8 @@ export default function DashboardPage() {
           )}
         </Card>
 
-        {/* Recent Activities (2/5 width, same height, no outer card) */}
-        <div className="lg:col-span-2 h-[400px] overflow-y-auto">
+        {/* Recent Activities (2/5 width, no scroll on parent) */}
+        <div className="lg:col-span-2 h-[400px] flex flex-col">
           <RecentActivities />
         </div>
       </div>
@@ -442,7 +451,7 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* === RouteMap === */}
+      {/* === Route Map === */}
       <div className="w-full h-[500px] relative">
         <RouteMap />
       </div>
