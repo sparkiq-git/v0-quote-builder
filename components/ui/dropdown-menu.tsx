@@ -105,7 +105,7 @@ function DropdownMenuContent({
   }, [])
 
   return (
-    <DropdownMenuPrimitive.Portal container={document.body}>
+    <DropdownMenuPrimitive.Portal>
       <DropdownMenuPrimitive.Content
         ref={contentRef}
         data-slot="dropdown-menu-content"
