@@ -14,6 +14,11 @@ import type {
   AircraftModel,
   AircraftTail,
   Itinerary,
+  PreItineraryData,
+  FBO,
+  CrewMember,
+  PassengerWithLegs,
+  Passenger,
 } from "../types"
 import { mockDatabase } from "./db"
 import { computeEffectiveTail, validateUniqueTailNumber } from "../utils/aircraft"
@@ -47,6 +52,19 @@ type MockStoreAction =
   | { type: "ADD_ITINERARY"; payload: Itinerary }
   | { type: "UPDATE_ITINERARY"; payload: { id: string; updates: Partial<Itinerary> } }
   | { type: "DELETE_ITINERARY"; payload: string }
+  | { type: "ADD_PRE_ITINERARY_DATA"; payload: PreItineraryData }
+  | { type: "UPDATE_PRE_ITINERARY_DATA"; payload: { id: string; updates: Partial<PreItineraryData> } }
+  | { type: "DELETE_PRE_ITINERARY_DATA"; payload: string }
+  | { type: "ADD_CREW_MEMBER"; payload: CrewMember }
+  | { type: "UPDATE_CREW_MEMBER"; payload: CrewMember }
+  | { type: "DELETE_CREW_MEMBER"; payload: string }
+  | { type: "ADD_CUSTOM_CREW_ROLE"; payload: string }
+  | { type: "ADD_FBO"; payload: FBO }
+  | { type: "UPDATE_FBO"; payload: FBO }
+  | { type: "DELETE_FBO"; payload: string }
+  | { type: "ADD_PASSENGER"; payload: Passenger }
+  | { type: "UPDATE_PASSENGER"; payload: Passenger }
+  | { type: "DELETE_PASSENGER"; payload: string }
   | { type: "RESET_DATA" }
 
 interface MockStoreState extends MockDatabase {}
@@ -75,7 +93,10 @@ interface MockStoreContextType {
   getItineraryById: (id: string) => Itinerary | undefined
   getItineraryByHash: (hash: string) => Itinerary | undefined
   getItineraryByQuoteId: (quoteId: string) => Itinerary | undefined
-  createItineraryFromQuote: (quoteId: string) => Itinerary
+  createItineraryFromQuote: (quoteId: string, preItineraryData?: any) => Itinerary
+  getPreItineraryDataByQuoteId: (quoteId: string) => PreItineraryData | undefined
+  getFBOById: (id: string) => FBO | undefined
+  getPassengerById: (id: string) => Passenger | undefined
 }
 
 const MockStoreContext = createContext<MockStoreContextType | undefined>(undefined)
@@ -91,6 +112,9 @@ function mockStoreReducer(state: MockStoreState, action: MockStoreAction): MockS
         itineraries: action.payload.itineraries || [],
         fbos: action.payload.fbos || [],
         crewMembers: action.payload.crewMembers || [],
+        preItineraryData: action.payload.preItineraryData || [],
+        customCrewRoles: action.payload.customCrewRoles || [], // Initialize custom roles
+        passengers: action.payload.passengers || [],
       }
 
     case "ADD_LEAD":
@@ -290,6 +314,90 @@ function mockStoreReducer(state: MockStoreState, action: MockStoreAction): MockS
         itineraries: (state.itineraries || []).filter((itinerary) => itinerary.id !== action.payload),
       }
 
+    case "ADD_PRE_ITINERARY_DATA":
+      return {
+        ...state,
+        preItineraryData: [...(state.preItineraryData || []), action.payload],
+      }
+
+    case "UPDATE_PRE_ITINERARY_DATA":
+      return {
+        ...state,
+        preItineraryData: (state.preItineraryData || []).map((data) =>
+          data.id === action.payload.id ? { ...data, ...action.payload.updates } : data,
+        ),
+      }
+
+    case "DELETE_PRE_ITINERARY_DATA":
+      return {
+        ...state,
+        preItineraryData: (state.preItineraryData || []).filter((data) => data.id !== action.payload),
+      }
+
+    case "ADD_CREW_MEMBER":
+      return {
+        ...state,
+        crewMembers: [...(state.crewMembers || []), action.payload],
+      }
+
+    case "UPDATE_CREW_MEMBER":
+      return {
+        ...state,
+        crewMembers: (state.crewMembers || []).map((crew) => (crew.id === action.payload.id ? action.payload : crew)),
+      }
+
+    case "DELETE_CREW_MEMBER":
+      return {
+        ...state,
+        crewMembers: (state.crewMembers || []).filter((crew) => crew.id !== action.payload),
+      }
+
+    case "ADD_CUSTOM_CREW_ROLE":
+      const existingRoles = state.customCrewRoles || []
+      if (existingRoles.includes(action.payload)) return state
+      return {
+        ...state,
+        customCrewRoles: [...existingRoles, action.payload],
+      }
+
+    case "ADD_FBO":
+      return {
+        ...state,
+        fbos: [...(state.fbos || []), action.payload],
+      }
+
+    case "UPDATE_FBO":
+      return {
+        ...state,
+        fbos: (state.fbos || []).map((fbo) => (fbo.id === action.payload.id ? action.payload : fbo)),
+      }
+
+    case "DELETE_FBO":
+      return {
+        ...state,
+        fbos: (state.fbos || []).filter((fbo) => fbo.id !== action.payload),
+      }
+
+    case "ADD_PASSENGER":
+      return {
+        ...state,
+        passengers: [...(state.passengers || []), action.payload],
+      }
+
+    case "UPDATE_PASSENGER":
+      return {
+        ...state,
+        passengers: (state.passengers || []).map((passenger) =>
+          passenger.id === action.payload.id ? action.payload : passenger,
+        ),
+      }
+
+    case "DELETE_PASSENGER":
+      return {
+        ...state,
+        passengers: (state.passengers || []).filter((passenger) => passenger.id !== action.payload),
+      }
+
     case "RESET_DATA":
       return mockDatabase
 
@@ -331,6 +439,9 @@ export function MockStoreProvider({ children }: { children: ReactNode }) {
           itineraries: parsedData.itineraries || mockDatabase.itineraries || [],
           fbos: parsedData.fbos || mockDatabase.fbos || [],
           crewMembers: parsedData.crewMembers || mockDatabase.crewMembers || [],
+          preItineraryData: parsedData.preItineraryData || mockDatabase.preItineraryData || [],
+          customCrewRoles: mockDatabase.customCrewRoles || [],
+          passengers: parsedData.passengers || mockDatabase.passengers || [],
         }
         dispatch({ type: "LOAD_DATA", payload: mergedData })
       } catch (error) {
@@ -352,10 +463,14 @@ export function MockStoreProvider({ children }: { children: ReactNode }) {
   const getQuoteByToken = (token: string) => state.quotes.find((quote) => quote.token === token)
   const getAircraftTypeById = (id: string) => state.aircraftTypes.find((aircraft) => aircraft.id === id)
   const getCustomerById = (id: string) => state.customers.find((customer) => customer.id === id)
+  const getPassengerById = (id: string) => state.passengers.find((passenger) => passenger.id === id)
 
   const convertLeadToQuote = (leadId: string): Quote => {
     const lead = getLeadById(leadId)
     if (!lead) throw new Error("Lead not found")
+
+    const now = new Date()
+    const expirationDate = new Date(now.getTime() + 8 * 60 * 60 * 1000) // 8 hours from now
 
     const newQuote: Quote = {
       id: `quote-${Date.now()}`,
@@ -365,12 +480,19 @@ export function MockStoreProvider({ children }: { children: ReactNode }) {
       legs: lead.legs,
       options: [],
       services: [],
-      status: "pending_acceptance",
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      status: "pending_response",
+      expiresAt: expirationDate.toISOString(),
       createdAt: new Date().toISOString(),
       terms: "Standard terms and conditions apply.",
       branding: {
         primaryColor: state.companies[0]?.primaryColor || "#2563eb",
+      },
+      workflowData: {
+        availabilityCheck: {
+          status: "pending",
+        },
+        contractAndPayment: {},
+        preItineraryData: {},
       },
     }
 
@@ -386,7 +508,7 @@ export function MockStoreProvider({ children }: { children: ReactNode }) {
 
     return {
       leadsToday: state.leads.filter((lead) => lead.createdAt.startsWith(today) && lead.status !== "deleted").length,
-      quotesPending: state.quotes.filter((quote) => quote.status === "pending_acceptance").length,
+      quotesPending: state.quotes.filter((quote) => quote.status === "pending_response").length,
       viewsThisWeek: state.events.filter((event) => event.type === "quote_viewed" && event.timestamp >= weekAgo).length,
     }
   }
@@ -394,6 +516,10 @@ export function MockStoreProvider({ children }: { children: ReactNode }) {
   const getCategoryById = (id: string) => state.categories.find((category) => category.id === id)
   const getModelById = (id: string) => (state.aircraftModels || []).find((model) => model.id === id)
   const getTailById = (id: string) => (state.aircraftTails || []).find((tail) => tail.id === id)
+  const getPreItineraryDataByQuoteId = (quoteId: string) =>
+    (state.preItineraryData || []).find((data) => data.quoteId === quoteId)
+
+  const getFBOById = (id: string) => (state.fbos || []).find((fbo) => fbo.id === id)
 
   const getEffectiveTail = (tailId: string) => {
     const tail = getTailById(tailId)
@@ -417,10 +543,23 @@ export function MockStoreProvider({ children }: { children: ReactNode }) {
   const getItineraryByQuoteId = (quoteId: string) =>
     (state.itineraries || []).find((itinerary) => itinerary.quoteId === quoteId)
 
-  const createItineraryFromQuote = (quoteId: string): Itinerary => {
+  const createItineraryFromQuote = (quoteId: string, providedPreItineraryData?: any): Itinerary => {
+    console.log("[v0] createItineraryFromQuote - Starting for quote:", quoteId)
+
     const quote = getQuoteById(quoteId)
     if (!quote) throw new Error("Quote not found")
-    if (quote.status !== "paid") throw new Error("Quote must be paid to create itinerary")
+
+    console.log("[v0] Found quote:", quote.id)
+    console.log("[v0] Quote status:", quote.status)
+    console.log("[v0] Quote selected option:", quote.selectedOptionId)
+
+    if (
+      quote.status !== "payment_received" &&
+      quote.status !== "itinerary_created" &&
+      quote.status !== "pending_payment" &&
+      quote.status !== "availability_confirmed"
+    )
+      throw new Error("Quote must have payment received before creating itinerary")
     if (!quote.selectedOptionId) throw new Error("Quote must have a selected option")
 
     const selectedOption = quote.options.find((opt) => opt.id === quote.selectedOptionId)
@@ -430,6 +569,28 @@ export function MockStoreProvider({ children }: { children: ReactNode }) {
     if (!model) throw new Error("Aircraft model not found")
 
     const tail = selectedOption.aircraftTailId ? getTailById(selectedOption.aircraftTailId) : undefined
+
+    const preItineraryData = providedPreItineraryData || quote.workflowData?.preItineraryData
+    console.log("[v0] Retrieved PreItineraryData:", preItineraryData)
+    console.log("[v0] PreItineraryData crew info:", preItineraryData?.crewInformation)
+    console.log("[v0] PreItineraryData passengers:", preItineraryData?.passengerDetails)
+
+    const crewMembers =
+      preItineraryData?.crewInformation?.selectedCrewIds && state.crewMembers
+        ? state.crewMembers
+            .filter((crew) => preItineraryData.crewInformation?.selectedCrewIds?.includes(crew.id))
+            .map((crew) => ({
+              ...crew,
+              assignedLegIds: preItineraryData.crewInformation?.assignments?.[crew.id] || [],
+            }))
+        : []
+
+    console.log("[v0] Built crew members list:", crewMembers)
+    console.log("[v0] Crew members count:", crewMembers.length)
+
+    const passengerDetails = preItineraryData?.passengerDetails || []
+    console.log("[v0] Passenger details:", passengerDetails)
+    console.log("[v0] Passenger count:", passengerDetails.length)
 
     const publicHash = `itin-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
 
@@ -452,32 +613,71 @@ export function MockStoreProvider({ children }: { children: ReactNode }) {
           baggageCapacity: "Standard baggage compartment",
         },
       },
-      segments: quote.legs.map((leg, index) => ({
-        id: `segment-${leg.id}`,
-        legId: leg.id,
-        segmentNumber: index + 1,
-        origin: leg.origin,
-        destination: leg.destination,
-        departureDate: leg.departureDate,
-        departureTime: leg.departureTime,
-        arrivalTime: "TBD",
-        blockTime: "TBD",
-        passengers: leg.passengers,
-        passengerList: [],
-        notes: leg.notes,
-        assignedCrew: [],
-      })),
+      segments: quote.legs.map((leg, index) => {
+        const legFboData = preItineraryData?.fboInformation?.legFbos?.[leg.id]
+        const originFBO = legFboData?.originFboId ? getFBOById(legFboData.originFboId) : undefined
+        const destinationFBO = legFboData?.destinationFboId ? getFBOById(legFboData.destinationFboId) : undefined
+
+        const weatherNotes =
+          preItineraryData?.weatherNotes?.[leg.origin] || preItineraryData?.weatherNotes?.[leg.destination]
+
+        const assignedCrew = crewMembers.filter((crew) => crew.assignedLegIds?.includes(leg.id))
+
+        const passengerList =
+          passengerDetails
+            ?.filter((p: PassengerWithLegs) => p.assignedLegIds?.includes(leg.id))
+            .map((p: PassengerWithLegs) => p.name) || []
+
+        console.log("[v0] Segment", index + 1, "- Leg ID:", leg.id)
+        console.log("[v0] Assigned crew for leg:", assignedCrew)
+        console.log("[v0] Passenger list for leg:", passengerList)
+
+        return {
+          id: `segment-${leg.id}`,
+          legId: leg.id,
+          segmentNumber: index + 1,
+          origin: leg.origin,
+          destination: leg.destination,
+          departureDate: leg.departureDate,
+          departureTime: leg.departureTime,
+          arrivalTime: "TBD",
+          blockTime: "TBD",
+          passengers: leg.passengers,
+          passengerList,
+          passengerDetails: passengerDetails,
+          notes: leg.notes,
+          fboOrigin: originFBO,
+          fboDestination: destinationFBO,
+          assignedCrew: assignedCrew || [],
+          weatherForecast: weatherNotes
+            ? {
+                airportCode: leg.origin,
+                forecast: weatherNotes,
+                temperature: "",
+                conditions: "",
+                visibility: "",
+                winds: "",
+              }
+            : undefined,
+        }
+      }),
       amenities: selectedOption.selectedAmenities || [],
       restrictions: {
         operational: [],
         customs: [],
         permits: [],
       },
-      specialNotes: [],
+      specialNotes: preItineraryData?.specialRequirements || [],
       images:
         selectedOption.overrideImages?.map((url) => ({ url, type: "exterior" as const })) ||
         model.images.map((url) => ({ url, type: "exterior" as const })),
-      crew: [],
+      crew: crewMembers || [],
+      crewWithLegs: crewMembers,
+      allPassengers: passengerDetails,
+      workflowData: {
+        ...quote.workflowData,
+        preItineraryData: preItineraryData,
+      },
       status: "confirmed",
       visibility: {
         showCrewContacts: false,
@@ -488,8 +688,23 @@ export function MockStoreProvider({ children }: { children: ReactNode }) {
       revisionNumber: 1,
     }
 
+    console.log("[v0] Created itinerary with crew:", newItinerary.crew)
+    console.log("[v0] Created itinerary with crewWithLegs:", newItinerary.crewWithLegs)
+    console.log("[v0] Created itinerary with passengers:", newItinerary.allPassengers)
+    console.log(
+      "[v0] Created itinerary segments:",
+      newItinerary.segments.map((s) => ({
+        id: s.id,
+        assignedCrew: s.assignedCrew.length,
+        passengerList: s.passengerList.length,
+      })),
+    )
+
     dispatch({ type: "ADD_ITINERARY", payload: newItinerary })
-    dispatch({ type: "UPDATE_QUOTE", payload: { id: quoteId, updates: { itineraryId: newItinerary.id } } })
+    dispatch({
+      type: "UPDATE_QUOTE",
+      payload: { id: quoteId, updates: { itineraryId: newItinerary.id, status: "itinerary_created" } },
+    })
 
     return newItinerary
   }
@@ -515,6 +730,9 @@ export function MockStoreProvider({ children }: { children: ReactNode }) {
     getItineraryByHash,
     getItineraryByQuoteId,
     createItineraryFromQuote,
+    getPreItineraryDataByQuoteId,
+    getFBOById,
+    getPassengerById,
   }
 
   return <MockStoreContext.Provider value={contextValue}>{children}</MockStoreContext.Provider>

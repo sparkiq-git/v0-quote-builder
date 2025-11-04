@@ -1,254 +1,460 @@
 "use client"
 
-import Link from "next/link"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
+import { useEffect, useState } from "react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Users, FileText, Clock, Plane, Mail, Phone, Calendar, TrendingUp } from "lucide-react"
+import { RouteMap } from "@/components/dashboard/route-map"
+import DashboardMetrics from "@/components/dashboard/DashboardMetrics"
+import { RecentActivities } from "@/components/dashboard/recent-activities"
 import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Users, FileText, Eye, TrendingUp, Clock, ArrowRight, Plus, Activity } from "lucide-react"
-import { useMockStore } from "@/lib/mock/store"
-import { formatTimeAgo, formatCurrency } from "@/lib/utils/format"
+import { AreaChart, Area, CartesianGrid, XAxis, Tooltip, ResponsiveContainer } from "recharts"
 
 export default function DashboardPage() {
-  const { state, getMetrics } = useMockStore()
-  const metrics = getMetrics()
+  const [leadCount, setLeadCount] = useState(0)
+  const [quotesAwaitingResponse, setQuotesAwaitingResponse] = useState(0)
+  const [unpaidQuotes, setUnpaidQuotes] = useState(0)
+  const [upcomingDepartures, setUpcomingDepartures] = useState(0)
+  const [isClient, setIsClient] = useState(false)
+  const [todayLeads, setTodayLeads] = useState<any[]>([])
+  const [todayQuotes, setTodayQuotes] = useState<any[]>([])
+  const [chartData, setChartData] = useState<any[]>([])
 
-  // Get recent activity
-  const recentLeads = state.leads
-    .filter((lead) => lead.status !== "deleted")
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    .slice(0, 3)
+  useEffect(() => setIsClient(true), [])
 
-  const recentQuotes = state.quotes
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    .slice(0, 3)
+  // === Load Lead Count ===
+  useEffect(() => {
+    if (!isClient) return
+    let cancelled = false
 
-  const recentEvents = state.events
-    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-    .slice(0, 5)
+    const loadLeadCount = async () => {
+      const { createClient } = await import("@/lib/supabase/client")
+      const supabase = createClient()
 
-  const getStatusBadgeVariant = (status: string) => {
-    switch (status) {
-      case "new":
-        return "default"
-      case "converted":
-        return "secondary"
-      case "pending_acceptance":
-        return "outline"
-      case "accepted_by_requester":
-        return "default"
-      case "accepted":
-        return "default"
-      case "declined":
-        return "destructive"
-      case "expired":
-        return "secondary"
-      default:
-        return "outline"
+      const { count, error } = await supabase
+        .from("lead")
+        .select("*", { count: "exact", head: true })
+        .in("status", ["opened", "new"])
+
+      if (!cancelled) {
+        if (error) {
+          console.error("Lead count error:", error)
+          setLeadCount(0)
+        } else {
+          setLeadCount(count ?? 0)
+        }
+      }
     }
+
+    loadLeadCount()
+    const id = setInterval(loadLeadCount, 15000)
+    return () => {
+      cancelled = true
+      clearInterval(id)
+    }
+  }, [isClient])
+
+  // === Load Metrics ===
+  useEffect(() => {
+    if (!isClient) return
+    let cancelled = false
+
+    const loadMetrics = async () => {
+      try {
+        const res = await fetch("/api/metrics", { cache: "no-store" })
+        if (!res.ok) throw new Error(`metrics ${res.status}`)
+        const j = await res.json()
+        if (cancelled) return
+        setQuotesAwaitingResponse(j.quotesAwaitingResponse ?? 0)
+        setUnpaidQuotes(j.unpaidQuotes ?? 0)
+        setUpcomingDepartures(j.upcomingDepartures ?? 0)
+      } catch (e) {
+        if (!cancelled) console.error("Failed to load metrics:", e)
+      }
+    }
+
+    loadMetrics()
+    const id = setInterval(loadMetrics, 15000)
+    return () => {
+      cancelled = true
+      clearInterval(id)
+    }
+  }, [isClient])
+
+  // === Load today's NEW Leads and DRAFT Quotes ===
+  useEffect(() => {
+    if (!isClient) return
+
+    const loadTodayData = async () => {
+      const { createClient } = await import("@/lib/supabase/client")
+      const supabase = createClient()
+
+      const start = new Date()
+      start.setHours(0, 0, 0, 0)
+      const end = new Date()
+      end.setHours(23, 59, 59, 999)
+
+      try {
+        const [{ data: leads }, { data: quotes }] = await Promise.all([
+          supabase
+            .from("lead")
+            .select(`
+              id,
+              customer_name,
+              customer_email,
+              customer_phone,
+              status,
+              trip_type,
+              trip_summary,
+              earliest_departure,
+              created_at
+            `)
+            .in("status", ["opened", "new"])
+            .gte("created_at", start.toISOString())
+            .lte("created_at", end.toISOString())
+            .order("created_at", { ascending: false }),
+
+          supabase
+            .from("quote")
+            .select(`
+              id,
+              contact_name,
+              status,
+              created_at,
+              title,
+              trip_summary,
+              trip_type,
+              total_pax
+            `)
+            .in("status", ["opened", "awaiting response"])
+            .gte("created_at", start.toISOString())
+            .lte("created_at", end.toISOString())
+            .order("created_at", { ascending: false }),
+        ])
+
+        setTodayLeads(leads ?? [])
+        setTodayQuotes(quotes ?? [])
+      } catch (error) {
+        console.error("Error loading today's data:", error)
+      }
+    }
+
+    loadTodayData()
+  }, [isClient])
+
+  // === Load Yearly Chart Data (Filtered by Quote Status) ===
+  useEffect(() => {
+    if (!isClient) return
+
+    const loadChartData = async () => {
+      const { createClient } = await import("@/lib/supabase/client")
+      const supabase = createClient()
+
+      const currentYear = new Date().getFullYear()
+      const startOfYear = new Date(currentYear, 0, 1).toISOString()
+      const endOfYear = new Date(currentYear, 11, 31, 23, 59, 59).toISOString()
+      const allowedStatuses = ["accepted", "invoiced", "paid", "pending_approval"]
+
+      // Step 1: Get quotes with allowed statuses
+      const { data: quotes, error: quoteError } = await supabase
+        .from("quote")
+        .select("id")
+        .in("status", allowedStatuses)
+
+      if (quoteError) {
+        console.error("Error loading quotes:", quoteError)
+        return
+      }
+
+      const quoteIds = quotes?.map((q) => q.id) ?? []
+      if (quoteIds.length === 0) {
+        setChartData([])
+        return
+      }
+
+      // Step 2: Get related quote_options
+      const { data: options, error } = await supabase
+        .from("quote_option")
+        .select("created_at, cost_operator, price_commission, quote_id")
+        .in("quote_id", quoteIds)
+        .gte("created_at", startOfYear)
+        .lte("created_at", endOfYear)
+
+      if (error) {
+        console.error("Error loading chart data:", error)
+        return
+      }
+
+      // Step 3: Aggregate monthly data
+      const monthlyData = Array.from({ length: 12 }, (_, i) => ({
+        month: new Date(0, i).toLocaleString("default", { month: "short" }),
+        cost_operator: 0,
+        price_commission: 0,
+      }))
+
+      options?.forEach((row) => {
+        const monthIndex = new Date(row.created_at).getMonth()
+        monthlyData[monthIndex].cost_operator += row.cost_operator || 0
+        monthlyData[monthIndex].price_commission += row.price_commission || 0
+      })
+
+      setChartData(monthlyData)
+    }
+
+    loadChartData()
+  }, [isClient])
+
+  // === Metric Card Component ===
+  function MetricCard({
+    title,
+    icon: Icon,
+    currentValue,
+    description,
+  }: {
+    title: string
+    icon: any
+    currentValue: number | string
+    description: string
+  }) {
+    return (
+      <Card className="col-span-1 h-full flex flex-col hover:shadow-lg transition-all duration-200 border border-border bg-card rounded-xl">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3 pt-6 px-6">
+          <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
+            <Icon className="h-4 w-4 text-muted-foreground" />
+            {title}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-rows-[auto_auto] gap-2 flex-1 px-6 pb-6">
+          <div className="text-3xl font-bold leading-none text-foreground tracking-tight">{currentValue}</div>
+          <p className="text-xs text-muted-foreground leading-relaxed min-h-4 truncate">{description}</p>
+        </CardContent>
+      </Card>
+    )
   }
+
+  // === Helper: Compute Best Month ===
+  const bestMonth =
+    chartData.length > 0
+      ? chartData.reduce(
+          (max, cur) => {
+            const total = (cur.cost_operator || 0) + (cur.price_commission || 0)
+            return total > max.total ? { month: cur.month, total } : max
+          },
+          { month: "", total: 0 }
+        )
+      : { month: "", total: 0 }
 
   return (
     <div className="space-y-8">
-      {/* Welcome Section */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground">Welcome back! Here's what's happening with your charter business today.</p>
+      {/* === Header === */}
+      <div className="space-y-2">
+        <h1 className="text-3xl font-semibold tracking-tight text-foreground">Welcome back!</h1>
+        <p className="text-muted-foreground text-base leading-relaxed">Here's what's happening today.</p>
       </div>
 
-      {/* Metrics Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Leads Today</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{metrics.leadsToday}</div>
-            <p className="text-xs text-muted-foreground">
-              <TrendingUp className="inline h-3 w-3 mr-1" />
-              New inquiries received
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Quotes Pending</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{metrics.quotesPending}</div>
-            <p className="text-xs text-muted-foreground">
-              <Clock className="inline h-3 w-3 mr-1" />
-              Awaiting customer response
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Views This Week</CardTitle>
-            <Eye className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{metrics.viewsThisWeek}</div>
-            <p className="text-xs text-muted-foreground">
-              <Activity className="inline h-3 w-3 mr-1" />
-              Quote page visits
-            </p>
-          </CardContent>
-        </Card>
-
-        
+      {/* === Top Metric Cards === */}
+      <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+        <MetricCard title="Leads" icon={Users} currentValue={leadCount} description="Pending conversion to quote" />
+        <MetricCard title="Quotes" icon={FileText} currentValue={quotesAwaitingResponse} description="Awaiting client response" />
+        <MetricCard title="Unpaid" icon={Clock} currentValue={unpaidQuotes} description="Awaiting payment" />
+        <MetricCard title="Upcoming Trips" icon={Plane} currentValue={upcomingDepartures} description="Departures in next 7 days" />
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        {/* Recent Leads */}
-        <Card className="col-span-4">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Recent Leads</CardTitle>
-                <CardDescription>Latest customer inquiries</CardDescription>
-              </div>
-              <Button asChild size="sm">
-                <Link href="/leads">
-                  View All
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
+      {/* === Monthly Metrics === */}
+      <DashboardMetrics />
+
+      {/* === Chart + Recent Activities === */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        {/* Chart Area (3/5 width) */}
+        <Card className="border border-border shadow-sm rounded-xl bg-card hover:shadow-md transition-shadow lg:col-span-3 h-[400px]">
+          <CardHeader className="pb-2 pt-4 px-5">
+            <CardTitle className="text-base font-semibold text-foreground">
+              Cost & Commission (Yearly)
+            </CardTitle>
+          </CardHeader>
+
+          <CardContent className="h-[280px] px-4 pb-2">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={chartData} margin={{ top: 10, right: 16, left: 0, bottom: 0 }}>
+                <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                <XAxis
+                  dataKey="month"
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={6}
+                  style={{ fontSize: "12px" }}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "hsl(var(--card))",
+                    borderColor: "hsl(var(--border))",
+                    borderRadius: "0.5rem",
+                    fontSize: "12px",
+                  }}
+                />
+                <defs>
+                  <linearGradient id="fillCost" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="var(--chart-1)" stopOpacity={0.8} />
+                    <stop offset="95%" stopColor="var(--chart-1)" stopOpacity={0.05} />
+                  </linearGradient>
+                  <linearGradient id="fillCommission" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="var(--chart-2)" stopOpacity={0.8} />
+                    <stop offset="95%" stopColor="var(--chart-2)" stopOpacity={0.05} />
+                  </linearGradient>
+                </defs>
+                <Area
+                  type="natural"
+                  dataKey="price_commission"
+                  stroke="var(--chart-2)"
+                  fill="url(#fillCommission)"
+                  fillOpacity={0.4}
+                  strokeWidth={1.6}
+                  name="Price Commission"
+                />
+                <Area
+                  type="natural"
+                  dataKey="cost_operator"
+                  stroke="var(--chart-1)"
+                  fill="url(#fillCost)"
+                  fillOpacity={0.4}
+                  strokeWidth={1.6}
+                  name="Cost Operator"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </CardContent>
+
+          {/* === Chart Footer: Show Best Month === */}
+          {bestMonth.month && (
+            <div className="px-5 pb-4 text-sm text-muted-foreground flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-green-500 shrink-0" />
+              <span className="font-medium text-foreground">
+                Best month: {bestMonth.month}
+              </span>
+              <span className="text-muted-foreground">
+                — $
+                {bestMonth.total.toLocaleString(undefined, {
+                  minimumFractionDigits: 0,
+                  maximumFractionDigits: 0,
+                })}{" "}
+                total
+              </span>
             </div>
+          )}
+        </Card>
+
+        {/* Recent Activities (2/5 width, no scroll on parent) */}
+        <div className="lg:col-span-2 h-[400px] flex flex-col">
+          <RecentActivities />
+        </div>
+      </div>
+
+      {/* === Leads and Quotes === */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        {/* Leads */}
+        <Card className="border border-border shadow-sm rounded-xl flex flex-col bg-card hover:shadow-md transition-shadow">
+          <CardHeader className="px-6 pt-6 pb-4">
+            <CardTitle className="text-lg font-semibold text-foreground">Today's New Leads</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {recentLeads.length > 0 ? (
-                recentLeads.map((lead) => (
-                  <div key={lead.id} className="flex items-center justify-between space-x-4">
-                    <div className="flex items-center space-x-4">
-                      <Avatar>
-                        <AvatarFallback>
-                          {lead.customer.name
-                            .split(" ")
-                            .map((n) => n[0])
-                            .join("")}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="text-sm font-medium leading-none">{lead.customer.name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {lead.legs[0]?.origin} → {lead.legs[0]?.destination}
-                          {lead.legs.length > 1 && ` +${lead.legs.length - 1} more`}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Badge variant={getStatusBadgeVariant(lead.status)}>{lead.status.replace("_", " ")}</Badge>
-                      <p className="text-sm text-muted-foreground">{formatTimeAgo(lead.createdAt)}</p>
-                    </div>
+          <CardContent className="flex-1 px-6 pb-6 space-y-4 overflow-y-auto max-h-[400px]">
+            {todayLeads.length === 0 ? (
+              <p className="text-sm text-muted-foreground leading-relaxed">No new leads today.</p>
+            ) : (
+              todayLeads.map((lead) => (
+                <div key={lead.id} className="flex flex-col border-b border-border pb-4 last:border-none">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="font-semibold text-sm text-foreground">{lead.customer_name}</p>
+                    <Badge variant="secondary" className="text-[10px] uppercase font-medium">
+                      {lead.status}
+                    </Badge>
                   </div>
-                ))
-              ) : (
-                <div className="text-center py-6">
-                  <Users className="mx-auto h-12 w-12 text-muted-foreground" />
-                  <h3 className="mt-2 text-sm font-semibold">No leads yet</h3>
-                  <p className="mt-1 text-sm text-muted-foreground">Get started by adding your first lead.</p>
-                  <div className="mt-6">
-                    <Button asChild size="sm">
-                      <Link href="/leads">
-                        <Plus className="mr-2 h-4 w-4" />
-                        Add Lead
-                      </Link>
-                    </Button>
+                  {lead.customer_email && (
+                    <p className="text-xs text-muted-foreground flex items-center gap-2 mt-1 leading-relaxed">
+                      <Mail className="w-3 h-3" /> {lead.customer_email}
+                    </p>
+                  )}
+                  {lead.customer_phone && (
+                    <p className="text-xs text-muted-foreground flex items-center gap-2 leading-relaxed">
+                      <Phone className="w-3 h-3" /> {lead.customer_phone}
+                    </p>
+                  )}
+                  {lead.trip_summary && (
+                    <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
+                      <span className="font-semibold text-foreground">Route:</span> {lead.trip_summary}
+                    </p>
+                  )}
+                  {lead.trip_type && (
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      <span className="font-semibold text-foreground">Trip Type:</span> {lead.trip_type}
+                    </p>
+                  )}
+                  {lead.earliest_departure && (
+                    <p className="text-xs text-muted-foreground flex items-center gap-2 leading-relaxed">
+                      <Calendar className="w-3 h-3" />{" "}
+                      {new Date(lead.earliest_departure).toLocaleString([], {
+                        month: "short",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </p>
+                  )}
+                  <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
+                    Created at:{" "}
+                    {new Date(lead.created_at).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </p>
+                </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Quotes */}
+        <Card className="border border-border shadow-sm rounded-xl flex flex-col bg-card hover:shadow-md transition-shadow">
+          <CardHeader className="px-6 pt-6 pb-4">
+            <CardTitle className="text-lg font-semibold text-foreground">Today's New Quotes</CardTitle>
+          </CardHeader>
+          <CardContent className="flex-1 px-6 pb-6 space-y-4 overflow-y-auto max-h-[400px]">
+            {todayQuotes.length === 0 ? (
+              <p className="text-sm text-muted-foreground leading-relaxed">No draft quotes today.</p>
+            ) : (
+              todayQuotes.map((quote) => (
+                <div key={quote.id} className="flex flex-col border-b border-border pb-3 last:border-none">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="font-semibold text-sm text-foreground">
+                      {quote.title || `Quote ${quote.id.slice(0, 6)}`} — {quote.contact_name}
+                    </p>
+                    <Badge variant="secondary" className="text-[10px] uppercase font-medium">
+                      {quote.status}
+                    </Badge>
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                    {quote.trip_summary || "No trip summary"}
+                  </div>
+                  <div className="text-xs text-muted-foreground flex justify-between mt-2 leading-relaxed">
+                    <span>
+                      Pax: {quote.total_pax ?? "—"} | {quote.trip_type ?? "one-way"}
+                    </span>
+                    <span>
+                      {new Date(quote.created_at).toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </span>
                   </div>
                 </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Recent Activity */}
-        <Card className="col-span-3">
-          <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
-            <CardDescription>Latest system events</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {recentEvents.length > 0 ? (
-                recentEvents.map((event) => {
-                  const quote = event.quoteId ? state.quotes.find((q) => q.id === event.quoteId) : null
-                  const lead = event.leadId ? state.leads.find((l) => l.id === event.leadId) : null
-
-                  let description = ""
-                  let icon = <Activity className="h-4 w-4" />
-
-                  switch (event.type) {
-                    case "quote_viewed":
-                      description = quote ? `Quote viewed by ${quote.customer.name}` : "Quote viewed"
-                      icon = <Eye className="h-4 w-4" />
-                      break
-                    case "option_selected":
-                      description = quote ? `Option selected by ${quote.customer.name}` : "Option selected"
-                      icon = <FileText className="h-4 w-4" />
-                      break
-                    case "lead_created":
-                      description = lead ? `New lead from ${lead.customer.name}` : "New lead created"
-                      icon = <Users className="h-4 w-4" />
-                      break
-                  }
-
-                  return (
-                    <div key={event.id} className="flex items-center space-x-4">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">{icon}</div>
-                      <div className="flex-1 space-y-1">
-                        <p className="text-sm font-medium leading-none">{description}</p>
-                        <p className="text-sm text-muted-foreground">{formatTimeAgo(event.timestamp)}</p>
-                      </div>
-                    </div>
-                  )
-                })
-              ) : (
-                <div className="text-center py-6">
-                  <Activity className="mx-auto h-12 w-12 text-muted-foreground" />
-                  <h3 className="mt-2 text-sm font-semibold">No activity yet</h3>
-                  <p className="mt-1 text-sm text-muted-foreground">Activity will appear here as you use the system.</p>
-                </div>
-              )}
-            </div>
+              ))
+            )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Quick Actions */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
-          <CardDescription>Common tasks to get you started</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-2">
-            <Button asChild variant="outline">
-              <Link href="/leads">
-                <Users className="mr-2 h-4 w-4" />
-                View All Leads
-              </Link>
-            </Button>
-            <Button asChild variant="outline">
-              <Link href="/quotes">
-                <FileText className="mr-2 h-4 w-4" />
-                Manage Quotes
-              </Link>
-            </Button>
-            <Button asChild variant="outline">
-              <Link href="/aircraft">
-                <Plus className="mr-2 h-4 w-4" />
-                Add Aircraft
-              </Link>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      {/* === Route Map === */}
+      <div className="w-full h-[500px] relative">
+        <RouteMap />
+      </div>
     </div>
   )
 }

@@ -1,8 +1,8 @@
 "use client"
 
-import type React from "react"
-
 import { useState, useEffect } from "react"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -16,40 +16,61 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Badge } from "@/components/ui/badge"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { ModelFormSchema, type ModelFormData } from "@/lib/schemas/aircraft"
-import { useMockStore } from "@/lib/mock/store"
 import { useToast } from "@/hooks/use-toast"
-import type { AircraftModel } from "@/lib/types"
-import { Plus, X } from "lucide-react"
+import { ModelFormSchema, type ModelFormData } from "@/lib/schemas/aircraft"
+import { insertModel } from "@/lib/supabase/queries/models"
+import ModelImageManager from "@/components/aircraft/model-image-manager"
+import type { AircraftModelRecord } from "@/lib/types"
 
 interface ModelCreateDialogProps {
-  children: React.ReactNode
-  modelId?: string
+  children?: React.ReactNode
+  onCreated?: () => Promise<void> | void
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
-export function ModelCreateDialog({ children, modelId }: ModelCreateDialogProps) {
-  const { state, dispatch, getModelById, getCategoryById } = useMockStore()
+export function ModelCreateDialog({
+  children,
+  onCreated,
+  open: controlledOpen,
+  onOpenChange,
+}: ModelCreateDialogProps) {
   const { toast } = useToast()
-  const [open, setOpen] = useState(false)
-  const [images, setImages] = useState<string[]>([])
-  const [newImageUrl, setNewImageUrl] = useState("")
-  const isEditing = !!modelId
-  const existingModel = modelId ? getModelById(modelId) : null
+  const [internalOpen, setInternalOpen] = useState(false)
+  const open = controlledOpen ?? internalOpen
+  const setOpen = onOpenChange ?? setInternalOpen
 
+  const [tenantId, setTenantId] = useState<string | null>(null)
+  const [createdModel, setCreatedModel] = useState<AircraftModelRecord | null>(null)
+  const [loading, setLoading] = useState(false)
+
+  // 🔹 Fetch tenant ID on client only
   useEffect(() => {
-    console.log("[v0] Dialog state changed:", { open, isEditing, modelId, existingModel: !!existingModel })
-  }, [open, isEditing, modelId, existingModel])
+    if (typeof window === "undefined") return
+    async function loadTenant() {
+      try {
+        // Only run on client side
+        if (typeof window === 'undefined') return;
+        
+        const { createClient } = await import("@/lib/supabase/client");
+        const supabase = createClient();
+        
+        const { data } = await supabase.auth.getUser()
+        setTenantId(data?.user?.app_metadata?.tenant_id ?? null)
+      } catch (err) {
+        console.error("Error fetching tenant ID:", err)
+      }
+    }
+    loadTenant()
+  }, [])
 
   const {
     register,
     handleSubmit,
-    reset,
     setValue,
     watch,
     formState: { errors, isSubmitting },
+    reset,
   } = useForm<ModelFormData>({
     resolver: zodResolver(ModelFormSchema),
     defaultValues: {
@@ -59,251 +80,146 @@ export function ModelCreateDialog({ children, modelId }: ModelCreateDialogProps)
       defaultCapacity: undefined,
       defaultRangeNm: undefined,
       defaultSpeedKnots: undefined,
-      images: [],
     },
   })
 
-  const selectedCategoryId = watch("categoryId")
+  const categoryId = watch("categoryId")
 
-  useEffect(() => {
-    if (open && existingModel) {
-      const modelImages = existingModel.images || []
-      setImages(modelImages)
-      reset({
-        name: existingModel.name,
-        categoryId: existingModel.categoryId,
-        manufacturer: existingModel.manufacturer || "",
-        defaultCapacity: existingModel.defaultCapacity,
-        defaultRangeNm: existingModel.defaultRangeNm,
-        defaultSpeedKnots: existingModel.defaultSpeedKnots,
-        images: modelImages,
-      })
-    } else if (open && !existingModel) {
-      setImages([])
-      setNewImageUrl("")
-      reset({
-        name: "",
-        categoryId: "",
-        manufacturer: "",
-        defaultCapacity: undefined,
-        defaultRangeNm: undefined,
-        defaultSpeedKnots: undefined,
-        images: [],
-      })
-    }
-  }, [open, existingModel, reset, state.categories])
-
-  useEffect(() => {
-    setValue("images", images)
-  }, [images, setValue])
-
-  const addImage = () => {
-    if (newImageUrl.trim() && !images.includes(newImageUrl.trim())) {
-      const updatedImages = [...images, newImageUrl.trim()]
-      setImages(updatedImages)
-      setNewImageUrl("")
-    }
-  }
-
-  const removeImage = (index: number) => {
-    const updatedImages = images.filter((_, i) => i !== index)
-    setImages(updatedImages)
-  }
-
-  const handleImageKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      e.preventDefault()
-      addImage()
-    }
-  }
-
-  const onSubmit = async (data: ModelFormData) => {
+  const handleCreate = async (data: ModelFormData) => {
     try {
-      console.log("[v0] Form submission started", { isEditing, data, images })
+      if (!tenantId) throw new Error("Tenant ID not found.")
+      setLoading(true)
+      const created = await insertModel({ ...data, tenant_id: tenantId })
+      setCreatedModel(created)
+      toast({ title: "Model created", description: "Now add images for this model." })
+      await onCreated?.()
+    } catch (err: any) {
+      toast({ title: "Error creating model", description: err.message, variant: "destructive" })
+    } finally {
+      setLoading(false)
+    }
+  }
 
-      console.log("[v0] Form validation data:", {
-        name: data.name,
-        categoryId: data.categoryId,
-        images: data.images,
-        imagesState: images,
-        errors: errors,
-      })
-
-      if (isEditing && existingModel) {
-        console.log("[v0] Updating existing model", { modelId: existingModel.id, updates: data })
-        dispatch({
-          type: "UPDATE_MODEL",
-          payload: {
-            id: existingModel.id,
-            updates: {
-              ...data,
-              defaultCapacity: data.defaultCapacity || undefined,
-              defaultRangeNm: data.defaultRangeNm || undefined,
-              defaultSpeedKnots: data.defaultSpeedKnots || undefined,
-              images: images,
-            },
-          },
-        })
-        console.log("[v0] Model update dispatched successfully")
-        toast({
-          title: "Model updated",
-          description: "The aircraft model has been updated successfully.",
-        })
-      } else {
-        console.log("[v0] Creating new model", { data })
-        const newModel: AircraftModel = {
-          id: `model-${Date.now()}`,
-          ...data,
-          defaultCapacity: data.defaultCapacity || undefined,
-          defaultRangeNm: data.defaultRangeNm || undefined,
-          defaultSpeedKnots: data.defaultSpeedKnots || undefined,
-          images: images,
-          isArchived: false,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        }
-        dispatch({ type: "ADD_MODEL", payload: newModel })
-        console.log("[v0] Model creation dispatched successfully")
-        toast({
-          title: "Model created",
-          description: "The aircraft model has been created successfully.",
-        })
-      }
-      console.log("[v0] Closing dialog")
-      setOpen(false)
-    } catch (error) {
-      console.error("[v0] Error in form submission:", error)
-      toast({
-        title: "Error",
-        description: "Something went wrong. Please try again.",
-        variant: "destructive",
-      })
+  const handleDialogChange = (isOpen: boolean) => {
+    setOpen(isOpen)
+    if (!isOpen) {
+      setCreatedModel(null)
+      reset()
     }
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+    <Dialog open={open} onOpenChange={handleDialogChange}>
+      {children && <DialogTrigger asChild>{children}</DialogTrigger>}
+
+      <DialogContent className="sm:max-w-[650px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{isEditing ? "Edit Aircraft Model" : "Create Aircraft Model"}</DialogTitle>
+          <DialogTitle>
+            {createdModel ? "Upload Images" : "Create Aircraft Model"}
+          </DialogTitle>
           <DialogDescription>
-            {isEditing
-              ? "Update the aircraft model details below."
-              : "Add a new aircraft model to your catalog with default specifications."}
+            {createdModel
+              ? `Upload and manage images for ${createdModel.name}`
+              : "Add a new aircraft model to your catalog."}
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Model Name *</Label>
-              <Input id="name" {...register("name")} placeholder="e.g., Phenom 300E" />
-              {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="categoryId">Category *</Label>
-              <Select value={selectedCategoryId} onValueChange={(value) => setValue("categoryId", value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {(state.categories || []).map((category) => (
-                    <SelectItem key={category.id} value={category.id}>
-                      {category.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.categoryId && <p className="text-sm text-destructive">{errors.categoryId.message}</p>}
-            </div>
-          </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="manufacturer">Manufacturer</Label>
-            <Input id="manufacturer" {...register("manufacturer")} placeholder="e.g., Embraer" />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Aircraft Images *</Label>
-            <div className="flex gap-2">
-              <Input
-                value={newImageUrl}
-                onChange={(e) => setNewImageUrl(e.target.value)}
-                onKeyPress={handleImageKeyPress}
-                placeholder="Enter image URL"
-                className="flex-1"
-              />
-              <Button type="button" onClick={addImage} size="sm">
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
-            {images.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-2">
-                {images.map((image, index) => (
-                  <Badge key={index} variant="secondary" className="flex items-center gap-1">
-                    <span className="max-w-[200px] truncate">Image {index + 1}</span>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-4 w-4 p-0 hover:bg-destructive hover:text-destructive-foreground"
-                      onClick={() => removeImage(index)}
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
-                  </Badge>
-                ))}
+        {/* --- STEP 1: Basic form --- */}
+        {!createdModel && (
+          <form onSubmit={handleSubmit(handleCreate)} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="name">Model Name *</Label>
+                <Input id="name" {...register("name")} placeholder="Phenom 300E" />
+                {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
               </div>
-            )}
-            {errors.images && <p className="text-sm text-destructive">{errors.images.message}</p>}
-          </div>
+              <div>
+                <Label htmlFor="categoryId">Category *</Label>
+                <Select value={categoryId} onValueChange={(v) => setValue("categoryId", v)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="light-jet">Light Jet</SelectItem>
+                    <SelectItem value="midsize">Midsize</SelectItem>
+                    <SelectItem value="heavy-jet">Heavy Jet</SelectItem>
+                  </SelectContent>
+                </Select>
+                {errors.categoryId && (
+                  <p className="text-sm text-destructive">{errors.categoryId.message}</p>
+                )}
+              </div>
+            </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="defaultCapacity">Default Capacity</Label>
+            <div>
+              <Label htmlFor="manufacturer">Manufacturer</Label>
+              <Input id="manufacturer" {...register("manufacturer")} placeholder="Embraer" />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="defaultCapacity">Default Capacity</Label>
+                <Input
+                  id="defaultCapacity"
+                  type="number"
+                  min="1"
+                  {...register("defaultCapacity", { 
+                    valueAsNumber: true,
+                    setValueAs: (value) => isNaN(value) ? undefined : value
+                  })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="defaultRangeNm">Range (nm)</Label>
+                <Input
+                  id="defaultRangeNm"
+                  type="number"
+                  min="1"
+                  {...register("defaultRangeNm", { 
+                    valueAsNumber: true,
+                    setValueAs: (value) => isNaN(value) ? undefined : value
+                  })}
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="defaultSpeedKnots">Speed (knots)</Label>
               <Input
-                id="defaultCapacity"
+                id="defaultSpeedKnots"
                 type="number"
                 min="1"
-                {...register("defaultCapacity", { valueAsNumber: true })}
-                placeholder="8"
+                {...register("defaultSpeedKnots", { 
+                  valueAsNumber: true,
+                  setValueAs: (value) => isNaN(value) ? undefined : value
+                })}
               />
-              {errors.defaultCapacity && <p className="text-sm text-destructive">{errors.defaultCapacity.message}</p>}
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="defaultRangeNm">Range (nm)</Label>
-              <Input
-                id="defaultRangeNm"
-                type="number"
-                min="1"
-                {...register("defaultRangeNm", { valueAsNumber: true })}
-                placeholder="2010"
-              />
-              {errors.defaultRangeNm && <p className="text-sm text-destructive">{errors.defaultRangeNm.message}</p>}
-            </div>
-          </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="defaultSpeedKnots">Speed (knots)</Label>
-            <Input
-              id="defaultSpeedKnots"
-              type="number"
-              min="1"
-              {...register("defaultSpeedKnots", { valueAsNumber: true })}
-              placeholder="450"
-            />
-            {errors.defaultSpeedKnots && <p className="text-sm text-destructive">{errors.defaultSpeedKnots.message}</p>}
-          </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => handleDialogChange(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSubmitting || loading}>
+                {loading ? "Creating..." : "Create Model"}
+              </Button>
+            </DialogFooter>
+          </form>
+        )}
 
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Saving..." : isEditing ? "Update Model" : "Create Model"}
-            </Button>
-          </DialogFooter>
-        </form>
+        {/* --- STEP 2: Image upload --- */}
+        {createdModel && tenantId && (
+          <div className="mt-6 border-t pt-6 space-y-4">
+            <h3 className="text-lg font-semibold">Upload Images</h3>
+            <ModelImageManager modelId={createdModel.id} tenantId={tenantId} />
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => handleDialogChange(false)}>
+                Done
+              </Button>
+            </DialogFooter>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   )
