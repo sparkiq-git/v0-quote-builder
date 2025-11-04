@@ -66,7 +66,9 @@ export function InvoiceContractWizard({
   const [sending, setSending] = useState(false)
   const [editedQuoteData, setEditedQuoteData] = useState<any | null>(null)
   const [taxes, setTaxes] = useState<Array<{ id: string; name: string; amount: number }>>([])
-  const [sendEmail, setSendEmail] = useState(true) // Default to sending email
+  const [sendToCustomer, setSendToCustomer] = useState(true) // Default to sending to customer
+  const [sendToTenant, setSendToTenant] = useState(true) // Default to sending to tenant
+  const [includePdf, setIncludePdf] = useState(true) // Default to including PDF
 
   // Safety check: ensure taxes is always an array
   const safeTaxes = Array.isArray(taxes) ? taxes : []
@@ -114,7 +116,10 @@ export function InvoiceContractWizard({
           quote_id: selectedQuote.id,
           external_payment_url: paymentUrl || null,
           taxes: safeTaxes,
-          send_email: sendEmail,
+          send_email: sendToCustomer || sendToTenant, // Legacy flag for backward compatibility
+          send_to_customer: sendToCustomer,
+          send_to_tenant: sendToTenant,
+          include_pdf: includePdf,
         }),
       })
 
@@ -122,9 +127,16 @@ export function InvoiceContractWizard({
       if (!res.ok) throw new Error(data.error || "Failed to create invoice")
 
       // Show success message
+      const emailSent = sendToCustomer || sendToTenant
+      const emailDetails = []
+      if (sendToCustomer) emailDetails.push("customer")
+      if (sendToTenant) emailDetails.push("tenant")
+      const emailText = emailSent ? ` and email sent to ${emailDetails.join(" & ")}` : ""
+      const pdfText = includePdf && emailSent ? " with PDF attachment" : ""
+      
       toast({
-        title: "Invoice created" + (sendEmail ? " & email sent" : ""),
-        description: `Invoice ${data.data?.invoice?.number || "created"} successfully${sendEmail ? " and email sent to customer" : ""}.`,
+        title: "Invoice created" + (emailSent ? " & email sent" : ""),
+        description: `Invoice ${data.data?.invoice?.number || "created"} successfully${emailText}${pdfText}.`,
       })
 
       // Call success callback if provided
@@ -145,7 +157,7 @@ export function InvoiceContractWizard({
     } finally {
       setSending(false)
     }
-  }, [selectedQuote, step, paymentUrl, toast, onSuccess, editedQuoteData, fullQuoteData, safeTaxes, sendEmail])
+  }, [selectedQuote, step, paymentUrl, toast, onSuccess, editedQuoteData, fullQuoteData, safeTaxes, sendToCustomer, sendToTenant, includePdf])
 
   const handleBack = useCallback(() => {
     if (step === 2) {
@@ -157,10 +169,12 @@ export function InvoiceContractWizard({
     onOpenChange(false)
     // Reset state when closing
     setStep(1)
-      setPaymentUrl("")
-      setEditedQuoteData(null)
-      setTaxes([])
-      setSendEmail(true)
+    setPaymentUrl("")
+    setEditedQuoteData(null)
+    setTaxes([])
+    setSendToCustomer(true)
+    setSendToTenant(true)
+    setIncludePdf(true)
   }, [onOpenChange])
 
 
@@ -218,8 +232,12 @@ export function InvoiceContractWizard({
               onQuoteDataChange={setEditedQuoteData}
               taxes={safeTaxes}
               onTaxesChange={setTaxes}
-              sendEmail={sendEmail}
-              onSendEmailChange={setSendEmail}
+              sendToCustomer={sendToCustomer}
+              onSendToCustomerChange={setSendToCustomer}
+              sendToTenant={sendToTenant}
+              onSendToTenantChange={setSendToTenant}
+              includePdf={includePdf}
+              onIncludePdfChange={setIncludePdf}
             />
           ) : (
             <ContractBuilderStep
@@ -283,8 +301,12 @@ function InvoiceSummaryStep({
   onQuoteDataChange,
   taxes = [],
   onTaxesChange,
-  sendEmail,
-  onSendEmailChange,
+  sendToCustomer,
+  onSendToCustomerChange,
+  sendToTenant,
+  onSendToTenantChange,
+  includePdf,
+  onIncludePdfChange,
 }: {
   selectedQuote: any | null
   fullQuoteData: any | null
@@ -293,8 +315,12 @@ function InvoiceSummaryStep({
   onQuoteDataChange: (data: any) => void
   taxes?: Array<{ id: string; name: string; amount: number }>
   onTaxesChange: (taxes: Array<{ id: string; name: string; amount: number }>) => void
-  sendEmail: boolean
-  onSendEmailChange: (send: boolean) => void
+  sendToCustomer: boolean
+  onSendToCustomerChange: (send: boolean) => void
+  sendToTenant: boolean
+  onSendToTenantChange: (send: boolean) => void
+  includePdf: boolean
+  onIncludePdfChange: (include: boolean) => void
 }) {
   // Ensure taxes is always an array
   const safeTaxes = Array.isArray(taxes) ? taxes : []
@@ -864,24 +890,72 @@ function InvoiceSummaryStep({
             <span>Enter a payment URL that will be included in the invoice for easy customer access.</span>
           </p>
 
-          {/* Send Email Toggle */}
-          <div className="pt-3 border-t border-slate-200 dark:border-slate-800">
+          {/* Email Options */}
+          <div className="pt-3 border-t border-slate-200 dark:border-slate-800 space-y-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Mail className="h-5 w-5 text-slate-600 dark:text-slate-400" />
+              <Label className="font-semibold text-base text-slate-900 dark:text-slate-100">
+                Email Options
+              </Label>
+            </div>
+            
+            {/* Send to Customer */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <Mail className="h-5 w-5 text-slate-600 dark:text-slate-400" />
+                <User className="h-4 w-4 text-slate-600 dark:text-slate-400" />
                 <div>
-                  <Label htmlFor="send-email" className="font-semibold text-base text-slate-900 dark:text-slate-100">
-                    Send Invoice Email
+                  <Label htmlFor="send-to-customer" className="font-medium text-sm text-slate-900 dark:text-slate-100">
+                    Send to Customer
                   </Label>
                   <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
-                    Send invoice to customer and copy tenant emails
+                    Send invoice email to customer
                   </p>
                 </div>
               </div>
               <Switch
-                id="send-email"
-                checked={sendEmail}
-                onCheckedChange={onSendEmailChange}
+                id="send-to-customer"
+                checked={sendToCustomer}
+                onCheckedChange={onSendToCustomerChange}
+              />
+            </div>
+
+            {/* Send to Tenant */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Building2 className="h-4 w-4 text-slate-600 dark:text-slate-400" />
+                <div>
+                  <Label htmlFor="send-to-tenant" className="font-medium text-sm text-slate-900 dark:text-slate-100">
+                    Send to Tenant
+                  </Label>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+                    Send invoice copy to tenant emails
+                  </p>
+                </div>
+              </div>
+              <Switch
+                id="send-to-tenant"
+                checked={sendToTenant}
+                onCheckedChange={onSendToTenantChange}
+              />
+            </div>
+
+            {/* Include PDF */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <FileText className="h-4 w-4 text-slate-600 dark:text-slate-400" />
+                <div>
+                  <Label htmlFor="include-pdf" className="font-medium text-sm text-slate-900 dark:text-slate-100">
+                    Include PDF Attachment
+                  </Label>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+                    Attach PDF invoice to email
+                  </p>
+                </div>
+              </div>
+              <Switch
+                id="include-pdf"
+                checked={includePdf}
+                onCheckedChange={onIncludePdfChange}
               />
             </div>
           </div>

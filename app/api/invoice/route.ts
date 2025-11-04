@@ -37,7 +37,15 @@ export async function POST(req: Request) {
   const supabase = await createClient()
   
   try {
-    const { quote_id, external_payment_url, taxes, send_email = false } = await req.json()
+    const { 
+      quote_id, 
+      external_payment_url, 
+      taxes, 
+      send_email = false, // Legacy flag for backward compatibility
+      send_to_customer = true,
+      send_to_tenant = true,
+      include_pdf = true
+    } = await req.json()
     if (!quote_id) return NextResponse.json({ error: "Missing quote_id" }, { status: 400 })
 
     // 🔁 Call your Supabase Edge Function
@@ -100,8 +108,9 @@ export async function POST(req: Request) {
       }, { status: 500 })
     }
 
-    // Send invoice email if requested
-    if (send_email && data.invoice?.id) {
+    // Send invoice email if requested (either legacy flag or new flags)
+    const shouldSendEmail = send_email || send_to_customer || send_to_tenant
+    if (shouldSendEmail && data.invoice?.id) {
       try {
         const { data: tenantData } = await supabase
           .from("invoice")
@@ -115,9 +124,9 @@ export async function POST(req: Request) {
             body: {
               invoice_id: data.invoice.id,
               tenant_id: tenantData.tenant_id,
-              send_to_customer: true,
-              send_to_tenant: true,
-              include_pdf: true, // Request PDF attachment
+              send_to_customer: send_email ? true : send_to_customer, // Legacy flag overrides if set
+              send_to_tenant: send_email ? true : send_to_tenant, // Legacy flag overrides if set
+              include_pdf: include_pdf,
             },
           })
 
@@ -125,7 +134,11 @@ export async function POST(req: Request) {
             console.warn("⚠️ Failed to send invoice email:", emailResult.error)
             // Don't fail the invoice creation if email fails
           } else {
-            console.log("✅ Invoice email with PDF sent successfully")
+            console.log("✅ Invoice email sent successfully", {
+              send_to_customer: send_email ? true : send_to_customer,
+              send_to_tenant: send_email ? true : send_to_tenant,
+              include_pdf: include_pdf,
+            })
           }
         }
       } catch (emailErr: any) {
