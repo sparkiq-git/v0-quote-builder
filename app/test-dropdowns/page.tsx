@@ -1,7 +1,7 @@
-"use client";
+"use client"
 
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { useState } from "react"
+import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,32 +9,24 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { MoreHorizontal } from "lucide-react";
+} from "@/components/ui/dropdown-menu-hui"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { MoreHorizontal } from "lucide-react"
 
 /** Kick a layout recalculation right after open (webfont/SSR first-frame guard). */
 const forceRecalc = () =>
-  requestAnimationFrame(() =>
-    requestAnimationFrame(() => window.dispatchEvent(new Event("resize")))
-  );
+  requestAnimationFrame(() => requestAnimationFrame(() => window.dispatchEvent(new Event("resize"))))
 
 export default function TestDropdownsPage() {
-  const [count, setCount] = useState(0);
+  const [count, setCount] = useState(0)
 
   return (
     <div className="min-h-screen p-12 bg-gray-50">
       <div className="max-w-4xl mx-auto space-y-12">
         <div>
-          <h1 className="text-3xl font-bold mb-4">Dropdown Test Page</h1>
+          <h1 className="text-3xl font-bold mb-4">Dropdown Test Page (Headless UI)</h1>
           <p className="text-gray-600">
-            Clean test page to isolate dropdown visibility issues. This page uses NO sidebar or layout components.
+            Testing Headless UI dropdown implementation. This page uses NO sidebar or layout components.
           </p>
         </div>
 
@@ -42,20 +34,14 @@ export default function TestDropdownsPage() {
         <div className="bg-white p-8 rounded-lg shadow-sm border space-y-4">
           <h2 className="text-xl font-semibold">Test 1: Basic Dropdown Menu</h2>
 
-          <DropdownMenu modal={false} onOpenChange={(o) => o && forceRecalc()}>
+          <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline">
                 <MoreHorizontal className="mr-2 h-4 w-4" />
                 Basic Dropdown
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent
-              side="bottom"
-              align="end"
-              sideOffset={8}
-              /** keep body interactive in prod */
-              disableOutsidePointerEvents={false}
-            >
+            <DropdownMenuContent side="bottom" align="end" sideOffset={8}>
               <DropdownMenuLabel>My Account</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem>Profile</DropdownMenuItem>
@@ -83,7 +69,7 @@ export default function TestDropdownsPage() {
                     <td className="p-4">Item {i}</td>
                     <td className="p-4">Active</td>
                     <td className="p-4 text-right">
-                      <DropdownMenu modal={false} onOpenChange={(o) => o && forceRecalc()}>
+                      <DropdownMenu>
                         <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                           <Button variant="ghost" className="h-8 w-8 p-0">
                             <MoreHorizontal className="h-4 w-4" />
@@ -94,13 +80,12 @@ export default function TestDropdownsPage() {
                           align="end"
                           sideOffset={8}
                           onClick={(e) => e.stopPropagation()}
-                          disableOutsidePointerEvents={false}
                         >
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
                           <DropdownMenuItem>View</DropdownMenuItem>
                           <DropdownMenuItem>Edit</DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem className="text-destructive">Delete</DropdownMenuItem>
+                          <DropdownMenuItem variant="destructive">Delete</DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </td>
@@ -132,14 +117,14 @@ export default function TestDropdownsPage() {
           <p>Counter: {count}</p>
           <div className="flex gap-4">
             <Button onClick={() => setCount((n) => n + 1)}>Increment</Button>
-            <DropdownMenu modal={false} onOpenChange={(o) => o && forceRecalc()}>
+            <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline">
                   <MoreHorizontal className="mr-2 h-4 w-4" />
                   Reset Counter
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent side="bottom" align="start" sideOffset={8} disableOutsidePointerEvents={false}>
+              <DropdownMenuContent side="bottom" align="start" sideOffset={8}>
                 <DropdownMenuItem onClick={() => setCount(0)}>Reset to 0</DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setCount(10)}>Set to 10</DropdownMenuItem>
               </DropdownMenuContent>
@@ -151,12 +136,12 @@ export default function TestDropdownsPage() {
         <div className="bg-white p-8 rounded-lg shadow-sm border space-y-4">
           <h2 className="text-xl font-semibold">Test 5: Multiple Dropdowns</h2>
           <div className="flex gap-4">
-            {[1,2,3,4].map((i) => (
-              <DropdownMenu key={i} modal={false} onOpenChange={(o) => o && forceRecalc()}>
+            {[1, 2, 3, 4].map((i) => (
+              <DropdownMenu key={i}>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline">Dropdown {i}</Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent side="bottom" align="start" sideOffset={8} disableOutsidePointerEvents={false}>
+                <DropdownMenuContent side="bottom" align="start" sideOffset={8}>
                   <DropdownMenuItem>Action A from {i}</DropdownMenuItem>
                   <DropdownMenuItem>Action B from {i}</DropdownMenuItem>
                 </DropdownMenuContent>
@@ -166,5 +151,5 @@ export default function TestDropdownsPage() {
         </div>
       </div>
     </div>
-  );
+  )
 }
