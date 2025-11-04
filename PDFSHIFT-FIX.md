@@ -6,7 +6,7 @@ The error is caused by invalid parameters in the PDFShift API call. Remove `wait
 
 Replace the PDFShift API call in your edge function with this corrected version:
 
-```typescript
+\`\`\`typescript
 async function generateInvoicePDF(invoiceHtml) {
   try {
     if (!PDFSHIFT_API_KEY) {
@@ -46,7 +46,7 @@ async function generateInvoicePDF(invoiceHtml) {
     return null;
   }
 }
-```
+\`\`\`
 
 ## What changed:
 

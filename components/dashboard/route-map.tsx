@@ -56,6 +56,7 @@ export function RouteMap() {
       const { createClient } = await import("@/lib/supabase/client")
       const supabase = createClient()
 
+      // --- Load leads with status = "new"
       const loadLeadRoutes = async () => {
         const { data, error } = await supabase
           .from("lead_detail")
@@ -78,7 +79,7 @@ export function RouteMap() {
               created_at
             )
           `)
-          .eq("lead.status", "new")
+          .filter("lead.status", "eq", "new")
           .order("depart_dt", { ascending: true })
 
         if (error) {
@@ -89,7 +90,12 @@ export function RouteMap() {
 
         const formatted: Route[] = (data ?? [])
           .filter(
-            (r) => r.origin_lat && r.origin_long && r.destination_lat && r.destination_long
+            (r) =>
+              r.lead?.status === "new" &&
+              r.origin_lat &&
+              r.origin_long &&
+              r.destination_lat &&
+              r.destination_long
           )
           .map((r) => ({
             id: String(r.lead_id),
@@ -119,6 +125,7 @@ export function RouteMap() {
         console.log("✅ New Leads loaded (drawable):", formatted.length)
       }
 
+      // --- Load upcoming quotes within 7 days
       const loadUpcomingRoutes = async () => {
         const start = new Date()
         start.setHours(0, 0, 0, 0)
