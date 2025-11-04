@@ -152,26 +152,13 @@
 [data-radix-popper-content-wrapper] {
   z-index: 2147483647 !important;
   pointer-events: auto !important;
-  /* Removed transform: none - Radix NEEDS the transform for positioning */
-  /* Ensure the wrapper uses fixed positioning */
-  position: fixed !important;
-  /* Help browser optimize transforms */
-  will-change: transform;
-  /* Ensure wrapper doesn't have any size constraints */
-  contain: none !important;
+  /* Let Radix handle positioning - don't override position or transform */
+  /* Radix needs to calculate and apply transforms for positioning */
 }
 
-/* Ensure Radix content calculates position correctly */
+/* Ensure Radix content is interactive */
 [data-radix-popper-content-wrapper] > * {
   pointer-events: auto !important;
-}
-
-/* Fix for Radix Select content */
-[data-radix-select-content],
-[data-radix-dropdown-menu-content] {
-  /* Let Radix handle transforms, but ensure visibility */
-  visibility: visible !important;
-  opacity: 1;
 }
 
 /* Prevent body pointer-events lock */

@@ -70,10 +70,13 @@ function DropdownMenuContent({
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Content>) {
   React.useEffect(() => {
-    const timer = setTimeout(() => {
-      window.dispatchEvent(new Event("resize"))
-    }, 0)
-    return () => clearTimeout(timer)
+    // Force multiple reflows to ensure Radix calculates position
+    const timers = [
+      setTimeout(() => window.dispatchEvent(new Event("resize")), 0),
+      setTimeout(() => window.dispatchEvent(new Event("resize")), 10),
+      setTimeout(() => window.dispatchEvent(new Event("resize")), 50),
+    ]
+    return () => timers.forEach(clearTimeout)
   }, [])
 
   return (
@@ -86,6 +89,7 @@ function DropdownMenuContent({
         avoidCollisions={avoidCollisions}
         collisionPadding={collisionPadding}
         sticky={sticky as any}
+        {...({ strategy: "fixed" } as any)}
         {...(props as any)}
         className={cn(
           // estilos shadcn + capa alta y clicks activos
