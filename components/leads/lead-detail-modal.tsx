@@ -342,45 +342,56 @@ const handleDeleteLead = async () => {
               </Card>
 
               {/* Trip Summary */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Lead Summary</CardTitle>
-                  <CardDescription>
-                    Quick overview of the trip request
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">
-                        Total Legs
-                      </p>
-                      <p className="text-2xl font-bold">
-                        {lead.leg_count ?? "-"}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">
-                        Total Passengers
-                      </p>
-                      <p className="text-2xl font-bold">
-                        {lead.total_pax ?? "-"}
-                      </p>
-                    </div>
-                  </div>
-                  <Separator />
-                  {lead.trip_summary && (
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground mb-2">
-                        Internal Notes
-                      </p>
-                      <p className="text-sm bg-muted p-3 rounded-md">
-                        {lead.trip_summary}
-                      </p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+<Card>
+  <CardHeader>
+    <CardTitle className="mt-2">Lead Summary</CardTitle>
+    <CardDescription>
+      Quick overview of the trip request
+    </CardDescription>
+  </CardHeader>
+  <CardContent className="space-y-4">
+    <div className="grid grid-cols-2 gap-4">
+      <div>
+        <p className="text-sm font-medium text-muted-foreground">
+          Total Legs
+        </p>
+        <p className="text-2xl font-bold">{lead.leg_count ?? "-"}</p>
+      </div>
+      <div>
+        <p className="text-sm font-medium text-muted-foreground">
+          Total Passengers
+        </p>
+        <p className="text-2xl font-bold">{lead.total_pax ?? "-"}</p>
+      </div>
+    </div>
+
+    <Separator />
+
+    {/* ✅ Aircraft Type */}
+    {lead.aircraft_pref && (
+      <div>
+        <p className="text-sm font-medium text-muted-foreground mb-1">
+          Preferred Aircraft
+        </p>
+        <p className="text-base font-semibold">{lead.aircraft_pref}</p>
+      </div>
+    )}
+
+    {lead.trip_summary && (
+      <>
+        <Separator />
+        <div>
+          <p className="text-sm font-medium text-muted-foreground mb-2">
+            Internal Notes
+          </p>
+          <p className="text-sm bg-muted p-3 rounded-md">
+            {lead.trip_summary}
+          </p>
+        </div>
+      </>
+    )}
+  </CardContent>
+</Card>
             </div>
 
             {/* ✅ Trip Timeline */}

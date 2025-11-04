@@ -9,8 +9,18 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
-import { Plus, Eye, Search, Trash2, FileSignature, ArrowUpDown, Filter, MoreHorizontal } from "lucide-react"
-import { formatDate, formatTimeAgo } from "@/lib/utils/format"
+import {
+  Plus,
+  FileText,
+  Eye,
+  Search,
+  Trash2,
+  FileSignature,
+  ArrowUpDown,
+  Filter,
+  MoreHorizontal,
+} from "lucide-react"
+import { formatDate, formatTimeAgo, formatCurrency } from "@/lib/utils/format"
 import { useToast } from "@/hooks/use-toast"
 import {
   Dialog,
@@ -255,7 +265,7 @@ export default function QuotesPage() {
             </div>
             <div className="flex items-center gap-2">
               <Filter className="h-4 w-4 text-muted-foreground" />
-              <Select value={statusFilter} onValueChange={setStatusFilter} modal={false}>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
