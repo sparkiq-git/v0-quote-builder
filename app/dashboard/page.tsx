@@ -231,6 +231,20 @@ export default function DashboardPage() {
     )
   }
 
+  // === Helper: Compute Best Month ===
+  const bestMonth =
+    chartData.length > 0
+      ? chartData.reduce(
+          (max, cur) => {
+            const total = (cur.cost_operator || 0) + (cur.price_commission || 0)
+            return total > max.total
+              ? { month: cur.month, total }
+              : max
+          },
+          { month: "", total: 0 }
+        )
+      : { month: "", total: 0 }
+
   return (
     <div className="space-y-8">
       <div className="space-y-2">
@@ -299,15 +313,30 @@ export default function DashboardPage() {
               </AreaChart>
             </ResponsiveContainer>
           </CardContent>
-          <div className="px-6 pb-4 text-sm text-muted-foreground flex items-center gap-2">
-            <TrendingUp className="h-4 w-4 text-green-500" /> Trending up 12.4% this year
-          </div>
+
+          {/* === Chart Footer: Show Best Month === */}
+          {bestMonth.month && (
+            <div className="px-6 pb-4 text-sm text-muted-foreground flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-green-500" />
+              <span className="font-medium text-foreground">
+                Best month: {bestMonth.month}
+              </span>
+              <span className="text-muted-foreground">
+                — $
+                {bestMonth.total.toLocaleString(undefined, {
+                  minimumFractionDigits: 0,
+                  maximumFractionDigits: 0,
+                })}{" "}
+                total
+              </span>
+            </div>
+          )}
         </Card>
 
-        {/* Recent Activities (2/5 width, same height, no extra container) */}
-<div className="lg:col-span-2 h-[400px] overflow-y-auto">
-  <RecentActivities />
-</div>
+        {/* Recent Activities (2/5 width, same height, no outer card) */}
+        <div className="lg:col-span-2 h-[400px] overflow-y-auto">
+          <RecentActivities />
+        </div>
       </div>
 
       {/* === Leads and Quotes === */}
