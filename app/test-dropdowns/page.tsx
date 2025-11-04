@@ -15,46 +15,137 @@ import { MoreHorizontal } from "lucide-react"
 
 export default function TestDropdownsPage() {
   const [count, setCount] = useState(0)
+  const [diagnosticResult, setDiagnosticResult] = useState<string>("")
 
-  const runDebugScript = () => {
-    console.log("=== DEBUG MENU ===")
-    const menus = document.querySelectorAll('[data-slot="dropdown-menu-content"]')
-    console.log("Dropdown menus encontrados:", menus.length)
+  const runDiagnostic = () => {
+    console.log("=== TEST DROPDOWNS ===")
+    let result = "=== DIAGNOSTIC RESULTS ===\n\n"
 
-    if (menus.length === 0) {
-      console.warn("❌ No se encontró ningún dropdown en el DOM.")
-      console.log("👉 Probablemente un problema de SSR o Portal no renderizado.")
+    const triggers = document.querySelectorAll('[data-slot="dropdown-menu-trigger"]')
+    console.log("Triggers encontrados:", triggers.length)
+    result += `✓ Triggers encontrados: ${triggers.length}\n`
+    triggers.forEach((t, i) => console.log(`#${i + 1}`, t))
+
+    const contents = document.querySelectorAll('[data-slot="dropdown-menu-content"]')
+    console.log("Dropdown contents encontrados:", contents.length)
+    result += `${contents.length === 0 ? "❌" : "✓"} Dropdown contents encontrados: ${contents.length}\n\n`
+
+    if (contents.length === 0) {
+      result += "❌ PROBLEMA: El contenido nunca se monta\n"
+      result += "👉 Posible causa: SSR / Portal no renderizado\n"
+      result += "👉 Solución: Verificar que el componente tenga 'use client'\n"
     } else {
-      menus.forEach((menu, i) => {
+      contents.forEach((c, i) => {
+        const rect = c.getBoundingClientRect()
+        const styles = getComputedStyle(c)
         console.group(`Dropdown #${i + 1}`)
-        const element = menu as HTMLElement
-        console.log("Visible:", !!(element.offsetWidth || element.offsetHeight))
-        console.log("Display:", getComputedStyle(element).display)
-        console.log("Opacity:", getComputedStyle(element).opacity)
-        console.log("Z-Index:", getComputedStyle(element).zIndex)
-        console.log("Position:", getComputedStyle(element).position)
-        console.log("Transform:", getComputedStyle(element).transform)
-        console.log("Overflow padre:", element.parentElement?.style.overflow || "(none)")
+        console.log("Display:", styles.display)
+        console.log("Opacity:", styles.opacity)
+        console.log("Transform:", styles.transform)
+        console.log("Z-index:", styles.zIndex)
+        console.log("Bounding rect:", rect)
         console.groupEnd()
-      })
 
-      console.log("💡 Si 'Visible:false' pero existe en el DOM → problema de estilos")
-      console.log("💡 Si 'Display:none' u 'Opacity:0' → clases de animación purgadas")
-      console.log("💡 Si está visible pero se corta → contenedor con overflow:hidden")
+        result += `Dropdown #${i + 1}:\n`
+        result += `  Display: ${styles.display}\n`
+        result += `  Opacity: ${styles.opacity}\n`
+        result += `  Transform: ${styles.transform}\n`
+        result += `  Z-index: ${styles.zIndex}\n`
+        result += `  Position: top=${rect.top.toFixed(0)}px, left=${rect.left.toFixed(0)}px\n`
+        result += `  Size: ${rect.width.toFixed(0)}x${rect.height.toFixed(0)}px\n`
+
+        // Diagnose issues
+        if (styles.display === "none") {
+          result += "  ❌ PROBLEMA: Display none\n"
+          result += "  👉 Tailwind purgó las clases de animación\n"
+        }
+        if (Number.parseFloat(styles.opacity) === 0) {
+          result += "  ❌ PROBLEMA: Opacity 0\n"
+          result += "  👉 Clases de animación no aplicadas\n"
+        }
+        if (rect.top < 0 || rect.top > window.innerHeight) {
+          result += "  ❌ PROBLEMA: Fuera de pantalla verticalmente\n"
+          result += "  👉 Floating UI posicionó incorrectamente\n"
+        }
+        if (rect.left < 0 || rect.left > window.innerWidth) {
+          result += "  ❌ PROBLEMA: Fuera de pantalla horizontalmente\n"
+          result += "  👉 Floating UI posicionó incorrectamente\n"
+        }
+        if (rect.height === 0) {
+          result += "  ❌ PROBLEMA: Altura 0\n"
+          result += "  👉 Contenido no renderizado correctamente\n"
+        }
+        result += "\n"
+      })
     }
+
+    console.log(result)
+    setDiagnosticResult(result)
+  }
+
+  const forceVisible = () => {
+    console.log("=== FORCING DROPDOWNS VISIBLE ===")
+    let result = "Intentando forzar visibilidad...\n\n"
+
+    const contents = document.querySelectorAll('[data-slot="dropdown-menu-content"]')
+    if (contents.length === 0) {
+      result += "❌ No hay dropdowns para forzar (no están en el DOM)\n"
+      console.warn("No dropdowns found to force visible")
+    } else {
+      contents.forEach((el, i) => {
+        const element = el as HTMLElement
+        element.style.opacity = "1"
+        element.style.pointerEvents = "auto"
+        element.style.zIndex = "99999"
+        element.style.transform = "translate(0, 40px)"
+        element.style.position = "fixed"
+        element.style.top = "100px"
+        element.style.right = "20px"
+        element.style.display = "block"
+        console.log("Dropdown forzado visible:", el)
+        result += `✓ Dropdown #${i + 1} forzado visible\n`
+      })
+      result += "\n👉 Si ahora ves los menús, el problema es de posicionamiento/estilos\n"
+      result += "👉 Si aún no los ves, el problema es más profundo (DOM/React)\n"
+    }
+
+    console.log(result)
+    setDiagnosticResult(result)
   }
 
   return (
     <div className="min-h-screen p-12 bg-gray-50">
       <div className="max-w-4xl mx-auto space-y-12">
-        <div>
-          <h1 className="text-3xl font-bold mb-4">Dropdown Test Page (Production-Safe Radix)</h1>
-          <p className="text-gray-600">
-            Testing production-safe Radix dropdown with controlled open state and forced layout calculations.
+        <div className="bg-yellow-50 border-2 border-yellow-400 rounded-lg p-6 space-y-4">
+          <h1 className="text-2xl font-bold text-yellow-900">🔍 Diagnostic Panel</h1>
+          <p className="text-yellow-800">
+            <strong>Instrucciones:</strong>
           </p>
-          <Button onClick={runDebugScript} variant="outline" className="mt-4 bg-transparent">
-            Run Debug Script (Check Console)
-          </Button>
+          <ol className="list-decimal list-inside text-yellow-800 space-y-2">
+            <li>Haz clic en cualquier botón de dropdown (⋯) abajo</li>
+            <li>Luego haz clic en "Run Diagnostic" para ver qué está pasando</li>
+            <li>Si no ves el menú, haz clic en "Force Visible" para probar si existe pero está oculto</li>
+            <li>Revisa la consola del navegador para más detalles</li>
+          </ol>
+
+          <div className="flex gap-4">
+            <Button onClick={runDiagnostic} variant="default" className="bg-yellow-600 hover:bg-yellow-700">
+              Run Diagnostic
+            </Button>
+            <Button
+              onClick={forceVisible}
+              variant="outline"
+              className="border-yellow-600 text-yellow-900 bg-transparent"
+            >
+              Force Visible
+            </Button>
+          </div>
+
+          {diagnosticResult && (
+            <pre className="bg-white p-4 rounded border border-yellow-300 text-xs overflow-auto max-h-96 whitespace-pre-wrap">
+              {diagnosticResult}
+            </pre>
+          )}
         </div>
 
         {/* Test 1 */}
