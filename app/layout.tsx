@@ -33,46 +33,44 @@ export default async function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html
-      lang="en"
-      className={`${inter.variable} ${jetbrainsMono.variable} antialiased`}
-      suppressHydrationWarning
-    >
+    <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable} antialiased`} suppressHydrationWarning>
       <body>
         <MockStoreProvider>
           {children}
 
           {/* ✅ Global Sonner toaster */}
-          <Toaster 
-            richColors 
-            position="top-right" 
-            closeButton 
+          <Toaster
+            richColors
+            position="top-right"
+            closeButton
             expand={true}
             visibleToasts={5}
             offset="16px"
             toastOptions={{
               duration: 6000,
               style: {
-                background: 'linear-gradient(135deg, hsl(var(--background)) 0%, hsl(var(--muted)) 100%)',
-                color: 'hsl(var(--foreground))',
-                border: '1px solid hsl(var(--border))',
-                borderRadius: '12px',
-                boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-                backdropFilter: 'blur(8px)',
+                background: "linear-gradient(135deg, hsl(var(--background)) 0%, hsl(var(--muted)) 100%)",
+                color: "hsl(var(--foreground))",
+                border: "1px solid hsl(var(--border))",
+                borderRadius: "12px",
+                boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+                backdropFilter: "blur(8px)",
                 zIndex: 9999,
               },
-              className: 'sonner-toast',
+              className: "sonner-toast",
             }}
             style={{
               zIndex: 9999,
             }}
           />
-          
+
           {/* ✅ Custom toast system for useToast hook */}
           <CustomToaster />
 
           {/* ✅ Global listener; runs safely client-side only */}
           <LeadListener />
+
+          <div id="portal-root" className="relative z-[10000]" />
         </MockStoreProvider>
       </body>
     </html>

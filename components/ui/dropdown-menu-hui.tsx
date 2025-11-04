@@ -23,7 +23,7 @@ function DropdownMenu({ children, onOpenChange }: DropdownMenuProps) {
     onOpenChange?.(open)
   }, [open])
 
-  return <Menu>{() => <>{children}</>}</Menu>
+  return <Menu>{({ open }) => <>{children}</>}</Menu>
 }
 
 interface DropdownMenuTriggerProps {
@@ -36,15 +36,17 @@ interface DropdownMenuTriggerProps {
 function DropdownMenuTrigger({ asChild, children, onClick, className }: DropdownMenuTriggerProps) {
   if (asChild && React.isValidElement(children)) {
     return (
-      <MenuButton
-        as="div"
-        className="inline-flex"
-        onClick={(e: React.MouseEvent) => {
-          onClick?.(e)
-          children.props.onClick?.(e)
-        }}
-      >
-        {children}
+      <MenuButton as={React.Fragment}>
+        {({ open }) =>
+          React.cloneElement(children, {
+            ...children.props,
+            onClick: (e: React.MouseEvent) => {
+              onClick?.(e)
+              children.props.onClick?.(e)
+            },
+            "aria-expanded": open,
+          } as any)
+        }
       </MenuButton>
     )
   }
@@ -74,7 +76,6 @@ function DropdownMenuContent({
   sideOffset = 8,
   onClick,
 }: DropdownMenuContentProps) {
-  // Calculate anchor position based on side and align
   const anchorMap = {
     top: { start: "top start", center: "top", end: "top end" },
     bottom: { start: "bottom start", center: "bottom", end: "bottom end" },
@@ -88,6 +89,7 @@ function DropdownMenuContent({
     <MenuItems
       anchor={anchor}
       onClick={onClick}
+      modal={false}
       className={cn(
         // Base styles matching shadcn
         "bg-popover text-popover-foreground pointer-events-auto",
@@ -96,11 +98,6 @@ function DropdownMenuContent({
         // Animations
         "transition duration-100 ease-out",
         "data-[closed]:scale-95 data-[closed]:opacity-0",
-        // Offset
-        side === "bottom" && `mt-[${sideOffset}px]`,
-        side === "top" && `mb-[${sideOffset}px]`,
-        side === "left" && `mr-[${sideOffset}px]`,
-        side === "right" && `ml-[${sideOffset}px]`,
         className,
       )}
       style={{
