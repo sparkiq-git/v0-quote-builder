@@ -180,18 +180,18 @@ export function InvoiceContractWizard({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="w-[60vw] sm:max-w-[92vw] md:max-w-[60vw] lg:max-w-[60vw] max-h-[95vh] p-5 flex flex-col overflow-hidden bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border border-gray-200 dark:border-gray-800 shadow-2xl">
-        <DialogHeader className="border-b border-slate-200 dark:border-slate-800 pb-4">
+      <DialogContent className="w-[60vw] sm:max-w-[92vw] md:max-w-[60vw] lg:max-w-[60vw] max-h-[95vh] p-5 flex flex-col overflow-hidden bg-background backdrop-blur-xl border shadow-2xl">
+        <DialogHeader className="border-b border-border pb-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                <FileSignature className="h-5 w-5 text-slate-700 dark:text-slate-300" />
+              <div className="p-2 rounded-lg bg-muted border border-border">
+                <FileSignature className="h-5 w-5 text-muted-foreground" />
               </div>
               <div>
-                <DialogTitle className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                <DialogTitle className="text-2xl font-bold text-foreground">
                   {step === 1 ? "Create Invoice & Contract" : "Contract Builder"}
                 </DialogTitle>
-                <DialogDescription className="text-base mt-1 text-slate-600 dark:text-slate-400">
+                <DialogDescription className="text-base mt-1 text-muted-foreground">
                   {step === 1
                     ? "Review the quote summary and generate an invoice with contract"
                     : "Build the first page of your contract document"}
@@ -202,12 +202,12 @@ export function InvoiceContractWizard({
             <div className="flex items-center gap-2">
               <div
                 className={`h-2 w-8 rounded-full transition-colors ${
-                  step === 1 ? "bg-slate-900 dark:bg-slate-100" : "bg-slate-300 dark:bg-slate-700"
+                  step === 1 ? "bg-primary" : "bg-muted"
                 }`}
               />
               <div
                 className={`h-2 w-8 rounded-full transition-colors ${
-                  step === 2 ? "bg-slate-900 dark:bg-slate-100" : "bg-slate-300 dark:bg-slate-700"
+                  step === 2 ? "bg-primary" : "bg-muted"
                 }`}
               />
             </div>
@@ -248,7 +248,7 @@ export function InvoiceContractWizard({
           )}
         </div>
 
-        <DialogFooter className="border-t border-slate-200 dark:border-slate-800 pt-4 gap-2">
+        <DialogFooter className="border-t border-border pt-4 gap-2">
           {step === 1 ? (
             <>
               <Button variant="outline" onClick={handleClose} className="min-w-[100px]">
@@ -257,7 +257,7 @@ export function InvoiceContractWizard({
               <Button
                 onClick={handleNext}
                 disabled={sending || loadingQuote}
-                className="min-w-[200px] bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-slate-200 text-white dark:text-slate-900 shadow-lg hover:shadow-xl transition-all"
+                className="min-w-[200px] shadow-lg hover:shadow-xl transition-all"
               >
                 {sending ? (
                   <>
@@ -280,7 +280,7 @@ export function InvoiceContractWizard({
               </Button>
               <Button
                 onClick={handleClose}
-                className="min-w-[200px] bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-slate-200 text-white dark:text-slate-900 shadow-lg hover:shadow-xl transition-all"
+                className="min-w-[200px] shadow-lg hover:shadow-xl transition-all"
               >
                 Done
               </Button>
@@ -441,45 +441,45 @@ function InvoiceSummaryStep({
   return (
     <div className="space-y-6">
       {/* Customer Information Card */}
-      <div className="relative overflow-hidden rounded-xl border-2 border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 shadow-sm hover:shadow-md transition-shadow">
+      <div className="relative overflow-hidden rounded-xl border-2 border-border bg-muted/50 shadow-sm hover:shadow-md transition-shadow">
         <div className="p-6">
           <div className="flex items-center gap-2 mb-4">
-            <User className="h-5 w-5 text-slate-600 dark:text-slate-400" />
-            <h4 className="font-semibold text-lg text-slate-900 dark:text-slate-100">Customer Information</h4>
+            <User className="h-5 w-5 text-muted-foreground" />
+            <h4 className="font-semibold text-lg text-foreground">Customer Information</h4>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="flex items-start gap-3 p-3 rounded-lg bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-              <User className="h-4 w-4 text-slate-500 mt-0.5" />
+            <div className="flex items-start gap-3 p-3 rounded-lg bg-card border border-border">
+              <User className="h-4 w-4 text-muted-foreground mt-0.5" />
               <div className="flex-1 min-w-0">
-                <span className="text-xs text-slate-500 dark:text-slate-400 block mb-1">Name</span>
-                <p className="font-medium text-sm truncate text-slate-900 dark:text-slate-100">
+                <span className="text-xs text-muted-foreground block mb-1">Name</span>
+                <p className="font-medium text-sm truncate text-foreground">
                   {fullQuoteData.contact_name || selectedQuote.customer.name || "—"}
                 </p>
               </div>
             </div>
-            <div className="flex items-start gap-3 p-3 rounded-lg bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-              <Mail className="h-4 w-4 text-slate-500 mt-0.5" />
+            <div className="flex items-start gap-3 p-3 rounded-lg bg-card border border-border">
+              <Mail className="h-4 w-4 text-muted-foreground mt-0.5" />
               <div className="flex-1 min-w-0">
-                <span className="text-xs text-slate-500 dark:text-slate-400 block mb-1">Email</span>
-                <p className="font-medium text-sm truncate text-slate-900 dark:text-slate-100">
+                <span className="text-xs text-muted-foreground block mb-1">Email</span>
+                <p className="font-medium text-sm truncate text-foreground">
                   {fullQuoteData.contact_email || selectedQuote.customer.email || "—"}
                 </p>
               </div>
             </div>
-            <div className="flex items-start gap-3 p-3 rounded-lg bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-              <Phone className="h-4 w-4 text-slate-500 mt-0.5" />
+            <div className="flex items-start gap-3 p-3 rounded-lg bg-card border border-border">
+              <Phone className="h-4 w-4 text-muted-foreground mt-0.5" />
               <div className="flex-1 min-w-0">
-                <span className="text-xs text-slate-500 dark:text-slate-400 block mb-1">Phone</span>
-                <p className="font-medium text-sm truncate text-slate-900 dark:text-slate-100">
+                <span className="text-xs text-muted-foreground block mb-1">Phone</span>
+                <p className="font-medium text-sm truncate text-foreground">
                   {fullQuoteData.contact_phone || selectedQuote.customer.phone || "—"}
                 </p>
               </div>
             </div>
-            <div className="flex items-start gap-3 p-3 rounded-lg bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-              <Building2 className="h-4 w-4 text-slate-500 mt-0.5" />
+            <div className="flex items-start gap-3 p-3 rounded-lg bg-card border border-border">
+              <Building2 className="h-4 w-4 text-muted-foreground mt-0.5" />
               <div className="flex-1 min-w-0">
-                <span className="text-xs text-slate-500 dark:text-slate-400 block mb-1">Company</span>
-                <p className="font-medium text-sm truncate text-slate-900 dark:text-slate-100">
+                <span className="text-xs text-muted-foreground block mb-1">Company</span>
+                <p className="font-medium text-sm truncate text-foreground">
                   {fullQuoteData.contact_company || selectedQuote.customer.company || "—"}
                 </p>
               </div>
@@ -498,26 +498,26 @@ function InvoiceSummaryStep({
         }
 
         return (
-          <div className="relative overflow-hidden rounded-xl border-2 border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 shadow-sm hover:shadow-md transition-shadow">
+          <div className="relative overflow-hidden rounded-xl border-2 border-border bg-muted/50 shadow-sm hover:shadow-md transition-shadow">
             <div className="p-6">
               <div className="flex items-center gap-2 mb-4">
-                <Plane className="h-5 w-5 text-slate-600 dark:text-slate-400" />
-                <h4 className="font-semibold text-lg text-slate-900 dark:text-slate-100">Selected Aircraft Option</h4>
+                <Plane className="h-5 w-5 text-muted-foreground" />
+                <h4 className="font-semibold text-lg text-foreground">Selected Aircraft Option</h4>
               </div>
-              <div className="p-4 rounded-lg bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-2">
+              <div className="p-4 rounded-lg bg-card border border-border space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Badge
                       variant="secondary"
-                      className="text-xs bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300"
+                      className="text-xs"
                     >
                       Selected Option
                     </Badge>
-                    <span className="font-semibold text-sm text-slate-900 dark:text-slate-100">
+                    <span className="font-semibold text-sm text-foreground">
                       {selectedOption.aircraftModel?.name || selectedOption.aircraftTail?.tailNumber || "Aircraft Option"}
                     </span>
                   </div>
-                  <span className="font-bold text-lg text-slate-900 dark:text-slate-100">
+                  <span className="font-bold text-lg text-foreground">
                     {formatCurrency(
                       selectedOption.price_total ||
                         (selectedOption.cost_operator || 0) +
@@ -529,15 +529,15 @@ function InvoiceSummaryStep({
                   </span>
                 </div>
                 {(selectedOption.cost_operator || selectedOption.price_commission) && (
-                  <div className="space-y-1 pt-2 border-t border-slate-200 dark:border-slate-800">
+                  <div className="space-y-1 pt-2 border-t border-border">
                     {selectedOption.cost_operator && (
-                      <div className="flex justify-between text-xs text-slate-600 dark:text-slate-400">
+                      <div className="flex justify-between text-xs text-muted-foreground">
                         <span>Operator Cost:</span>
                         <span className="font-medium">{formatCurrency(selectedOption.cost_operator)}</span>
                       </div>
                     )}
                     {selectedOption.price_commission && (
-                      <div className="flex justify-between text-xs text-slate-600 dark:text-slate-400">
+                      <div className="flex justify-between text-xs text-muted-foreground">
                         <span>Commission:</span>
                         <span className="font-medium">{formatCurrency(selectedOption.price_commission)}</span>
                       </div>
@@ -545,7 +545,7 @@ function InvoiceSummaryStep({
                   </div>
                 )}
                 {selectedOption.flight_hours && (
-                  <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Clock className="h-3.5 w-3.5" />
                     <span>{selectedOption.flight_hours} flight hours</span>
                   </div>
@@ -557,12 +557,12 @@ function InvoiceSummaryStep({
       })()}
 
       {/* Additional Services Card - Editable (like QuoteServicesTab) */}
-      <div className="relative overflow-hidden rounded-xl border-2 border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 shadow-sm hover:shadow-md transition-shadow">
+      <div className="relative overflow-hidden rounded-xl border-2 border-border bg-muted/50 shadow-sm hover:shadow-md transition-shadow">
         <div className="p-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <Package className="h-5 w-5 text-slate-600 dark:text-slate-400" />
-              <h4 className="font-semibold text-lg text-slate-900 dark:text-slate-100">Additional Services</h4>
+              <Package className="h-5 w-5 text-muted-foreground" />
+              <h4 className="font-semibold text-lg text-foreground">Additional Services</h4>
             </div>
           </div>
 
@@ -576,10 +576,10 @@ function InvoiceSummaryStep({
                 return (
                   <div
                     key={serviceId}
-                    className="border rounded-lg p-4 bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 relative"
+                    className="border rounded-lg p-4 bg-card border-border relative"
                   >
                     <div className="flex justify-between items-start mb-3">
-                      <div className="font-medium text-sm text-slate-900 dark:text-slate-100">Service Item</div>
+                      <div className="font-medium text-sm text-foreground">Service Item</div>
                       <Button
                         variant="ghost"
                         size="icon"
@@ -593,7 +593,7 @@ function InvoiceSummaryStep({
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                       {/* Service Name/Item Combobox */}
                       <div>
-                        <Label className="text-sm mb-1 block text-slate-700 dark:text-slate-300">Service Name</Label>
+                        <Label className="text-sm mb-1 block">Service Name</Label>
                         {fullQuoteData.tenant_id ? (
                           <ItemCombobox
                             tenantId={fullQuoteData.tenant_id}
@@ -616,7 +616,7 @@ function InvoiceSummaryStep({
 
                       {/* Description */}
                       <div>
-                        <Label className="text-sm mb-1 block text-slate-700 dark:text-slate-300">Description</Label>
+                        <Label className="text-sm mb-1 block">Description</Label>
                         <Input
                           placeholder="Enter service description"
                           value={service.description || ""}
@@ -627,7 +627,7 @@ function InvoiceSummaryStep({
 
                       {/* Quantity */}
                       <div>
-                        <Label className="text-sm mb-1 block text-slate-700 dark:text-slate-300">Quantity</Label>
+                        <Label className="text-sm mb-1 block">Quantity</Label>
                         <Input
                           type="number"
                           min="1"
@@ -641,7 +641,7 @@ function InvoiceSummaryStep({
 
                       {/* Unit Price */}
                       <div>
-                        <Label className="text-sm mb-1 block text-slate-700 dark:text-slate-300">Unit Price</Label>
+                        <Label className="text-sm mb-1 block">Unit Price</Label>
                         <Input
                           type="number"
                           step="0.01"
@@ -657,17 +657,17 @@ function InvoiceSummaryStep({
                     </div>
 
                     {/* Taxable Toggle & Total */}
-                    <div className="flex items-center justify-between mt-4 pt-3 border-t border-slate-200 dark:border-slate-800">
+                    <div className="flex items-center justify-between mt-4 pt-3 border-t border-border">
                       <div className="flex items-center gap-2">
                         <Switch
                           checked={service.taxable !== false}
                           onCheckedChange={(val) => handleUpdateService(serviceId, "taxable", val)}
                         />
-                        <Label className="text-sm text-slate-700 dark:text-slate-300">Taxable</Label>
+                        <Label className="text-sm">Taxable</Label>
                       </div>
                       <div className="text-right">
-                        <span className="text-xs text-slate-600 dark:text-slate-400 block">Line Total</span>
-                        <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                        <span className="text-xs text-muted-foreground block">Line Total</span>
+                        <span className="text-sm font-semibold text-foreground">
                           {formatCurrency(serviceTotal)}
                         </span>
                       </div>
@@ -676,18 +676,18 @@ function InvoiceSummaryStep({
                 )
               })
             ) : (
-              <p className="text-sm text-slate-500 dark:text-slate-400 text-center py-4">
+              <p className="text-sm text-muted-foreground text-center py-4">
                 No additional services added yet.
               </p>
             )}
           </div>
 
           {/* Add New Service */}
-          <div className="p-4 rounded-lg bg-slate-100 dark:bg-slate-900 border-2 border-dashed border-slate-300 dark:border-slate-700">
-            <h5 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-3">Add New Service</h5>
+          <div className="p-4 rounded-lg bg-muted border-2 border-dashed border-border">
+            <h5 className="text-sm font-semibold text-foreground mb-3">Add New Service</h5>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
-                <Label className="text-sm mb-1 block text-slate-700 dark:text-slate-300">Service Name</Label>
+                <Label className="text-sm mb-1 block">Service Name</Label>
                 {fullQuoteData.tenant_id ? (
                   <ItemCombobox
                     tenantId={fullQuoteData.tenant_id}
@@ -707,7 +707,7 @@ function InvoiceSummaryStep({
                 )}
               </div>
               <div>
-                <Label className="text-sm mb-1 block text-slate-700 dark:text-slate-300">Description</Label>
+                <Label className="text-sm mb-1 block">Description</Label>
                 <Input
                   value={newServiceDescription}
                   onChange={(e) => setNewServiceDescription(e.target.value)}
@@ -716,7 +716,7 @@ function InvoiceSummaryStep({
                 />
               </div>
               <div>
-                <Label className="text-sm mb-1 block text-slate-700 dark:text-slate-300">Quantity</Label>
+                <Label className="text-sm mb-1 block">Quantity</Label>
                 <Input
                   type="number"
                   min="1"
@@ -726,7 +726,7 @@ function InvoiceSummaryStep({
                 />
               </div>
               <div>
-                <Label className="text-sm mb-1 block text-slate-700 dark:text-slate-300">Unit Price</Label>
+                <Label className="text-sm mb-1 block">Unit Price</Label>
                 <Input
                   type="number"
                   step="0.01"
@@ -750,40 +750,40 @@ function InvoiceSummaryStep({
       </div>
 
       {/* Totals Card - Editable with Tax */}
-      <div className="relative overflow-hidden rounded-xl border-2 border-slate-300 dark:border-slate-700 bg-slate-100/50 dark:bg-slate-900/50 shadow-lg">
+      <div className="relative overflow-hidden rounded-xl border-2 border-border bg-muted/50 shadow-lg">
         <div className="p-6">
           <div className="flex items-center gap-2 mb-4">
-            <DollarSign className="h-5 w-5 text-slate-700 dark:text-slate-300" />
-            <h4 className="font-semibold text-lg text-slate-900 dark:text-slate-100">Invoice Summary</h4>
+            <DollarSign className="h-5 w-5 text-muted-foreground" />
+            <h4 className="font-semibold text-lg text-foreground">Invoice Summary</h4>
           </div>
           <div className="space-y-3">
             {selectedOption && subtotalAircraft > 0 && (
               <div className="flex items-center justify-between text-sm">
-                <span className="text-slate-600 dark:text-slate-400">Aircraft Option:</span>
-                <span className="font-semibold text-slate-900 dark:text-slate-100">
+                <span className="text-muted-foreground">Aircraft Option:</span>
+                <span className="font-semibold text-foreground">
                   {formatCurrency(subtotalAircraft)}
                 </span>
               </div>
             )}
             {subtotalServices > 0 && (
               <div className="flex items-center justify-between text-sm">
-                <span className="text-slate-600 dark:text-slate-400">Additional Services:</span>
-                <span className="font-semibold text-slate-900 dark:text-slate-100">
+                <span className="text-muted-foreground">Additional Services:</span>
+                <span className="font-semibold text-foreground">
                   {formatCurrency(subtotalServices)}
                 </span>
               </div>
             )}
-            <div className="flex items-center justify-between text-sm pt-2 border-t border-slate-300 dark:border-slate-700">
-              <span className="text-slate-600 dark:text-slate-400">Subtotal:</span>
-              <span className="font-semibold text-slate-900 dark:text-slate-100">{formatCurrency(subtotal)}</span>
+            <div className="flex items-center justify-between text-sm pt-2 border-t border-border">
+              <span className="text-muted-foreground">Subtotal:</span>
+              <span className="font-semibold text-foreground">{formatCurrency(subtotal)}</span>
             </div>
 
             {/* Taxes & Fees Section (like QuoteOptionsTab) */}
-            <div className="pt-3 border-t border-slate-300 dark:border-slate-700 space-y-3">
+            <div className="pt-3 border-t border-border space-y-3">
               <div className="flex items-center justify-between mb-3">
                 <div>
-                  <Label className="text-sm font-medium text-slate-900 dark:text-slate-100">Taxes & Fees</Label>
-                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+                  <Label className="text-sm font-medium text-foreground">Taxes & Fees</Label>
+                  <p className="text-xs text-muted-foreground mt-0.5">
                     Add applicable taxes and fees for this invoice.
                   </p>
                 </div>
@@ -794,7 +794,7 @@ function InvoiceSummaryStep({
                   {safeTaxes.map((tax) => (
                     <div
                       key={tax.id}
-                      className="flex items-center gap-3 p-2 bg-slate-100 dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800"
+                      className="flex items-center gap-3 p-2 bg-muted rounded-lg border border-border"
                     >
                       <Input
                         value={tax.name}
@@ -851,29 +851,29 @@ function InvoiceSummaryStep({
               </Button>
 
               {taxTotal > 0 && (
-                <div className="flex items-center justify-between text-sm pt-2 border-t border-slate-300 dark:border-slate-700">
-                  <span className="text-slate-600 dark:text-slate-400">Total Taxes & Fees:</span>
-                  <span className="font-semibold text-slate-900 dark:text-slate-100">
+                <div className="flex items-center justify-between text-sm pt-2 border-t border-border">
+                  <span className="text-muted-foreground">Total Taxes & Fees:</span>
+                  <span className="font-semibold text-foreground">
                     {formatCurrency(taxTotal)}
                   </span>
                 </div>
               )}
             </div>
 
-            <div className="flex items-center justify-between pt-3 border-t-2 border-slate-300 dark:border-slate-700">
-              <span className="text-lg font-bold text-slate-900 dark:text-slate-100">Grand Total:</span>
-              <span className="text-2xl font-bold text-slate-900 dark:text-slate-100">{formatCurrency(grandTotal)}</span>
+            <div className="flex items-center justify-between pt-3 border-t-2 border-border">
+              <span className="text-lg font-bold text-foreground">Grand Total:</span>
+              <span className="text-2xl font-bold text-foreground">{formatCurrency(grandTotal)}</span>
             </div>
           </div>
         </div>
       </div>
 
       {/* Payment URL Input Card */}
-      <div className="relative overflow-hidden rounded-xl border-2 border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 shadow-sm">
+      <div className="relative overflow-hidden rounded-xl border-2 border-border bg-muted/50 shadow-sm">
         <div className="p-6 space-y-4">
           <div className="flex items-center gap-2">
-            <LinkIcon className="h-5 w-5 text-slate-600 dark:text-slate-400" />
-            <Label htmlFor="payment-url" className="font-semibold text-base text-slate-900 dark:text-slate-100">
+            <LinkIcon className="h-5 w-5 text-muted-foreground" />
+            <Label htmlFor="payment-url" className="font-semibold text-base text-foreground">
               Payment Link (Optional)
             </Label>
           </div>
@@ -885,16 +885,16 @@ function InvoiceSummaryStep({
             onChange={(e) => onPaymentUrlChange(e.target.value)}
             className="w-full h-11 text-sm"
           />
-          <p className="text-xs text-slate-600 dark:text-slate-400 flex items-start gap-2">
-            <CheckCircle2 className="h-3.5 w-3.5 mt-0.5 text-slate-500" />
+          <p className="text-xs text-muted-foreground flex items-start gap-2">
+            <CheckCircle2 className="h-3.5 w-3.5 mt-0.5 text-muted-foreground" />
             <span>Enter a payment URL that will be included in the invoice for easy customer access.</span>
           </p>
 
           {/* Email Options */}
-          <div className="pt-3 border-t border-slate-200 dark:border-slate-800 space-y-4">
+          <div className="pt-3 border-t border-border space-y-4">
             <div className="flex items-center gap-2 mb-3">
-              <Mail className="h-5 w-5 text-slate-600 dark:text-slate-400" />
-              <Label className="font-semibold text-base text-slate-900 dark:text-slate-100">
+              <Mail className="h-5 w-5 text-muted-foreground" />
+              <Label className="font-semibold text-base text-foreground">
                 Email Options
               </Label>
             </div>
@@ -902,12 +902,12 @@ function InvoiceSummaryStep({
             {/* Send to Customer */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <User className="h-4 w-4 text-slate-600 dark:text-slate-400" />
+                <User className="h-4 w-4 text-muted-foreground" />
                 <div>
-                  <Label htmlFor="send-to-customer" className="font-medium text-sm text-slate-900 dark:text-slate-100">
+                  <Label htmlFor="send-to-customer" className="font-medium text-sm text-foreground">
                     Send to Customer
                   </Label>
-                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+                  <p className="text-xs text-muted-foreground mt-0.5">
                     Send invoice email to customer
                   </p>
                 </div>
@@ -922,12 +922,12 @@ function InvoiceSummaryStep({
             {/* Send to Tenant */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <Building2 className="h-4 w-4 text-slate-600 dark:text-slate-400" />
+                <Building2 className="h-4 w-4 text-muted-foreground" />
                 <div>
-                  <Label htmlFor="send-to-tenant" className="font-medium text-sm text-slate-900 dark:text-slate-100">
+                  <Label htmlFor="send-to-tenant" className="font-medium text-sm text-foreground">
                     Send to Tenant
                   </Label>
-                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+                  <p className="text-xs text-muted-foreground mt-0.5">
                     Send invoice copy to tenant emails
                   </p>
                 </div>
@@ -942,12 +942,12 @@ function InvoiceSummaryStep({
             {/* Include PDF */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <FileText className="h-4 w-4 text-slate-600 dark:text-slate-400" />
+                <FileText className="h-4 w-4 text-muted-foreground" />
                 <div>
-                  <Label htmlFor="include-pdf" className="font-medium text-sm text-slate-900 dark:text-slate-100">
+                  <Label htmlFor="include-pdf" className="font-medium text-sm text-foreground">
                     Include PDF Attachment
                   </Label>
-                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+                  <p className="text-xs text-muted-foreground mt-0.5">
                     Attach PDF invoice to email
                   </p>
                 </div>
@@ -963,14 +963,14 @@ function InvoiceSummaryStep({
       </div>
 
       {/* Info Banner */}
-      <div className="relative overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-800 p-5">
+      <div className="relative overflow-hidden rounded-xl bg-muted border-2 border-border p-5">
         <div className="flex items-start gap-3">
-          <div className="p-2 rounded-lg bg-slate-200 dark:bg-slate-800">
-            <FileSignature className="h-5 w-5 text-slate-700 dark:text-slate-300" />
+          <div className="p-2 rounded-lg bg-muted border border-border">
+            <FileSignature className="h-5 w-5 text-muted-foreground" />
           </div>
           <div className="flex-1">
-            <p className="text-sm font-medium text-slate-900 dark:text-slate-100 mb-1">Ready to Create Invoice</p>
-            <p className="text-xs text-slate-600 dark:text-slate-400">
+            <p className="text-sm font-medium text-foreground mb-1">Ready to Create Invoice</p>
+            <p className="text-xs text-muted-foreground">
               Review the summary above and proceed to build the contract document.
             </p>
           </div>
@@ -1029,42 +1029,42 @@ function ContractBuilderStep({
   return (
     <div className="space-y-6">
       {/* Contract Preview Card */}
-      <div className="relative overflow-hidden rounded-xl border-2 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 shadow-lg">
+      <div className="relative overflow-hidden rounded-xl border-2 border-border bg-card shadow-lg">
         <div className="p-8">
-          <div className="border-b-2 border-slate-300 dark:border-slate-700 pb-6 mb-6">
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 mb-2">Flight Charter Contract</h1>
-            <p className="text-sm text-slate-600 dark:text-slate-400">Contract Number: {selectedQuote.id.slice(0, 8)}</p>
+          <div className="border-b-2 border-border pb-6 mb-6">
+            <h1 className="text-3xl font-bold text-foreground mb-2">Flight Charter Contract</h1>
+            <p className="text-sm text-muted-foreground">Contract Number: {selectedQuote.id.slice(0, 8)}</p>
           </div>
 
           <div className="space-y-6">
             {/* Parties Section */}
             <div>
-              <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100 mb-4">Parties</h2>
+              <h2 className="text-xl font-semibold text-foreground mb-4">Parties</h2>
               <div className="grid grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <h3 className="text-sm font-medium text-slate-700 dark:text-slate-300">Client</h3>
-                  <p className="text-sm text-slate-900 dark:text-slate-100">
+                  <h3 className="text-sm font-medium text-muted-foreground">Client</h3>
+                  <p className="text-sm text-foreground">
                     {fullQuoteData.contact_name || selectedQuote.customer.name || "—"}
                   </p>
                   {fullQuoteData.contact_company && (
-                    <p className="text-sm text-slate-900 dark:text-slate-100">
+                    <p className="text-sm text-foreground">
                       {fullQuoteData.contact_company || selectedQuote.customer.company}
                     </p>
                   )}
-                  <p className="text-sm text-slate-600 dark:text-slate-400">
+                  <p className="text-sm text-muted-foreground">
                     {fullQuoteData.contact_email || selectedQuote.customer.email || "—"}
                   </p>
                   {fullQuoteData.contact_phone && (
-                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                    <p className="text-sm text-muted-foreground">
                       {fullQuoteData.contact_phone || selectedQuote.customer.phone || "—"}
                     </p>
                   )}
                 </div>
                 <div className="space-y-2">
-                  <h3 className="text-sm font-medium text-slate-700 dark:text-slate-300">Charter Provider</h3>
-                  <p className="text-sm text-slate-900 dark:text-slate-100">[Your Company Name]</p>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">[Company Address]</p>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">[Contact Information]</p>
+                  <h3 className="text-sm font-medium text-muted-foreground">Charter Provider</h3>
+                  <p className="text-sm text-foreground">[Your Company Name]</p>
+                  <p className="text-sm text-muted-foreground">[Company Address]</p>
+                  <p className="text-sm text-muted-foreground">[Contact Information]</p>
                 </div>
               </div>
             </div>
@@ -1072,25 +1072,25 @@ function ContractBuilderStep({
             {/* Flight Details Section */}
             {fullQuoteData.options && fullQuoteData.options.length > 0 && (
               <div>
-                <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100 mb-4">Flight Details</h2>
+                <h2 className="text-xl font-semibold text-foreground mb-4">Flight Details</h2>
                 <div className="space-y-3">
                   {fullQuoteData.options.map((option: any, idx: number) => (
                     <div
                       key={option.id || idx}
-                      className="p-4 border border-slate-200 dark:border-slate-800 rounded-lg"
+                      className="p-4 border border-border rounded-lg"
                     >
                       <div className="flex justify-between items-start mb-2">
                         <div>
-                          <p className="font-medium text-slate-900 dark:text-slate-100">
+                          <p className="font-medium text-foreground">
                             {option.aircraftModel?.name || option.aircraftTail?.tailNumber || "Aircraft Option"}
                           </p>
                           {option.aircraftTail?.tailNumber && (
-                            <p className="text-sm text-slate-600 dark:text-slate-400">
+                            <p className="text-sm text-muted-foreground">
                               Tail Number: {option.aircraftTail.tailNumber}
                             </p>
                           )}
                         </div>
-                        <p className="font-semibold text-slate-900 dark:text-slate-100">
+                        <p className="font-semibold text-foreground">
                           {formatCurrency(
                             option.price_total ||
                               (option.cost_operator || 0) +
@@ -1102,7 +1102,7 @@ function ContractBuilderStep({
                         </p>
                       </div>
                       {option.flight_hours && (
-                        <p className="text-sm text-slate-600 dark:text-slate-400">
+                        <p className="text-sm text-muted-foreground">
                           Flight Hours: {option.flight_hours}
                         </p>
                       )}
@@ -1115,17 +1115,17 @@ function ContractBuilderStep({
             {/* Additional Services */}
             {fullQuoteData.services && fullQuoteData.services.length > 0 && (
               <div>
-                <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100 mb-4">Additional Services</h2>
+                <h2 className="text-xl font-semibold text-foreground mb-4">Additional Services</h2>
                 <div className="space-y-2">
                   {fullQuoteData.services.map((service: any, idx: number) => (
                     <div
                       key={service.id || idx}
-                      className="flex justify-between p-3 border border-slate-200 dark:border-slate-800 rounded-lg"
+                      className="flex justify-between p-3 border border-border rounded-lg"
                     >
-                      <span className="text-sm text-slate-900 dark:text-slate-100">
+                      <span className="text-sm text-foreground">
                         {service.name || service.description || `Service ${idx + 1}`}
                       </span>
-                      <span className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                      <span className="text-sm font-medium text-foreground">
                         {formatCurrency((service.amount || service.unit_price || 0) * (service.qty || 1))}
                       </span>
                     </div>
@@ -1135,11 +1135,11 @@ function ContractBuilderStep({
             )}
 
             {/* Terms & Total */}
-            <div className="border-t-2 border-slate-300 dark:border-slate-700 pt-6 mt-6">
+            <div className="border-t-2 border-border pt-6 mt-6">
               <div className="space-y-2 mb-4">
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-600 dark:text-slate-400">Subtotal:</span>
-                  <span className="font-semibold text-slate-900 dark:text-slate-100">
+                  <span className="text-muted-foreground">Subtotal:</span>
+                  <span className="font-semibold text-foreground">
                     {formatCurrency(subtotal)}
                   </span>
                 </div>
@@ -1147,16 +1147,16 @@ function ContractBuilderStep({
                   <>
                     {safeTaxes.map((tax) => (
                       <div key={tax.id} className="flex justify-between text-sm">
-                        <span className="text-slate-600 dark:text-slate-400">{tax.name}:</span>
-                        <span className="font-semibold text-slate-900 dark:text-slate-100">
+                        <span className="text-muted-foreground">{tax.name}:</span>
+                        <span className="font-semibold text-foreground">
                           {formatCurrency(tax.amount || 0)}
                         </span>
                       </div>
                     ))}
                     {taxTotal > 0 && (
-                      <div className="flex justify-between text-sm pt-1 border-t border-slate-300 dark:border-slate-700">
-                        <span className="text-slate-600 dark:text-slate-400 font-medium">Total Taxes & Fees:</span>
-                        <span className="font-semibold text-slate-900 dark:text-slate-100">
+                      <div className="flex justify-between text-sm pt-1 border-t border-border">
+                        <span className="text-muted-foreground font-medium">Total Taxes & Fees:</span>
+                        <span className="font-semibold text-foreground">
                           {formatCurrency(taxTotal)}
                         </span>
                       </div>
@@ -1164,13 +1164,13 @@ function ContractBuilderStep({
                   </>
                 )}
               </div>
-              <div className="flex justify-between items-center mb-4 pt-2 border-t border-slate-300 dark:border-slate-700">
-                <span className="text-lg font-semibold text-slate-900 dark:text-slate-100">Total Contract Amount:</span>
-                <span className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+              <div className="flex justify-between items-center mb-4 pt-2 border-t border-border">
+                <span className="text-lg font-semibold text-foreground">Total Contract Amount:</span>
+                <span className="text-2xl font-bold text-foreground">
                   {formatCurrency(grandTotal)}
                 </span>
               </div>
-              <div className="mt-6 space-y-3 text-sm text-slate-700 dark:text-slate-300">
+              <div className="mt-6 space-y-3 text-sm text-muted-foreground">
                 <p>
                   <strong>Payment Terms:</strong> As specified in the invoice attached to this contract.
                 </p>
@@ -1187,12 +1187,12 @@ function ContractBuilderStep({
       </div>
 
       {/* Info Banner */}
-      <div className="relative overflow-hidden rounded-xl bg-blue-50 dark:bg-blue-950 border-2 border-blue-200 dark:border-blue-800 p-5">
+      <div className="relative overflow-hidden rounded-xl bg-muted border-2 border-border p-5">
         <div className="flex items-start gap-3">
-          <FileText className="h-5 w-5 text-blue-700 dark:text-blue-300 mt-0.5" />
+          <FileText className="h-5 w-5 text-muted-foreground mt-0.5" />
           <div className="flex-1">
-            <p className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-1">Contract Preview</p>
-            <p className="text-xs text-blue-700 dark:text-blue-300">
+            <p className="text-sm font-medium text-foreground mb-1">Contract Preview</p>
+            <p className="text-xs text-muted-foreground">
               This is a preview of the first page of your contract. The full contract will be generated as a PDF when
               you create the invoice.
             </p>
