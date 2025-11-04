@@ -22,6 +22,12 @@ function DropdownMenuRoot({ children, ...props }: React.ComponentPropsWithoutRef
   const triggerRef = React.useRef<HTMLElement | null>(null)
 
   const handleOpenChange = React.useCallback((newOpen: boolean) => {
+    if (newOpen && triggerRef.current) {
+      triggerRef.current.getBoundingClientRect()
+      // Force a reflow
+      void triggerRef.current.offsetHeight
+    }
+
     setOpen(newOpen)
 
     if (newOpen) {
@@ -58,16 +64,29 @@ function DropdownMenuContent({
   sideOffset = 8,
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Content>) {
+  const [mounted, setMounted] = React.useState(false)
   const contentRef = React.useRef<HTMLDivElement>(null)
 
+  React.useEffect(() => {
+    setMounted(true)
+  }, [])
+
   React.useLayoutEffect(() => {
-    if (contentRef.current) {
+    if (contentRef.current && mounted) {
       // Force a synchronous layout by reading getBoundingClientRect
       contentRef.current.getBoundingClientRect()
       // Dispatch resize to trigger Floating UI recalculation
       window.dispatchEvent(new Event("resize"))
+
+      setTimeout(() => {
+        window.dispatchEvent(new Event("resize"))
+      }, 10)
     }
-  }, [])
+  }, [mounted])
+
+  if (!mounted) {
+    return null
+  }
 
   return (
     <DropdownMenuPrimitive.Portal>
@@ -77,6 +96,9 @@ function DropdownMenuContent({
         side={side}
         align={align}
         sideOffset={sideOffset}
+        collisionPadding={8}
+        avoidCollisions={true}
+        sticky="always"
         {...(props as any)}
         className={cn(
           "bg-popover text-popover-foreground pointer-events-auto",
