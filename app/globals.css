@@ -1,5 +1,4 @@
 @import "tailwindcss";
-/* Do NOT import tw-animate-css here. If you must use it, scope it per-page. */
 
 /* --- Sonner cosmetics (optional) --- */
 .sonner-toast { z-index: 9999 !important; position: relative; overflow: hidden; }
