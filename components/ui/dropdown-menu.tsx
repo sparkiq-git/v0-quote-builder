@@ -23,7 +23,22 @@ function DropdownMenuRoot({ children, ...props }: React.ComponentPropsWithoutRef
   const triggerRef = React.useRef<HTMLElement | null>(null)
 
   const handleOpenChange = React.useCallback((newOpen: boolean) => {
+    console.log("[v0] Dropdown open change:", newOpen)
+
+    if (newOpen && triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect()
+      console.log("[v0] Trigger rect:", rect)
+      // Force a reflow
+      void triggerRef.current.offsetHeight
+    }
+
     setOpen(newOpen)
+
+    if (newOpen) {
+      requestAnimationFrame(() => {
+        window.dispatchEvent(new Event("resize"))
+      })
+    }
   }, [])
 
   return (
@@ -39,6 +54,9 @@ function DropdownMenuTrigger({ ...props }: React.ComponentPropsWithoutRef<typeof
   const combinedRef = React.useCallback(
     (node: HTMLElement | null) => {
       triggerRef.current = node
+      if (node) {
+        console.log("[v0] Trigger mounted:", node)
+      }
     },
     [triggerRef],
   )
@@ -57,23 +75,38 @@ function DropdownMenuContent({
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Content>) {
   const contentRef = React.useRef<HTMLDivElement | null>(null)
-  const [mounted, setMounted] = React.useState(false)
+  const [container, setContainer] = React.useState<HTMLElement | null>(null)
 
-  React.useEffect(() => setMounted(true), [])
+  React.useEffect(() => {
+    console.log("[v0] DropdownMenuContent mounted ✅")
+
+    let el = document.getElementById("dropdown-root")
+    if (!el) {
+      el = document.createElement("div")
+      el.id = "dropdown-root"
+      el.style.position = "relative"
+      el.style.zIndex = "99999"
+      document.body.appendChild(el)
+      console.log("[v0] Created dropdown-root container")
+    }
+    setContainer(el)
+  }, [])
 
   React.useLayoutEffect(() => {
-    const trigger = document.querySelector(
-      '[data-slot="dropdown-menu-trigger"][data-state="open"]',
-    ) as HTMLElement | null
+    const trigger = document.querySelector('[data-slot="dropdown-menu-trigger"][data-state="open"]')
     const content = contentRef.current
+
     if (!trigger || !content) return
 
     const rect = trigger.getBoundingClientRect()
-    const offset = 6
+    console.log("[v0] Positioning dropdown below trigger:", rect)
 
-    // Position below the trigger
-    let left = rect.left
+    // Calculate position relative to trigger
+    const offset = 6 // visual separation between trigger and menu
     const top = rect.bottom + offset
+    const left = rect.left
+
+    // Apply fixed positioning
     content.style.position = "fixed"
     content.style.top = `${top}px`
     content.style.left = `${left}px`
@@ -82,45 +115,46 @@ function DropdownMenuContent({
     content.style.opacity = "1"
     content.style.pointerEvents = "auto"
 
-    // Prevent overflow to the right
-    const menuRect = content.getBoundingClientRect()
-    if (menuRect.right > window.innerWidth) {
-      const shift = menuRect.right - window.innerWidth + 8
-      left = Math.max(0, left - shift)
-      content.style.left = `${left}px`
-    }
-  })
+    console.log("[v0] Dropdown repositioned correctly", { top, left })
+  }, [container])
 
-  if (!mounted) return null
+  if (!container) return null
 
   return (
-    <DropdownMenuPrimitive.Portal container={document.body}>
-      <DropdownMenuPrimitive.Content
-        ref={contentRef}
-        data-slot="dropdown-menu-content"
-        side={side}
-        align={align}
-        sideOffset={sideOffset}
-        avoidCollisions={avoidCollisions}
-        collisionPadding={collisionPadding}
-        sticky={sticky as any}
-        className={cn(
-          "bg-popover text-popover-foreground pointer-events-auto",
-          "data-[state=open]:animate-in data-[state=closed]:animate-out",
-          "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
-          "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
-          "data-[side=bottom]:slide-in-from-top-2",
-          "data-[side=left]:slide-in-from-right-2",
-          "data-[side=right]:slide-in-from-left-2",
-          "data-[side=top]:slide-in-from-bottom-2",
-          "z-[99999] max-h-[var(--radix-dropdown-menu-content-available-height)]",
-          "min-w-[8rem] origin-[var(--radix-dropdown-menu-content-transform-origin)]",
-          "overflow-x-hidden overflow-y-auto rounded-md border p-1 shadow-md",
-          className,
-        )}
-        {...props}
-      />
-    </DropdownMenuPrimitive.Portal>
+    <DropdownMenuPrimitive.Content
+      ref={contentRef}
+      data-slot="dropdown-menu-content"
+      side={side}
+      align={align}
+      sideOffset={sideOffset}
+      avoidCollisions={avoidCollisions}
+      collisionPadding={collisionPadding}
+      sticky={sticky as any}
+      className={cn(
+        "bg-popover text-popover-foreground pointer-events-auto",
+        "data-[state=open]:animate-in data-[state=closed]:animate-out",
+        "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+        "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
+        "data-[side=bottom]:slide-in-from-top-2",
+        "data-[side=left]:slide-in-from-right-2",
+        "data-[side=right]:slide-in-from-left-2",
+        "data-[side=top]:slide-in-from-bottom-2",
+        "z-[99999] max-h-[var(--radix-dropdown-menu-content-available-height)]",
+        "min-w-[8rem] origin-[var(--radix-dropdown-menu-content-transform-origin)]",
+        "overflow-x-hidden overflow-y-auto rounded-md border p-1 shadow-md",
+        className,
+      )}
+      {...props}
+      style={{
+        position: "absolute",
+        ...props.style,
+      }}
+      onOpenAutoFocus={(e) => {
+        contentRef.current?.offsetHeight
+        console.log("[v0] Content auto-focused, rect:", contentRef.current?.getBoundingClientRect())
+        props.onOpenAutoFocus?.(e)
+      }}
+    />
   )
 }
 
