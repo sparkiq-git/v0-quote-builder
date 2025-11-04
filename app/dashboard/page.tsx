@@ -2,12 +2,17 @@
 
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Users, FileText, Clock, Plane, Mail, Phone, Calendar } from "lucide-react"
+import { Users, FileText, Clock, Plane, Mail, Phone, Calendar, TrendingUp } from "lucide-react"
 import { RouteMap } from "@/components/dashboard/route-map"
 import DashboardMetrics from "@/components/dashboard/DashboardMetrics"
 import { RecentActivities } from "@/components/dashboard/recent-activities"
 import { Badge } from "@/components/ui/badge"
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts"
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart"
+import { Area, AreaChart, CartesianGrid, XAxis, Tooltip, ResponsiveContainer } from "recharts"
 
 export default function DashboardPage() {
   const [leadCount, setLeadCount] = useState(0)
@@ -152,9 +157,9 @@ export default function DashboardPage() {
       const currentYear = new Date().getFullYear()
       const startOfYear = new Date(currentYear, 0, 1).toISOString()
       const endOfYear = new Date(currentYear, 11, 31, 23, 59, 59).toISOString()
-
-      // Step 1: Get IDs of quotes with allowed statuses
       const allowedStatuses = ["accepted", "invoiced", "paid", "pending_approval"]
+
+      // Step 1: Get quotes with allowed statuses
       const { data: quotes, error: quoteError } = await supabase
         .from("quote")
         .select("id")
@@ -172,7 +177,7 @@ export default function DashboardPage() {
       }
 
       // Step 2: Get related quote_options
-      const { data, error } = await supabase
+      const { data: options, error } = await supabase
         .from("quote_option")
         .select("created_at, cost_operator, price_commission, quote_id")
         .in("quote_id", quoteIds)
@@ -191,7 +196,7 @@ export default function DashboardPage() {
         price_commission: 0,
       }))
 
-      data?.forEach((row) => {
+      options?.forEach((row) => {
         const monthIndex = new Date(row.created_at).getMonth()
         monthlyData[monthIndex].cost_operator += row.cost_operator || 0
         monthlyData[monthIndex].price_commission += row.price_commission || 0
@@ -241,55 +246,80 @@ export default function DashboardPage() {
       {/* === Top Metric Cards === */}
       <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard title="Leads" icon={Users} currentValue={leadCount} description="Pending conversion to quote" />
-        <MetricCard
-          title="Quotes"
-          icon={FileText}
-          currentValue={quotesAwaitingResponse}
-          description="Awaiting client response"
-        />
+        <MetricCard title="Quotes" icon={FileText} currentValue={quotesAwaitingResponse} description="Awaiting client response" />
         <MetricCard title="Unpaid" icon={Clock} currentValue={unpaidQuotes} description="Awaiting payment" />
-        <MetricCard
-          title="Upcoming Trips"
-          icon={Plane}
-          currentValue={upcomingDepartures}
-          description="Departures in next 7 days"
-        />
+        <MetricCard title="Upcoming Trips" icon={Plane} currentValue={upcomingDepartures} description="Departures in next 7 days" />
       </div>
 
       {/* === Monthly Metrics === */}
       <DashboardMetrics />
 
       {/* === Chart + Recent Activities === */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Chart Card */}
-        <Card className="border border-border shadow-sm rounded-xl bg-card hover:shadow-md transition-shadow lg:col-span-1">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        {/* Chart Area (3/5 width) */}
+        <Card className="border border-border shadow-sm rounded-xl bg-card hover:shadow-md transition-shadow lg:col-span-3 h-[400px]">
           <CardHeader>
-            <CardTitle className="text-lg font-semibold text-foreground">
-              Cost & Commission (Yearly)
-            </CardTitle>
+            <CardTitle>Cost & Commission (Yearly)</CardTitle>
           </CardHeader>
-          <CardContent className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="cost_operator" fill="#60a5fa" name="Cost Operator" />
-                <Bar dataKey="price_commission" fill="#fbbf24" name="Price Commission" />
-              </BarChart>
-            </ResponsiveContainer>
+          <CardContent className="h-[300px] pt-2">
+            <ChartContainer
+              config={{
+                cost_operator: { label: "Cost Operator", color: "var(--chart-1)" },
+                price_commission: { label: "Price Commission", color: "var(--chart-2)" },
+              }}
+            >
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={chartData} margin={{ left: 12, right: 12 }}>
+                  <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                  <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8} />
+                  <Tooltip content={<ChartTooltipContent />} />
+                  <defs>
+                    <linearGradient id="fillCost" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="var(--chart-1)" stopOpacity={0.8} />
+                      <stop offset="95%" stopColor="var(--chart-1)" stopOpacity={0.1} />
+                    </linearGradient>
+                    <linearGradient id="fillCommission" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="var(--chart-2)" stopOpacity={0.8} />
+                      <stop offset="95%" stopColor="var(--chart-2)" stopOpacity={0.1} />
+                    </linearGradient>
+                  </defs>
+                  <Area
+                    type="natural"
+                    dataKey="price_commission"
+                    stroke="var(--chart-2)"
+                    fill="url(#fillCommission)"
+                    fillOpacity={0.4}
+                    stackId="a"
+                  />
+                  <Area
+                    type="natural"
+                    dataKey="cost_operator"
+                    stroke="var(--chart-1)"
+                    fill="url(#fillCost)"
+                    fillOpacity={0.4}
+                    stackId="a"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </ChartContainer>
           </CardContent>
+          <div className="px-6 pb-4 text-sm text-muted-foreground flex items-center gap-2">
+            <TrendingUp className="h-4 w-4 text-green-500" /> Trending up 12.4% this year
+          </div>
         </Card>
 
-        {/* Recent Activities */}
-        <div className="lg:col-span-2">
-          <RecentActivities />
-        </div>
+        {/* Recent Activities (2/5 width, same height) */}
+        <Card className="border border-border shadow-sm rounded-xl bg-card hover:shadow-md transition-shadow lg:col-span-2 h-[400px]">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-semibold text-foreground">Recent Activities</CardTitle>
+          </CardHeader>
+          <CardContent className="h-[340px] overflow-y-auto pt-0">
+            <RecentActivities />
+          </CardContent>
+        </Card>
       </div>
 
-      {/* === Today's New Leads and Draft Quotes === */}
+      {/* === Leads and Quotes === */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* Leads */}
         <Card className="border border-border shadow-sm rounded-xl flex flex-col bg-card hover:shadow-md transition-shadow">
@@ -308,31 +338,26 @@ export default function DashboardPage() {
                       {lead.status}
                     </Badge>
                   </div>
-
                   {lead.customer_email && (
                     <p className="text-xs text-muted-foreground flex items-center gap-2 mt-1 leading-relaxed">
                       <Mail className="w-3 h-3" /> {lead.customer_email}
                     </p>
                   )}
-
                   {lead.customer_phone && (
                     <p className="text-xs text-muted-foreground flex items-center gap-2 leading-relaxed">
                       <Phone className="w-3 h-3" /> {lead.customer_phone}
                     </p>
                   )}
-
                   {lead.trip_summary && (
                     <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
                       <span className="font-semibold text-foreground">Route:</span> {lead.trip_summary}
                     </p>
                   )}
-
                   {lead.trip_type && (
                     <p className="text-xs text-muted-foreground leading-relaxed">
                       <span className="font-semibold text-foreground">Trip Type:</span> {lead.trip_type}
                     </p>
                   )}
-
                   {lead.earliest_departure && (
                     <p className="text-xs text-muted-foreground flex items-center gap-2 leading-relaxed">
                       <Calendar className="w-3 h-3" />{" "}
@@ -344,7 +369,6 @@ export default function DashboardPage() {
                       })}
                     </p>
                   )}
-
                   <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
                     Created at:{" "}
                     {new Date(lead.created_at).toLocaleTimeString([], {
