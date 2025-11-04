@@ -77,6 +77,7 @@ function DropdownMenuContent({
   const [mounted, setMounted] = React.useState(false)
 
   React.useEffect(() => {
+    console.log("[v0] DropdownMenuContent mounted ✅")
     setMounted(true)
   }, [])
 

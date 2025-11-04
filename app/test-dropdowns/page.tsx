@@ -10,6 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { ClientOnly } from "@/components/ui/client-only"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { MoreHorizontal } from "lucide-react"
 
@@ -148,30 +149,31 @@ export default function TestDropdownsPage() {
           )}
         </div>
 
-        {/* Test 1 */}
+        {/* Test 1 - Wrapped in ClientOnly */}
         <div className="bg-white p-8 rounded-lg shadow-sm border space-y-4">
-          <h2 className="text-xl font-semibold">Test 1: Basic Dropdown Menu</h2>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline">
-                <MoreHorizontal className="mr-2 h-4 w-4" />
-                Basic Dropdown
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent side="bottom" align="end" sideOffset={8}>
-              <DropdownMenuLabel>My Account</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem>Profile</DropdownMenuItem>
-              <DropdownMenuItem>Settings</DropdownMenuItem>
-              <DropdownMenuItem>Logout</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <h3 className="text-xl font-semibold">Test 1: Basic Dropdown Menu (with ClientOnly)</h3>
+          <ClientOnly>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline">
+                  <MoreHorizontal className="mr-2 h-4 w-4" />
+                  Basic Dropdown
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent side="bottom" align="end" sideOffset={8}>
+                <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem>Profile</DropdownMenuItem>
+                <DropdownMenuItem>Settings</DropdownMenuItem>
+                <DropdownMenuItem>Logout</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </ClientOnly>
         </div>
 
-        {/* Test 2 */}
+        {/* Test 2 - Wrapped in ClientOnly */}
         <div className="bg-white p-8 rounded-lg shadow-sm border space-y-4">
-          <h2 className="text-xl font-semibold">Test 2: Dropdown in Table</h2>
+          <h3 className="text-xl font-semibold">Test 2: Dropdown in Table (with ClientOnly)</h3>
           <div className="border rounded-lg overflow-hidden">
             <table className="w-full">
               <thead className="bg-gray-100">
@@ -187,25 +189,27 @@ export default function TestDropdownsPage() {
                     <td className="p-4">Item {i}</td>
                     <td className="p-4">Active</td>
                     <td className="p-4 text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent
-                          side="bottom"
-                          align="end"
-                          sideOffset={8}
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuItem>View</DropdownMenuItem>
-                          <DropdownMenuItem>Edit</DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem variant="destructive">Delete</DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      <ClientOnly>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent
+                            side="bottom"
+                            align="end"
+                            sideOffset={8}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuItem>View</DropdownMenuItem>
+                            <DropdownMenuItem>Edit</DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem variant="destructive">Delete</DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </ClientOnly>
                     </td>
                   </tr>
                 ))}
@@ -216,7 +220,7 @@ export default function TestDropdownsPage() {
 
         {/* Test 3 */}
         <div className="bg-white p-8 rounded-lg shadow-sm border space-y-4">
-          <h2 className="text-xl font-semibold">Test 3: Select Component</h2>
+          <h3 className="text-xl font-semibold">Test 3: Select Component</h3>
           <Select>
             <SelectTrigger className="w-[200px]">
               <SelectValue placeholder="Select an option" />
@@ -229,41 +233,45 @@ export default function TestDropdownsPage() {
           </Select>
         </div>
 
-        {/* Test 4 */}
+        {/* Test 4 - Wrapped in ClientOnly */}
         <div className="bg-white p-8 rounded-lg shadow-sm border space-y-4">
-          <h2 className="text-xl font-semibold">Test 4: Dropdown with Interactive State</h2>
+          <h3 className="text-xl font-semibold">Test 4: Dropdown with Interactive State (with ClientOnly)</h3>
           <p>Counter: {count}</p>
           <div className="flex gap-4">
             <Button onClick={() => setCount((n) => n + 1)}>Increment</Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline">
-                  <MoreHorizontal className="mr-2 h-4 w-4" />
-                  Reset Counter
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent side="bottom" align="start" sideOffset={8}>
-                <DropdownMenuItem onClick={() => setCount(0)}>Reset to 0</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setCount(10)}>Set to 10</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <ClientOnly>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline">
+                    <MoreHorizontal className="mr-2 h-4 w-4" />
+                    Reset Counter
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent side="bottom" align="start" sideOffset={8}>
+                  <DropdownMenuItem onClick={() => setCount(0)}>Reset to 0</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setCount(10)}>Set to 10</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </ClientOnly>
           </div>
         </div>
 
-        {/* Test 5 */}
+        {/* Test 5 - Wrapped in ClientOnly */}
         <div className="bg-white p-8 rounded-lg shadow-sm border space-y-4">
-          <h2 className="text-xl font-semibold">Test 5: Multiple Dropdowns</h2>
+          <h3 className="text-xl font-semibold">Test 5: Multiple Dropdowns (with ClientOnly)</h3>
           <div className="flex gap-4">
             {[1, 2, 3, 4].map((i) => (
-              <DropdownMenu key={i}>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline">Dropdown {i}</Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent side="bottom" align="start" sideOffset={8}>
-                  <DropdownMenuItem>Action A from {i}</DropdownMenuItem>
-                  <DropdownMenuItem>Action B from {i}</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <ClientOnly key={i}>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline">Dropdown {i}</Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent side="bottom" align="start" sideOffset={8}>
+                    <DropdownMenuItem>Action A from {i}</DropdownMenuItem>
+                    <DropdownMenuItem>Action B from {i}</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </ClientOnly>
             ))}
           </div>
         </div>
