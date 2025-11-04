@@ -10,12 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import {
-  DropdownMenuClient,
-  DropdownMenuClientItem,
-  DropdownMenuClientLabel,
-  DropdownMenuClientSeparator,
-} from "@/components/ui/dropdown-menu-client"
+import { DropdownMenuClient } from "@/components/ui/dropdown-menu-client"
 import { ClientOnly } from "@/components/ui/client-only"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { MoreHorizontal } from "lucide-react"
@@ -155,11 +150,11 @@ export default function TestDropdownsPage() {
           )}
         </div>
 
-        {/* Test 0 - Added new test using DropdownMenuClient wrapper */}
+        {/* Test 0 - Updated to use simplified items API */}
         <div className="bg-green-50 p-8 rounded-lg shadow-sm border-2 border-green-400 space-y-4">
-          <h3 className="text-xl font-semibold text-green-900">Test 0: DropdownMenuClient Wrapper (NEW)</h3>
+          <h3 className="text-xl font-semibold text-green-900">Test 0: DropdownMenuClient Wrapper (Simplified API)</h3>
           <p className="text-green-800 text-sm">
-            This uses the new DropdownMenuClient wrapper that encapsulates the entire Radix tree in a client component.
+            This uses the new simplified DropdownMenuClient with items array API.
           </p>
           <DropdownMenuClient
             trigger={
@@ -168,13 +163,8 @@ export default function TestDropdownsPage() {
                 Client Wrapper Dropdown
               </Button>
             }
-          >
-            <DropdownMenuClientLabel>My Account</DropdownMenuClientLabel>
-            <DropdownMenuClientSeparator />
-            <DropdownMenuClientItem>Profile</DropdownMenuClientItem>
-            <DropdownMenuClientItem>Settings</DropdownMenuClientItem>
-            <DropdownMenuClientItem>Logout</DropdownMenuClientItem>
-          </DropdownMenuClient>
+            items={[{ label: "Profile" }, { label: "Settings" }, { label: "Logout", variant: "destructive" }]}
+          />
         </div>
 
         {/* Test 1 - Wrapped in ClientOnly */}
@@ -199,7 +189,7 @@ export default function TestDropdownsPage() {
           </ClientOnly>
         </div>
 
-        {/* Test 2 - Updated to use DropdownMenuClient */}
+        {/* Test 2 - Updated to use simplified items API */}
         <div className="bg-white p-8 rounded-lg shadow-sm border space-y-4">
           <h3 className="text-xl font-semibold">Test 2: Dropdown in Table (with DropdownMenuClient)</h3>
           <div className="border rounded-lg overflow-hidden">
@@ -223,13 +213,8 @@ export default function TestDropdownsPage() {
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         }
-                      >
-                        <DropdownMenuClientLabel>Actions</DropdownMenuClientLabel>
-                        <DropdownMenuClientItem>View</DropdownMenuClientItem>
-                        <DropdownMenuClientItem>Edit</DropdownMenuClientItem>
-                        <DropdownMenuClientSeparator />
-                        <DropdownMenuClientItem variant="destructive">Delete</DropdownMenuClientItem>
-                      </DropdownMenuClient>
+                        items={[{ label: "View" }, { label: "Edit" }, { label: "Delete", variant: "destructive" }]}
+                      />
                     </td>
                   </tr>
                 ))}
@@ -276,15 +261,16 @@ export default function TestDropdownsPage() {
           </div>
         </div>
 
-        {/* Test 5 - Updated to use DropdownMenuClient */}
+        {/* Test 5 - Updated to use simplified items API */}
         <div className="bg-white p-8 rounded-lg shadow-sm border space-y-4">
           <h3 className="text-xl font-semibold">Test 5: Multiple Dropdowns (with DropdownMenuClient)</h3>
           <div className="flex gap-4">
             {[1, 2, 3, 4].map((i) => (
-              <DropdownMenuClient key={i} trigger={<Button variant="outline">Dropdown {i}</Button>}>
-                <DropdownMenuClientItem>Action A from {i}</DropdownMenuClientItem>
-                <DropdownMenuClientItem>Action B from {i}</DropdownMenuClientItem>
-              </DropdownMenuClient>
+              <DropdownMenuClient
+                key={i}
+                trigger={<Button variant="outline">Dropdown {i}</Button>}
+                items={[{ label: `Action A from ${i}` }, { label: `Action B from ${i}` }]}
+              />
             ))}
           </div>
         </div>
