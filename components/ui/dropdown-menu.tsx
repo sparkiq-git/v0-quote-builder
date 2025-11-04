@@ -23,22 +23,7 @@ function DropdownMenuRoot({ children, ...props }: React.ComponentPropsWithoutRef
   const triggerRef = React.useRef<HTMLElement | null>(null)
 
   const handleOpenChange = React.useCallback((newOpen: boolean) => {
-    console.log("[v0] Dropdown open change:", newOpen)
-
-    if (newOpen && triggerRef.current) {
-      const rect = triggerRef.current.getBoundingClientRect()
-      console.log("[v0] Trigger rect:", rect)
-      // Force a reflow
-      void triggerRef.current.offsetHeight
-    }
-
     setOpen(newOpen)
-
-    if (newOpen) {
-      requestAnimationFrame(() => {
-        window.dispatchEvent(new Event("resize"))
-      })
-    }
   }, [])
 
   return (
@@ -54,9 +39,6 @@ function DropdownMenuTrigger({ ...props }: React.ComponentPropsWithoutRef<typeof
   const combinedRef = React.useCallback(
     (node: HTMLElement | null) => {
       triggerRef.current = node
-      if (node) {
-        console.log("[v0] Trigger mounted:", node)
-      }
     },
     [triggerRef],
   )
@@ -76,10 +58,9 @@ function DropdownMenuContent({
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Content>) {
   const contentRef = React.useRef<HTMLDivElement | null>(null)
   const [container, setContainer] = React.useState<HTMLElement | null>(null)
+  const [mounted, setMounted] = React.useState(false)
 
-  React.useEffect(() => {
-    console.log("[v0] DropdownMenuContent mounted ✅")
-
+  React.useLayoutEffect(() => {
     let el = document.getElementById("dropdown-root")
     if (!el) {
       el = document.createElement("div")
@@ -87,28 +68,51 @@ function DropdownMenuContent({
       el.style.position = "relative"
       el.style.zIndex = "99999"
       document.body.appendChild(el)
-      console.log("[v0] Created dropdown-root container")
     }
     setContainer(el)
   }, [])
 
-  React.useEffect(() => {
-    const trigger = document.querySelector('[data-slot="dropdown-menu-trigger"][data-state="open"]')
-    const content = contentRef.current
+  React.useEffect(() => setMounted(true), [])
 
-    if (trigger && content) {
+  React.useLayoutEffect(() => {
+    const updatePosition = () => {
+      const trigger = document.querySelector(
+        '[data-slot="dropdown-menu-trigger"][data-state="open"]',
+      ) as HTMLElement | null
+      const content = contentRef.current
+      if (!trigger || !content) return
+
       const rect = trigger.getBoundingClientRect()
-      console.log("[v0] Positioning dropdown below trigger:", rect)
+      const offset = 6
+      let left = rect.left
+      const top = rect.bottom + offset
 
-      // Position the dropdown just below the trigger
       content.style.position = "fixed"
-      content.style.top = `${rect.bottom + 8}px`
-      content.style.left = `${rect.left}px`
+      content.style.top = `${top}px`
+      content.style.left = `${left}px`
+      content.style.minWidth = `${rect.width}px`
+      content.style.opacity = "1"
+      content.style.pointerEvents = "auto"
       content.style.zIndex = "99999"
-    }
-  }, [container])
 
-  if (!container) return null
+      const menuRect = content.getBoundingClientRect()
+      if (menuRect.right > window.innerWidth) {
+        const shift = menuRect.right - window.innerWidth + 8
+        left = Math.max(0, left - shift)
+        content.style.left = `${left}px`
+      }
+    }
+
+    updatePosition()
+    window.addEventListener("scroll", updatePosition, true)
+    window.addEventListener("resize", updatePosition)
+    return () => {
+      window.removeEventListener("scroll", updatePosition, true)
+      window.removeEventListener("resize", updatePosition)
+    }
+  }, [mounted, container])
+
+  if (!mounted || !container) return null
 
   return (
     <DropdownMenuPrimitive.Content
@@ -135,15 +139,6 @@ function DropdownMenuContent({
         className,
       )}
       {...props}
-      style={{
-        position: "absolute",
-        ...props.style,
-      }}
-      onOpenAutoFocus={(e) => {
-        contentRef.current?.offsetHeight
-        console.log("[v0] Content auto-focused, rect:", contentRef.current?.getBoundingClientRect())
-        props.onOpenAutoFocus?.(e)
-      }}
     />
   )
 }
