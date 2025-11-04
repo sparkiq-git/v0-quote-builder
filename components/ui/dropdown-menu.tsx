@@ -68,88 +68,53 @@ function DropdownMenuContent({
   side = "bottom",
   align = "end",
   sideOffset = 8,
+  avoidCollisions = true,
+  collisionPadding = 8,
+  sticky = "always",
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Content>) {
-  const [mounted, setMounted] = React.useState(false)
-  const contentRef = React.useRef<HTMLDivElement>(null)
-  const { triggerRef } = React.useContext(DropdownMenuContext)
+  const contentRef = React.useRef<HTMLDivElement | null>(null)
 
-  React.useEffect(() => {
-    setMounted(true)
-    console.log("[v0] Content mounted")
-  }, [])
-
-  React.useLayoutEffect(() => {
-    if (!contentRef.current || !mounted) return
-
-    const contentElement = contentRef.current
-    const computedStyle = window.getComputedStyle(contentElement)
-
-    console.log("[v0] === DROPDOWN DEBUG ===")
-    console.log("[v0] Content element:", contentElement)
-    console.log("[v0] Visible:", !!(contentElement.offsetWidth || contentElement.offsetHeight))
-    console.log("[v0] Display:", computedStyle.display)
-    console.log("[v0] Opacity:", computedStyle.opacity)
-    console.log("[v0] Z-Index:", computedStyle.zIndex)
-    console.log("[v0] Position:", computedStyle.position)
-    console.log("[v0] Transform:", computedStyle.transform)
-
-    const transformOrigin = computedStyle.getPropertyValue("--radix-popper-transform-origin")
-    console.log("[v0] Radix transform-origin:", transformOrigin)
-
-    if (triggerRef.current) {
-      const triggerRect = triggerRef.current.getBoundingClientRect()
-      console.log("[v0] Trigger rect:", triggerRect)
-    }
-
-    const contentRect = contentElement.getBoundingClientRect()
-    console.log("[v0] Content rect:", contentRect)
-
-    // Check if Radix positioning failed
-    if (!transformOrigin || transformOrigin.trim() === "") {
-      console.warn("[v0] ❌ Radix positioning FAILED - transform-origin is empty")
-
-      if (triggerRef.current) {
-        const triggerRect = triggerRef.current.getBoundingClientRect()
-        const top = triggerRect.bottom + sideOffset
-        const left = triggerRect.right - contentRect.width
-
-        console.log("[v0] Applying manual position:", { top, left })
-
-        // Apply manual positioning with inline styles
-        contentElement.style.position = "fixed"
-        contentElement.style.top = `${top}px`
-        contentElement.style.left = `${left}px`
-        contentElement.style.transform = "none"
-        contentElement.style.opacity = "1"
-        contentElement.style.pointerEvents = "auto"
-      }
-    } else {
-      console.log("[v0] ✅ Radix positioning working")
-    }
-
-    // Force reflow
-    contentElement.getBoundingClientRect()
-    window.dispatchEvent(new Event("resize"))
-  }, [mounted, side, align, sideOffset, triggerRef])
-
-  if (!mounted) {
-    console.log("[v0] Content not mounted yet")
-    return null
+  const microReflow = () => {
+    // Fuerza un reflow más prolongado para que Floating UI recalcule posición correctamente
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => requestAnimationFrame(() => window.dispatchEvent(new Event("resize")))),
+    )
   }
 
+  React.useEffect(() => {
+    const el = contentRef.current
+    if (!el) return
+
+    // Esperar un frame extra tras apertura para medir posición real
+    const fixPosition = () => {
+      const rect = el.getBoundingClientRect()
+      if (rect.top < 0 || rect.bottom < 0 || rect.height === 0) {
+        console.warn("⚠️ Dropdown fuera de pantalla — aplicando fallback manual")
+        el.style.position = "fixed"
+        el.style.top = "48px" // ajusta según tu diseño
+        el.style.left = "auto"
+        el.style.right = "16px" // alinéalo si deseas al borde derecho
+        el.style.transform = "none"
+        el.style.opacity = "1"
+        el.style.pointerEvents = "auto"
+      }
+    }
+
+    requestAnimationFrame(fixPosition)
+  }, [])
+
   return (
-    <DropdownMenuPrimitive.Portal>
+    <DropdownMenuPrimitive.Portal container={document.body}>
       <DropdownMenuPrimitive.Content
         ref={contentRef}
         data-slot="dropdown-menu-content"
         side={side}
         align={align}
         sideOffset={sideOffset}
-        collisionPadding={8}
-        avoidCollisions={true}
-        sticky="always"
-        {...props}
+        avoidCollisions={avoidCollisions}
+        collisionPadding={collisionPadding}
+        sticky={sticky as any}
         className={cn(
           "bg-popover text-popover-foreground pointer-events-auto",
           "data-[state=open]:animate-in data-[state=closed]:animate-out",
@@ -159,15 +124,15 @@ function DropdownMenuContent({
           "data-[side=left]:slide-in-from-right-2",
           "data-[side=right]:slide-in-from-left-2",
           "data-[side=top]:slide-in-from-bottom-2",
-          "z-[10000] max-h-[var(--radix-dropdown-menu-content-available-height)]",
+          "z-[99999] max-h-[var(--radix-dropdown-menu-content-available-height)]",
           "min-w-[8rem] origin-[var(--radix-dropdown-menu-content-transform-origin)]",
           "overflow-x-hidden overflow-y-auto rounded-md border p-1 shadow-md",
           className,
         )}
-        style={{
-          opacity: 1,
-          pointerEvents: "auto",
-          ...props.style,
+        {...props}
+        onOpenAutoFocus={(e) => {
+          microReflow() // reflow en apertura
+          props.onOpenAutoFocus?.(e)
         }}
       />
     </DropdownMenuPrimitive.Portal>
