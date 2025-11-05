@@ -15,8 +15,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog"
-import { ContactCombobox } from "@/components/ui/contact-combobox"
-import { DateTimePicker } from "@/components/ui/date-time-picker"
+import { SimpleContactCombobox } from "@/components/ui/simple-contact-combobox"
 import { ChevronRight, AlertCircle } from "lucide-react"
 import { updateContact } from "@/lib/supabase/queries/contacts"
 import { useToast } from "@/hooks/use-toast"
@@ -39,7 +38,7 @@ export function QuoteDetailsTab({ quote, onUpdate, onNext }: Props) {
 
   const handleFieldChange = (field: "email" | "phone" | "company" | "name", value: string) => {
     // Clear previous validation error for this field
-    setValidationErrors(prev => {
+    setValidationErrors((prev) => {
       const newErrors = { ...prev }
       delete newErrors[`contact_${field}`]
       return newErrors
@@ -66,7 +65,7 @@ export function QuoteDetailsTab({ quote, onUpdate, onNext }: Props) {
       }
 
       schema.parse(value)
-      
+
       // If validation passes, update the quote
       onUpdate({
         [`contact_${field}`]: value,
@@ -80,8 +79,8 @@ export function QuoteDetailsTab({ quote, onUpdate, onNext }: Props) {
     } catch (error) {
       if (error instanceof z.ZodError) {
         const errors = getValidationErrors(error)
-        setValidationErrors(prev => ({ ...prev, ...errors }))
-        
+        setValidationErrors((prev) => ({ ...prev, ...errors }))
+
         toast({
           title: "Validation Error",
           description: Object.values(errors)[0] || "Invalid input",
@@ -101,7 +100,7 @@ export function QuoteDetailsTab({ quote, onUpdate, onNext }: Props) {
     }
 
     const errors: Record<string, string> = {}
-    
+
     // Check required fields
     if (!requiredFields.contact_name) {
       errors.contact_name = "Contact name is required"
@@ -157,7 +156,7 @@ export function QuoteDetailsTab({ quote, onUpdate, onNext }: Props) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="grid gap-2">
             <Label>Contact *</Label>
-            <ContactCombobox
+            <SimpleContactCombobox
               tenantId={quote.tenant_id}
               value={quote.contact_id || null}
               selectedName={quote.contact_name || quote.customer?.name || null}

@@ -5,8 +5,9 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
-import { AirportCombobox } from "@/components/ui/airport-combobox"
-import { DateTimePicker } from "@/components/ui/date-time-picker"
+import { SimpleAirportCombobox } from "@/components/ui/simple-airport-combobox"
+import { SimpleDatePicker } from "@/components/ui/simple-date-picker"
+import { Input } from "@/components/ui/input"
 import { Plane, ChevronRight, Plus, Trash2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
@@ -27,11 +28,8 @@ export function QuoteLegsTab({ quote, onUpdate, onLegsChange, onNext, onBack }: 
   const [saving, setSaving] = useState(false)
   const [tripType, setTripType] = useState<TripType>(quote.trip_type || "one-way")
 
-  
-
   const legs = Array.isArray(quote.legs) ? quote.legs : []
 
-  // ✈️ One-way / Round-trip form state
   const [formState, setFormState] = useState({
     origin: legs[0]?.origin || "",
     origin_code: legs[0]?.origin_code || "",
@@ -42,13 +40,12 @@ export function QuoteLegsTab({ quote, onUpdate, onLegsChange, onNext, onBack }: 
     returnDate: legs[1]?.departureDate || legs[1]?.depart_dt || "",
     returnTime: legs[1]?.departureTime || legs[1]?.depart_time || "",
     passengers: legs[0]?.passengers || legs[0]?.pax_count || 1,
-    origin_lat: legs[0]?.origin_lat ?? null,          // ✅ add
-    origin_long: legs[0]?.origin_long ?? null,        // ✅ add
-    destination_lat: legs[0]?.destination_lat ?? null,// ✅ add
-    destination_long: legs[0]?.destination_long ?? null, // ✅ add
+    origin_lat: legs[0]?.origin_lat ?? null,
+    origin_long: legs[0]?.origin_long ?? null,
+    destination_lat: legs[0]?.destination_lat ?? null,
+    destination_long: legs[0]?.destination_long ?? null,
   })
 
-  // 🧭 Multi-City form state
   const [multiLegs, setMultiLegs] = useState<Leg[]>(
     legs.length
       ? legs.map((l) => ({
@@ -80,33 +77,29 @@ export function QuoteLegsTab({ quote, onUpdate, onLegsChange, onNext, onBack }: 
             destination_lat: null,
             destination_long: null,
           },
-        ]
+        ],
   )
 
-  /* ------------------ ✈️ Auto-save on form changes ------------------ */
   useEffect(() => {
-    // Auto-save when form state changes (debounced)
     const timeoutId = setTimeout(() => {
       if (tripType !== "multi-city") {
         saveFormData()
       }
-    }, 1000) // 1 second debounce
+    }, 1000)
 
     return () => clearTimeout(timeoutId)
   }, [formState, tripType])
 
   useEffect(() => {
-    // Auto-save when multi-legs change (debounced)
     const timeoutId = setTimeout(() => {
       if (tripType === "multi-city") {
         saveFormData()
       }
-    }, 1000) // 1 second debounce
+    }, 1000)
 
     return () => clearTimeout(timeoutId)
   }, [multiLegs, tripType])
 
-  /* ------------------ ✈️ Save form data to parent ------------------ */
   const saveFormData = () => {
     console.log("🛫 QuoteLegsTab saveFormData called", {
       tripType,
@@ -116,27 +109,25 @@ export function QuoteLegsTab({ quote, onUpdate, onLegsChange, onNext, onBack }: 
         returnDate: formState.returnDate,
         returnTime: formState.returnTime,
       },
-      multiLegs: multiLegs.map(leg => ({
+      multiLegs: multiLegs.map((leg) => ({
         departureDate: leg.departureDate,
         departureTime: leg.departureTime,
-      }))
+      })),
     })
 
     if (tripType === "multi-city") {
-      // Save multi-city legs with proper date handling
-      const processedLegs = multiLegs.map(leg => ({
+      const processedLegs = multiLegs.map((leg) => ({
         ...leg,
         departureDate: leg.departureDate || null,
         departureTime: leg.departureTime || null,
       }))
       console.log("🛫 Processed multi-city legs:", processedLegs)
       onLegsChange(processedLegs)
-      onUpdate({ 
+      onUpdate({
         legs: processedLegs,
-        trip_type: tripType 
+        trip_type: tripType,
       })
     } else {
-      // Save one-way or round-trip legs
       const newLegs = [
         {
           id: legs[0]?.id || crypto.randomUUID(),
@@ -151,10 +142,9 @@ export function QuoteLegsTab({ quote, onUpdate, onLegsChange, onNext, onBack }: 
           origin_long: formState.origin_long,
           destination_lat: formState.destination_lat,
           destination_long: formState.destination_long,
-        }
+        },
       ]
-      
-      // Add return leg for round-trip
+
       if (tripType === "round-trip" && formState.returnDate) {
         newLegs.push({
           id: legs[1]?.id || crypto.randomUUID(),
@@ -171,50 +161,43 @@ export function QuoteLegsTab({ quote, onUpdate, onLegsChange, onNext, onBack }: 
           destination_long: formState.origin_long,
         })
       }
-      
+
       console.log("🛫 Processed one-way/round-trip legs:", newLegs)
       onLegsChange(newLegs)
-      onUpdate({ 
+      onUpdate({
         legs: newLegs,
-        trip_type: tripType 
+        trip_type: tripType,
       })
     }
   }
 
-  /* ------------------ ✈️ Navigate (save handled by parent) ------------------ */
   const handleSaveAndNavigate = (direction: "next" | "back") => {
-    saveFormData() // Save before navigating
+    saveFormData()
     direction === "next" ? onNext() : onBack()
   }
 
-  /* ------------------ 🧱 Multi-leg Handlers ------------------ */
-const handleAddLeg = () => {
-  const newLeg: Leg = {
-    id: crypto.randomUUID(),
-    origin: "",
-    origin_code: "",
-    destination: "",
-    destination_code: "",
-    departureDate: "",
-    departureTime: "",
-    passengers: multiLegs[multiLegs.length - 1]?.passengers || 1,
-    origin_lat: null,
-    origin_long: null,
-    destination_lat: null,
-    destination_long: null,
-  };
-  setMultiLegs([...multiLegs, newLeg]);
-};
-
-
-
-
+  const handleAddLeg = () => {
+    const newLeg: Leg = {
+      id: crypto.randomUUID(),
+      origin: "",
+      origin_code: "",
+      destination: "",
+      destination_code: "",
+      departureDate: "",
+      departureTime: "",
+      passengers: multiLegs[multiLegs.length - 1]?.passengers || 1,
+      origin_lat: null,
+      origin_long: null,
+      destination_lat: null,
+      destination_long: null,
+    }
+    setMultiLegs([...multiLegs, newLeg])
+  }
 
   const handleRemoveLeg = (id: string) => {
     setMultiLegs((prev) => prev.filter((l) => l.id !== id))
   }
 
-  /* ------------------ 🎨 Render ------------------ */
   return (
     <Card>
       <CardHeader>
@@ -226,7 +209,6 @@ const handleAddLeg = () => {
       </CardHeader>
 
       <CardContent className="space-y-6">
-        {/* Trip Type Toggle */}
         <div className="flex items-center gap-1 p-1 bg-muted rounded-lg">
           {(["one-way", "round-trip", "multi-city"] as const).map((type) => (
             <button
@@ -236,121 +218,109 @@ const handleAddLeg = () => {
                 "px-3 py-1.5 text-xs font-medium rounded-md transition-all",
                 tripType === type
                   ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
+                  : "text-muted-foreground hover:text-foreground",
               )}
             >
-              {type === "one-way"
-                ? "One-Way"
-                : type === "round-trip"
-                ? "Round-Trip"
-                : "Multi-City"}
+              {type === "one-way" ? "One-Way" : type === "round-trip" ? "Round-Trip" : "Multi-City"}
             </button>
           ))}
         </div>
 
-        {/* --- One-Way / Round-Trip Layout --- */}
         {(tripType === "one-way" || tripType === "round-trip") && (
           <div className="space-y-4 p-4 border rounded-lg bg-background/50">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
-              {/* Origin */}
               <div className="grid gap-2 lg:col-span-2">
                 <Label>Origin *</Label>
-<AirportCombobox
-  value={formState.origin_code}
-  onSelect={(a) =>
-    setFormState((prev) => ({
-      ...prev,
-      origin: a.airport,
-      origin_code: a.airport_code,
-      origin_lat: a.lat ?? null,
-      origin_long: a.lon ?? null,
-    }))
-  }
-/>
-
-              </div>
-
-              {/* Destination */}
-              <div className="grid gap-2 lg:col-span-2">
-                <Label>Destination *</Label>
-  <AirportCombobox
-    value={formState.destination_code}
-    onSelect={(a) =>
-      setFormState((prev) => ({
-        ...prev,
-        destination: a.airport,
-        destination_code: a.airport_code,
-        destination_lat: a.lat ?? null,
-        destination_long: a.lon ?? null,
-      }))
-    }
-  />
-
-              </div>
-
-              {/* Departure Date */}
-              <div>
-                <Label>Departure Date *</Label>
-                <DateTimePicker
-                  date={formState.departureDate}
-                  onDateChange={(d) => {
-                    console.log("📅 Departure date changed:", d)
-                    setFormState((prev) => ({ ...prev, departureDate: d }))
-                  }}
-                  showOnlyDate
+                <SimpleAirportCombobox
+                  value={formState.origin_code}
+                  onSelect={(a) =>
+                    setFormState((prev) => ({
+                      ...prev,
+                      origin: a.airport,
+                      origin_code: a.airport_code,
+                      origin_lat: a.lat ?? null,
+                      origin_long: a.lon ?? null,
+                    }))
+                  }
                 />
               </div>
 
-              {/* Departure Time */}
+              <div className="grid gap-2 lg:col-span-2">
+                <Label>Destination *</Label>
+                <SimpleAirportCombobox
+                  value={formState.destination_code}
+                  onSelect={(a) =>
+                    setFormState((prev) => ({
+                      ...prev,
+                      destination: a.airport,
+                      destination_code: a.airport_code,
+                      destination_lat: a.lat ?? null,
+                      destination_long: a.lon ?? null,
+                    }))
+                  }
+                />
+              </div>
+
+              <div>
+                <Label>Departure Date *</Label>
+                <SimpleDatePicker
+                  value={formState.departureDate}
+                  onChange={(d) => {
+                    console.log("📅 Departure date changed:", d)
+                    setFormState((prev) => ({ ...prev, departureDate: d }))
+                  }}
+                  placeholder="Select date"
+                />
+              </div>
+
               <div>
                 <Label>Departure Time</Label>
-                <DateTimePicker
-                  time={formState.departureTime}
-                  onTimeChange={(t) => setFormState((prev) => ({ ...prev, departureTime: t }))}
-                  showOnlyTime
+                <Input
+                  type="time"
+                  value={formState.departureTime}
+                  onChange={(e) => setFormState((prev) => ({ ...prev, departureTime: e.target.value }))}
+                  className="h-9"
                 />
               </div>
             </div>
 
             {tripType === "round-trip" && (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t">
-                {/* Return Date */}
                 <div>
                   <Label>Return Date *</Label>
-                  <DateTimePicker
-                    date={formState.returnDate}
-                    onDateChange={(d) => {
+                  <SimpleDatePicker
+                    value={formState.returnDate}
+                    onChange={(d) => {
                       console.log("📅 Return date changed:", d)
                       setFormState((prev) => ({ ...prev, returnDate: d }))
                     }}
-                    showOnlyDate
+                    placeholder="Select date"
                   />
                 </div>
 
-                {/* Return Time */}
                 <div>
                   <Label>Return Time</Label>
-                  <DateTimePicker
-                    time={formState.returnTime}
-                    onTimeChange={(t) => setFormState((prev) => ({ ...prev, returnTime: t }))}
-                    showOnlyTime
+                  <Input
+                    type="time"
+                    value={formState.returnTime}
+                    onChange={(e) => setFormState((prev) => ({ ...prev, returnTime: e.target.value }))}
+                    className="h-9"
                   />
                 </div>
               </div>
             )}
 
-            {/* Passengers */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-4">
               <div className="grid gap-2">
                 <Label>Passengers *</Label>
-                <input
+                <Input
                   type="number"
                   min={1}
                   value={formState.passengers}
                   onChange={(e) =>
                     setFormState((prev) => ({
                       ...prev,
-                      passengers: parseInt(e.target.value) || 1,
+                      passengers: Number.parseInt(e.target.value) || 1,
                     }))
                   }
                   className="border rounded-md px-3 py-2 bg-background"
@@ -360,7 +330,6 @@ const handleAddLeg = () => {
           </div>
         )}
 
-        {/* --- Multi-City Layout --- */}
         {tripType === "multi-city" && (
           <div className="space-y-4">
             {multiLegs.map((leg, i) => (
@@ -377,74 +346,71 @@ const handleAddLeg = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
                   <div className="grid gap-2 lg:col-span-2">
                     <Label>Origin *</Label>
-            <AirportCombobox
-              value={leg.origin_code}
-              onSelect={(a) =>
-                setMultiLegs((prev) =>
-                  prev.map((l) =>
-                    l.id === leg.id
-                      ? {
-                          ...l,
-                          origin: a.airport,
-                          origin_code: a.airport_code,
-                          origin_lat: a.lat ?? null,
-                          origin_long: a.lon ?? null,
-                        }
-                      : l
-                  )
-                )
-              }
-            />
-
+                    <SimpleAirportCombobox
+                      value={leg.origin_code}
+                      onSelect={(a) =>
+                        setMultiLegs((prev) =>
+                          prev.map((l) =>
+                            l.id === leg.id
+                              ? {
+                                  ...l,
+                                  origin: a.airport,
+                                  origin_code: a.airport_code,
+                                  origin_lat: a.lat ?? null,
+                                  origin_long: a.lon ?? null,
+                                }
+                              : l,
+                          ),
+                        )
+                      }
+                    />
                   </div>
 
                   <div className="grid gap-2 lg:col-span-2">
                     <Label>Destination *</Label>
- <AirportCombobox
-              value={leg.destination_code}
-              onSelect={(a) =>
-                setMultiLegs((prev) =>
-                  prev.map((l) =>
-                    l.id === leg.id
-                      ? {
-                          ...l,
-                          destination: a.airport,
-                          destination_code: a.airport_code,
-                          destination_lat: a.lat ?? null,
-                          destination_long: a.lon ?? null,
-                        }
-                      : l
-                  )
-                )
-              }
-            />
-
+                    <SimpleAirportCombobox
+                      value={leg.destination_code}
+                      onSelect={(a) =>
+                        setMultiLegs((prev) =>
+                          prev.map((l) =>
+                            l.id === leg.id
+                              ? {
+                                  ...l,
+                                  destination: a.airport,
+                                  destination_code: a.airport_code,
+                                  destination_lat: a.lat ?? null,
+                                  destination_long: a.lon ?? null,
+                                }
+                              : l,
+                          ),
+                        )
+                      }
+                    />
                   </div>
 
                   <div>
                     <Label>Departure Date *</Label>
-                    <DateTimePicker
-                      date={leg.departureDate}
-                      onDateChange={(d) => {
+                    <SimpleDatePicker
+                      value={leg.departureDate}
+                      onChange={(d) => {
                         console.log("📅 Multi-city leg date changed:", { legId: leg.id, date: d })
-                        setMultiLegs((prev) =>
-                          prev.map((l) => (l.id === leg.id ? { ...l, departureDate: d } : l))
-                        )
+                        setMultiLegs((prev) => prev.map((l) => (l.id === leg.id ? { ...l, departureDate: d } : l)))
                       }}
-                      showOnlyDate
+                      placeholder="Select date"
                     />
                   </div>
 
                   <div>
                     <Label>Departure Time</Label>
-                    <DateTimePicker
-                      time={leg.departureTime}
-                      onTimeChange={(t) =>
+                    <Input
+                      type="time"
+                      value={leg.departureTime}
+                      onChange={(e) =>
                         setMultiLegs((prev) =>
-                          prev.map((l) => (l.id === leg.id ? { ...l, departureTime: t } : l))
+                          prev.map((l) => (l.id === leg.id ? { ...l, departureTime: e.target.value } : l)),
                         )
                       }
-                      showOnlyTime
+                      className="h-9"
                     />
                   </div>
                 </div>
@@ -452,17 +418,15 @@ const handleAddLeg = () => {
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div className="grid gap-2">
                     <Label>Passengers *</Label>
-                    <input
+                    <Input
                       type="number"
                       min={1}
                       value={leg.passengers}
                       onChange={(e) =>
                         setMultiLegs((prev) =>
                           prev.map((l) =>
-                            l.id === leg.id
-                              ? { ...l, passengers: parseInt(e.target.value) || 1 }
-                              : l
-                          )
+                            l.id === leg.id ? { ...l, passengers: Number.parseInt(e.target.value) || 1 } : l,
+                          ),
                         )
                       }
                       className="border rounded-md px-3 py-2 bg-background"
@@ -472,9 +436,8 @@ const handleAddLeg = () => {
               </div>
             ))}
 
-            {/* Only Multi-City shows Add Leg */}
             {multiLegs.length < 6 && (
-              <Button variant="outline" className="w-full" onClick={handleAddLeg}>
+              <Button variant="outline" className="w-full bg-transparent" onClick={handleAddLeg}>
                 <Plus className="mr-2 h-4 w-4" /> Add Leg
               </Button>
             )}
@@ -483,7 +446,6 @@ const handleAddLeg = () => {
 
         <Separator />
 
-        {/* Navigation */}
         <div className="flex justify-between pt-4">
           <Button variant="outline" onClick={() => handleSaveAndNavigate("back")}>
             <ChevronRight className="mr-2 h-4 w-4 rotate-180" /> Back: Details
