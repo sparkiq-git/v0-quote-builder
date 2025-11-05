@@ -155,8 +155,8 @@ export function SimpleContactCombobox({ tenantId, value, selectedName, onSelect 
     if (open && triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect()
       const newPosition = {
-        top: rect.bottom + window.scrollY + 4,
-        left: rect.left + window.scrollX,
+        top: rect.bottom + 4,
+        left: rect.left,
         width: rect.width,
       }
       console.log("[v0] Position calculated:", newPosition)
@@ -175,8 +175,6 @@ export function SimpleContactCombobox({ tenantId, value, selectedName, onSelect 
         onClick={() => {
           const newOpen = !open
           console.log("[v0] Contact combobox clicked, open:", newOpen)
-          console.log("[v0] Mounted:", mounted)
-          console.log("[v0] TriggerRef:", triggerRef.current)
           setOpen(newOpen)
         }}
         type="button"
@@ -191,13 +189,18 @@ export function SimpleContactCombobox({ tenantId, value, selectedName, onSelect 
         createPortal(
           <div
             ref={dropdownRef}
-            className="absolute w-[350px] rounded-md border bg-popover p-0 text-popover-foreground shadow-md"
+            className="fixed w-[350px] rounded-md border bg-popover p-0 text-popover-foreground shadow-md"
             style={{
-              top: position.top,
-              left: position.left,
+              top: `${position.top}px`,
+              left: `${position.left}px`,
               zIndex: 50000,
             }}
           >
+            <div
+              className="absolute -top-2 -left-2 w-4 h-4 bg-red-500 rounded-full"
+              title="Debug: Dropdown is rendering"
+            />
+
             {!creating ? (
               <div className="flex flex-col">
                 <div className="flex items-center border-b px-3">

@@ -42,8 +42,8 @@ export function SimpleItemCombobox({ tenantId, value, onSelect, placeholder = "S
     if (isOpen && triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect()
       setPosition({
-        top: rect.bottom + window.scrollY + 4,
-        left: rect.left + window.scrollX,
+        top: rect.bottom + 4,
+        left: rect.left,
         width: rect.width,
       })
       console.log("[v0] Item combobox opened, position:", { top: rect.bottom, left: rect.left })
@@ -158,7 +158,7 @@ export function SimpleItemCombobox({ tenantId, value, onSelect, placeholder = "S
           <div
             ref={dropdownRef}
             style={{
-              position: "absolute",
+              position: "fixed",
               top: position.top,
               left: position.left,
               width: position.width,
