@@ -18,14 +18,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { LeadDetailModal } from "@/components/leads/lead-detail-modal"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu-dynamic"
+import { SimpleDropdown } from "@/components/ui/simple-dropdown"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { MoreHorizontal, FileText, Trash2, ArrowUpDown, Search, Filter } from "lucide-react"
 import { useRouter } from "next/navigation"
@@ -284,26 +277,41 @@ export function LeadTable({ data, setLeads, onOpenNewCountChange }: LeadTablePro
         id: "actions",
         cell: ({ row }) => {
           const lead = row.original
+
+          const dropdownItems = []
+
+          if (lead.status === "new" || lead.status === "opened") {
+            dropdownItems.push({
+              label: "Convert to Quote",
+              icon: <FileText className="h-4 w-4" />,
+              onClick: () => handleConvertToQuote(lead.id),
+            })
+            dropdownItems.push({
+              label: "Delete Lead",
+              icon: <Trash2 className="h-4 w-4" />,
+              onClick: () => handleDeleteLead(lead.id),
+              variant: "destructive" as const,
+              separator: true,
+            })
+          } else {
+            dropdownItems.push({
+              label: "Delete Lead",
+              icon: <Trash2 className="h-4 w-4" />,
+              onClick: () => handleDeleteLead(lead.id),
+              variant: "destructive" as const,
+            })
+          }
+
           return (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+            <SimpleDropdown
+              trigger={
                 <Button variant="ghost" className="h-8 w-8 p-0" data-no-row-click>
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                {(lead.status === "new" || lead.status === "opened") && (
-                  <DropdownMenuItem onClick={(e) => handleConvertToQuote(lead.id, e)}>
-                    <FileText className="mr-2 h-4 w-4" /> Convert to Quote
-                  </DropdownMenuItem>
-                )}
-                {(lead.status === "new" || lead.status === "opened") && <DropdownMenuSeparator />}
-                <DropdownMenuItem className="text-destructive" onClick={(e) => handleDeleteLead(lead.id, e)}>
-                  <Trash2 className="mr-2 h-4 w-4" /> Delete Lead
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+              }
+              items={dropdownItems}
+              align="end"
+            />
           )
         },
       },

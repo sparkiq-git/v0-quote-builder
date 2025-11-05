@@ -22,14 +22,7 @@ import {
 } from "@/components/ui/dialog"
 import { deleteQuote, getQuoteById } from "@/lib/supabase/queries/quotes"
 import { InvoiceContractWizard } from "@/components/quotes/invoice-contract-wizard"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu-dynamic"
+import { SimpleDropdown } from "@/components/ui/simple-dropdown"
 import { useAppHeader } from "@/components/app-header-context"
 
 export default function QuotesPage() {
@@ -349,36 +342,38 @@ export default function QuotesPage() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                        <SimpleDropdown
+                          trigger={
                             <Button variant="ghost" className="h-8 w-8 p-0">
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem asChild>
-                              <Link href={`/quotes/${quote.id}`}>
-                                <Eye className="mr-2 h-4 w-4" />
-                                View/Edit
-                              </Link>
-                            </DropdownMenuItem>
-                            {canSendInvoiceContract(quote) && (
-                              <>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem onClick={(e) => handleOpenInvoiceContractModal(quote)}>
-                                  <FileSignature className="mr-2 h-4 w-4" />
-                                  Invoice & Contract
-                                </DropdownMenuItem>
-                              </>
-                            )}
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-destructive" onClick={(e) => handleDeleteQuote(quote.id)}>
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Delete Quote
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                          }
+                          items={[
+                            {
+                              label: "View/Edit",
+                              icon: <Eye className="h-4 w-4" />,
+                              onClick: () => router.push(`/quotes/${quote.id}`),
+                            },
+                            ...(canSendInvoiceContract(quote)
+                              ? [
+                                  {
+                                    label: "Invoice & Contract",
+                                    icon: <FileSignature className="h-4 w-4" />,
+                                    onClick: () => handleOpenInvoiceContractModal(quote),
+                                    separator: true,
+                                  },
+                                ]
+                              : []),
+                            {
+                              label: "Delete Quote",
+                              icon: <Trash2 className="h-4 w-4" />,
+                              onClick: () => handleDeleteQuote(quote.id),
+                              variant: "destructive" as const,
+                              separator: true,
+                            },
+                          ]}
+                          align="end"
+                        />
                       </TableCell>
                     </TableRow>
                   ))
