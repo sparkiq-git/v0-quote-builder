@@ -1,81 +1,50 @@
-"use client"
+export const runtime = "nodejs"
+export const dynamic = "force-dynamic"
+export const revalidate = 0
+export const fetchCache = "force-no-store"
 
-import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Plus, UserCircle } from "lucide-react"
-import { PassengersTable } from "@/components/passengers/passengers-table"
-import { PassengerCreateDialog } from "@/components/passengers/passenger-create-dialog"
-import { useMockStore } from "@/lib/mock/store"
+import { Suspense } from "react"
+import { getServerUser } from "@/lib/supabase/server"
+import { PassengersListClient } from "@/components/passengers/passengers-list-client"
+import { PassengersPageLayout } from "@/components/passengers/passengers-page-layout"
 
-export default function PassengersPage() {
-  const [showCreateDialog, setShowCreateDialog] = useState(false)
-  const [isClient, setIsClient] = useState(false)
-  
-  // Only access the store on the client side
-  const { state } = useMockStore()
-  
-  useEffect(() => {
-    setIsClient(true)
-  }, [])
+export default async function PassengersManagementPage() {
+  try {
+    const { user } = await getServerUser()
 
-  // Show loading state during hydration
-  if (!isClient) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Passengers</h1>
-            <p className="text-muted-foreground">Manage passenger profiles and travel history</p>
+    if (!user) {
+      return (
+        <div className="flex h-screen items-center justify-center">
+          <div className="text-center space-y-4">
+            <h1 className="text-2xl font-bold text-destructive">Authentication Error</h1>
+            <p className="text-muted-foreground">
+              Unable to verify your authentication. Please try refreshing the page.
+            </p>
           </div>
         </div>
-        <div className="flex items-center justify-center h-64">
-          <p className="text-muted-foreground">Loading...</p>
+      )
+    }
+
+    return (
+      <PassengersPageLayout>
+        <main className="flex-1 overflow-auto p-6">
+          <Suspense fallback={<div>Loading passengers...</div>}>
+            <PassengersListClient />
+          </Suspense>
+        </main>
+      </PassengersPageLayout>
+    )
+  } catch (error) {
+    console.error("Passengers management page error:", error)
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-center space-y-4">
+          <h1 className="text-2xl font-bold text-destructive">Error Loading Page</h1>
+          <p className="text-muted-foreground">
+            There was an error loading the passengers management page. Please try refreshing or contact support.
+          </p>
         </div>
       </div>
     )
   }
-
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Passengers</h1>
-          <p className="text-muted-foreground">Manage passenger profiles and travel history</p>
-        </div>
-        <Button onClick={() => setShowCreateDialog(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Passenger
-        </Button>
-      </div>
-
-      {state.passengers && state.passengers.length > 0 ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Passenger Directory</CardTitle>
-            <CardDescription>View and manage passenger profiles, preferences, and travel history</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <PassengersTable data={state.passengers} />
-          </CardContent>
-        </Card>
-      ) : (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-16">
-            <UserCircle className="h-16 w-16 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No passengers yet</h3>
-            <p className="text-muted-foreground text-center mb-6 max-w-md">
-              Start by adding your first passenger. Track passenger profiles, preferences, and travel history.
-            </p>
-            <Button onClick={() => setShowCreateDialog(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Your First Passenger
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-
-      <PassengerCreateDialog open={showCreateDialog} onOpenChange={setShowCreateDialog} />
-    </div>
-  )
 }
