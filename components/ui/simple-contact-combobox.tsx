@@ -154,65 +154,27 @@ export function SimpleContactCombobox({ tenantId, value, selectedName, onSelect 
   useEffect(() => {
     if (open && triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect()
-      const newPosition = {
+      setPosition({
         top: rect.bottom + 4,
         left: rect.left,
         width: rect.width,
-      }
-      console.log("[v0] Position calculated:", newPosition)
-      console.log("[v0] Window size:", window.innerWidth, window.innerHeight)
-      console.log("[v0] Scroll position:", window.scrollX, window.scrollY)
-      setPosition(newPosition)
+      })
     } else {
       setPosition(null)
     }
   }, [open])
 
-  useEffect(() => {
-    if (mounted && open && position) {
-      console.log("[v0] ✅ Portal SHOULD be rendering now!")
-      console.log("[v0] Mounted:", mounted, "Open:", open, "Position:", position)
-
-      // Check if Portal actually rendered
-      setTimeout(() => {
-        const portalElements = document.querySelectorAll('[data-combobox-portal="true"]')
-        console.log("[v0] Found portal elements:", portalElements.length)
-        if (portalElements.length > 0) {
-          const el = portalElements[0] as HTMLElement
-          console.log("[v0] Portal element styles:", {
-            display: window.getComputedStyle(el).display,
-            visibility: window.getComputedStyle(el).visibility,
-            opacity: window.getComputedStyle(el).opacity,
-            zIndex: window.getComputedStyle(el).zIndex,
-            position: window.getComputedStyle(el).position,
-            top: window.getComputedStyle(el).top,
-            left: window.getComputedStyle(el).left,
-          })
-        }
-      }, 100)
-    }
-  }, [mounted, open, position])
-
   const dropdownContent = (
     <div
       ref={dropdownRef}
-      data-combobox-portal="true"
-      className="fixed w-[350px] rounded-md border bg-popover p-0 text-popover-foreground shadow-md"
+      className="w-[350px] rounded-md border bg-popover text-popover-foreground shadow-md overflow-hidden"
       style={{
+        position: "fixed",
         top: `${position?.top}px`,
         left: `${position?.left}px`,
         zIndex: 50000,
-        backgroundColor: "#ff0000",
-        border: "5px solid #00ff00",
       }}
     >
-      <div
-        className="absolute -top-10 -left-10 w-20 h-20 bg-yellow-500 rounded-full flex items-center justify-center text-black font-bold text-2xl animate-pulse"
-        style={{ zIndex: 99999 }}
-      >
-        HERE!
-      </div>
-
       {!creating ? (
         <div className="flex flex-col">
           <div className="flex items-center border-b px-3">
@@ -302,11 +264,7 @@ export function SimpleContactCombobox({ tenantId, value, selectedName, onSelect 
         ref={triggerRef}
         variant="outline"
         className="justify-between w-full bg-transparent"
-        onClick={() => {
-          const newOpen = !open
-          console.log("[v0] Contact combobox clicked, open:", newOpen)
-          setOpen(newOpen)
-        }}
+        onClick={() => setOpen(!open)}
         type="button"
       >
         {selectedName || "Select contact"}
