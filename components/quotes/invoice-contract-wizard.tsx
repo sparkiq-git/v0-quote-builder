@@ -16,7 +16,6 @@ import {
 import {
   FileSignature,
   Loader2,
-  Send,
   User,
   Mail,
   Phone,
@@ -32,13 +31,10 @@ import {
   ChevronRight,
   Plus,
   Trash2,
-  Edit2,
-  X,
-  Save,
 } from "lucide-react"
 import { formatCurrency } from "@/lib/utils/format"
 import { useToast } from "@/hooks/use-toast"
-import { ItemCombobox } from "@/components/ui/item-combobox"
+import { SimpleItemCombobox } from "@/components/ui/simple-item-combobox"
 import { Switch } from "@/components/ui/switch"
 
 interface InvoiceContractWizardProps {
@@ -157,12 +153,11 @@ export function InvoiceContractWizard({
     onOpenChange(false)
     // Reset state when closing
     setStep(1)
-      setPaymentUrl("")
-      setEditedQuoteData(null)
-      setTaxes([])
-      setSendEmail(true)
+    setPaymentUrl("")
+    setEditedQuoteData(null)
+    setTaxes([])
+    setSendEmail(true)
   }, [onOpenChange])
-
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -233,7 +228,7 @@ export function InvoiceContractWizard({
         <DialogFooter className="border-t border-slate-200 dark:border-slate-800 pt-4 gap-2">
           {step === 1 ? (
             <>
-              <Button variant="outline" onClick={handleClose} className="min-w-[100px]">
+              <Button variant="outline" onClick={handleClose} className="min-w-[100px] bg-transparent">
                 Cancel
               </Button>
               <Button
@@ -256,7 +251,7 @@ export function InvoiceContractWizard({
             </>
           ) : (
             <>
-              <Button variant="outline" onClick={handleBack} className="min-w-[100px]">
+              <Button variant="outline" onClick={handleBack} className="min-w-[100px] bg-transparent">
                 <ChevronLeft className="mr-2 h-4 w-4" />
                 Back
               </Button>
@@ -328,10 +323,8 @@ function InvoiceSummaryStep({
     : 0
 
   const subtotalServices =
-    fullQuoteData.services?.reduce(
-      (sum: number, s: any) => sum + (s.amount || s.unit_price || 0) * (s.qty || 1),
-      0,
-    ) || 0
+    fullQuoteData.services?.reduce((sum: number, s: any) => sum + (s.amount || s.unit_price || 0) * (s.qty || 1), 0) ||
+    0
 
   const subtotal = subtotalAircraft + subtotalServices
 
@@ -488,7 +481,9 @@ function InvoiceSummaryStep({
                       Selected Option
                     </Badge>
                     <span className="font-semibold text-sm text-slate-900 dark:text-slate-100">
-                      {selectedOption.aircraftModel?.name || selectedOption.aircraftTail?.tailNumber || "Aircraft Option"}
+                      {selectedOption.aircraftModel?.name ||
+                        selectedOption.aircraftTail?.tailNumber ||
+                        "Aircraft Option"}
                     </span>
                   </div>
                   <span className="font-bold text-lg text-slate-900 dark:text-slate-100">
@@ -569,7 +564,7 @@ function InvoiceSummaryStep({
                       <div>
                         <Label className="text-sm mb-1 block text-slate-700 dark:text-slate-300">Service Name</Label>
                         {fullQuoteData.tenant_id ? (
-                          <ItemCombobox
+                          <SimpleItemCombobox
                             tenantId={fullQuoteData.tenant_id}
                             value={service.item_id || null}
                             onSelect={(item) => handleServiceItemSelect(serviceId, item)}
@@ -606,9 +601,7 @@ function InvoiceSummaryStep({
                           type="number"
                           min="1"
                           value={service.qty || 1}
-                          onChange={(e) =>
-                            handleUpdateService(serviceId, "qty", parseInt(e.target.value) || 1)
-                          }
+                          onChange={(e) => handleUpdateService(serviceId, "qty", Number.parseInt(e.target.value) || 1)}
                           className="h-9 text-sm"
                         />
                       </div>
@@ -621,7 +614,7 @@ function InvoiceSummaryStep({
                           step="0.01"
                           value={service.amount || service.unit_price || 0}
                           onChange={(e) => {
-                            const price = parseFloat(e.target.value) || 0
+                            const price = Number.parseFloat(e.target.value) || 0
                             handleUpdateService(serviceId, "amount", price)
                             handleUpdateService(serviceId, "unit_price", price)
                           }}
@@ -640,7 +633,7 @@ function InvoiceSummaryStep({
                         <Label className="text-sm text-slate-700 dark:text-slate-300">Taxable</Label>
                       </div>
                       <div className="text-right">
-                        <span className="text-xs text-slate-600 dark:text-slate-400 block">Line Total</span>
+                        <span className="text-xs text-slate-600 dark:text-slate-400">Line Total</span>
                         <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">
                           {formatCurrency(serviceTotal)}
                         </span>
@@ -663,7 +656,7 @@ function InvoiceSummaryStep({
               <div>
                 <Label className="text-sm mb-1 block text-slate-700 dark:text-slate-300">Service Name</Label>
                 {fullQuoteData.tenant_id ? (
-                  <ItemCombobox
+                  <SimpleItemCombobox
                     tenantId={fullQuoteData.tenant_id}
                     value={newServiceItemId}
                     onSelect={(item) => {
@@ -695,7 +688,7 @@ function InvoiceSummaryStep({
                   type="number"
                   min="1"
                   value={newServiceQty}
-                  onChange={(e) => setNewServiceQty(parseInt(e.target.value) || 1)}
+                  onChange={(e) => setNewServiceQty(Number.parseInt(e.target.value) || 1)}
                   className="h-9 text-sm"
                 />
               </div>
@@ -705,7 +698,7 @@ function InvoiceSummaryStep({
                   type="number"
                   step="0.01"
                   value={newServicePrice}
-                  onChange={(e) => setNewServicePrice(parseFloat(e.target.value) || 0)}
+                  onChange={(e) => setNewServicePrice(Number.parseFloat(e.target.value) || 0)}
                   className="h-9 text-sm"
                 />
               </div>
@@ -713,7 +706,7 @@ function InvoiceSummaryStep({
             <Button
               onClick={handleAddService}
               disabled={!newServiceDescription.trim() && !newServiceItemId}
-              className="mt-3 w-full"
+              className="mt-3 w-full bg-transparent"
               variant="outline"
             >
               <Plus className="h-4 w-4 mr-2" />
@@ -785,7 +778,7 @@ function InvoiceSummaryStep({
                         value={tax.amount ?? 0}
                         onChange={(e) => {
                           const updated = safeTaxes.map((t) =>
-                            t.id === tax.id ? { ...t, amount: parseFloat(e.target.value) || 0 } : t,
+                            t.id === tax.id ? { ...t, amount: Number.parseFloat(e.target.value) || 0 } : t,
                           )
                           onTaxesChange(updated)
                         }}
@@ -813,7 +806,10 @@ function InvoiceSummaryStep({
                 size="sm"
                 onClick={() => {
                   const newTax = {
-                    id: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `temp-${Date.now()}-${Math.random()}`,
+                    id:
+                      typeof crypto !== "undefined" && crypto.randomUUID
+                        ? crypto.randomUUID()
+                        : `temp-${Date.now()}-${Math.random()}`,
                     name: "Custom Tax",
                     amount: 0,
                   }
@@ -827,16 +823,16 @@ function InvoiceSummaryStep({
               {taxTotal > 0 && (
                 <div className="flex items-center justify-between text-sm pt-2 border-t border-slate-300 dark:border-slate-700">
                   <span className="text-slate-600 dark:text-slate-400">Total Taxes & Fees:</span>
-                  <span className="font-semibold text-slate-900 dark:text-slate-100">
-                    {formatCurrency(taxTotal)}
-                  </span>
+                  <span className="font-semibold text-slate-900 dark:text-slate-100">{formatCurrency(taxTotal)}</span>
                 </div>
               )}
             </div>
 
             <div className="flex items-center justify-between pt-3 border-t-2 border-slate-300 dark:border-slate-700">
               <span className="text-lg font-bold text-slate-900 dark:text-slate-100">Grand Total:</span>
-              <span className="text-2xl font-bold text-slate-900 dark:text-slate-100">{formatCurrency(grandTotal)}</span>
+              <span className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                {formatCurrency(grandTotal)}
+              </span>
             </div>
           </div>
         </div>
@@ -878,11 +874,7 @@ function InvoiceSummaryStep({
                   </p>
                 </div>
               </div>
-              <Switch
-                id="send-email"
-                checked={sendEmail}
-                onCheckedChange={onSendEmailChange}
-              />
+              <Switch id="send-email" checked={sendEmail} onCheckedChange={onSendEmailChange} />
             </div>
           </div>
         </div>
@@ -943,10 +935,8 @@ function ContractBuilderStep({
     : 0
 
   const totalServices =
-    fullQuoteData.services?.reduce(
-      (sum: number, s: any) => sum + (s.amount || s.unit_price || 0) * (s.qty || 1),
-      0,
-    ) || 0
+    fullQuoteData.services?.reduce((sum: number, s: any) => sum + (s.amount || s.unit_price || 0) * (s.qty || 1), 0) ||
+    0
 
   const subtotal = totalAircraftOption + totalServices
   const taxTotal = safeTaxes.reduce((sum, tax) => sum + (tax.amount || 0), 0)
@@ -959,7 +949,9 @@ function ContractBuilderStep({
         <div className="p-8">
           <div className="border-b-2 border-slate-300 dark:border-slate-700 pb-6 mb-6">
             <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 mb-2">Flight Charter Contract</h1>
-            <p className="text-sm text-slate-600 dark:text-slate-400">Contract Number: {selectedQuote.id.slice(0, 8)}</p>
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              Contract Number: {selectedQuote.id.slice(0, 8)}
+            </p>
           </div>
 
           <div className="space-y-6">
@@ -1065,9 +1057,7 @@ function ContractBuilderStep({
               <div className="space-y-2 mb-4">
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-600 dark:text-slate-400">Subtotal:</span>
-                  <span className="font-semibold text-slate-900 dark:text-slate-100">
-                    {formatCurrency(subtotal)}
-                  </span>
+                  <span className="font-semibold text-slate-900 dark:text-slate-100">{formatCurrency(subtotal)}</span>
                 </div>
                 {safeTaxes.length > 0 && (
                   <>

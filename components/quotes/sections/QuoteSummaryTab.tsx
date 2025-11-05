@@ -2,28 +2,13 @@
 
 import { useState, useMemo, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-} from "@/components/ui/card"
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Label } from "@/components/ui/label"
-import { DateTimePicker } from "@/components/ui/date-time-picker"
-import {
-  FileText,
-  ChevronRight,
-  Send,
-  Clock,
-  Users,
-  Plane,
-  Wifi,
-  Coffee,
-  Utensils,
-} from "lucide-react"
+import { SimpleDatePicker } from "@/components/ui/simple-date-picker"
+import { Input } from "@/components/ui/input"
+import { FileText, ChevronRight, Send, Clock, Users, Plane, Wifi, Coffee, Utensils } from "lucide-react"
 import { formatCurrency } from "@/lib/utils/format"
 import { useToast } from "@/hooks/use-toast"
 import type { Quote } from "@/lib/types"
@@ -42,19 +27,14 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
   const [expirationDate, setExpirationDate] = useState<string>("")
   const [expirationTime, setExpirationTime] = useState<string>("")
 
-
   // ✅ Fallback URL
-  const quoteUrl =
-    publishedUrl ?? `${process.env.NEXT_PUBLIC_APP_URL}/q/${quote.magic_link_slug}`
+  const quoteUrl = publishedUrl ?? `${process.env.NEXT_PUBLIC_APP_URL}/q/${quote.magic_link_slug}`
 
   /* ---------------- 💰 Totals ---------------- */
   const totalOptions = useMemo(() => {
     if (!quote.options?.length) return 0
     return quote.options.reduce((sum, o) => {
-      const total =
-        (Number(o.cost_operator) || 0) +
-        (Number(o.price_commission) || 0) +
-        (Number(o.price_base) || 0)
+      const total = (Number(o.cost_operator) || 0) + (Number(o.price_commission) || 0) + (Number(o.price_base) || 0)
       return sum + total
     }, 0)
   }, [quote.options])
@@ -63,7 +43,7 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
     if (!quote.services?.length) return 0
     return quote.services.reduce(
       (sum, s) => sum + (Number(s.amount) || Number(s.unit_price) || 0) * (Number(s.qty) || 1),
-      0
+      0,
     )
   }, [quote.services])
 
@@ -90,8 +70,7 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
       const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
       if (!anonKey) throw new Error("Missing NEXT_PUBLIC_SUPABASE_ANON_KEY")
-      if (!process.env.NEXT_PUBLIC_SUPABASE_URL)
-        throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL")
+      if (!process.env.NEXT_PUBLIC_SUPABASE_URL) throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL")
 
       const res = await fetch(fnUrl, {
         method: "POST",
@@ -105,10 +84,10 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
           email: quote.contact_email,
           tenant_id: quote.tenant_id,
           created_by: quote.created_by_user_id,
-          metadata: { 
-            quote_id: quote.id, 
+          metadata: {
+            quote_id: quote.id,
             quote_ref: quote.reference_code,
-            expiration_date: expirationDateTime
+            expiration_date: expirationDateTime,
           },
         }),
       })
@@ -151,12 +130,12 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
       }
 
       setPublishedUrl(json.link || json.link_url || null)
-      
+
       // Show success toast with status update confirmation
       console.log("🎉 Showing success toast for quote publish")
       toast({
         title: "Quote Published Successfully!",
-        description: statusUpdated 
+        description: statusUpdated
           ? "Your client has been emailed a secure link to view and confirm the quote. Quote status updated to 'awaiting response'."
           : "Your client has been emailed a secure link to view and confirm the quote. Status update pending.",
       })
@@ -177,15 +156,11 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
     }
   }
 
-useEffect(() => {
-  if (!quote?.options?.length) return
-// Note: Aircraft data is already in quote options
-// No need to fetch separately
-}, [quote?.options])
-
-
-
-
+  useEffect(() => {
+    if (!quote?.options?.length) return
+    // Note: Aircraft data is already in quote options
+    // No need to fetch separately
+  }, [quote?.options])
 
   /* ---------------- 🧾 Render ---------------- */
   return (
@@ -195,9 +170,7 @@ useEffect(() => {
           <FileText className="h-5 w-5" />
           Summary & Publish
         </CardTitle>
-        <CardDescription>
-          Review all quote details before publishing.
-        </CardDescription>
+        <CardDescription>Review all quote details before publishing.</CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-8">
@@ -235,10 +208,7 @@ useEffect(() => {
           {quote.legs?.length ? (
             <div className="space-y-3">
               {quote.legs.map((leg: any, i: number) => (
-                <div
-                  key={leg.id || i}
-                  className="border p-4 rounded-lg bg-muted/30"
-                >
+                <div key={leg.id || i} className="border p-4 rounded-lg bg-muted/30">
                   <div className="flex justify-between items-start">
                     <div>
                       <p className="font-semibold text-lg">
@@ -248,11 +218,7 @@ useEffect(() => {
                         {leg.departureDate || leg.depart_dt || "No date"} at{" "}
                         {leg.departureTime || leg.depart_time || "No time"}
                       </p>
-                      {leg.notes && (
-                        <p className="text-muted-foreground text-xs mt-1 italic">
-                          {leg.notes}
-                        </p>
-                      )}
+                      {leg.notes && <p className="text-muted-foreground text-xs mt-1 italic">{leg.notes}</p>}
                     </div>
                     <div className="text-right">
                       <div className="text-lg font-semibold text-primary">
@@ -264,9 +230,7 @@ useEffect(() => {
               ))}
             </div>
           ) : (
-            <p className="text-muted-foreground text-sm">
-              No trip legs defined.
-            </p>
+            <p className="text-muted-foreground text-sm">No trip legs defined.</p>
           )}
         </div>
 
@@ -295,30 +259,17 @@ useEffect(() => {
                 const amenities = option?.selectedAmenities || []
 
                 return (
-                  <div
-                    key={option.id ?? i}
-                    className="border rounded-lg bg-muted/30 overflow-hidden"
-                  >
+                  <div key={option.id ?? i} className="border rounded-lg bg-muted/30 overflow-hidden">
                     {/* Header */}
                     <div className="p-4 border-b bg-muted/50">
                       <div className="flex justify-between items-start">
                         <div>
-                          <h4 className="font-semibold text-lg">
-                            {option.label || `Option ${i + 1}`}
-                          </h4>
-                          {option.notes && (
-                            <p className="text-muted-foreground text-sm mt-1">
-                              {option.notes}
-                            </p>
-                          )}
+                          <h4 className="font-semibold text-lg">{option.label || `Option ${i + 1}`}</h4>
+                          {option.notes && <p className="text-muted-foreground text-sm mt-1">{option.notes}</p>}
                         </div>
                         <div className="text-right">
-                          <div className="text-2xl font-bold text-primary">
-                            {formatCurrency(total)}
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            {option.flight_hours || 0} flight hours
-                          </div>
+                          <div className="text-2xl font-bold text-primary">{formatCurrency(total)}</div>
+                          <div className="text-sm text-muted-foreground">{option.flight_hours || 0} flight hours</div>
                         </div>
                       </div>
                     </div>
@@ -336,15 +287,15 @@ useEffect(() => {
                             <div>
                               <span className="text-muted-foreground">Model:</span>
                               <span className="ml-2 font-medium">
-                                {aircraftModel?.manufacturer ? `${aircraftModel.manufacturer} ${aircraftModel.name}` : aircraftModel?.name || "Unknown Model"}
+                                {aircraftModel?.manufacturer
+                                  ? `${aircraftModel.manufacturer} ${aircraftModel.name}`
+                                  : aircraftModel?.name || "Unknown Model"}
                               </span>
                             </div>
                             {aircraftTail?.tailNumber && (
                               <div>
                                 <span className="text-muted-foreground">Tail Number:</span>
-                                <span className="ml-2 font-medium">
-                                  {aircraftTail.tailNumber}
-                                </span>
+                                <span className="ml-2 font-medium">{aircraftTail.tailNumber}</span>
                               </div>
                             )}
                             {(aircraftTail?.operator || aircraftTail?.operator_id) && (
@@ -358,13 +309,22 @@ useEffect(() => {
                             <div>
                               <span className="text-muted-foreground">Capacity:</span>
                               <span className="ml-2 font-medium">
-                                {aircraftTail?.capacityOverride || aircraftTail?.capacity_pax || aircraftModel?.defaultCapacity || aircraftModel?.size_code || "N/A"} passengers
+                                {aircraftTail?.capacityOverride ||
+                                  aircraftTail?.capacity_pax ||
+                                  aircraftModel?.defaultCapacity ||
+                                  aircraftModel?.size_code ||
+                                  "N/A"}{" "}
+                                passengers
                               </span>
                             </div>
                             <div>
                               <span className="text-muted-foreground">Range:</span>
                               <span className="ml-2 font-medium">
-                                {aircraftTail?.rangeNmOverride || aircraftTail?.range_nm || aircraftModel?.defaultRangeNm || "N/A"} nm
+                                {aircraftTail?.rangeNmOverride ||
+                                  aircraftTail?.range_nm ||
+                                  aircraftModel?.defaultRangeNm ||
+                                  "N/A"}{" "}
+                                nm
                               </span>
                             </div>
                           </div>
@@ -379,9 +339,9 @@ useEffect(() => {
                           {amenities.length > 0 ? (
                             <div className="flex flex-wrap gap-2">
                               {amenities.map((amenity: any, idx: number) => {
-                                const amenityName = typeof amenity === 'string' ? amenity : amenity.name
-                                const amenityIcon = typeof amenity === 'object' ? amenity.icon_ref : null
-                                
+                                const amenityName = typeof amenity === "string" ? amenity : amenity.name
+                                const amenityIcon = typeof amenity === "object" ? amenity.icon_ref : null
+
                                 return (
                                   <span
                                     key={idx}
@@ -416,7 +376,7 @@ useEffect(() => {
                                   className="flex-shrink-0 w-20 h-20 relative rounded-lg overflow-hidden border"
                                 >
                                   <Image
-                                    src={image}
+                                    src={image || "/placeholder.svg"}
                                     alt={`Aircraft image ${idx + 1}`}
                                     fill
                                     className="object-cover"
@@ -458,7 +418,6 @@ useEffect(() => {
           )}
         </div>
 
-
         <Separator />
 
         {/* Services */}
@@ -470,34 +429,22 @@ useEffect(() => {
           {quote.services?.length ? (
             <div className="space-y-3">
               {quote.services.map((service: any, i: number) => {
-                const totalAmount = (Number(service.amount) || Number(service.unit_price) || 0) * (Number(service.qty) || 1)
+                const totalAmount =
+                  (Number(service.amount) || Number(service.unit_price) || 0) * (Number(service.qty) || 1)
                 return (
-                  <div
-                    key={service.id || i}
-                    className="border p-4 rounded-lg bg-muted/30"
-                  >
+                  <div key={service.id || i} className="border p-4 rounded-lg bg-muted/30">
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
-                        <h4 className="font-medium text-base">
-                          {service.description || service.name || "Service"}
-                        </h4>
-                        {service.notes && (
-                          <p className="text-muted-foreground text-sm mt-1">
-                            {service.notes}
-                          </p>
-                        )}
+                        <h4 className="font-medium text-base">{service.description || service.name || "Service"}</h4>
+                        {service.notes && <p className="text-muted-foreground text-sm mt-1">{service.notes}</p>}
                         <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
                           <span>Qty: {service.qty || 1}</span>
                           <span>Unit Price: {formatCurrency(service.amount || service.unit_price || 0)}</span>
-                          {service.taxable && (
-                            <span className="text-amber-600 font-medium">Taxable</span>
-                          )}
+                          {service.taxable && <span className="text-amber-600 font-medium">Taxable</span>}
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="text-lg font-semibold">
-                          {formatCurrency(totalAmount)}
-                        </div>
+                        <div className="text-lg font-semibold">{formatCurrency(totalAmount)}</div>
                       </div>
                     </div>
                   </div>
@@ -520,20 +467,19 @@ useEffect(() => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border rounded-lg bg-muted/30">
             <div className="space-y-2">
               <Label htmlFor="expiration-date">Expiration Date *</Label>
-              <DateTimePicker
-                date={expirationDate}
-                onDateChange={setExpirationDate}
-                showOnlyDate
+              <SimpleDatePicker
+                value={expirationDate}
+                onChange={setExpirationDate}
                 placeholder="Select expiration date"
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="expiration-time">Expiration Time *</Label>
-              <DateTimePicker
-                time={expirationTime}
-                onTimeChange={setExpirationTime}
-                showOnlyTime
-                placeholder="Select expiration time"
+              <Input
+                type="time"
+                value={expirationTime}
+                onChange={(e) => setExpirationTime(e.target.value)}
+                className="w-full"
               />
             </div>
           </div>
@@ -552,15 +498,9 @@ useEffect(() => {
 
         {/* Totals */}
         <div className="text-right space-y-1">
-          <p className="text-sm text-muted-foreground">
-            Aircraft Options Total: {formatCurrency(totalOptions)}
-          </p>
-          <p className="text-sm text-muted-foreground">
-            Additional Services Total: {formatCurrency(totalServices)}
-          </p>
-          <p className="text-lg font-semibold">
-            Grand Total: {formatCurrency(grandTotal)}
-          </p>
+          <p className="text-sm text-muted-foreground">Aircraft Options Total: {formatCurrency(totalOptions)}</p>
+          <p className="text-sm text-muted-foreground">Additional Services Total: {formatCurrency(totalServices)}</p>
+          <p className="text-lg font-semibold">Grand Total: {formatCurrency(grandTotal)}</p>
         </div>
 
         <Separator />
@@ -572,8 +512,8 @@ useEffect(() => {
           </Button>
 
           <div className="flex items-center gap-3">
-            <Button 
-              onClick={handlePublish} 
+            <Button
+              onClick={handlePublish}
               disabled={publishing || !isExpirationValid}
               title={!isExpirationValid ? "Please set an expiration date and time before publishing" : ""}
             >
