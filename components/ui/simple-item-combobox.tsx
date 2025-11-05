@@ -29,6 +29,7 @@ export function SimpleItemCombobox({ tenantId, value, onSelect, placeholder = "S
   const [loading, setLoading] = useState(false)
   const [mounted, setMounted] = useState(false)
   const [selectedItem, setSelectedItem] = useState<Item | null>(null)
+  const [position, setPosition] = useState<{ top: number; left: number; width: number } | null>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
@@ -36,6 +37,20 @@ export function SimpleItemCombobox({ tenantId, value, onSelect, placeholder = "S
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  useEffect(() => {
+    if (isOpen && triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect()
+      setPosition({
+        top: rect.bottom + window.scrollY + 4,
+        left: rect.left + window.scrollX,
+        width: rect.width,
+      })
+      console.log("[v0] Item combobox opened, position:", { top: rect.bottom, left: rect.left })
+    } else {
+      setPosition(null)
+    }
+  }, [isOpen])
 
   useEffect(() => {
     if (isOpen && searchInputRef.current) {
@@ -112,8 +127,6 @@ export function SimpleItemCombobox({ tenantId, value, onSelect, placeholder = "S
       item.description?.toLowerCase().includes(search.toLowerCase()),
   )
 
-  const position = triggerRef.current?.getBoundingClientRect()
-
   return (
     <>
       <button
@@ -146,8 +159,8 @@ export function SimpleItemCombobox({ tenantId, value, onSelect, placeholder = "S
             ref={dropdownRef}
             style={{
               position: "absolute",
-              top: position.bottom + window.scrollY + 4,
-              left: position.left + window.scrollX,
+              top: position.top,
+              left: position.left,
               width: position.width,
               zIndex: 50000,
             }}

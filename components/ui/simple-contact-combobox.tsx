@@ -30,12 +30,14 @@ export function SimpleContactCombobox({ tenantId, value, selectedName, onSelect 
   const [creating, setCreating] = useState(false)
   const [supabase, setSupabase] = useState<any>(null)
   const [mounted, setMounted] = useState(false)
+  const [position, setPosition] = useState<{ top: number; left: number; width: number } | null>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const { toast } = useToast()
 
   useEffect(() => {
     setMounted(true)
+    console.log("[v0] SimpleContactCombobox mounted")
   }, [])
 
   // Initialize supabase client
@@ -149,7 +151,20 @@ export function SimpleContactCombobox({ tenantId, value, selectedName, onSelect 
     }
   }
 
-  const position = triggerRef.current?.getBoundingClientRect()
+  useEffect(() => {
+    if (open && triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect()
+      const newPosition = {
+        top: rect.bottom + window.scrollY + 4,
+        left: rect.left + window.scrollX,
+        width: rect.width,
+      }
+      console.log("[v0] Position calculated:", newPosition)
+      setPosition(newPosition)
+    } else {
+      setPosition(null)
+    }
+  }, [open])
 
   return (
     <>
@@ -158,8 +173,11 @@ export function SimpleContactCombobox({ tenantId, value, selectedName, onSelect 
         variant="outline"
         className="justify-between w-full bg-transparent"
         onClick={() => {
-          console.log("[v0] Contact combobox clicked, open:", !open)
-          setOpen(!open)
+          const newOpen = !open
+          console.log("[v0] Contact combobox clicked, open:", newOpen)
+          console.log("[v0] Mounted:", mounted)
+          console.log("[v0] TriggerRef:", triggerRef.current)
+          setOpen(newOpen)
         }}
         type="button"
       >
@@ -175,8 +193,8 @@ export function SimpleContactCombobox({ tenantId, value, selectedName, onSelect 
             ref={dropdownRef}
             className="absolute w-[350px] rounded-md border bg-popover p-0 text-popover-foreground shadow-md"
             style={{
-              top: position.bottom + window.scrollY + 4,
-              left: position.left + window.scrollX,
+              top: position.top,
+              left: position.left,
               zIndex: 50000,
             }}
           >

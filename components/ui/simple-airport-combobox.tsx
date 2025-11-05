@@ -29,6 +29,7 @@ export function SimpleAirportCombobox({ value, onSelect, placeholder = "Search a
   const [airports, setAirports] = useState<Airport[]>([])
   const [loading, setLoading] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [position, setPosition] = useState<{ top: number; left: number; width: number } | null>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
@@ -36,6 +37,19 @@ export function SimpleAirportCombobox({ value, onSelect, placeholder = "Search a
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  useEffect(() => {
+    if (isOpen && triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect()
+      setPosition({
+        top: rect.bottom + window.scrollY + 4,
+        left: rect.left + window.scrollX,
+        width: rect.width,
+      })
+    } else {
+      setPosition(null)
+    }
+  }, [isOpen])
 
   useEffect(() => {
     if (isOpen && searchInputRef.current) {
@@ -115,8 +129,6 @@ export function SimpleAirportCombobox({ value, onSelect, placeholder = "Search a
     setSearch("")
   }
 
-  const position = triggerRef.current?.getBoundingClientRect()
-
   return (
     <>
       <button
@@ -146,8 +158,8 @@ export function SimpleAirportCombobox({ value, onSelect, placeholder = "Search a
             ref={dropdownRef}
             style={{
               position: "absolute",
-              top: position.bottom + window.scrollY + 4,
-              left: position.left + window.scrollX,
+              top: position.top,
+              left: position.left,
               width: position.width,
               zIndex: 50000,
             }}
