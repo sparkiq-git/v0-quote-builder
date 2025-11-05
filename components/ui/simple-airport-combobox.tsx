@@ -42,8 +42,8 @@ export function SimpleAirportCombobox({ value, onSelect, placeholder = "Search a
     if (isOpen && triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect()
       setPosition({
-        top: rect.bottom + 4,
-        left: rect.left,
+        top: rect.bottom + window.scrollY + 4,
+        left: rect.left + window.scrollX,
         width: rect.width,
       })
     } else {
@@ -157,7 +157,7 @@ export function SimpleAirportCombobox({ value, onSelect, placeholder = "Search a
           <div
             ref={dropdownRef}
             style={{
-              position: "fixed",
+              position: "absolute",
               top: position.top,
               left: position.left,
               width: position.width,

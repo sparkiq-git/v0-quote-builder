@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { createActionLinkClient } from "@/lib/supabase/action-links"
+import { QuoteTypeMapper } from "@/lib/utils/quote-mapper"
 
 /* ---------------- Utility helpers ---------------- */
 function toDateTime(date?: string | null, time?: string | null): string | null {
@@ -20,7 +21,9 @@ function haversineDistanceNM(lat1: number, lon1: number, lat2: number, lon2: num
   const R = 3440.065 // Earth radius in nautical miles
   const dLat = toRad(lat2 - lat1)
   const dLon = toRad(lon2 - lon1)
-  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
   return Math.round(R * c)
 }
@@ -37,7 +40,11 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
 
   try {
     // Fetch the main quote
-    const { data: quote, error: quoteError } = await supabase.from("quote").select("*").eq("id", id).single()
+    const { data: quote, error: quoteError } = await supabase
+      .from("quote")
+      .select("*")
+      .eq("id", id)
+      .single()
 
     if (quoteError) {
       console.error("Quote fetch error:", quoteError)
@@ -56,29 +63,36 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     }
 
     // Fetch quote options
-    const { data: options, error: optionsError } = await supabase.from("quote_option").select("*").eq("quote_id", id)
+    const { data: options, error: optionsError } = await supabase
+      .from("quote_option")
+      .select("*")
+      .eq("quote_id", id)
 
     if (optionsError) {
       console.error("Options fetch error:", optionsError)
     }
 
     // Fetch quote services
-    const { data: services, error: servicesError } = await supabase.from("quote_item").select("*").eq("quote_id", id)
+    const { data: services, error: servicesError } = await supabase
+      .from("quote_item")
+      .select("*")
+      .eq("quote_id", id)
 
     if (servicesError) {
       console.error("Services fetch error:", servicesError)
     }
 
     // Fetch aircraft data for the options
-    const aircraftIds = (options || []).map((opt) => opt.aircraft_id).filter(Boolean)
+    const aircraftIds = (options || []).map(opt => opt.aircraft_id).filter(Boolean)
     console.log("🛩️ Aircraft IDs to fetch:", aircraftIds)
-
+    
     let aircraftData = []
-
+    
     if (aircraftIds.length > 0) {
       const { data: aircraft, error: aircraftError } = await supabase
         .from("aircraft")
-        .select(`*
+        .select(`
+          *,
           aircraft_model!model_id (
             id,
             name,
@@ -116,7 +130,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
           )
         `)
         .in("id", aircraftIds)
-
+      
       if (aircraftError) {
         console.error("Aircraft fetch error:", aircraftError)
       } else {
@@ -132,18 +146,11 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     console.log("Raw quote data:", JSON.stringify(quote, null, 2))
     console.log("Raw legs data:", JSON.stringify(legs, null, 2))
     console.log("Raw options data:", JSON.stringify(options, null, 2))
-    console.log(
-      "Aircraft data with amenities:",
-      JSON.stringify(
-        aircraftData.map((a) => ({
-          id: a.id,
-          tail_number: a.tail_number,
-          amenities: a.aircraft_amenity?.map((amenity: any) => amenity.amenity?.name),
-        })),
-        null,
-        2,
-      ),
-    )
+    console.log("Aircraft data with amenities:", JSON.stringify(aircraftData.map(a => ({
+      id: a.id,
+      tail_number: a.tail_number,
+      amenities: a.aircraft_amenity?.map((amenity: any) => amenity.amenity?.name)
+    })), null, 2))
     console.log("Raw services data:", JSON.stringify(services, null, 2))
     console.log("Aircraft data:", JSON.stringify(aircraftData, null, 2))
 
@@ -175,16 +182,16 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
         pax_count: leg.pax_count,
       })),
       options: (options || []).map((option: any) => {
-        const aircraft = aircraftData.find((a) => a.id === option.aircraft_id)
+        const aircraft = aircraftData.find(a => a.id === option.aircraft_id)
         const aircraftModel = aircraft?.aircraft_model
-
+        
         console.log("🛩️ Processing option:", {
           optionId: option.id,
           aircraftId: option.aircraft_id,
           foundAircraft: !!aircraft,
-          foundModel: !!aircraftModel,
+          foundModel: !!aircraftModel
         })
-
+        
         return {
           id: option.id,
           aircraft_id: option.aircraft_id,
@@ -196,80 +203,72 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
           price_total: option.price_total || 0,
           fees: [], // TODO: Add fees support if needed
           feesEnabled: false,
-          selectedAmenities:
-            aircraft?.aircraft_amenity?.map((amenity: any) => amenity.amenity?.name).filter(Boolean) || [],
+          selectedAmenities: aircraft?.aircraft_amenity?.map((amenity: any) => amenity.amenity?.name).filter(Boolean) || [],
           notes: option.notes,
           conditions: option.conditions,
           additionalNotes: option.additional_notes,
           // Include aircraft model data for the component
-          aircraftModel: aircraftModel
-            ? {
-                id: aircraftModel.id,
-                name: aircraftModel.name,
-                manufacturer: aircraftModel.aircraft_manufacturer?.name || "Unknown",
-                defaultCapacity: aircraftModel.size_code ? Number.parseInt(aircraftModel.size_code) : 8,
-                defaultRangeNm: 2000, // Default range
-                defaultSpeedKnots: 400, // Default speed
-                images:
-                  aircraftModel.aircraft_model_image
-                    ?.sort((a: any, b: any) => {
-                      if (a.is_primary && !b.is_primary) return -1
-                      if (!a.is_primary && b.is_primary) return 1
-                      return a.display_order - b.display_order
-                    })
-                    .map((img: any) => {
-                      // If the URL is malformed, try to regenerate it
-                      if (img.public_url && !img.public_url.includes("/models/")) {
-                        // Try to reconstruct the correct path
-                        const fileName = img.public_url.split("/").pop()
-                        const reconstructedUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/aircraft-media/tenant/${aircraftModel.created_by}/models/${aircraftModel.id}/${fileName}`
-                        return reconstructedUrl
-                      }
-                      return img.public_url
-                    })
-                    .filter(Boolean) || [],
-              }
-            : null,
+          aircraftModel: aircraftModel ? {
+            id: aircraftModel.id,
+            name: aircraftModel.name,
+            manufacturer: aircraftModel.aircraft_manufacturer?.name || 'Unknown',
+            defaultCapacity: aircraftModel.size_code ? parseInt(aircraftModel.size_code) : 8,
+            defaultRangeNm: 2000, // Default range
+            defaultSpeedKnots: 400, // Default speed
+            images: aircraftModel.aircraft_model_image
+              ?.sort((a: any, b: any) => {
+                if (a.is_primary && !b.is_primary) return -1
+                if (!a.is_primary && b.is_primary) return 1
+                return a.display_order - b.display_order
+              })
+              .map((img: any) => {
+                // If the URL is malformed, try to regenerate it
+                if (img.public_url && !img.public_url.includes('/models/')) {
+                  // Try to reconstruct the correct path
+                  const fileName = img.public_url.split('/').pop()
+                  const reconstructedUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/aircraft-media/tenant/${aircraftModel.created_by}/models/${aircraftModel.id}/${fileName}`
+                  return reconstructedUrl
+                }
+                return img.public_url
+              })
+              .filter(Boolean) || [],
+          } : null,
           // Include aircraft tail data for the component
-          aircraftTail: aircraft
-            ? {
-                id: aircraft.id,
-                tailNumber: aircraft.tail_number,
-                operator: aircraft.operator_id,
-                year: aircraft.year_of_manufacture,
-                yearOfRefurbish: aircraft.year_of_refurbish,
-                cruisingSpeed: aircraft.cruising_speed,
-                rangeNm: aircraft.range_nm,
-                amenities:
-                  aircraft.aircraft_amenity?.map((amenity: any) => amenity.amenity?.name).filter(Boolean) || [],
-                images:
-                  aircraft.aircraft_image
-                    ?.sort((a: any, b: any) => {
-                      if (a.is_primary && !b.is_primary) return -1
-                      if (!a.is_primary && b.is_primary) return 1
-                      return a.display_order - b.display_order
-                    })
-                    .map((img: any) => {
-                      // If the URL is malformed, try to regenerate it
-                      if (img.public_url && !img.public_url.includes("/aircraft/")) {
-                        // Try to reconstruct the correct path
-                        const fileName = img.public_url.split("/").pop()
-                        const reconstructedUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/aircraft-media/tenant/${aircraft.tenant_id}/aircraft/${aircraft.id}/${fileName}`
-                        return reconstructedUrl
-                      }
-                      return img.public_url
-                    })
-                    .filter(Boolean) || [],
-                capacityOverride: aircraft.capacity_pax,
-                notes: aircraft.notes,
-                rangeNmOverride: aircraft.range_nm,
-                speedKnotsOverride: aircraft.cruising_speed,
-                status: aircraft.status,
-                homeBase: aircraft.home_base,
-                serialNumber: aircraft.serial_number,
-                mtowKg: aircraft.mtow_kg,
-              }
-            : null,
+          aircraftTail: aircraft ? {
+            id: aircraft.id,
+            tailNumber: aircraft.tail_number,
+            operator: aircraft.operator_id,
+            year: aircraft.year_of_manufacture,
+            yearOfRefurbish: aircraft.year_of_refurbish,
+            cruisingSpeed: aircraft.cruising_speed,
+            rangeNm: aircraft.range_nm,
+            amenities: aircraft.aircraft_amenity?.map((amenity: any) => amenity.amenity?.name).filter(Boolean) || [],
+            images: aircraft.aircraft_image
+              ?.sort((a: any, b: any) => {
+                if (a.is_primary && !b.is_primary) return -1
+                if (!a.is_primary && b.is_primary) return 1
+                return a.display_order - b.display_order
+              })
+              .map((img: any) => {
+                // If the URL is malformed, try to regenerate it
+                if (img.public_url && !img.public_url.includes('/aircraft/')) {
+                  // Try to reconstruct the correct path
+                  const fileName = img.public_url.split('/').pop()
+                  const reconstructedUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/aircraft-media/tenant/${aircraft.tenant_id}/aircraft/${aircraft.id}/${fileName}`
+                  return reconstructedUrl
+                }
+                return img.public_url
+              })
+              .filter(Boolean) || [],
+            capacityOverride: aircraft.capacity_pax,
+            notes: aircraft.notes,
+            rangeNmOverride: aircraft.range_nm,
+            speedKnotsOverride: aircraft.cruising_speed,
+            status: aircraft.status,
+            homeBase: aircraft.home_base,
+            serialNumber: aircraft.serial_number,
+            mtowKg: aircraft.mtow_kg,
+          } : null,
         }
       }),
       services: (services || []).map((service: any) => ({
@@ -313,13 +312,10 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
       body = await req.json()
     } catch (parseError: any) {
       console.error("Failed to parse request body:", parseError)
-      return NextResponse.json(
-        {
-          error: "Invalid request body",
-          details: parseError?.message,
-        },
-        { status: 400 },
-      )
+      return NextResponse.json({ 
+        error: "Invalid request body",
+        details: parseError?.message 
+      }, { status: 400 })
     }
 
     const { selectedOptionId, status, declineReason, declineNotes, sent_at, valid_until } = body
@@ -337,9 +333,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
       // Authenticated access: use regular client and check auth
       const { createClient } = await import("@/lib/supabase/server")
       supabase = await createClient()
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
+      const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
       }
@@ -387,7 +381,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     //     if (actionLinks && actionLinks.length > 0) {
     //       await supabase
     //         .from("action_link")
-    //         .update({
+    //         .update({ 
     //           status: "consumed",
     //           consumed_at: new Date().toISOString()
     //         })
@@ -405,7 +399,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
       try {
         const referer = req.headers.get("referer") || ""
         const isPublicAccess = referer?.includes("/action/") || referer?.includes("/q/")
-
+        
         if (isPublicAccess) {
           // Get action link info for audit - look for any status (active or consumed)
           const { data: actionLink, error: actionLinkError } = await supabase
@@ -414,14 +408,14 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
             .eq("metadata->>quote_id", id)
             .order("created_at", { ascending: false })
             .maybeSingle()
-
+          
           if (actionLinkError) {
             console.error("Failed to fetch action link for audit:", actionLinkError)
           } else if (actionLink) {
             const auditPayload = {
               tenant_id: actionLink.tenant_id,
               actor_user_id: null,
-              action: `quote.${status || "updated"}`,
+              action: `quote.${status || 'updated'}`,
               target_id: actionLink.id,
               action_type: actionLink.action_type,
               details: {
@@ -435,11 +429,11 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
               ip: req.headers.get("x-forwarded-for") || "unknown",
               user_agent: req.headers.get("user-agent") || "unknown",
             }
-
+            
             console.log("Inserting audit log:", JSON.stringify(auditPayload, null, 2))
-
+            
             const { error: auditError } = await supabase.from("action_link_audit_log").insert(auditPayload)
-
+            
             if (auditError) {
               console.error("Failed to insert audit log:", JSON.stringify(auditError, null, 2))
             } else {
@@ -466,39 +460,34 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
       stack: error?.stack,
       name: error?.name,
     })
-
+    
     // Always return JSON, even on errors
     try {
-      return NextResponse.json(
-        {
-          error: error?.message || "Internal server error",
-          details: error?.message || "An unexpected error occurred",
-        },
-        { status: 500 },
-      )
+      return NextResponse.json({ 
+        error: error?.message || "Internal server error",
+        details: error?.message || "An unexpected error occurred",
+      }, { status: 500 })
     } catch (responseError) {
       // Fallback if even JSON response creation fails
       console.error("Failed to create error response:", responseError)
       return new Response(
-        JSON.stringify({
+        JSON.stringify({ 
           error: error?.message || "Internal server error",
-          details: "Failed to create proper error response",
-        }),
-        {
+          details: "Failed to create proper error response"
+        }), 
+        { 
           status: 500,
-          headers: { "Content-Type": "application/json" },
-        },
+          headers: { "Content-Type": "application/json" }
+        }
       )
     }
   }
 }
 
-/* ---------------- PUT handler ---------------- */
+/* ---------------- PUT handler (existing) ---------------- */
 export async function PUT(req: Request, { params }: { params: { id: string } }) {
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   const { id } = params
@@ -525,7 +514,8 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
       })
       .eq("id", id)
 
-    if (quoteError) return NextResponse.json({ error: quoteError.message }, { status: 500 })
+    if (quoteError)
+      return NextResponse.json({ error: quoteError.message }, { status: 500 })
   }
 
   /* ---------------- ✈️ Upsert legs ---------------- */
@@ -534,12 +524,15 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
       .filter((l) => l.origin_code && l.destination_code)
       .map((l, i) => {
         const distance_nm =
-          l.origin_lat != null && l.origin_long != null && l.destination_lat != null && l.destination_long != null
+          l.origin_lat != null &&
+          l.origin_long != null &&
+          l.destination_lat != null &&
+          l.destination_long != null
             ? haversineDistanceNM(
                 Number(l.origin_lat),
                 Number(l.origin_long),
                 Number(l.destination_lat),
-                Number(l.destination_long),
+                Number(l.destination_long)
               )
             : null
 
@@ -566,20 +559,25 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
 
     console.log("🛫 Prepared legs to insert:", JSON.stringify(validLegs, null, 2))
 
-    const { error: upsertError } = await supabase.from("quote_detail").upsert(validLegs, { onConflict: "quote_id,seq" })
+const { error: upsertError } = await supabase
+  .from("quote_detail")
+  .upsert(validLegs, { onConflict: "quote_id,seq" })
 
-    if (upsertError) return NextResponse.json({ error: upsertError.message }, { status: 500 })
+    if (upsertError)
+      return NextResponse.json({ error: upsertError.message }, { status: 500 })
 
-    // 🧹 Step 2: Delete legs no longer present
-    const existingIds = validLegs.map((l) => l.id)
-    if (existingIds.length > 0) {
-      const { error: deleteError } = await supabase
-        .from("quote_detail")
-        .delete()
-        .eq("quote_id", id)
-        .not("id", "in", `(${existingIds.join(",")})`)
-      if (deleteError) return NextResponse.json({ error: deleteError.message }, { status: 500 })
-    }
+// 🧹 Step 2: Delete legs no longer present
+const existingIds = validLegs.map((l) => l.id)
+if (existingIds.length > 0) {
+  const { error: deleteError } = await supabase
+    .from("quote_detail")
+    .delete()
+    .eq("quote_id", id)
+    .not("id", "in", `(${existingIds.join(",")})`)
+  if (deleteError)
+    return NextResponse.json({ error: deleteError.message }, { status: 500 })
+}
+
 
     const leg_count = validLegs.length
     const total_pax = Math.max(...validLegs.map((l) => Number(l.pax_count || 0))) || 1
@@ -591,17 +589,19 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
       .filter(Boolean)
       .map((s) => new Date(s as string).getTime())
 
-    const earliest_departure = depTimes.length > 0 ? new Date(Math.min(...depTimes)).toISOString() : null
-    const latest_return = depTimes.length > 0 ? new Date(Math.max(...depTimes)).toISOString() : null
+    const earliest_departure =
+      depTimes.length > 0 ? new Date(Math.min(...depTimes)).toISOString() : null
+    const latest_return =
+      depTimes.length > 0 ? new Date(Math.max(...depTimes)).toISOString() : null
 
     const trip_type =
       leg_count === 1
         ? "one-way"
         : leg_count === 2 &&
-            validLegs[0].origin_code === validLegs[1].destination_code &&
-            validLegs[0].destination_code === validLegs[1].origin_code
-          ? "round-trip"
-          : "multi-city"
+          validLegs[0].origin_code === validLegs[1].destination_code &&
+          validLegs[0].destination_code === validLegs[1].origin_code
+        ? "round-trip"
+        : "multi-city"
 
     const { error: metaError } = await supabase
       .from("quote")
@@ -616,85 +616,104 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
       })
       .eq("id", id)
 
-    if (metaError) return NextResponse.json({ error: metaError.message }, { status: 500 })
+    if (metaError)
+      return NextResponse.json({ error: metaError.message }, { status: 500 })
   }
 
   /* ---------------- 🛩️ Upsert quote options ---------------- */
   if (options && Array.isArray(options)) {
-    const { error: optionError } = await supabase.from("quote_option").upsert(
-      options.map((o: any, index: number) => ({
-        id: o.id,
-        label: o.label || `Option ${index + 1}`,
-        quote_id: o.quote_id || id,
-        aircraft_id: o.aircraft_id && o.aircraft_id !== "" ? o.aircraft_id : null,
-        flight_hours: o.flight_hours ?? 0,
-        cost_operator: o.cost_operator ?? 0,
-        price_commission: o.price_commission ?? 0,
-        price_base: o.price_base ?? 0,
-        price_total: o.price_total ?? 0,
-        notes: o.notes ?? null,
-        updated_at: new Date().toISOString(),
-      })),
-    )
+    const { error: optionError } = await supabase
+      .from("quote_option")
+      .upsert(
+        options.map((o: any, index: number) => ({
+          id: o.id,
+          label: o.label || `Option ${index + 1}`,
+          quote_id: o.quote_id || id,
+          aircraft_id: o.aircraft_id,
+          flight_hours: o.flight_hours ?? 0,
+          cost_operator: o.cost_operator ?? 0,
+          price_commission: o.price_commission ?? 0,
+          price_base: o.price_base ?? 0,
+          price_total: o.price_total ?? 0,
+          notes: o.notes ?? null,
+          updated_at: new Date().toISOString(),
+        }))
+      )
 
-    if (optionError) return NextResponse.json({ error: optionError.message }, { status: 500 })
+    if (optionError)
+      return NextResponse.json({ error: optionError.message }, { status: 500 })
   }
 
-  /* ---------------- 💼 Upsert quote services (quote_item) ---------------- */
-  if (services && Array.isArray(services)) {
-    const itemIds = services.map((s) => s.item_id).filter(Boolean)
 
-    let itemMap: Record<string, string> = {}
-    if (itemIds.length > 0) {
-      const { data: itemData, error: itemError } = await supabase.from("item").select("id, name").in("id", itemIds)
+/* ---------------- 💼 Upsert quote services (quote_item) ---------------- */
+if (services && Array.isArray(services)) {
+  const itemIds = services.map((s) => s.item_id).filter(Boolean)
 
-      if (itemError) return NextResponse.json({ error: itemError.message }, { status: 500 })
+  let itemMap: Record<string, string> = {}
+  if (itemIds.length > 0) {
+    const { data: itemData, error: itemError } = await supabase
+      .from("item")
+      .select("id, name")
+      .in("id", itemIds)
 
-      itemMap = Object.fromEntries(itemData.map((i) => [i.id, i.name]))
-    }
+    if (itemError)
+      return NextResponse.json({ error: itemError.message }, { status: 500 })
 
-    const validServices = services.map((s) => ({
-      id: s.id || crypto.randomUUID(),
-      quote_id: id, // ✅ always the URL id
-      item_id: s.item_id || null,
-      name: s.item_id ? itemMap[s.item_id] || "Unnamed item" : s.description || "Custom item",
-      description: s.description || itemMap[s.item_id] || "Service item",
-      qty: s.qty ?? 1,
-      unit_price: Number(s.amount) || 0,
-      unit_cost: s.unit_cost ?? null,
-      taxable: s.taxable ?? true,
-      notes: s.notes ?? null,
-      updated_at: new Date().toISOString(),
-      created_at: s.created_at || new Date().toISOString(),
-    }))
-
-    /* 🧩 Step 1: Upsert if there are any services */
-    if (validServices.length > 0) {
-      const { error: upsertError } = await supabase.from("quote_item").upsert(validServices, { onConflict: "id" })
-
-      if (upsertError) return NextResponse.json({ error: upsertError.message }, { status: 500 })
-    }
-
-    /* 🧹 Step 2: Delete cleanup — including full wipe when no services left */
-    if (validServices.length > 0) {
-      const existingIds = validServices.map((s) => s.id).filter(Boolean)
-      const idList = `(${existingIds.join(",")})`
-      const { error: deleteError } = await supabase
-        .from("quote_item")
-        .delete()
-        .eq("quote_id", id)
-        .not("id", "in", idList)
-
-      if (deleteError) return NextResponse.json({ error: deleteError.message }, { status: 500 })
-    } else {
-      // 🧽 Delete all if none remain in UI
-      const { error: deleteAllError } = await supabase.from("quote_item").delete().eq("quote_id", id)
-
-      if (deleteAllError) return NextResponse.json({ error: deleteAllError.message }, { status: 500 })
-    }
-
-    console.log("💾 Saved services:", JSON.stringify(validServices, null, 2))
+    itemMap = Object.fromEntries(itemData.map((i) => [i.id, i.name]))
   }
+
+  const validServices = services.map((s) => ({
+    id: s.id || crypto.randomUUID(),
+    quote_id: id, // ✅ always the URL id
+    item_id: s.item_id || null,
+    name: s.item_id ? itemMap[s.item_id] || "Unnamed item" : s.description || "Custom item",
+    description: s.description || itemMap[s.item_id] || "Service item",
+    qty: s.qty ?? 1,
+    unit_price: Number(s.amount) || 0,
+    unit_cost: s.unit_cost ?? null,
+    taxable: s.taxable ?? true,
+    notes: s.notes ?? null,
+    updated_at: new Date().toISOString(),
+    created_at: s.created_at || new Date().toISOString(),
+  }))
+
+  /* 🧩 Step 1: Upsert if there are any services */
+  if (validServices.length > 0) {
+    const { error: upsertError } = await supabase
+      .from("quote_item")
+      .upsert(validServices, { onConflict: "id" })
+
+    if (upsertError)
+      return NextResponse.json({ error: upsertError.message }, { status: 500 })
+  }
+
+  /* 🧹 Step 2: Delete cleanup — including full wipe when no services left */
+  if (validServices.length > 0) {
+    const existingIds = validServices.map((s) => s.id).filter(Boolean)
+    const idList = `(${existingIds.join(",")})`
+    const { error: deleteError } = await supabase
+      .from("quote_item")
+      .delete()
+      .eq("quote_id", id)
+      .not("id", "in", idList)
+
+    if (deleteError)
+      return NextResponse.json({ error: deleteError.message }, { status: 500 })
+  } else {
+    // 🧽 Delete all if none remain in UI
+    const { error: deleteAllError } = await supabase
+      .from("quote_item")
+      .delete()
+      .eq("quote_id", id)
+
+    if (deleteAllError)
+      return NextResponse.json({ error: deleteAllError.message }, { status: 500 })
+  }
+
+  console.log("💾 Saved services:", JSON.stringify(validServices, null, 2))
+}
+
+
 
   return NextResponse.json({ success: true })
 }
