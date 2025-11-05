@@ -11,9 +11,12 @@ import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { useToast } from "@/hooks/use-toast"
 import { uploadPassengerAvatar, deletePassengerAvatar } from "@/lib/actions/contact-avatar"
-import { Upload, X } from "lucide-react"
+import { Upload, X, Check, ChevronsUpDown } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 const passengerFormSchema = z.object({
   contact_id: z.string().min(1, "Contact is required"),
@@ -67,6 +70,8 @@ export function EditPassengerDialog({ open, onOpenChange, passenger, onSuccess }
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
   const [contacts, setContacts] = useState<Contact[]>([])
   const [loadingContacts, setLoadingContacts] = useState(true)
+  const [contactComboboxOpen, setContactComboboxOpen] = useState(false)
+  const [contactSearch, setContactSearch] = useState("")
   const { toast } = useToast()
 
   const form = useForm<PassengerFormData>({
@@ -95,6 +100,8 @@ export function EditPassengerDialog({ open, onOpenChange, passenger, onSuccess }
       })
       setAvatarPreview(null)
       setAvatarFile(null)
+      setContactSearch("")
+      setContactComboboxOpen(false)
     }
   }, [open, passenger, form])
 
@@ -121,6 +128,19 @@ export function EditPassengerDialog({ open, onOpenChange, passenger, onSuccess }
       fetchContacts()
     }
   }, [open, toast])
+
+  // Filter contacts based on search
+  const filteredContacts = contacts.filter((contact) => {
+    if (!contactSearch) return true
+    const search = contactSearch.toLowerCase()
+    return (
+      contact.full_name.toLowerCase().includes(search) ||
+      contact.email.toLowerCase().includes(search) ||
+      (contact.company && contact.company.toLowerCase().includes(search))
+    )
+  })
+
+  const selectedContact = contacts.find((c) => c.id === form.watch("contact_id"))
 
   const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -287,36 +307,78 @@ export function EditPassengerDialog({ open, onOpenChange, passenger, onSuccess }
               </div>
             </div>
 
-            {/* Contact Selection */}
+            {/* Contact Selection - Searchable Combobox */}
             <FormField
               control={form.control}
               name="contact_id"
               render={({ field }) => (
-                <FormItem>
+                <FormItem className="flex flex-col">
                   <FormLabel>Contact *</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    value={field.value}
-                    disabled={loadingContacts}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder={loadingContacts ? "Loading contacts..." : "Select a contact"} />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {contacts.map((contact) => (
-                        <SelectItem key={contact.id} value={contact.id}>
-                          {contact.full_name} {contact.email && `(${contact.email})`}
-                        </SelectItem>
-                      ))}
-                      {contacts.length === 0 && !loadingContacts && (
-                        <SelectItem value="none" disabled>
-                          No contacts available
-                        </SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
+                  <Popover open={contactComboboxOpen} onOpenChange={setContactComboboxOpen} modal={true}>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          className={cn(
+                            "w-full justify-between",
+                            !field.value && "text-muted-foreground"
+                          )}
+                          disabled={loadingContacts}
+                        >
+                          {selectedContact
+                            ? `${selectedContact.full_name} ${selectedContact.email ? `(${selectedContact.email})` : ""}`
+                            : loadingContacts
+                            ? "Loading contacts..."
+                            : "Select a contact"}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                      <Command shouldFilter={false}>
+                        <CommandInput
+                          placeholder="Search contacts by name, email, or company..."
+                          value={contactSearch}
+                          onValueChange={setContactSearch}
+                        />
+                        <CommandList className="max-h-[300px] overflow-y-auto">
+                          <CommandEmpty>
+                            {contactSearch
+                              ? `No contacts found matching "${contactSearch}"`
+                              : "No contacts available"}
+                          </CommandEmpty>
+                          <CommandGroup>
+                            {filteredContacts.map((contact) => (
+                              <CommandItem
+                                key={contact.id}
+                                value={contact.id}
+                                onSelect={() => {
+                                  field.onChange(contact.id)
+                                  setContactComboboxOpen(false)
+                                  setContactSearch("")
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    field.value === contact.id ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                <div className="flex flex-col">
+                                  <span className="font-medium">{contact.full_name}</span>
+                                  <span className="text-xs text-muted-foreground">
+                                    {contact.email}
+                                    {contact.company && ` • ${contact.company}`}
+                                  </span>
+                                </div>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                   <FormMessage />
                 </FormItem>
               )}
