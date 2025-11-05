@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { Plane, Plus, Trash2, ChevronRight } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
-import { AircraftCombobox } from "@/components/ui/aircraft-combobox"
+import { SimpleAircraftCombobox } from "@/components/ui/simple-aircraft-combobox"
 import { AircraftCreateModal } from "@/components/aircraft/AircraftCreateModal"
 import { AircraftEditDrawer } from "@/components/aircraft/AircraftEditDrawer"
 import { AircraftSummaryCard } from "@/components/aircraft/AircraftSummaryCard"
@@ -24,8 +24,6 @@ interface Props {
   onBack: () => void
 }
 
-
-
 export function QuoteOptionsTab({ quote, onUpdate, onNext, onBack }: Props) {
   const { toast } = useToast()
   const options = Array.isArray(quote?.options) ? quote.options : []
@@ -34,110 +32,112 @@ export function QuoteOptionsTab({ quote, onUpdate, onNext, onBack }: Props) {
   const [aircraftCache, setAircraftCache] = useState<Record<string, AircraftFull>>({})
   const [saving, setSaving] = useState(false)
   const [initialized, setInitialized] = useState(false)
+  const [showCreateModal, setShowCreateModal] = useState(false)
 
   // 🧩 Normalize options after quote is loaded (ensures no undefined fees)
-useEffect(() => {
-  if (!quote?.options) return
+  useEffect(() => {
+    if (!quote?.options) return
 
-  const normalized = quote.options.map((o) => ({
-    ...o,
-    fees: Array.isArray(o.fees) ? o.fees : [],
-    feesEnabled: o.feesEnabled ?? false,
-  }))
+    const normalized = quote.options.map((o) => ({
+      ...o,
+      fees: Array.isArray(o.fees) ? o.fees : [],
+      feesEnabled: o.feesEnabled ?? false,
+    }))
 
-  // Only update if something changed (avoid re-renders)
-  if (JSON.stringify(normalized) !== JSON.stringify(quote.options)) {
-    onUpdate({ options: normalized })
-  }
-}, [quote])
-
+    // Only update if something changed (avoid re-renders)
+    if (JSON.stringify(normalized) !== JSON.stringify(quote.options)) {
+      onUpdate({ options: normalized })
+    }
+  }, [quote])
 
   // 🧮 Helper: renumber all options (Option 1, Option 2, etc.)
-const renumberOptions = (options: QuoteOption[]): QuoteOption[] => {
-  return options.map((opt, index) => ({
-    ...opt,
-    label: `Option ${index + 1}`,
-  }))
-}
-
-
-// 🧠 Mark as initialized once quote options are loaded from DB
-useEffect(() => {
-  if (quote?.options && quote.options.length > 0 && !initialized) {
-    setInitialized(true)
+  const renumberOptions = (options: QuoteOption[]): QuoteOption[] => {
+    return options.map((opt, index) => ({
+      ...opt,
+      label: `Option ${index + 1}`,
+    }))
   }
-}, [quote])
 
-// 🛩️ Preload aircraft data from existing options
-useEffect(() => {
-  if (!quote?.options?.length) return
-  
-  console.log("🔍 Debug quote options:", quote.options)
-  
-  const aircraftData: Record<string, AircraftFull> = {}
-  
-  quote.options.forEach((option: any) => {
-    console.log("🔍 Processing option:", {
-      aircraft_id: option.aircraft_id,
-      hasAircraftModel: !!option.aircraftModel,
-      hasAircraftTail: !!option.aircraftTail,
-      aircraftModel: option.aircraftModel,
-      aircraftTail: option.aircraftTail
-    })
-    
-    if (option.aircraft_id && option.aircraftModel && option.aircraftTail) {
-      // Convert API aircraft data to AircraftFull format
-      aircraftData[option.aircraft_id] = {
-        aircraft_id: option.aircraft_id,
-        tenant_id: option.aircraftTail.tenant_id || "",
-        tail_number: option.aircraftTail.tailNumber || "",
-        manufacturer_name: option.aircraftModel.manufacturer || "",
-        model_name: option.aircraftModel.name || "",
-        operator_name: option.aircraftTail.operator || option.aircraftTail.operator_id || "",
-        primary_image_url: option.aircraftTail.images?.[0] || option.aircraftModel.images?.[0] || null,
-        amenities: option.selectedAmenities?.map((a: any) => typeof a === 'string' ? a : a.name).filter(Boolean) || [],
-        capacity_pax: option.aircraftTail.capacityOverride || option.aircraftTail.capacity_pax || option.aircraftModel.defaultCapacity || 8,
-        range_nm: option.aircraftTail.rangeNmOverride || option.aircraftTail.range_nm || option.aircraftModel.defaultRangeNm || 2000,
-        status: option.aircraftTail.status || "active",
-        home_base: option.aircraftTail.homeBase || "",
-        year_of_manufacture: option.aircraftTail.year || null,
-        year_of_refurbish: option.aircraftTail.yearOfRefurbish || null,
-        serial_number: option.aircraftTail.serialNumber || "",
-        mtow_kg: option.aircraftTail.mtowKg || null,
-        notes: option.aircraftTail.notes || "",
-        meta: option.aircraftTail.meta || {},
-        aircraft_images: option.aircraftTail.images || [],
-      }
-    } else if (option.aircraft_id && !aircraftCache[option.aircraft_id]) {
-      // If option has aircraft_id but no aircraft data, it might be a newly added option
-      // that hasn't been saved yet. We'll skip it for now and let the user select an aircraft.
-      console.log("⚠️ Option has aircraft_id but no aircraft data (likely newly added):", {
-        aircraft_id: option.aircraft_id,
-        hasAircraftModel: !!option.aircraftModel,
-        hasAircraftTail: !!option.aircraftTail
-      })
-    } else {
-      console.log("⚠️ Missing aircraft data for option:", {
-        aircraft_id: option.aircraft_id,
-        hasAircraftModel: !!option.aircraftModel,
-        hasAircraftTail: !!option.aircraftTail
-      })
+  // 🧠 Mark as initialized once quote options are loaded from DB
+  useEffect(() => {
+    if (quote?.options && quote.options.length > 0 && !initialized) {
+      setInitialized(true)
     }
-  })
-  
-  if (Object.keys(aircraftData).length > 0) {
-    console.log("🛩️ Preloading aircraft data:", aircraftData)
-    setAircraftCache(aircraftData)
-  } else {
-    console.log("⚠️ No aircraft data found in options:", quote.options)
-  }
-}, [quote?.options])
+  }, [quote])
 
+  // 🛩️ Preload aircraft data from existing options
+  useEffect(() => {
+    if (!quote?.options?.length) return
 
+    console.log("🔍 Debug quote options:", quote.options)
 
+    const aircraftData: Record<string, AircraftFull> = {}
 
-// Note: Aircraft data is already provided in the quote prop
-// No need to fetch separately
+    quote.options.forEach((option: any) => {
+      console.log("🔍 Processing option:", {
+        aircraft_id: option.aircraft_id,
+        hasAircraftModel: !!option.aircraftModel,
+        hasAircraftTail: !!option.aircraftTail,
+        aircraftModel: option.aircraftModel,
+        aircraftTail: option.aircraftTail,
+      })
+
+      if (option.aircraft_id && option.aircraftModel && option.aircraftTail) {
+        // Convert API aircraft data to AircraftFull format
+        aircraftData[option.aircraft_id] = {
+          aircraft_id: option.aircraft_id,
+          tenant_id: option.aircraftTail.tenant_id || "",
+          tail_number: option.aircraftTail.tailNumber || "",
+          manufacturer_name: option.aircraftModel.manufacturer || "",
+          model_name: option.aircraftModel.name || "",
+          operator_name: option.aircraftTail.operator || option.aircraftTail.operator_id || "",
+          primary_image_url: option.aircraftTail.images?.[0] || option.aircraftModel.images?.[0] || null,
+          amenities:
+            option.selectedAmenities?.map((a: any) => (typeof a === "string" ? a : a.name)).filter(Boolean) || [],
+          capacity_pax:
+            option.aircraftTail.capacityOverride ||
+            option.aircraftTail.capacity_pax ||
+            option.aircraftModel.defaultCapacity ||
+            8,
+          range_nm:
+            option.aircraftTail.rangeNmOverride ||
+            option.aircraftTail.range_nm ||
+            option.aircraftModel.defaultRangeNm ||
+            2000,
+          status: option.aircraftTail.status || "active",
+          home_base: option.aircraftTail.homeBase || "",
+          year_of_manufacture: option.aircraftTail.year || null,
+          year_of_refurbish: option.aircraftTail.yearOfRefurbish || null,
+          serial_number: option.aircraftTail.serialNumber || "",
+          mtow_kg: option.aircraftTail.mtowKg || null,
+          notes: option.aircraftTail.notes || "",
+          meta: option.aircraftTail.meta || {},
+          aircraft_images: option.aircraftTail.images || [],
+        }
+      } else if (option.aircraft_id && !aircraftCache[option.aircraft_id]) {
+        // If option has aircraft_id but no aircraft data, it might be a newly added option
+        // that hasn't been saved yet. We'll skip it for now and let the user select an aircraft.
+        console.log("⚠️ Option has aircraft_id but no aircraft data (likely newly added):", {
+          aircraft_id: option.aircraft_id,
+          hasAircraftModel: !!option.aircraftModel,
+          hasAircraftTail: !!option.aircraftTail,
+        })
+      } else {
+        console.log("⚠️ Missing aircraft data for option:", {
+          aircraft_id: option.aircraft_id,
+          hasAircraftModel: !!option.aircraftModel,
+          hasAircraftTail: !!option.aircraftTail,
+        })
+      }
+    })
+
+    if (Object.keys(aircraftData).length > 0) {
+      console.log("🛩️ Preloading aircraft data:", aircraftData)
+      setAircraftCache(aircraftData)
+    } else {
+      console.log("⚠️ No aircraft data found in options:", quote.options)
+    }
+  }, [quote?.options])
 
   const handleAddOption = () => {
     const newOption: any = {
@@ -165,29 +165,27 @@ useEffect(() => {
     onUpdate({ options: renumberOptions([...options, newOption]) })
   }
 
-const handleUpdateOption = (id: string, updates: Partial<QuoteOption>) => {
-  // Block only if we're hydrating pre-existing options from DB.
-  if (!initialized && options.length > 0) return;
+  const handleUpdateOption = (id: string, updates: Partial<QuoteOption>) => {
+    // Block only if we're hydrating pre-existing options from DB.
+    if (!initialized && options.length > 0) return
 
-  if (
-    !updates ||
-    Object.keys(updates).length === 0 ||
-    Object.values(updates).every((v) => v === undefined || v === null || v === "")
-  ) {
-    return;
+    if (
+      !updates ||
+      Object.keys(updates).length === 0 ||
+      Object.values(updates).every((v) => v === undefined || v === null || v === "")
+    ) {
+      return
+    }
+
+    onUpdate({
+      options: options.map((o) => (o.id === id ? { ...o, ...updates } : o)),
+    })
   }
 
-  onUpdate({
-    options: options.map((o) => (o.id === id ? { ...o, ...updates } : o)),
-  });
-};
-
-
-
   const handleRemoveOption = (id: string) => {
-  const remaining = options.filter((o) => o.id !== id)
-  onUpdate({ options: renumberOptions(remaining) })
-}
+    const remaining = options.filter((o) => o.id !== id)
+    onUpdate({ options: renumberOptions(remaining) })
+  }
 
   const calculateOptionTotal = (option: any) => {
     const feeTotal = option.feesEnabled
@@ -199,12 +197,59 @@ const handleUpdateOption = (id: string, updates: Partial<QuoteOption>) => {
   const total = options.reduce((sum, o) => sum + calculateOptionTotal(o), 0)
   const isOptionsValid = options.length > 0
 
-// 🧩 Navigate (save handled by parent)
-const handleNext = () => {
-  onNext()
-}
+  // 🧩 Navigate (save handled by parent)
+  const handleNext = () => {
+    onNext()
+  }
 
+  const handleAircraftSelect = (selectedAircraft: any) => {
+    const aircraftModel = {
+      id: selectedAircraft.aircraft_id,
+      name: selectedAircraft.model_name || "",
+      manufacturer: selectedAircraft.manufacturer_name || "",
+      defaultCapacity: selectedAircraft.capacity_pax || null,
+      defaultRangeNm: selectedAircraft.range_nm || null,
+      defaultSpeedKnots: null,
+      images:
+        selectedAircraft.aircraft_images ||
+        (selectedAircraft.primary_image_url ? [selectedAircraft.primary_image_url] : []),
+    }
 
+    const aircraftTail = {
+      id: selectedAircraft.aircraft_id,
+      tailNumber: selectedAircraft.tail_number || "",
+      operator: selectedAircraft.operator_name || "",
+      operator_id: "", // AircraftFull doesn't have operator_id field
+      year: selectedAircraft.year_of_manufacture || null,
+      yearOfRefurbish: selectedAircraft.year_of_refurbish || null,
+      cruisingSpeed: null,
+      rangeNm: selectedAircraft.range_nm || null,
+      amenities: selectedAircraft.amenities || [],
+      images:
+        selectedAircraft.aircraft_images ||
+        (selectedAircraft.primary_image_url ? [selectedAircraft.primary_image_url] : []),
+      capacityOverride: selectedAircraft.capacity_pax || null,
+      rangeNmOverride: selectedAircraft.range_nm || null,
+      speedKnotsOverride: null,
+      status: selectedAircraft.status || "ACTIVE",
+      home_base: selectedAircraft.home_base || "",
+      serialNumber: selectedAircraft.serial_number || null,
+      mtowKg: selectedAircraft.mtow_kg || null,
+    }
+
+    onUpdate({
+      aircraft_id: selectedAircraft.aircraft_id,
+      aircraft_tail_id: selectedAircraft.aircraft_id, // Assuming same for now
+      selectedAmenities: selectedAircraft.amenities || [],
+      aircraftModel: aircraftModel,
+      aircraftTail: aircraftTail,
+    })
+
+    toast({
+      title: "Aircraft Selected",
+      description: `${selectedAircraft.model_name || ""} (${selectedAircraft.tail_number || ""}) selected.`,
+    })
+  }
 
   return (
     <Card>
@@ -257,76 +302,30 @@ const handleNext = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Left column: Aircraft */}
                   <div className="space-y-3">
-                    <Label>Aircraft Selection</Label>
-                    <AircraftCombobox
-                      value={option.aircraft_id || null}
-                      onSelect={(a) => {
-                        // Store the full aircraft data in cache
-                        setAircraftCache((prev) => ({ ...prev, [a.aircraft_id]: a }))
-                        
-                        // Also store the aircraft data in the option itself for persistence
-                        const aircraftModel = {
-                          id: a.aircraft_id,
-                          name: a.model_name || "",
-                          manufacturer: a.manufacturer_name || "",
-                          defaultCapacity: a.capacity_pax || null,
-                          defaultRangeNm: a.range_nm || null,
-                          defaultSpeedKnots: null,
-                          images: a.aircraft_images || (a.primary_image_url ? [a.primary_image_url] : []),
-                        }
-                        
-                        const aircraftTail = {
-                          id: a.aircraft_id,
-                          tailNumber: a.tail_number || "",
-                          operator: a.operator_name || "",
-                          operator_id: "", // AircraftFull doesn't have operator_id field
-                          year: a.year_of_manufacture || null,
-                          yearOfRefurbish: a.year_of_refurbish || null,
-                          cruisingSpeed: null,
-                          rangeNm: a.range_nm || null,
-                          amenities: a.amenities || [],
-                          images: a.aircraft_images || (a.primary_image_url ? [a.primary_image_url] : []),
-                          capacityOverride: a.capacity_pax || null,
-                          rangeNmOverride: a.range_nm || null,
-                          speedKnotsOverride: null,
-                          status: a.status || "ACTIVE",
-                          homeBase: a.home_base || "",
-                          serialNumber: a.serial_number || null,
-                          mtowKg: a.mtow_kg || null,
-                        }
-                        
-                        handleUpdateOption(option.id, {
-                          aircraft_id: a.aircraft_id,
-                          aircraft_tail_id: a.aircraft_id, // Assuming same for now
-                          selectedAmenities: a.amenities || [],
-                          aircraftModel: aircraftModel,
-                          aircraftTail: aircraftTail,
-                        })
-                        toast({
-                          title: "Aircraft Selected",
-                          description: `${a.model_name || ""} (${a.tail_number || ""}) selected.`,
-                        })
-                      }}
-                      onClickAdd={() => setCreateOpen(true)}
+                    <Label htmlFor="aircraft">Aircraft</Label>
+                    <SimpleAircraftCombobox
+                      value={quote.aircraft_id}
+                      onSelect={handleAircraftSelect}
+                      onClickAdd={() => setShowCreateModal(true)}
                     />
 
-                 {option.aircraft_id && aircraftCache[option.aircraft_id] && (
-  <AircraftSummaryCard
-    aircraft={aircraftCache[option.aircraft_id]}
-    onEdit={() => setEditOpenFor(option.aircraft_id!)}
-  />
-)}
-                 {option.aircraft_id && !aircraftCache[option.aircraft_id] && (
-  <div className="p-3 border border-yellow-200 bg-yellow-50 rounded-lg">
-    <p className="text-sm text-yellow-800">
-      ⚠️ Aircraft data not found. Please select a different aircraft.
-    </p>
-    <p className="text-xs text-yellow-700 mt-1">
-      Debug: aircraft_id={option.aircraft_id}, cache keys={Object.keys(aircraftCache).join(', ')}
-    </p>
-  </div>
-)}
+                    {quote.aircraft_id && aircraftCache[quote.aircraft_id] && (
+                      <AircraftSummaryCard
+                        aircraft={aircraftCache[quote.aircraft_id]}
+                        onEdit={() => setEditOpenFor(quote.aircraft_id!)}
+                      />
+                    )}
 
+                    {quote.aircraft_id && !aircraftCache[quote.aircraft_id] && (
+                      <div className="p-3 border border-yellow-200 bg-yellow-50 rounded-lg">
+                        <p className="text-sm text-yellow-800">
+                          ⚠️ Aircraft data not found. Please select a different aircraft.
+                        </p>
+                        <p className="text-xs text-yellow-700 mt-1">
+                          Debug: aircraft_id={quote.aircraft_id}, cache keys={Object.keys(aircraftCache).join(", ")}
+                        </p>
+                      </div>
+                    )}
                   </div>
 
                   {/* Right column: Pricing */}
@@ -341,7 +340,7 @@ const handleNext = () => {
                           value={option.flight_hours ?? 0}
                           onChange={(e) =>
                             handleUpdateOption(option.id, {
-                              flight_hours: parseFloat(e.target.value) || 0,
+                              flight_hours: Number.parseFloat(e.target.value) || 0,
                             })
                           }
                         />
@@ -353,7 +352,7 @@ const handleNext = () => {
                           value={option.cost_operator ?? 0}
                           onChange={(e) =>
                             handleUpdateOption(option.id, {
-                              cost_operator: parseFloat(e.target.value) || 0,
+                              cost_operator: Number.parseFloat(e.target.value) || 0,
                             })
                           }
                         />
@@ -365,7 +364,7 @@ const handleNext = () => {
                           value={option.price_commission ?? 0}
                           onChange={(e) =>
                             handleUpdateOption(option.id, {
-                              price_commission: parseFloat(e.target.value) || 0,
+                              price_commission: Number.parseFloat(e.target.value) || 0,
                             })
                           }
                         />
@@ -380,7 +379,7 @@ const handleNext = () => {
                         value={option.price_base ?? 0}
                         onChange={(e) =>
                           handleUpdateOption(option.id, {
-                            price_base: parseFloat(e.target.value) || 0,
+                            price_base: Number.parseFloat(e.target.value) || 0,
                           })
                         }
                       />
@@ -392,9 +391,7 @@ const handleNext = () => {
                       <Textarea
                         placeholder="Special terms, conditions, or comments"
                         value={option.notes ?? ""}
-                        onChange={(e) =>
-                          handleUpdateOption(option.id, { notes: e.target.value })
-                        }
+                        onChange={(e) => handleUpdateOption(option.id, { notes: e.target.value })}
                         className="min-h-[70px]"
                       />
                     </div>
@@ -404,31 +401,24 @@ const handleNext = () => {
                       <div className="flex items-center justify-between mb-2">
                         <div>
                           <Label className="font-medium">Fees & Taxes</Label>
-                          <p className="text-xs text-muted-foreground">
-                            Enable to apply applicable fees and taxes.
-                          </p>
+                          <p className="text-xs text-muted-foreground">Enable to apply applicable fees and taxes.</p>
                         </div>
                         <Switch
                           checked={option.feesEnabled}
-                          onCheckedChange={(enabled) =>
-                            handleUpdateOption(option.id, { feesEnabled: enabled })
-                          }
+                          onCheckedChange={(enabled) => handleUpdateOption(option.id, { feesEnabled: enabled })}
                         />
                       </div>
 
                       {option.feesEnabled && (
                         <div className="space-y-2">
                           {(option.fees ?? []).map((fee) => (
-                            <div
-                              key={fee.id}
-                              className="flex items-center gap-3 p-2 bg-muted/40 rounded-lg"
-                            >
+                            <div key={fee.id} className="flex items-center gap-3 p-2 bg-muted/40 rounded-lg">
                               <Input
                                 value={fee.name}
                                 onChange={(e) =>
                                   handleUpdateOption(option.id, {
                                     fees: option.fees.map((f) =>
-                                      f.id === fee.id ? { ...f, name: e.target.value } : f
+                                      f.id === fee.id ? { ...f, name: e.target.value } : f,
                                     ),
                                   })
                                 }
@@ -444,9 +434,9 @@ const handleNext = () => {
                                       f.id === fee.id
                                         ? {
                                             ...f,
-                                            amount: parseFloat(e.target.value) || 0,
+                                            amount: Number.parseFloat(e.target.value) || 0,
                                           }
-                                        : f
+                                        : f,
                                     ),
                                   })
                                 }
@@ -470,10 +460,9 @@ const handleNext = () => {
                             variant="outline"
                             size="sm"
                             onClick={() => {
-  const newFee: QuoteFee = { id: crypto.randomUUID(), name: "Custom Fee", amount: 0 }
-  handleUpdateOption(option.id, { fees: [...(option.fees ?? []), newFee] })
-}}
-
+                              const newFee: QuoteFee = { id: crypto.randomUUID(), name: "Custom Fee", amount: 0 }
+                              handleUpdateOption(option.id, { fees: [...(option.fees ?? []), newFee] })
+                            }}
                           >
                             <Plus className="mr-2 h-4 w-4" /> Add Fee
                           </Button>
@@ -503,8 +492,6 @@ const handleNext = () => {
           <Button onClick={handleNext} disabled={!isOptionsValid}>
             Next: Services <ChevronRight className="ml-2 h-4 w-4" />
           </Button>
-
-
         </div>
       </CardContent>
 
