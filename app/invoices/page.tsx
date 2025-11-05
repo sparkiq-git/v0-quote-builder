@@ -10,7 +10,15 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
-import { Eye, Trash2, Search, Plus } from "lucide-react"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Eye, Trash2, Search, Plus, MoreHorizontal, CheckCircle2, Send, FileEdit } from "lucide-react"
 import { formatDate, formatTimeAgo, formatCurrency } from "@/lib/utils/format"
 import { useToast } from "@/hooks/use-toast"
 import {
@@ -32,6 +40,7 @@ export default function InvoicesPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [invoiceToDelete, setInvoiceToDelete] = useState<string | null>(null)
+  const [processing, setProcessing] = useState<string | null>(null)
 
   // ✅ updated to use setContent instead of setHeaderContent
   const { setContent } = useAppHeader()
@@ -121,15 +130,14 @@ export default function InvoicesPage() {
   const confirmDelete = async () => {
     if (!invoiceToDelete) return
     try {
-      if (typeof window === "undefined") return
+      setProcessing(invoiceToDelete)
+      const res = await fetch(`/api/invoice/${invoiceToDelete}`, { method: "DELETE" })
+      const data = await res.json()
 
-      const { createClient } = await import("@/lib/supabase/client")
-      const supabase = createClient()
+      if (!res.ok) throw new Error(data.error || "Failed to delete invoice")
 
-      const { error } = await supabase.from("invoice").delete().eq("id", invoiceToDelete)
-      if (error) throw error
       setInvoices((prev) => prev.filter((i) => i.id !== invoiceToDelete))
-      toast({ title: "Invoice deleted", description: "The invoice was removed successfully." })
+      toast({ title: "Invoice deleted", description: "The invoice was removed and quote status updated to accepted." })
     } catch (err: any) {
       toast({
         title: "Delete failed",
@@ -139,6 +147,60 @@ export default function InvoicesPage() {
     } finally {
       setDeleteDialogOpen(false)
       setInvoiceToDelete(null)
+      setProcessing(null)
+    }
+  }
+
+  const handleMarkAsPaid = async (id: string) => {
+    try {
+      setProcessing(id)
+      const res = await fetch(`/api/invoice/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "paid" }),
+      })
+      const data = await res.json()
+
+      if (!res.ok) throw new Error(data.error || "Failed to mark invoice as paid")
+
+      setInvoices((prev) => prev.map((inv) => (inv.id === id ? { ...inv, status: "paid" } : inv)))
+      toast({ title: "Invoice marked as paid", description: "Invoice and quote status updated successfully." })
+    } catch (err: any) {
+      toast({
+        title: "Failed to mark as paid",
+        description: err.message || "Could not update invoice status.",
+        variant: "destructive",
+      })
+    } finally {
+      setProcessing(null)
+    }
+  }
+
+  const handleResend = async (id: string) => {
+    try {
+      setProcessing(id)
+      const res = await fetch(`/api/invoice/${id}/resend`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          send_to_customer: true,
+          send_to_tenant: true,
+          include_pdf: true,
+        }),
+      })
+      const data = await res.json()
+
+      if (!res.ok) throw new Error(data.error || "Failed to resend invoice")
+
+      toast({ title: "Invoice resent", description: "Invoice email sent successfully to customer and tenant." })
+    } catch (err: any) {
+      toast({
+        title: "Failed to resend invoice",
+        description: err.message || "Could not resend invoice email.",
+        variant: "destructive",
+      })
+    } finally {
+      setProcessing(null)
     }
   }
 
@@ -232,7 +294,7 @@ export default function InvoicesPage() {
                       </TableCell>
 
                       <TableCell>
-                        <div className="text-sm font-medium">{formatCurrency(inv.amount, inv.currency)}</div>
+                        <div className="text-sm font-medium">{formatCurrency(inv.amount)}</div>
                         <div className="text-xs text-muted-foreground">{inv.aircraft}</div>
                       </TableCell>
 
@@ -242,22 +304,52 @@ export default function InvoicesPage() {
                       </TableCell>
 
                       <TableCell>
-                        <div className="flex items-center space-x-2">
-                          <Button asChild variant="outline" size="sm">
-                            <Link href={`/invoices/${inv.id}`}>
-                              <Eye className="mr-2 h-4 w-4" />
-                              View
-                            </Link>
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDelete(inv.id)}
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0"
+                              disabled={processing === inv.id}
+                            >
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuItem asChild>
+                              <Link href={`/invoices/${inv.id}`}>
+                                <Eye className="mr-2 h-4 w-4" />
+                                View / Edit
+                              </Link>
+                            </DropdownMenuItem>
+                            {inv.status !== "paid" && (
+                              <DropdownMenuItem
+                                onClick={() => handleMarkAsPaid(inv.id)}
+                                disabled={processing === inv.id}
+                              >
+                                <CheckCircle2 className="mr-2 h-4 w-4" />
+                                Mark as Paid
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuItem
+                              onClick={() => handleResend(inv.id)}
+                              disabled={processing === inv.id}
+                            >
+                              <Send className="mr-2 h-4 w-4" />
+                              Re-send Invoice
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={() => handleDelete(inv.id)}
+                              disabled={processing === inv.id}
+                              className="text-red-600 focus:text-red-600"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                     </TableRow>
                   ))}
