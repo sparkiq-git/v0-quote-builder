@@ -2,7 +2,8 @@ import * as React from 'react'
 
 import { cn } from '@/lib/utils'
 
-function Input({ className, type, ...props }: React.ComponentProps<'input'>) {
+function Input({ className, type, children, ...props }: React.ComponentProps<'input'>) {
+  // Filter out children to prevent React error about void elements
   return (
     <input
       type={type}
