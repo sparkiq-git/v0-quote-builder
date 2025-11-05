@@ -149,7 +149,7 @@ export function SimpleAirportCombobox({ value, onSelect, placeholder = "Search a
               top: position.bottom + window.scrollY + 4,
               left: position.left + window.scrollX,
               width: position.width,
-              zIndex: 50,
+              zIndex: 50000,
             }}
             className="rounded-md border bg-popover text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95"
           >

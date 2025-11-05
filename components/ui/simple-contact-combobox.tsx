@@ -173,10 +173,11 @@ export function SimpleContactCombobox({ tenantId, value, selectedName, onSelect 
         createPortal(
           <div
             ref={dropdownRef}
-            className="fixed z-50 w-[350px] rounded-md border bg-popover p-0 text-popover-foreground shadow-md"
+            className="absolute w-[350px] rounded-md border bg-popover p-0 text-popover-foreground shadow-md"
             style={{
-              top: position.bottom + 4,
-              left: position.left,
+              top: position.bottom + window.scrollY + 4,
+              left: position.left + window.scrollX,
+              zIndex: 50000,
             }}
           >
             {!creating ? (

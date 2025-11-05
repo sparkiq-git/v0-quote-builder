@@ -119,7 +119,10 @@ export function SimpleItemCombobox({ tenantId, value, onSelect, placeholder = "S
       <button
         ref={triggerRef}
         type="button"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => {
+          console.log("[v0] Item combobox clicked, open:", !isOpen)
+          setIsOpen(!isOpen)
+        }}
         className={cn(
           "flex h-9 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm shadow-xs",
           "hover:bg-accent hover:text-accent-foreground",
@@ -146,7 +149,7 @@ export function SimpleItemCombobox({ tenantId, value, onSelect, placeholder = "S
               top: position.bottom + window.scrollY + 4,
               left: position.left + window.scrollX,
               width: position.width,
-              zIndex: 50,
+              zIndex: 50000,
             }}
             className="rounded-md border bg-popover text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95"
           >
