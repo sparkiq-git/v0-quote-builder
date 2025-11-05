@@ -26,6 +26,8 @@ import {
   UserCircle,
   ChevronDown,
   Users2,
+  Contact,
+  UserPlus,
 } from "lucide-react"
 import { useMockStore } from "@/lib/mock/store"
 import { cn } from "@/lib/utils"
@@ -66,9 +68,14 @@ const operationsNavigation = [
     icon: Building2,
   },
   {
+    title: "Contacts",
+    href: "/operations/contacts",
+    icon: Contact,
+  },
+  {
     title: "Passengers",
     href: "/operations/passengers",
-    icon: UserCircle,
+    icon: UserPlus,
   },
   {
     title: "Crew",
