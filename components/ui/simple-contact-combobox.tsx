@@ -17,12 +17,13 @@ interface Contact {
 }
 
 interface SimpleContactComboboxProps {
+  tenantId?: string
   value?: string | null
   selectedName?: string | null
   onSelect: (contact: Contact) => void
 }
 
-export function SimpleContactCombobox({ value, selectedName, onSelect }: SimpleContactComboboxProps) {
+export function SimpleContactCombobox({ tenantId, value, selectedName, onSelect }: SimpleContactComboboxProps) {
   const [open, setOpen] = useState(false)
   const [contacts, setContacts] = useState<Contact[]>([])
   const [search, setSearch] = useState("")
@@ -42,41 +43,43 @@ export function SimpleContactCombobox({ value, selectedName, onSelect }: SimpleC
     if (typeof window === "undefined") return
 
     const initSupabase = async () => {
-      const { createClientComponentClient } = await import("@supabase/auth-helpers-nextjs")
-      setSupabase(createClientComponentClient())
+      const { createClient } = await import("@/lib/supabase/client")
+      setSupabase(createClient())
     }
 
     initSupabase()
   }, [])
 
-  const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || process.env.TENANT_ID
+  const effectiveTenantId = tenantId || process.env.NEXT_PUBLIC_TENANT_ID || process.env.TENANT_ID
 
   // Fetch contacts
   useEffect(() => {
-    if (!open || !tenantId || !supabase) return
+    if (!open || !effectiveTenantId || !supabase) return
 
     const fetchContacts = async () => {
       const { data, error } = await supabase
         .from("contact")
         .select("*")
-        .eq("tenant_id", tenantId)
+        .eq("tenant_id", effectiveTenantId)
         .ilike("full_name", `%${search}%`)
         .order("full_name", { ascending: true })
         .limit(25)
 
       if (error) {
+        console.error("[v0] Error loading contacts:", error)
         toast({
           title: "Error loading contacts",
           description: error.message,
           variant: "destructive",
         })
       } else {
+        console.log("[v0] Loaded contacts:", data?.length)
         setContacts(data || [])
       }
     }
 
     fetchContacts()
-  }, [open, search, tenantId, supabase])
+  }, [open, search, effectiveTenantId, supabase, toast])
 
   // Click outside to close
   useEffect(() => {
@@ -117,7 +120,7 @@ export function SimpleContactCombobox({ value, selectedName, onSelect }: SimpleC
     const company = form.get("company") as string
 
     if (!full_name || !email || !phone) return
-    if (!tenantId || !supabase) {
+    if (!effectiveTenantId || !supabase) {
       toast({
         title: "Error",
         description: "Cannot create contact",
@@ -128,7 +131,7 @@ export function SimpleContactCombobox({ value, selectedName, onSelect }: SimpleC
 
     const { data, error } = await supabase
       .from("contact")
-      .insert([{ tenant_id: tenantId, full_name, email, phone, company }])
+      .insert([{ tenant_id: effectiveTenantId, full_name, email, phone, company }])
       .select()
       .single()
 
@@ -154,7 +157,10 @@ export function SimpleContactCombobox({ value, selectedName, onSelect }: SimpleC
         ref={triggerRef}
         variant="outline"
         className="justify-between w-full bg-transparent"
-        onClick={() => setOpen(!open)}
+        onClick={() => {
+          console.log("[v0] Contact combobox clicked, open:", !open)
+          setOpen(!open)
+        }}
         type="button"
       >
         {selectedName || "Select contact"}
@@ -208,6 +214,7 @@ export function SimpleContactCombobox({ value, selectedName, onSelect }: SimpleC
                         key={c.id}
                         className="relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
                         onClick={() => {
+                          console.log("[v0] Contact selected:", c.full_name)
                           onSelect(c)
                           setOpen(false)
                         }}
