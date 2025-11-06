@@ -202,12 +202,14 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Apply updated_at trigger to itinerary
+DROP TRIGGER IF EXISTS trg_itinerary_updated_at ON public.itinerary;
 CREATE TRIGGER trg_itinerary_updated_at
   BEFORE UPDATE ON public.itinerary
   FOR EACH ROW
   EXECUTE FUNCTION public.set_updated_at();
 
 -- Apply updated_at trigger to itinerary_detail
+DROP TRIGGER IF EXISTS trg_itinerary_detail_updated_at ON public.itinerary_detail;
 CREATE TRIGGER trg_itinerary_detail_updated_at
   BEFORE UPDATE ON public.itinerary_detail
   FOR EACH ROW
@@ -255,7 +257,6 @@ BEGIN
     q.earliest_departure,
     q.latest_return,
     qo.aircraft_id,
-    qo.aircraft_tail_id,
     ac.tail_number as aircraft_tail_no,
     -- Lead-specific fields
     l.asap,
@@ -265,7 +266,7 @@ BEGIN
   INTO v_quote
   FROM public.quote q
   LEFT JOIN public.quote_option qo ON q.selected_option_id = qo.id
-  LEFT JOIN public.aircraft ac ON qo.aircraft_tail_id = ac.id
+  LEFT JOIN public.aircraft ac ON qo.aircraft_id = ac.id -- quote_option only has aircraft_id, not aircraft_tail_id
   LEFT JOIN public.lead l ON q.lead_id = l.id
   WHERE q.id = p_quote_id;
   
@@ -278,9 +279,21 @@ BEGIN
     RAISE EXCEPTION 'Itinerary already exists for quote: %', p_quote_id;
   END IF;
   
+  -- Log start of itinerary creation
+  RAISE NOTICE '[CREATE ITINERARY] Starting itinerary creation for quote: %', p_quote_id;
+  
   -- Get contact_id (use from quote or find/create from contact_name/email)
   v_contact_id := v_quote.contact_id;
   v_tenant_id := v_quote.tenant_id;
+  
+  -- Validate required fields
+  IF v_contact_id IS NULL THEN
+    RAISE EXCEPTION 'Quote % does not have a contact_id. Cannot create itinerary without a contact.', p_quote_id;
+  END IF;
+  
+  IF v_tenant_id IS NULL THEN
+    RAISE EXCEPTION 'Quote % does not have a tenant_id. Cannot create itinerary without a tenant.', p_quote_id;
+  END IF;
   
   -- Use leg_count from quote if available, otherwise count from quote_detail
   IF v_quote.leg_count IS NOT NULL AND v_quote.leg_count > 0 THEN
@@ -332,9 +345,9 @@ BEGIN
     total_pax,
     domestic_trip,
     asap,
-    aircraft_id,
-    aircraft_tail_id,
-    aircraft_tail_no,
+        aircraft_id,
+        aircraft_tail_id, -- Set to same as aircraft_id (quote_option doesn't have separate tail_id)
+        aircraft_tail_no,
     aircraft_pref,
     earliest_departure,
     latest_return,
@@ -356,10 +369,10 @@ BEGIN
     v_leg_count,
     v_total_pax,
     v_quote.domestic_trip,
-    COALESCE(v_quote.asap, false),
-    v_quote.aircraft_id,
-    v_quote.aircraft_tail_id,
-    v_quote.aircraft_tail_no,
+        COALESCE(v_quote.asap, false),
+        v_quote.aircraft_id,
+        v_quote.aircraft_id, -- aircraft_tail_id = aircraft_id (quote_option only has aircraft_id)
+        v_quote.aircraft_tail_no,
     v_quote.aircraft_pref,
     v_earliest_departure,
     v_latest_return,
@@ -428,69 +441,97 @@ BEGIN
     )
   WHERE id = v_itinerary_id;
   
+  RAISE NOTICE '[CREATE ITINERARY] ✅ Successfully created itinerary % with % detail records', v_itinerary_id, v_seq - 1;
+  
   RETURN v_itinerary_id;
 END;
 $$;
 
 -- ============================================
--- TRIGGER: Auto-create Itinerary when Quote Status → "accepted"
+-- TRIGGER: Auto-create Itinerary when Invoice is Created
 -- ============================================
-CREATE OR REPLACE FUNCTION public.handle_quote_status_change()
+CREATE OR REPLACE FUNCTION public.handle_invoice_insert()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
+DECLARE
+  v_itinerary_id UUID;
 BEGIN
-  -- Only create itinerary when status changes TO "accepted"
-  IF NEW.status = 'accepted' AND (OLD.status IS NULL OR OLD.status != 'accepted') THEN
-    -- Check if itinerary already exists (prevent duplicates)
-    IF NOT EXISTS (SELECT 1 FROM public.itinerary WHERE quote_id = NEW.id) THEN
-      BEGIN
-        PERFORM public.create_itinerary_from_quote(NEW.id);
-        RAISE NOTICE 'Created draft itinerary for quote: %', NEW.id;
-      EXCEPTION WHEN OTHERS THEN
-        -- Log error but don't fail the quote update
-        RAISE WARNING 'Failed to create itinerary for quote %: %', NEW.id, SQLERRM;
-      END;
-    END IF;
+  -- ALWAYS log when trigger fires (use RAISE WARNING so it shows in logs)
+  RAISE WARNING '[ITINERARY TRIGGER] 🔔🔔🔔 Invoice INSERT trigger fired! Invoice: %, Quote: %', NEW.id, NEW.quote_id;
+  
+  -- Check if itinerary already exists for this quote (prevent duplicates)
+  IF EXISTS (SELECT 1 FROM public.itinerary WHERE quote_id = NEW.quote_id) THEN
+    RAISE WARNING '[ITINERARY TRIGGER] Itinerary already exists for quote %, linking invoice_id...', NEW.quote_id;
+    
+    -- Update existing itinerary to link this invoice
+    UPDATE public.itinerary
+    SET invoice_id = NEW.id
+    WHERE quote_id = NEW.quote_id
+      AND invoice_id IS NULL;
+    
+    RETURN NEW;
   END IF;
+  
+  -- Create new draft itinerary from quote
+  RAISE WARNING '[ITINERARY TRIGGER] Creating draft itinerary for quote: %', NEW.quote_id;
+  
+  BEGIN
+    v_itinerary_id := public.create_itinerary_from_quote(NEW.quote_id);
+    
+    -- Link the invoice_id to the newly created itinerary
+    UPDATE public.itinerary
+    SET invoice_id = NEW.id
+    WHERE id = v_itinerary_id;
+    
+    RAISE WARNING '[ITINERARY TRIGGER] ✅✅✅ SUCCESS! Created itinerary % and linked invoice % for quote: %', 
+      v_itinerary_id, NEW.id, NEW.quote_id;
+  EXCEPTION WHEN OTHERS THEN
+    -- Log error but don't fail the invoice insert
+    RAISE WARNING '[ITINERARY TRIGGER] ❌❌❌ ERROR creating itinerary for quote %: %', NEW.quote_id, SQLERRM;
+    RAISE WARNING '[ITINERARY TRIGGER] SQLSTATE: %', SQLSTATE;
+  END;
   
   RETURN NEW;
 END;
 $$;
 
--- Create trigger on quote table
-CREATE TRIGGER trg_quote_status_create_itinerary
-  AFTER UPDATE OF status ON public.quote
+-- Create trigger on invoice table (fires when invoice is inserted)
+DROP TRIGGER IF EXISTS trg_invoice_insert_create_itinerary ON public.invoice;
+CREATE TRIGGER trg_invoice_insert_create_itinerary
+  AFTER INSERT ON public.invoice
   FOR EACH ROW
-  WHEN (NEW.status = 'accepted' AND (OLD.status IS NULL OR OLD.status != 'accepted'))
-  EXECUTE FUNCTION public.handle_quote_status_change();
+  EXECUTE FUNCTION public.handle_invoice_insert();
 
 -- ============================================
--- TRIGGER: Link Invoice to Itinerary when Invoice is Paid
+-- TRIGGER: Update Itinerary Status when Invoice is Paid
 -- ============================================
+-- Note: The invoice_id is already linked when invoice is created (via INSERT trigger)
+-- This trigger only updates the itinerary status when invoice is paid
 CREATE OR REPLACE FUNCTION public.handle_invoice_paid()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
 BEGIN
-  -- When invoice status changes to "paid", link it to itinerary if exists
+  -- When invoice status changes to "paid", ensure itinerary is linked and ready for confirmation
   IF NEW.status = 'paid' AND (OLD.status IS NULL OR OLD.status != 'paid') THEN
-    -- Update itinerary to link invoice_id
+    -- Ensure invoice_id is linked to itinerary (in case INSERT trigger failed or was skipped)
     UPDATE public.itinerary
     SET invoice_id = NEW.id
     WHERE quote_id = NEW.quote_id
-      AND invoice_id IS NULL;
+      AND (invoice_id IS NULL OR invoice_id != NEW.id);
     
-    RAISE NOTICE 'Linked paid invoice % to itinerary for quote: %', NEW.id, NEW.quote_id;
+    RAISE WARNING '[ITINERARY TRIGGER] Invoice % paid for quote %. Itinerary is ready to be confirmed.', NEW.id, NEW.quote_id;
   END IF;
   
   RETURN NEW;
 END;
 $$;
 
--- Create trigger on invoice table
+-- Create trigger on invoice table (keep existing trigger name from user's schema)
+DROP TRIGGER IF EXISTS trg_invoice_paid_link_itinerary ON public.invoice;
 CREATE TRIGGER trg_invoice_paid_link_itinerary
   AFTER UPDATE OF status ON public.invoice
   FOR EACH ROW
@@ -549,6 +590,7 @@ CREATE INDEX IF NOT EXISTS itinerary_image_is_primary_idx
   WHERE is_primary = true;
 
 -- Trigger: Update updated_at timestamp
+DROP TRIGGER IF EXISTS trg_itinerary_image_updated_at ON public.itinerary_image;
 CREATE TRIGGER trg_itinerary_image_updated_at
   BEFORE UPDATE ON public.itinerary_image
   FOR EACH ROW
@@ -590,7 +632,7 @@ COMMENT ON TABLE public.itinerary IS 'Itineraries created from accepted quotes. 
 COMMENT ON TABLE public.itinerary_detail IS 'Individual flight legs/segments for an itinerary.';
 COMMENT ON TABLE public.itinerary_image IS 'Images specific to an itinerary. Users can override/upload images that override the quote/aircraft images.';
 COMMENT ON FUNCTION public.create_itinerary_from_quote IS 'Creates a draft itinerary from an accepted quote, copying quote_detail to itinerary_detail.';
-COMMENT ON FUNCTION public.handle_quote_status_change IS 'Trigger function that automatically creates a draft itinerary when quote status changes to accepted.';
-COMMENT ON FUNCTION public.handle_invoice_paid IS 'Trigger function that links invoice to itinerary when invoice status changes to paid.';
+COMMENT ON FUNCTION public.handle_invoice_insert IS 'Trigger function that automatically creates a draft itinerary when an invoice is created.';
+COMMENT ON FUNCTION public.handle_invoice_paid IS 'Trigger function that ensures invoice_id is linked to itinerary when invoice status changes to paid.';
 COMMENT ON FUNCTION public.can_confirm_itinerary_trip IS 'Helper function to check if an itinerary can be confirmed (invoice must be paid).';
 

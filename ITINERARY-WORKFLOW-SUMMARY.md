@@ -6,12 +6,12 @@ This document explains the itinerary workflow system that automatically creates 
 
 ## Workflow Steps
 
-### 1. Quote Accepted → Draft Itinerary Created
+### 1. Invoice Created → Draft Itinerary Created
 
-**Trigger**: When a quote's `status` field changes to `"accepted"`
+**Trigger**: When a new invoice is inserted into the `invoice` table
 
 **What Happens**:
-- A database trigger (`trg_quote_status_create_itinerary`) fires
+- A database trigger (`trg_invoice_insert_create_itinerary`) fires
 - The RPC function `create_itinerary_from_quote()` is called
 - A new itinerary is created with:
   - Status: `"draft"`
@@ -42,25 +42,28 @@ This document explains the itinerary workflow system that automatically creates 
 - `earliest_departure` → itinerary.earliest_departure (from quote or calculated)
 - `latest_return` → itinerary.latest_return (from quote or calculated)
 
-**From quote_option** (via selected_option_id):
-- `aircraft_id` → itinerary.aircraft_id (references aircraft.id)
-- `aircraft_tail_id` → itinerary.aircraft_tail_id (references aircraft.id, if specific tail selected)
-- `aircraft.tail_number` → itinerary.aircraft_tail_no (from aircraft table)
+    **From quote_option** (via selected_option_id):
+    - `aircraft_id` → itinerary.aircraft_id (references aircraft.id)
+    - `aircraft_tail_id` → itinerary.aircraft_tail_id (references aircraft.id, if specific tail selected)
+    - `aircraft.tail_number` → itinerary.aircraft_tail_no (from aircraft table)
 
-**From lead table** (if lead_id exists):
-- `asap` → itinerary.asap (urgent trip flag)
-- `source` → itinerary.source (lead source tracking)
-- `source_ref` → itinerary.source_ref (lead source reference)
-- `special_notes` → itinerary.special_requirements (fallback if quote doesn't have special_notes)
+    **From lead table** (if lead_id exists):
+    - `asap` → itinerary.asap (urgent trip flag)
+    - `source` → itinerary.source (lead source tracking)
+    - `source_ref` → itinerary.source_ref (lead source reference)
+    - `special_notes` → itinerary.special_requirements (fallback if quote doesn't have special_notes)
 
-### 2. Invoice Paid → Itinerary Linked & Ready for Confirmation
+    **The invoice is automatically linked**:
+    - `invoice.id` → itinerary.invoice_id (linked immediately when invoice is created)
+
+    ### 2. Invoice Paid → Itinerary Ready for Confirmation
 
 **Trigger**: When an invoice's `status` field changes to `"paid"`
 
 **What Happens**:
 - A database trigger (`trg_invoice_paid_link_itinerary`) fires
-- The itinerary's `invoice_id` is linked to the paid invoice
-- The itinerary status can now be changed to `"trip_confirmed"` (via application logic)
+- The itinerary's `invoice_id` is ensured to be linked (safety check in case INSERT trigger failed)
+- The itinerary is now ready for its status to be changed to `"trip_confirmed"` by a user in the application
 
 **Important**: The trigger only links the invoice. Your application should:
 1. Check if invoice is paid using `can_confirm_itinerary_trip()` function
@@ -74,7 +77,7 @@ This document explains the itinerary workflow system that automatically creates 
 **Key Fields**:
 - `id` - UUID primary key
 - `quote_id` - References quote (required, unique - one itinerary per quote)
-- `invoice_id` - References invoice (nullable, set when invoice is paid)
+- `invoice_id` - References invoice (set when invoice is created, linked via INSERT trigger)
 - `contact_id` - References contact (required, from quote)
 - `lead_id` - References lead (nullable, links back to original lead)
 - `tenant_id` - References tenant (required)
@@ -156,10 +159,9 @@ This document explains the itinerary workflow system that automatically creates 
 
 ### Triggers
 
-1. **`trg_quote_status_create_itinerary`**
-   - Fires: AFTER UPDATE of `status` on `quote` table
-   - Condition: Status changed TO `"accepted"`
-   - Action: Calls `create_itinerary_from_quote()`
+1. **`trg_invoice_insert_create_itinerary`**
+   - Fires: AFTER INSERT on `invoice` table
+   - Action: Calls `create_itinerary_from_quote()` and links `invoice_id` to the newly created itinerary
 
 2. **`trg_invoice_paid_link_itinerary`**
    - Fires: AFTER UPDATE of `status` on `invoice` table
@@ -179,9 +181,9 @@ All tables have Row Level Security enabled:
 
 ## Application Integration Points
 
-### 1. Quote Status Change Notification
+### 1. Invoice Created Notification
 
-When a quote status changes to "accepted", you should:
+When an invoice is created, the trigger automatically creates a draft itinerary. You should:
 - Show a notification that a draft itinerary was created
 - Optionally redirect user to the itinerary page
 - Display itinerary status badge as "draft"

@@ -83,9 +83,14 @@ export function ItinerariesListClient() {
       if (statusFilter !== "all") params.append("status", statusFilter)
 
       const response = await fetch(`/api/itineraries?${params.toString()}`)
-      if (!response.ok) throw new Error("Failed to fetch itineraries")
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        console.error("Failed to fetch itineraries:", response.status, errorData)
+        throw new Error(errorData.error || "Failed to fetch itineraries")
+      }
 
       const { data } = await response.json()
+      console.log(`[ITINERARIES CLIENT] Received ${data?.length || 0} itineraries`)
       setItineraries(data || [])
     } catch (error: any) {
       console.error("Error fetching itineraries:", error)

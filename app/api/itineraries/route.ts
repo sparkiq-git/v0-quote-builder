@@ -41,6 +41,9 @@ export async function GET(request: NextRequest) {
         )
       `)
       .eq("tenant_id", tenantId)
+    
+    // Add debug logging
+    console.log(`[ITINERARIES API] Querying itineraries for tenant: ${tenantId}`)
 
     if (status && status !== "all") {
       query = query.eq("status", status)
@@ -55,8 +58,11 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       console.error("Error fetching itineraries:", error)
+      console.error("Error details:", JSON.stringify(error, null, 2))
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
+
+    console.log(`[ITINERARIES API] Fetched ${rawData?.length || 0} itineraries for tenant ${tenantId}`)
 
     // Filter by search in contact name if search query provided
     let data = rawData || []
