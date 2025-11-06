@@ -30,19 +30,46 @@ export function SimpleAircraftCombobox({ value, onSelect, onClickAdd }: Props) {
     setMounted(true)
   }, [])
 
-  // Calculate position when dropdown opens
-  useEffect(() => {
-    if (open && triggerRef.current) {
-      const rect = triggerRef.current.getBoundingClientRect()
-      setPosition({
-        top: rect.bottom + window.scrollY + 4,
-        left: rect.left + window.scrollX,
-        width: rect.width,
-      })
-    } else {
-      setPosition(null)
+  const calculatePosition = () => {
+    if (!triggerRef.current) return null
+
+    const rect = triggerRef.current.getBoundingClientRect()
+    const viewportHeight = window.innerHeight
+    const viewportWidth = window.innerWidth
+    const dropdownHeight = 400 // estimated max height
+    const dropdownWidth = Math.max(rect.width, 420)
+
+    console.log("[v0] Aircraft button rect:", rect)
+
+    let top = rect.bottom + 4
+    let left = rect.left
+
+    const spaceBelow = viewportHeight - rect.bottom
+    const spaceAbove = rect.top
+
+    // Only show above if there's actually enough space above (not just more than below)
+    if (spaceBelow < dropdownHeight && spaceAbove >= dropdownHeight) {
+      // There's enough space above, show above
+      top = rect.top - dropdownHeight - 4
+    } else if (spaceBelow < dropdownHeight && spaceAbove < dropdownHeight) {
+      // Not enough space either way, show below and let it scroll
+      top = rect.bottom + 4
     }
-  }, [open])
+
+    // If dropdown would go off right of screen, align to right edge
+    if (left + dropdownWidth > viewportWidth) {
+      left = viewportWidth - dropdownWidth - 8
+    }
+
+    const newPosition = {
+      top: Math.max(4, top), // At least 4px from top
+      left: Math.max(4, left), // At least 4px from left
+      width: rect.width,
+    }
+
+    console.log("[v0] Aircraft calculated position:", newPosition)
+    return newPosition
+  }
 
   // Focus search input when dropdown opens
   useEffect(() => {
@@ -68,6 +95,26 @@ export function SimpleAircraftCombobox({ value, onSelect, onClickAdd }: Props) {
 
     document.addEventListener("mousedown", handleClickOutside)
     return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [open])
+
+  useEffect(() => {
+    if (!open) return
+
+    const handleScroll = () => {
+      const newPosition = calculatePosition()
+      if (newPosition) {
+        setPosition(newPosition)
+      }
+    }
+
+    // Listen to scroll on window and all scrollable parents
+    window.addEventListener("scroll", handleScroll, true)
+    window.addEventListener("resize", handleScroll)
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll, true)
+      window.removeEventListener("resize", handleScroll)
+    }
   }, [open])
 
   // Load aircraft list when dropdown opens
@@ -137,6 +184,12 @@ export function SimpleAircraftCombobox({ value, onSelect, onClickAdd }: Props) {
         type="button"
         className="inline-flex items-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] border shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50 h-9 px-4 py-2 justify-between w-full bg-transparent"
         onClick={() => {
+          if (!open) {
+            const newPosition = calculatePosition()
+            setPosition(newPosition)
+          } else {
+            setPosition(null)
+          }
           setOpen(!open)
         }}
       >
@@ -166,11 +219,11 @@ export function SimpleAircraftCombobox({ value, onSelect, onClickAdd }: Props) {
             className="rounded-md border bg-popover text-popover-foreground shadow-md"
             style={{
               position: "fixed",
-              top: position.top,
-              left: position.left,
-              width: Math.max(position.width, 420),
+              top: `${position.top}px`,
+              left: `${position.left}px`,
+              width: `${Math.max(position.width, 420)}px`,
               zIndex: 2147483647,
-              border: "2px solid red",
+              pointerEvents: "auto",
             }}
           >
             {/* Search Input */}

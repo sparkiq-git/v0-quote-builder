@@ -41,9 +41,27 @@ export function SimpleItemCombobox({ tenantId, value, onSelect, placeholder = "S
   useEffect(() => {
     if (isOpen && triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect()
+      const viewportHeight = window.innerHeight
+      const viewportWidth = window.innerWidth
+      const dropdownHeight = 400 // estimated max height
+
+      // Calculate position, ensuring it stays within viewport
+      let top = rect.bottom + 4
+      let left = rect.left
+
+      // If dropdown would go off bottom of screen, show above button instead
+      if (top + dropdownHeight > viewportHeight) {
+        top = rect.top - dropdownHeight - 4
+      }
+
+      // If dropdown would go off right of screen, align to right edge
+      if (left + rect.width > viewportWidth) {
+        left = viewportWidth - rect.width - 8
+      }
+
       setPosition({
-        top: rect.bottom + window.scrollY + 4,
-        left: rect.left + window.scrollX,
+        top: Math.max(4, top), // At least 4px from top
+        left: Math.max(4, left), // At least 4px from left
         width: rect.width,
       })
     } else {
@@ -154,11 +172,12 @@ export function SimpleItemCombobox({ tenantId, value, onSelect, placeholder = "S
           <div
             ref={dropdownRef}
             style={{
-              position: "absolute",
-              top: position.top,
-              left: position.left,
-              width: position.width,
-              zIndex: 50000,
+              position: "fixed",
+              top: `${position.top}px`,
+              left: `${position.left}px`,
+              width: `${position.width}px`,
+              zIndex: 2147483647,
+              pointerEvents: "auto",
             }}
             className="rounded-md border bg-popover text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95"
           >
