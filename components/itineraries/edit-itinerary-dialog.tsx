@@ -42,21 +42,11 @@ interface Passenger {
   avatar_path: string | null
 }
 
-interface CrewMember {
-  id: string
-  display_name: string
-  first_name: string
-  last_name: string
-  phone_number: string | null
-  active: boolean
-}
-
 interface ItineraryCrewMember {
   id: string
-  crew_id: string
   role: string
   notes: string | null
-  crew?: CrewMember
+  confirmed: boolean
 }
 
 interface Itinerary {
@@ -101,12 +91,8 @@ export function EditItineraryDialog({
     company: "",
   })
   
-  // Crew state - references existing crew members
-  const [crewMembers, setCrewMembers] = useState<Array<{ id: string; crew_id: string; role: string; notes?: string }>>([])
-  const [availableCrew, setAvailableCrew] = useState<CrewMember[]>([])
-  const [loadingCrew, setLoadingCrew] = useState(true)
-  const [crewSearch, setCrewSearch] = useState("")
-  const [crewComboboxOpen, setCrewComboboxOpen] = useState<string | null>(null)
+  // Crew state - stored independently (no crew_id foreign key)
+  const [crewMembers, setCrewMembers] = useState<Array<{ id: string; role: string; notes?: string }>>([])
 
   const fetchItineraryData = async () => {
     try {
@@ -129,7 +115,6 @@ export function EditItineraryDialog({
         // Map crew data to match our state structure
         const crewData = (data?.crew || []).map((c: any) => ({
           id: c.id,
-          crew_id: c.crew_id,
           role: c.role,
           notes: c.notes || "",
         }))
@@ -159,24 +144,6 @@ export function EditItineraryDialog({
     }
   }
 
-  const fetchAvailableCrew = async () => {
-    setLoadingCrew(true)
-    try {
-      const response = await fetch(`/api/crew?active=true`)
-      if (!response.ok) throw new Error("Failed to fetch crew")
-      const { data } = await response.json()
-      setAvailableCrew(data || [])
-    } catch (error: any) {
-      console.error("Error fetching crew:", error)
-      toast({
-        title: "Error",
-        description: "Failed to load crew members",
-        variant: "destructive",
-      })
-    } finally {
-      setLoadingCrew(false)
-    }
-  }
 
   // Fetch existing passengers and crew for this itinerary
   useEffect(() => {
@@ -194,13 +161,6 @@ export function EditItineraryDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, itinerary.contact_id])
 
-  // Fetch available crew
-  useEffect(() => {
-    if (open) {
-      fetchAvailableCrew()
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open])
 
   const handleAddPassengerSlot = () => {
     if (passengers.length >= itinerary.total_pax) {
@@ -291,18 +251,11 @@ export function EditItineraryDialog({
   }
 
   const handleAddCrew = (role: "PIC" | "SIC" | "Cabin Attendance") => {
-    setCrewMembers([...crewMembers, { id: `temp-${Date.now()}`, crew_id: "", role, notes: "" }])
+    setCrewMembers([...crewMembers, { id: `temp-${Date.now()}`, role, notes: "" }])
   }
 
   const handleRemoveCrew = (index: number) => {
     setCrewMembers(crewMembers.filter((_, i) => i !== index))
-  }
-
-  const handleSelectCrew = (index: number, crewId: string) => {
-    const updated = [...crewMembers]
-    updated[index].crew_id = crewId
-    setCrewMembers(updated)
-    setCrewComboboxOpen(null)
   }
 
   const handleUpdateCrewNotes = (index: number, notes: string) => {
@@ -325,10 +278,10 @@ export function EditItineraryDialog({
         throw new Error("Please select a passenger for all entries")
       }
 
-      // Validate all crew have crew_id selected
-      const incompleteCrew = crewMembers.filter((c) => !c.crew_id)
+      // Validate all crew have role
+      const incompleteCrew = crewMembers.filter((c) => !c.role)
       if (incompleteCrew.length > 0) {
-        throw new Error("Please select a crew member for all entries")
+        throw new Error("Please enter a role for all crew members")
       }
 
       // Save passengers
@@ -351,7 +304,6 @@ export function EditItineraryDialog({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           crew: crewMembers.map((c) => ({
-            crew_id: c.crew_id,
             role: c.role,
             notes: c.notes || undefined,
           })),
@@ -388,9 +340,7 @@ export function EditItineraryDialog({
     setPassengers([])
     setCrewMembers([])
     setPassengerSearch("")
-    setCrewSearch("")
     setPassengerComboboxOpen(null)
-    setCrewComboboxOpen(null)
     setShowCreatePassengerForm(false)
     setNewPassengerData({ full_name: "", email: "", phone: "", company: "" })
   }, [onOpenChange])
@@ -406,23 +356,8 @@ export function EditItineraryDialog({
     )
   })
 
-  // Filter crew based on search
-  const filteredCrew = availableCrew.filter((crew) => {
-    if (!crewSearch) return true
-    const search = crewSearch.toLowerCase()
-    return (
-      crew.display_name.toLowerCase().includes(search) ||
-      (crew.first_name && crew.first_name.toLowerCase().includes(search)) ||
-      (crew.last_name && crew.last_name.toLowerCase().includes(search))
-    )
-  })
-
   const getPassengerById = (passengerId: string) => {
     return availablePassengers.find((p) => p.id === passengerId)
-  }
-
-  const getCrewById = (crewId: string) => {
-    return availableCrew.find((c) => c.id === crewId)
   }
 
   const remainingPassengerSlots = itinerary.total_pax - passengers.length
@@ -780,8 +715,6 @@ export function EditItineraryDialog({
                   .filter((c) => c.role === "PIC")
                   .map((crewEntry) => {
                     const actualIndex = crewMembers.findIndex((c) => c.id === crewEntry.id)
-                    const crew = getCrewById(crewEntry.crew_id)
-                    const isOpen = crewComboboxOpen === `crew-${actualIndex}`
 
                     return (
                       <div
@@ -791,59 +724,8 @@ export function EditItineraryDialog({
                         <div className="space-y-4">
                           <div className="flex items-start justify-between">
                             <div className="flex-1">
-                              <Label className="text-sm mb-2 block">Crew Member *</Label>
-                              <Popover
-                                open={isOpen}
-                                onOpenChange={(open) =>
-                                  setCrewComboboxOpen(open ? `crew-${actualIndex}` : null)
-                                }
-                                modal={true}
-                              >
-                                <PopoverTrigger asChild>
-                                  <Button
-                                    variant="outline"
-                                    role="combobox"
-                                    className={cn(
-                                      "w-full justify-between",
-                                      !crewEntry.crew_id && "text-muted-foreground"
-                                    )}
-                                    disabled={loadingCrew}
-                                  >
-                                    {crew
-                                      ? crew.display_name || `${crew.first_name} ${crew.last_name}`
-                                      : loadingCrew
-                                      ? "Loading crew..."
-                                      : "Select a crew member"}
-                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                  </Button>
-                                </PopoverTrigger>
-                                <PopoverContent
-                                  className="w-[var(--radix-popover-trigger-width)] p-0"
-                                  align="start"
-                                >
-                                  <Command shouldFilter={false}>
-                                    <CommandInput
-                                      placeholder="Search crew members..."
-                                      value={crewSearch}
-                                      onValueChange={setCrewSearch}
-                                    />
-                                    <CommandList className="max-h-[300px] overflow-y-auto">
-                                      <CommandEmpty>No crew members found.</CommandEmpty>
-                                      <CommandGroup>
-                                        {filteredCrew.map((c) => (
-                                          <CommandItem
-                                            key={c.id}
-                                            value={c.id}
-                                            onSelect={() => handleSelectCrew(actualIndex, c.id)}
-                                          >
-                                            {c.display_name || `${c.first_name} ${c.last_name}`}
-                                          </CommandItem>
-                                        ))}
-                                      </CommandGroup>
-                                    </CommandList>
-                                  </Command>
-                                </PopoverContent>
-                              </Popover>
+                              <Label className="text-sm mb-2 block">Role</Label>
+                              <div className="text-sm font-medium text-muted-foreground">{crewEntry.role}</div>
                             </div>
                             <Button
                               type="button"
@@ -889,8 +771,6 @@ export function EditItineraryDialog({
                   .filter((c) => c.role === "SIC")
                   .map((crewEntry) => {
                     const actualIndex = crewMembers.findIndex((c) => c.id === crewEntry.id)
-                    const crew = getCrewById(crewEntry.crew_id)
-                    const isOpen = crewComboboxOpen === `crew-${actualIndex}`
 
                     return (
                       <div
@@ -900,59 +780,8 @@ export function EditItineraryDialog({
                         <div className="space-y-4">
                           <div className="flex items-start justify-between">
                             <div className="flex-1">
-                              <Label className="text-sm mb-2 block">Crew Member *</Label>
-                              <Popover
-                                open={isOpen}
-                                onOpenChange={(open) =>
-                                  setCrewComboboxOpen(open ? `crew-${actualIndex}` : null)
-                                }
-                                modal={true}
-                              >
-                                <PopoverTrigger asChild>
-                                  <Button
-                                    variant="outline"
-                                    role="combobox"
-                                    className={cn(
-                                      "w-full justify-between",
-                                      !crewEntry.crew_id && "text-muted-foreground"
-                                    )}
-                                    disabled={loadingCrew}
-                                  >
-                                    {crew
-                                      ? crew.display_name || `${crew.first_name} ${crew.last_name}`
-                                      : loadingCrew
-                                      ? "Loading crew..."
-                                      : "Select a crew member"}
-                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                  </Button>
-                                </PopoverTrigger>
-                                <PopoverContent
-                                  className="w-[var(--radix-popover-trigger-width)] p-0"
-                                  align="start"
-                                >
-                                  <Command shouldFilter={false}>
-                                    <CommandInput
-                                      placeholder="Search crew members..."
-                                      value={crewSearch}
-                                      onValueChange={setCrewSearch}
-                                    />
-                                    <CommandList className="max-h-[300px] overflow-y-auto">
-                                      <CommandEmpty>No crew members found.</CommandEmpty>
-                                      <CommandGroup>
-                                        {filteredCrew.map((c) => (
-                                          <CommandItem
-                                            key={c.id}
-                                            value={c.id}
-                                            onSelect={() => handleSelectCrew(actualIndex, c.id)}
-                                          >
-                                            {c.display_name || `${c.first_name} ${c.last_name}`}
-                                          </CommandItem>
-                                        ))}
-                                      </CommandGroup>
-                                    </CommandList>
-                                  </Command>
-                                </PopoverContent>
-                              </Popover>
+                              <Label className="text-sm mb-2 block">Role</Label>
+                              <div className="text-sm font-medium text-muted-foreground">{crewEntry.role}</div>
                             </div>
                             <Button
                               type="button"
@@ -998,8 +827,6 @@ export function EditItineraryDialog({
                   .filter((c) => c.role === "Cabin Attendance")
                   .map((crewEntry) => {
                     const actualIndex = crewMembers.findIndex((c) => c.id === crewEntry.id)
-                    const crew = getCrewById(crewEntry.crew_id)
-                    const isOpen = crewComboboxOpen === `crew-${actualIndex}`
 
                     return (
                       <div
@@ -1009,59 +836,8 @@ export function EditItineraryDialog({
                         <div className="space-y-4">
                           <div className="flex items-start justify-between">
                             <div className="flex-1">
-                              <Label className="text-sm mb-2 block">Crew Member *</Label>
-                              <Popover
-                                open={isOpen}
-                                onOpenChange={(open) =>
-                                  setCrewComboboxOpen(open ? `crew-${actualIndex}` : null)
-                                }
-                                modal={true}
-                              >
-                                <PopoverTrigger asChild>
-                                  <Button
-                                    variant="outline"
-                                    role="combobox"
-                                    className={cn(
-                                      "w-full justify-between",
-                                      !crewEntry.crew_id && "text-muted-foreground"
-                                    )}
-                                    disabled={loadingCrew}
-                                  >
-                                    {crew
-                                      ? crew.display_name || `${crew.first_name} ${crew.last_name}`
-                                      : loadingCrew
-                                      ? "Loading crew..."
-                                      : "Select a crew member"}
-                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                  </Button>
-                                </PopoverTrigger>
-                                <PopoverContent
-                                  className="w-[var(--radix-popover-trigger-width)] p-0"
-                                  align="start"
-                                >
-                                  <Command shouldFilter={false}>
-                                    <CommandInput
-                                      placeholder="Search crew members..."
-                                      value={crewSearch}
-                                      onValueChange={setCrewSearch}
-                                    />
-                                    <CommandList className="max-h-[300px] overflow-y-auto">
-                                      <CommandEmpty>No crew members found.</CommandEmpty>
-                                      <CommandGroup>
-                                        {filteredCrew.map((c) => (
-                                          <CommandItem
-                                            key={c.id}
-                                            value={c.id}
-                                            onSelect={() => handleSelectCrew(actualIndex, c.id)}
-                                          >
-                                            {c.display_name || `${c.first_name} ${c.last_name}`}
-                                          </CommandItem>
-                                        ))}
-                                      </CommandGroup>
-                                    </CommandList>
-                                  </Command>
-                                </PopoverContent>
-                              </Popover>
+                              <Label className="text-sm mb-2 block">Role</Label>
+                              <div className="text-sm font-medium text-muted-foreground">{crewEntry.role}</div>
                             </div>
                             <Button
                               type="button"

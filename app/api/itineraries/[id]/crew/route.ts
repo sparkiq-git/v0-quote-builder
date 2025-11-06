@@ -16,20 +16,10 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 
     const { id } = params
 
-    // Fetch itinerary crew with crew member details
+    // Fetch itinerary crew (no foreign key to crew table - stored independently)
     const { data, error } = await supabase
       .from("itinerary_crew")
-      .select(`
-        *,
-        crew:crew_id (
-          id,
-          display_name,
-          first_name,
-          last_name,
-          phone_number,
-          active
-        )
-      `)
+      .select("*")
       .eq("itinerary_id", id)
       .order("role", { ascending: true })
       .order("created_at", { ascending: true })
@@ -73,9 +63,9 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
     // Validate required fields
     for (const c of crew) {
-      if (!c.crew_id || !c.role) {
+      if (!c.role) {
         return NextResponse.json(
-          { error: "Each crew member must have a crew_id and role" },
+          { error: "Each crew member must have a role" },
           { status: 400 }
         )
       }
@@ -113,12 +103,11 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ error: deleteError.message }, { status: 500 })
     }
 
-    // Insert new crew using crew_id references
+    // Insert new crew (no crew_id - stored independently with just role and notes)
     if (crew.length > 0) {
-      const crewInserts = crew.map((c: { crew_id: string; role: string; notes?: string; confirmed?: boolean }) => ({
+      const crewInserts = crew.map((c: { role: string; notes?: string; confirmed?: boolean }) => ({
         itinerary_id: id,
         tenant_id: itinerary.tenant_id,
-        crew_id: c.crew_id,
         role: c.role,
         notes: c.notes || null,
         confirmed: c.confirmed || false,
