@@ -29,6 +29,19 @@ export function SimpleDateTimePicker({
   const buttonRef = React.useRef<HTMLButtonElement>(null)
   const dropdownRef = React.useRef<HTMLDivElement>(null)
 
+  const [selectedHour, setSelectedHour] = React.useState<number>(date?.getHours() || 12)
+  const [selectedMinute, setSelectedMinute] = React.useState<number>(date?.getMinutes() || 0)
+  const [selectedPeriod, setSelectedPeriod] = React.useState<"AM" | "PM">(date && date.getHours() >= 12 ? "PM" : "AM")
+
+  React.useEffect(() => {
+    if (date) {
+      const hours = date.getHours()
+      setSelectedHour(hours === 0 ? 12 : hours > 12 ? hours - 12 : hours)
+      setSelectedMinute(date.getMinutes())
+      setSelectedPeriod(hours >= 12 ? "PM" : "AM")
+    }
+  }, [date])
+
   const calculatePosition = React.useCallback(() => {
     if (!buttonRef.current) return
 
@@ -39,28 +52,33 @@ export function SimpleDateTimePicker({
       const viewportHeight = window.innerHeight
       const viewportWidth = window.innerWidth
 
-      // Get actual dropdown height if available, otherwise estimate
-      const dropdownHeight = dropdownRef.current?.offsetHeight || 400
+      const dropdownWidth = showOnlyTime ? 320 : 350 // Time picker needs 320px, calendar needs ~350px
+      const actualDropdownHeight = dropdownRef.current?.offsetHeight
+      const dropdownHeight = actualDropdownHeight || (showOnlyTime ? 420 : 450)
 
       let top = rect.bottom + 4
-      let left = Math.max(4, rect.left)
+      let left = rect.left
 
-      // Calculate available space
-      const spaceBelow = viewportHeight - rect.bottom
-      const spaceAbove = rect.top
+      const spaceBelow = viewportHeight - rect.bottom - 40 // Reserve 40px padding at bottom
+      const spaceAbove = rect.top - 40 // Reserve 40px padding at top
 
-      // Only show above if more than 75% would be off-screen below
-      // AND there's at least 200px above AND the result would be at least 100px from top
-      if (spaceBelow < dropdownHeight * 0.25 && spaceAbove >= 200) {
-        const wouldBeAbovePosition = rect.top - dropdownHeight - 4
-        if (wouldBeAbovePosition >= 100) {
-          top = wouldBeAbovePosition
-        }
+      // If not enough space below, try positioning above
+      if (spaceBelow < dropdownHeight && spaceAbove > spaceBelow && spaceAbove >= dropdownHeight) {
+        top = rect.top - dropdownHeight - 4
+      } else if (spaceBelow < dropdownHeight) {
+        // Not enough space above or below, position to fit within viewport
+        const maxTop = viewportHeight - dropdownHeight - 40
+        top = Math.max(40, Math.min(rect.bottom + 4, maxTop))
       }
 
-      // Ensure dropdown doesn't go off right edge
-      const maxLeft = viewportWidth - rect.width - 8
-      left = Math.min(left, maxLeft)
+      const spaceRight = viewportWidth - rect.left
+      if (spaceRight < dropdownWidth + 40) {
+        // Not enough space on the right, align to right edge with padding
+        left = Math.max(40, viewportWidth - dropdownWidth - 40)
+      } else {
+        // Enough space, use button's left position with minimum padding
+        left = Math.max(40, rect.left)
+      }
 
       setPosition({
         top,
@@ -68,7 +86,7 @@ export function SimpleDateTimePicker({
         width: rect.width,
       })
     })
-  }, [])
+  }, [showOnlyTime])
 
   React.useEffect(() => {
     if (isOpen) {
@@ -133,13 +151,15 @@ export function SimpleDateTimePicker({
     })}`
   }
 
-  const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const timeValue = e.target.value
-    if (!timeValue) return
-
-    const [hours, minutes] = timeValue.split(":").map(Number)
+  const handleTimeSelect = (hour: number, minute: number, period: "AM" | "PM") => {
     const newDate = date ? new Date(date) : new Date()
-    newDate.setHours(hours, minutes, 0, 0)
+    let hours24 = hour
+    if (period === "PM" && hour !== 12) {
+      hours24 = hour + 12
+    } else if (period === "AM" && hour === 12) {
+      hours24 = 0
+    }
+    newDate.setHours(hours24, minute, 0, 0)
     onDateChange?.(newDate)
   }
 
@@ -164,12 +184,8 @@ export function SimpleDateTimePicker({
     }
   }
 
-  const getTimeValue = () => {
-    if (!date) return ""
-    const hours = date.getHours().toString().padStart(2, "0")
-    const minutes = date.getMinutes().toString().padStart(2, "0")
-    return `${hours}:${minutes}`
-  }
+  const hours = Array.from({ length: 12 }, (_, i) => i + 1)
+  const minutes = Array.from({ length: 60 }, (_, i) => i)
 
   return (
     <div className="relative">
@@ -200,7 +216,7 @@ export function SimpleDateTimePicker({
             position: "fixed",
             top: `${position.top}px`,
             left: `${position.left}px`,
-            width: showOnlyTime ? `${position.width}px` : "auto",
+            width: showOnlyTime ? `${Math.max(position.width, 320)}px` : "auto",
             zIndex: 2147483647,
             pointerEvents: "auto",
           }}
@@ -210,32 +226,126 @@ export function SimpleDateTimePicker({
 
           {!showOnlyDate && (
             <div className="border-t p-3">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 mb-3">
                 <Clock className="h-4 w-4 opacity-50" />
-                <input
-                  type="time"
-                  value={getTimeValue()}
-                  onChange={handleTimeChange}
-                  className={cn(
-                    "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1",
-                    "text-sm shadow-sm transition-colors",
-                    "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
-                    "disabled:cursor-not-allowed disabled:opacity-50",
-                  )}
-                />
+                <span className="text-sm font-medium">Select Time</span>
               </div>
+
+              {/* AM/PM Toggle */}
+              <div className="flex gap-2 mb-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedPeriod("AM")
+                    handleTimeSelect(selectedHour, selectedMinute, "AM")
+                  }}
+                  className={cn(
+                    "flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors",
+                    selectedPeriod === "AM"
+                      ? "bg-black text-white"
+                      : "bg-muted hover:bg-muted/80 text-muted-foreground",
+                  )}
+                >
+                  AM
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedPeriod("PM")
+                    handleTimeSelect(selectedHour, selectedMinute, "PM")
+                  }}
+                  className={cn(
+                    "flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors",
+                    selectedPeriod === "PM"
+                      ? "bg-black text-white"
+                      : "bg-muted hover:bg-muted/80 text-muted-foreground",
+                  )}
+                >
+                  PM
+                </button>
+              </div>
+
+              {/* Hours and Minutes Grid */}
+              <div className="grid grid-cols-2 gap-3">
+                {/* Hours */}
+                <div>
+                  <div className="text-xs font-medium text-muted-foreground mb-2 text-center">Hour</div>
+                  <div className="max-h-[200px] overflow-y-auto rounded-md border bg-background/50 p-1">
+                    <div className="grid grid-cols-3 gap-1">
+                      {hours.map((hour) => (
+                        <button
+                          key={hour}
+                          type="button"
+                          onClick={() => {
+                            setSelectedHour(hour)
+                            handleTimeSelect(hour, selectedMinute, selectedPeriod)
+                          }}
+                          className={cn(
+                            "px-2 py-1.5 rounded text-sm font-medium transition-colors",
+                            selectedHour === hour ? "bg-black text-white" : "hover:bg-muted text-foreground",
+                          )}
+                        >
+                          {hour}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Minutes */}
+                <div>
+                  <div className="text-xs font-medium text-muted-foreground mb-2 text-center">Minute</div>
+                  <div className="max-h-[200px] overflow-y-auto rounded-md border bg-background/50 p-1">
+                    <div className="grid grid-cols-3 gap-1">
+                      {minutes.map((minute) => (
+                        <button
+                          key={minute}
+                          type="button"
+                          onClick={() => {
+                            setSelectedMinute(minute)
+                            handleTimeSelect(selectedHour, minute, selectedPeriod)
+                          }}
+                          className={cn(
+                            "px-2 py-1.5 rounded text-sm font-medium transition-colors",
+                            selectedMinute === minute ? "bg-black text-white" : "hover:bg-muted text-foreground",
+                          )}
+                        >
+                          {minute.toString().padStart(2, "0")}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {showOnlyTime && (
+                <div className="mt-3 flex justify-start">
+                  <button
+                    type="button"
+                    onClick={() => setIsOpen(false)}
+                    className={cn(
+                      "inline-flex items-center justify-center rounded-md text-sm font-medium",
+                      "h-9 px-4 py-2",
+                      "bg-black text-white shadow hover:bg-black/90",
+                      "transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+                    )}
+                  >
+                    Done
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
           {!showOnlyDate && !showOnlyTime && (
-            <div className="border-t p-2 flex justify-end">
+            <div className="border-t p-2 flex justify-start">
               <button
                 type="button"
                 onClick={() => setIsOpen(false)}
                 className={cn(
                   "inline-flex items-center justify-center rounded-md text-sm font-medium",
                   "h-9 px-4 py-2",
-                  "bg-primary text-primary-foreground shadow hover:bg-primary/90",
+                  "bg-black text-white shadow hover:bg-black/90",
                   "transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
                 )}
               >

@@ -276,11 +276,29 @@ export function QuoteLegsTab({ quote, onUpdate, onLegsChange, onNext, onBack }: 
 
               <div>
                 <Label>Departure Time</Label>
-                <Input
-                  type="time"
-                  value={formState.departureTime}
-                  onChange={(e) => setFormState((prev) => ({ ...prev, departureTime: e.target.value }))}
-                  className="h-9"
+                <SimpleDateTimePicker
+                  date={
+                    formState.departureTime
+                      ? (() => {
+                          const [hours, minutes] = formState.departureTime.split(":")
+                          const d = new Date()
+                          d.setHours(Number.parseInt(hours), Number.parseInt(minutes), 0, 0)
+                          return d
+                        })()
+                      : undefined
+                  }
+                  onDateChange={(d) => {
+                    console.log("⏰ Departure time changed:", d)
+                    if (d) {
+                      const hours = d.getHours().toString().padStart(2, "0")
+                      const minutes = d.getMinutes().toString().padStart(2, "0")
+                      setFormState((prev) => ({ ...prev, departureTime: `${hours}:${minutes}` }))
+                    } else {
+                      setFormState((prev) => ({ ...prev, departureTime: "" }))
+                    }
+                  }}
+                  showOnlyTime
+                  placeholder="--:-- --"
                 />
               </div>
             </div>
@@ -302,11 +320,29 @@ export function QuoteLegsTab({ quote, onUpdate, onLegsChange, onNext, onBack }: 
 
                 <div>
                   <Label>Return Time</Label>
-                  <Input
-                    type="time"
-                    value={formState.returnTime}
-                    onChange={(e) => setFormState((prev) => ({ ...prev, returnTime: e.target.value }))}
-                    className="h-9"
+                  <SimpleDateTimePicker
+                    date={
+                      formState.returnTime
+                        ? (() => {
+                            const [hours, minutes] = formState.returnTime.split(":")
+                            const d = new Date()
+                            d.setHours(Number.parseInt(hours), Number.parseInt(minutes), 0, 0)
+                            return d
+                          })()
+                        : undefined
+                    }
+                    onDateChange={(d) => {
+                      console.log("⏰ Return time changed:", d)
+                      if (d) {
+                        const hours = d.getHours().toString().padStart(2, "0")
+                        const minutes = d.getMinutes().toString().padStart(2, "0")
+                        setFormState((prev) => ({ ...prev, returnTime: `${hours}:${minutes}` }))
+                      } else {
+                        setFormState((prev) => ({ ...prev, returnTime: "" }))
+                      }
+                    }}
+                    showOnlyTime
+                    placeholder="--:-- --"
                   />
                 </div>
               </div>
@@ -407,15 +443,36 @@ export function QuoteLegsTab({ quote, onUpdate, onLegsChange, onNext, onBack }: 
 
                   <div>
                     <Label>Departure Time</Label>
-                    <Input
-                      type="time"
-                      value={leg.departureTime}
-                      onChange={(e) =>
-                        setMultiLegs((prev) =>
-                          prev.map((l) => (l.id === leg.id ? { ...l, departureTime: e.target.value } : l)),
-                        )
+                    <SimpleDateTimePicker
+                      date={
+                        leg.departureTime
+                          ? (() => {
+                              const [hours, minutes] = leg.departureTime.split(":")
+                              const d = new Date()
+                              d.setHours(Number.parseInt(hours), Number.parseInt(minutes), 0, 0)
+                              return d
+                            })()
+                          : undefined
                       }
-                      className="h-9"
+                      onDateChange={(d) => {
+                        console.log("⏰ Multi-city leg time changed:", { legId: leg.id, date: d })
+                        setMultiLegs((prev) =>
+                          prev.map((l) => {
+                            if (l.id === leg.id) {
+                              if (d) {
+                                const hours = d.getHours().toString().padStart(2, "0")
+                                const minutes = d.getMinutes().toString().padStart(2, "0")
+                                return { ...l, departureTime: `${hours}:${minutes}` }
+                              } else {
+                                return { ...l, departureTime: "" }
+                              }
+                            }
+                            return l
+                          }),
+                        )
+                      }}
+                      showOnlyTime
+                      placeholder="--:-- --"
                     />
                   </div>
                 </div>
