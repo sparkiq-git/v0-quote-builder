@@ -17,6 +17,15 @@ interface SimpleDropdownProps {
   align?: "start" | "end"
 }
 
+interface SimpleDropdownComposableProps {
+  trigger: React.ReactNode
+  children: React.ReactNode
+  align?: "start" | "center" | "end"
+  side?: "top" | "bottom" | "left" | "right"
+  sideOffset?: number
+  className?: string
+}
+
 export function SimpleDropdown({ trigger, items, align = "end" }: SimpleDropdownProps) {
   const [isOpen, setIsOpen] = React.useState(false)
   const dropdownRef = React.useRef<HTMLDivElement>(null)
@@ -105,4 +114,187 @@ export function SimpleDropdown({ trigger, items, align = "end" }: SimpleDropdown
       )}
     </div>
   )
+}
+
+export function SimpleDropdownComposable({
+  trigger,
+  children,
+  align = "end",
+  side = "bottom",
+  sideOffset = 4,
+  className,
+}: SimpleDropdownComposableProps) {
+  const [isOpen, setIsOpen] = React.useState(false)
+  const triggerRef = React.useRef<HTMLDivElement>(null)
+  const dropdownRef = React.useRef<HTMLDivElement>(null)
+  const [position, setPosition] = React.useState({ top: 0, left: 0 })
+
+  const calculatePosition = React.useCallback(() => {
+    if (!triggerRef.current) return
+
+    const rect = triggerRef.current.getBoundingClientRect()
+    const viewportWidth = window.innerWidth
+    const viewportHeight = window.innerHeight
+    const dropdownWidth = 224 // min-w-56 = 14rem = 224px
+    const dropdownHeight = dropdownRef.current?.offsetHeight || 200
+
+    let top = 0
+    let left = 0
+
+    // Calculate vertical position
+    if (side === "bottom") {
+      const spaceBelow = viewportHeight - rect.bottom
+      const spaceAbove = rect.top
+
+      if (spaceBelow < dropdownHeight && spaceAbove > spaceBelow) {
+        // Position above
+        top = rect.top - dropdownHeight - sideOffset
+      } else {
+        // Position below
+        top = rect.bottom + sideOffset
+      }
+    } else if (side === "top") {
+      top = rect.top - dropdownHeight - sideOffset
+    } else if (side === "right") {
+      top = rect.top
+      left = rect.right + sideOffset
+    } else if (side === "left") {
+      top = rect.top
+      left = rect.left - dropdownWidth - sideOffset
+    }
+
+    // Calculate horizontal position for top/bottom sides
+    if (side === "top" || side === "bottom") {
+      if (align === "start") {
+        left = rect.left
+      } else if (align === "end") {
+        left = rect.right - dropdownWidth
+      } else {
+        left = rect.left + rect.width / 2 - dropdownWidth / 2
+      }
+
+      // Ensure dropdown stays within viewport
+      const padding = 16
+      left = Math.max(padding, Math.min(left, viewportWidth - dropdownWidth - padding))
+    }
+
+    // Ensure top position stays within viewport
+    top = Math.max(16, Math.min(top, viewportHeight - dropdownHeight - 16))
+
+    setPosition({ top, left })
+  }, [align, side, sideOffset])
+
+  React.useEffect(() => {
+    if (isOpen) {
+      calculatePosition()
+      window.addEventListener("resize", calculatePosition)
+      window.addEventListener("scroll", calculatePosition, true)
+
+      return () => {
+        window.removeEventListener("resize", calculatePosition)
+        window.removeEventListener("scroll", calculatePosition, true)
+      }
+    }
+  }, [isOpen, calculatePosition])
+
+  // Click outside handler
+  React.useEffect(() => {
+    if (!isOpen) return
+
+    let cleanup: (() => void) | null = null
+
+    const timeoutId = setTimeout(() => {
+      const handleClickOutside = (e: MouseEvent) => {
+        if (
+          triggerRef.current &&
+          !triggerRef.current.contains(e.target as Node) &&
+          dropdownRef.current &&
+          !dropdownRef.current.contains(e.target as Node)
+        ) {
+          setIsOpen(false)
+        }
+      }
+
+      document.addEventListener("mousedown", handleClickOutside)
+      cleanup = () => document.removeEventListener("mousedown", handleClickOutside)
+    }, 100)
+
+    return () => {
+      clearTimeout(timeoutId)
+      cleanup?.()
+    }
+  }, [isOpen])
+
+  const handleTriggerClick = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsOpen(!isOpen)
+  }
+
+  return (
+    <div className="relative">
+      <div ref={triggerRef} onClick={handleTriggerClick}>
+        {trigger}
+      </div>
+
+      {isOpen && (
+        <div
+          ref={dropdownRef}
+          className={cn(
+            "fixed z-50 min-w-56 rounded-lg border bg-popover p-1 text-popover-foreground shadow-md",
+            "animate-in fade-in-0 zoom-in-95",
+            className,
+          )}
+          style={{
+            top: `${position.top}px`,
+            left: `${position.left}px`,
+          }}
+        >
+          {children}
+        </div>
+      )}
+    </div>
+  )
+}
+
+export function SimpleDropdownItem({
+  children,
+  onSelect,
+  className,
+  ...props
+}: {
+  children: React.ReactNode
+  onSelect?: () => void
+  className?: string
+} & React.HTMLAttributes<HTMLDivElement>) {
+  const handleClick = () => {
+    onSelect?.()
+  }
+
+  return (
+    <div
+      className={cn(
+        "relative flex cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none",
+        "transition-colors hover:bg-accent hover:text-accent-foreground",
+        "focus:bg-accent focus:text-accent-foreground",
+        className,
+      )}
+      onClick={handleClick}
+      {...props}
+    >
+      {children}
+    </div>
+  )
+}
+
+export function SimpleDropdownLabel({ children, className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div className={cn("px-2 py-1.5 text-sm font-semibold", className)} {...props}>
+      {children}
+    </div>
+  )
+}
+
+export function SimpleDropdownSeparator({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
+  return <div className={cn("-mx-1 my-1 h-px bg-border", className)} {...props} />
 }
