@@ -5,7 +5,8 @@
 -- 
 -- PREREQUISITES:
 -- 1. Run ITINERARY-SCHEMA-PROPOSAL.sql first to create the itinerary table
--- 2. Ensure contact_passenger, crew, and tenant tables exist
+-- 2. Ensure contact_passenger and tenant tables exist
+-- Note: Crew members are stored directly in itinerary_crew, no crew table reference needed
 -- 
 -- IMPORTANT: This script must be run AFTER ITINERARY-SCHEMA-PROPOSAL.sql
 -- The itinerary table must exist before creating these junction tables
@@ -76,8 +77,8 @@ CREATE TRIGGER trg_itinerary_passenger_updated_at
 -- ============================================
 -- ITINERARY_CREW TABLE
 -- ============================================
--- Links crew members to itineraries
--- Note: crew table references auth.users via user_id
+-- Stores crew members assigned to itineraries
+-- Crew members are added freely without linking to a crew table
 -- Multi-tenant: includes tenant_id for tenant isolation
 
 -- Drop table if it exists (to ensure clean creation)
@@ -88,12 +89,16 @@ CREATE TABLE public.itinerary_crew (
   
   -- Relationships
   itinerary_id UUID NOT NULL,
-  crew_id UUID NOT NULL, -- References crew.id (which references auth.users)
   tenant_id UUID NOT NULL,
   
-  -- Crew role for this itinerary
+  -- Crew member information (stored directly, not referenced)
+  name TEXT NOT NULL, -- Crew member name
   role TEXT NOT NULL, -- 'PIC', 'SIC', 'Cabin Attendance', or custom role
   -- Note: PIC = Pilot in Command, SIC = Second in Command
+  
+  -- Optional contact information
+  email TEXT NULL, -- Crew member email
+  phone TEXT NULL, -- Crew member phone number
   
   -- Assignment metadata
   notes TEXT NULL, -- Notes about this crew member's assignment
@@ -107,8 +112,6 @@ CREATE TABLE public.itinerary_crew (
   CONSTRAINT itinerary_crew_pkey PRIMARY KEY (id),
   CONSTRAINT itinerary_crew_itinerary_id_fkey FOREIGN KEY (itinerary_id) 
     REFERENCES public.itinerary(id) ON DELETE CASCADE,
-  CONSTRAINT itinerary_crew_crew_id_fkey FOREIGN KEY (crew_id) 
-    REFERENCES public.crew(id) ON DELETE CASCADE,
   CONSTRAINT itinerary_crew_tenant_id_fkey FOREIGN KEY (tenant_id) 
     REFERENCES public.tenant(id) ON DELETE CASCADE,
   CONSTRAINT itinerary_crew_role_check CHECK (
@@ -120,8 +123,8 @@ CREATE TABLE public.itinerary_crew (
 CREATE INDEX IF NOT EXISTS itinerary_crew_itinerary_id_idx 
   ON public.itinerary_crew USING btree (itinerary_id) TABLESPACE pg_default;
 
-CREATE INDEX IF NOT EXISTS itinerary_crew_crew_id_idx 
-  ON public.itinerary_crew USING btree (crew_id) TABLESPACE pg_default;
+CREATE INDEX IF NOT EXISTS itinerary_crew_name_idx 
+  ON public.itinerary_crew USING btree (name) TABLESPACE pg_default;
 
 CREATE INDEX IF NOT EXISTS itinerary_crew_tenant_id_idx 
   ON public.itinerary_crew USING btree (tenant_id) TABLESPACE pg_default;
@@ -140,5 +143,5 @@ CREATE TRIGGER trg_itinerary_crew_updated_at
 -- COMMENTS
 -- ============================================
 COMMENT ON TABLE public.itinerary_passenger IS 'Links passengers (contact_passenger) to itineraries. Allows multiple passengers per itinerary up to total_pax.';
-COMMENT ON TABLE public.itinerary_crew IS 'Links crew members to itineraries. Supports PIC, SIC, and Cabin Attendance roles.';
+COMMENT ON TABLE public.itinerary_crew IS 'Stores crew members assigned to itineraries. Crew members are added freely without linking to a crew table. Supports PIC, SIC, and Cabin Attendance roles.';
 

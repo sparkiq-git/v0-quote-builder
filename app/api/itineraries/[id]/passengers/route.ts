@@ -66,11 +66,6 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const tenantId = user.app_metadata?.tenant_id
-    if (!tenantId) {
-      return NextResponse.json({ error: "Missing tenant_id" }, { status: 400 })
-    }
-
     const { id } = params
     const body = await request.json()
     const { passengers } = body
@@ -79,7 +74,8 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ error: "Passengers must be an array" }, { status: 400 })
     }
 
-    // Get itinerary to check total_pax
+    // Get itinerary to check total_pax and get tenant_id
+    // RLS will ensure user can only access their tenant's itineraries
     const { data: itinerary, error: itineraryError } = await supabase
       .from("itinerary")
       .select("total_pax, tenant_id")
@@ -113,7 +109,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       const passengerInserts = passengers.map((p: { passenger_id: string }) => ({
         itinerary_id: id,
         passenger_id: p.passenger_id,
-        tenant_id: tenantId,
+        tenant_id: itinerary.tenant_id,
       }))
 
       const { error: insertError } = await supabase

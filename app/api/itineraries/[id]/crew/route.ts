@@ -16,21 +16,10 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 
     const { id } = params
 
-    // Fetch itinerary crew with crew member details
+    // Fetch itinerary crew (crew members are stored directly, not referenced)
     const { data, error } = await supabase
       .from("itinerary_crew")
-      .select(`
-        *,
-        crew:crew_id (
-          id,
-          user_id,
-          display_name,
-          first_name,
-          last_name,
-          phone_number,
-          active
-        )
-      `)
+      .select("*")
       .eq("itinerary_id", id)
       .order("role", { ascending: true })
       .order("created_at", { ascending: true })
@@ -62,10 +51,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const tenantId = user.app_metadata?.tenant_id
-    if (!tenantId) {
-      return NextResponse.json({ error: "Missing tenant_id" }, { status: 400 })
-    }
+    // RLS will handle tenant filtering at the database level
 
     const { id } = params
     const body = await request.json()
@@ -73,6 +59,16 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
     if (!Array.isArray(crew)) {
       return NextResponse.json({ error: "Crew must be an array" }, { status: 400 })
+    }
+
+    // Validate required fields
+    for (const c of crew) {
+      if (!c.name || !c.role) {
+        return NextResponse.json(
+          { error: "Each crew member must have a name and role" },
+          { status: 400 }
+        )
+      }
     }
 
     // Validate roles
@@ -83,6 +79,17 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         { error: `Invalid roles: ${invalidRoles.map((c: { role: string }) => c.role).join(", ")}` },
         { status: 400 }
       )
+    }
+
+    // Get itinerary to get tenant_id
+    const { data: itinerary, error: itineraryError } = await supabase
+      .from("itinerary")
+      .select("tenant_id")
+      .eq("id", id)
+      .single()
+
+    if (itineraryError || !itinerary) {
+      return NextResponse.json({ error: "Itinerary not found" }, { status: 404 })
     }
 
     // Delete existing crew for this itinerary
@@ -96,13 +103,16 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ error: deleteError.message }, { status: 500 })
     }
 
-    // Insert new crew
+    // Insert new crew (crew members stored directly, not referenced)
     if (crew.length > 0) {
-      const crewInserts = crew.map((c: { crew_id: string; role: string }) => ({
+      const crewInserts = crew.map((c: { name: string; role: string; email?: string; phone?: string; notes?: string }) => ({
         itinerary_id: id,
-        crew_id: c.crew_id,
+        tenant_id: itinerary.tenant_id,
+        name: c.name,
         role: c.role,
-        tenant_id: tenantId,
+        email: c.email || null,
+        phone: c.phone || null,
+        notes: c.notes || null,
       }))
 
       const { error: insertError } = await supabase
