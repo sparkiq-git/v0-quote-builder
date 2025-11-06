@@ -16,10 +16,20 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 
     const { id } = params
 
-    // Fetch itinerary crew (crew members are stored directly, not referenced)
+    // Fetch itinerary crew with crew member details
     const { data, error } = await supabase
       .from("itinerary_crew")
-      .select("*")
+      .select(`
+        *,
+        crew:crew_id (
+          id,
+          display_name,
+          first_name,
+          last_name,
+          phone_number,
+          active
+        )
+      `)
       .eq("itinerary_id", id)
       .order("role", { ascending: true })
       .order("created_at", { ascending: true })
@@ -63,9 +73,9 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
     // Validate required fields
     for (const c of crew) {
-      if (!c.name || !c.role) {
+      if (!c.crew_id || !c.role) {
         return NextResponse.json(
-          { error: "Each crew member must have a name and role" },
+          { error: "Each crew member must have a crew_id and role" },
           { status: 400 }
         )
       }
@@ -103,16 +113,15 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ error: deleteError.message }, { status: 500 })
     }
 
-    // Insert new crew (crew members stored directly, not referenced)
+    // Insert new crew using crew_id references
     if (crew.length > 0) {
-      const crewInserts = crew.map((c: { name: string; role: string; email?: string; phone?: string; notes?: string }) => ({
+      const crewInserts = crew.map((c: { crew_id: string; role: string; notes?: string; confirmed?: boolean }) => ({
         itinerary_id: id,
         tenant_id: itinerary.tenant_id,
-        name: c.name,
+        crew_id: c.crew_id,
         role: c.role,
-        email: c.email || null,
-        phone: c.phone || null,
         notes: c.notes || null,
+        confirmed: c.confirmed || false,
       }))
 
       const { error: insertError } = await supabase

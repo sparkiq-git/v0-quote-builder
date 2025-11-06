@@ -19,16 +19,11 @@ import {
   Save,
   Users,
   UserPlus,
-  Plane,
   UserCog,
   Plus,
   Trash2,
   X,
-  Upload,
-  Check,
   ChevronsUpDown,
-  Mail,
-  Phone,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -45,20 +40,23 @@ interface Passenger {
   phone: string | null
   company: string | null
   avatar_path: string | null
-  contact?: {
-    id: string
-    full_name: string
-    email: string
-  }
 }
 
 interface CrewMember {
   id: string
-  name: string
+  display_name: string
+  first_name: string
+  last_name: string
+  phone_number: string | null
+  active: boolean
+}
+
+interface ItineraryCrewMember {
+  id: string
+  crew_id: string
   role: string
-  email: string | null
-  phone: string | null
   notes: string | null
+  crew?: CrewMember
 }
 
 interface Itinerary {
@@ -86,7 +84,6 @@ export function EditItineraryDialog({
   onSuccess,
 }: EditItineraryDialogProps) {
   const { toast } = useToast()
-  const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   
   // Passengers state
@@ -104,15 +101,22 @@ export function EditItineraryDialog({
     company: "",
   })
   
-  // Crew state - crew members are stored directly, not referenced
-  const [crewMembers, setCrewMembers] = useState<Array<{ id: string; name: string; role: string; email?: string; phone?: string; notes?: string }>>([])
+  // Crew state - references existing crew members
+  const [crewMembers, setCrewMembers] = useState<Array<{ id: string; crew_id: string; role: string; notes?: string }>>([])
+  const [availableCrew, setAvailableCrew] = useState<CrewMember[]>([])
+  const [loadingCrew, setLoadingCrew] = useState(true)
+  const [crewSearch, setCrewSearch] = useState("")
+  const [crewComboboxOpen, setCrewComboboxOpen] = useState<string | null>(null)
 
   const fetchItineraryData = async () => {
     try {
       const response = await fetch(`/api/itineraries/${itinerary.id}/passengers`)
       if (response.ok) {
         const { data } = await response.json()
-        setPassengers(data?.passengers || [])
+        setPassengers((data?.passengers || []).map((p: any) => ({
+          id: p.id || `temp-${Date.now()}-${Math.random()}`,
+          passenger_id: p.passenger_id,
+        })))
       }
     } catch (error) {
       console.error("Error fetching itinerary passengers:", error)
@@ -125,10 +129,8 @@ export function EditItineraryDialog({
         // Map crew data to match our state structure
         const crewData = (data?.crew || []).map((c: any) => ({
           id: c.id,
-          name: c.name || "",
+          crew_id: c.crew_id,
           role: c.role,
-          email: c.email || "",
-          phone: c.phone || "",
           notes: c.notes || "",
         }))
         setCrewMembers(crewData)
@@ -157,6 +159,25 @@ export function EditItineraryDialog({
     }
   }
 
+  const fetchAvailableCrew = async () => {
+    setLoadingCrew(true)
+    try {
+      const response = await fetch(`/api/crew?active=true`)
+      if (!response.ok) throw new Error("Failed to fetch crew")
+      const { data } = await response.json()
+      setAvailableCrew(data || [])
+    } catch (error: any) {
+      console.error("Error fetching crew:", error)
+      toast({
+        title: "Error",
+        description: "Failed to load crew members",
+        variant: "destructive",
+      })
+    } finally {
+      setLoadingCrew(false)
+    }
+  }
+
   // Fetch existing passengers and crew for this itinerary
   useEffect(() => {
     if (open && itinerary.id) {
@@ -173,8 +194,15 @@ export function EditItineraryDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, itinerary.contact_id])
 
+  // Fetch available crew
+  useEffect(() => {
+    if (open) {
+      fetchAvailableCrew()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
 
-  const handleAddPassenger = () => {
+  const handleAddPassengerSlot = () => {
     if (passengers.length >= itinerary.total_pax) {
       toast({
         title: "Limit Reached",
@@ -263,16 +291,23 @@ export function EditItineraryDialog({
   }
 
   const handleAddCrew = (role: "PIC" | "SIC" | "Cabin Attendance") => {
-    setCrewMembers([...crewMembers, { id: `temp-${Date.now()}`, name: "", role, email: "", phone: "", notes: "" }])
+    setCrewMembers([...crewMembers, { id: `temp-${Date.now()}`, crew_id: "", role, notes: "" }])
   }
 
   const handleRemoveCrew = (index: number) => {
     setCrewMembers(crewMembers.filter((_, i) => i !== index))
   }
 
-  const handleUpdateCrew = (index: number, field: string, value: string) => {
+  const handleSelectCrew = (index: number, crewId: string) => {
     const updated = [...crewMembers]
-    updated[index] = { ...updated[index], [field]: value }
+    updated[index].crew_id = crewId
+    setCrewMembers(updated)
+    setCrewComboboxOpen(null)
+  }
+
+  const handleUpdateCrewNotes = (index: number, notes: string) => {
+    const updated = [...crewMembers]
+    updated[index].notes = notes
     setCrewMembers(updated)
   }
 
@@ -290,10 +325,10 @@ export function EditItineraryDialog({
         throw new Error("Please select a passenger for all entries")
       }
 
-      // Validate all crew have names
-      const incompleteCrew = crewMembers.filter((c) => !c.name || !c.name.trim())
+      // Validate all crew have crew_id selected
+      const incompleteCrew = crewMembers.filter((c) => !c.crew_id)
       if (incompleteCrew.length > 0) {
-        throw new Error("Please enter a name for all crew members")
+        throw new Error("Please select a crew member for all entries")
       }
 
       // Save passengers
@@ -316,10 +351,8 @@ export function EditItineraryDialog({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           crew: crewMembers.map((c) => ({
-            name: c.name,
+            crew_id: c.crew_id,
             role: c.role,
-            email: c.email || undefined,
-            phone: c.phone || undefined,
             notes: c.notes || undefined,
           })),
         }),
@@ -355,7 +388,9 @@ export function EditItineraryDialog({
     setPassengers([])
     setCrewMembers([])
     setPassengerSearch("")
+    setCrewSearch("")
     setPassengerComboboxOpen(null)
+    setCrewComboboxOpen(null)
     setShowCreatePassengerForm(false)
     setNewPassengerData({ full_name: "", email: "", phone: "", company: "" })
   }, [onOpenChange])
@@ -371,8 +406,23 @@ export function EditItineraryDialog({
     )
   })
 
+  // Filter crew based on search
+  const filteredCrew = availableCrew.filter((crew) => {
+    if (!crewSearch) return true
+    const search = crewSearch.toLowerCase()
+    return (
+      crew.display_name.toLowerCase().includes(search) ||
+      (crew.first_name && crew.first_name.toLowerCase().includes(search)) ||
+      (crew.last_name && crew.last_name.toLowerCase().includes(search))
+    )
+  })
+
   const getPassengerById = (passengerId: string) => {
     return availablePassengers.find((p) => p.id === passengerId)
+  }
+
+  const getCrewById = (crewId: string) => {
+    return availableCrew.find((c) => c.id === crewId)
   }
 
   const remainingPassengerSlots = itinerary.total_pax - passengers.length
@@ -410,136 +460,23 @@ export function EditItineraryDialog({
                     {passengers.length} / {itinerary.total_pax}
                   </Badge>
                 </div>
-                <div className="flex gap-2">
-                  {!showCreatePassengerForm && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowCreatePassengerForm(true)}
-                      disabled={passengers.length >= itinerary.total_pax}
-                    >
-                      <UserPlus className="h-4 w-4 mr-2" />
-                      Create New
-                    </Button>
-                  )}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={handleAddPassenger}
-                    disabled={passengers.length >= itinerary.total_pax}
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Existing
-                  </Button>
-                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAddPassengerSlot}
+                  disabled={passengers.length >= itinerary.total_pax}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Passenger
+                </Button>
               </div>
 
-              {/* Create New Passenger Form */}
-              {showCreatePassengerForm && (
-                <div className="mb-4 p-4 border rounded-lg bg-muted/30 border-border">
-                  <div className="flex items-center justify-between mb-3">
-                    <h5 className="font-medium text-sm">Create New Passenger</h5>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setShowCreatePassengerForm(false)
-                        setNewPassengerData({ full_name: "", email: "", phone: "", company: "" })
-                      }}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div>
-                      <Label className="text-xs mb-1 block">Full Name *</Label>
-                      <Input
-                        placeholder="Enter full name"
-                        value={newPassengerData.full_name}
-                        onChange={(e) =>
-                          setNewPassengerData({ ...newPassengerData, full_name: e.target.value })
-                        }
-                        className="h-8 text-sm"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs mb-1 block">Email *</Label>
-                      <Input
-                        type="email"
-                        placeholder="Enter email"
-                        value={newPassengerData.email}
-                        onChange={(e) =>
-                          setNewPassengerData({ ...newPassengerData, email: e.target.value })
-                        }
-                        className="h-8 text-sm"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs mb-1 block">Phone</Label>
-                      <Input
-                        type="tel"
-                        placeholder="Enter phone (optional)"
-                        value={newPassengerData.phone}
-                        onChange={(e) =>
-                          setNewPassengerData({ ...newPassengerData, phone: e.target.value })
-                        }
-                        className="h-8 text-sm"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs mb-1 block">Company</Label>
-                      <Input
-                        placeholder="Enter company (optional)"
-                        value={newPassengerData.company}
-                        onChange={(e) =>
-                          setNewPassengerData({ ...newPassengerData, company: e.target.value })
-                        }
-                        className="h-8 text-sm"
-                      />
-                    </div>
-                  </div>
-                  <div className="flex gap-2 mt-3">
-                    <Button
-                      type="button"
-                      size="sm"
-                      onClick={handleCreatePassenger}
-                      disabled={creatingPassenger || !newPassengerData.full_name || !newPassengerData.email}
-                    >
-                      {creatingPassenger ? (
-                        <>
-                          <Loader2 className="h-3 w-3 mr-2 animate-spin" />
-                          Creating...
-                        </>
-                      ) : (
-                        <>
-                          <Plus className="h-3 w-3 mr-2" />
-                          Create & Add
-                        </>
-                      )}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setShowCreatePassengerForm(false)
-                        setNewPassengerData({ full_name: "", email: "", phone: "", company: "" })
-                      }}
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {passengers.length === 0 && !showCreatePassengerForm ? (
+              {passengers.length === 0 ? (
                 <div className="text-center py-8 text-sm text-muted-foreground">
-                  No passengers added yet. Click "Create New" or "Add Existing" to get started.
+                  No passengers added yet. Click "Add Passenger" to get started.
                 </div>
-              ) : passengers.length > 0 ? (
+              ) : (
                 <div className="space-y-4">
                   {passengers.map((passengerEntry, index) => {
                     const passenger = getPassengerById(passengerEntry.passenger_id)
@@ -708,7 +645,106 @@ export function EditItineraryDialog({
                     )
                   })}
                 </div>
-              ) : null}
+              )}
+
+              {/* Create New Passenger Form */}
+              {showCreatePassengerForm && (
+                <div className="mt-4 p-4 border rounded-lg bg-muted/30 border-border">
+                  <div className="flex items-center justify-between mb-3">
+                    <h5 className="font-medium text-sm">Create New Passenger</h5>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setShowCreatePassengerForm(false)
+                        setNewPassengerData({ full_name: "", email: "", phone: "", company: "" })
+                      }}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-xs mb-1 block">Full Name *</Label>
+                      <Input
+                        placeholder="Enter full name"
+                        value={newPassengerData.full_name}
+                        onChange={(e) =>
+                          setNewPassengerData({ ...newPassengerData, full_name: e.target.value })
+                        }
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs mb-1 block">Email *</Label>
+                      <Input
+                        type="email"
+                        placeholder="Enter email"
+                        value={newPassengerData.email}
+                        onChange={(e) =>
+                          setNewPassengerData({ ...newPassengerData, email: e.target.value })
+                        }
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs mb-1 block">Phone</Label>
+                      <Input
+                        type="tel"
+                        placeholder="Enter phone (optional)"
+                        value={newPassengerData.phone}
+                        onChange={(e) =>
+                          setNewPassengerData({ ...newPassengerData, phone: e.target.value })
+                        }
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs mb-1 block">Company</Label>
+                      <Input
+                        placeholder="Enter company (optional)"
+                        value={newPassengerData.company}
+                        onChange={(e) =>
+                          setNewPassengerData({ ...newPassengerData, company: e.target.value })
+                        }
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-2 mt-3">
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={handleCreatePassenger}
+                      disabled={creatingPassenger || !newPassengerData.full_name || !newPassengerData.email}
+                    >
+                      {creatingPassenger ? (
+                        <>
+                          <Loader2 className="h-3 w-3 mr-2 animate-spin" />
+                          Creating...
+                        </>
+                      ) : (
+                        <>
+                          <UserPlus className="h-3 w-3 mr-2" />
+                          Create & Add
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setShowCreatePassengerForm(false)
+                        setNewPassengerData({ full_name: "", email: "", phone: "", company: "" })
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              )}
 
               {remainingPassengerSlots > 0 && (
                 <p className="text-xs text-muted-foreground mt-4">
@@ -744,68 +780,87 @@ export function EditItineraryDialog({
                   .filter((c) => c.role === "PIC")
                   .map((crewEntry) => {
                     const actualIndex = crewMembers.findIndex((c) => c.id === crewEntry.id)
+                    const crew = getCrewById(crewEntry.crew_id)
+                    const isOpen = crewComboboxOpen === `crew-${actualIndex}`
 
                     return (
                       <div
                         key={crewEntry.id}
                         className="border rounded-lg p-4 bg-card border-border mb-2"
                       >
-                        <div className="flex items-start justify-between mb-3">
-                          <div className="font-medium text-sm text-foreground">Crew Member</div>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleRemoveCrew(actualIndex)}
-                            className="text-muted-foreground hover:text-destructive h-8 w-8"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
                         <div className="space-y-4">
-                          <div>
-                            <Label className="text-sm mb-1 block">Name *</Label>
-                            <Input
-                              placeholder="Enter crew member name"
-                              value={crewEntry.name || ""}
-                              onChange={(e) => handleUpdateCrew(actualIndex, "name", e.target.value)}
-                              className="h-9 text-sm"
-                            />
-                          </div>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                              <Label className="text-sm mb-1 block flex items-center gap-2">
-                                <Mail className="h-3.5 w-3.5 text-muted-foreground" />
-                                Email
-                              </Label>
-                              <Input
-                                type="email"
-                                placeholder="Enter email (optional)"
-                                value={crewEntry.email || ""}
-                                onChange={(e) => handleUpdateCrew(actualIndex, "email", e.target.value)}
-                                className="h-9 text-sm"
-                              />
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <Label className="text-sm mb-2 block">Crew Member *</Label>
+                              <Popover
+                                open={isOpen}
+                                onOpenChange={(open) =>
+                                  setCrewComboboxOpen(open ? `crew-${actualIndex}` : null)
+                                }
+                                modal={true}
+                              >
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    role="combobox"
+                                    className={cn(
+                                      "w-full justify-between",
+                                      !crewEntry.crew_id && "text-muted-foreground"
+                                    )}
+                                    disabled={loadingCrew}
+                                  >
+                                    {crew
+                                      ? crew.display_name || `${crew.first_name} ${crew.last_name}`
+                                      : loadingCrew
+                                      ? "Loading crew..."
+                                      : "Select a crew member"}
+                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent
+                                  className="w-[var(--radix-popover-trigger-width)] p-0"
+                                  align="start"
+                                >
+                                  <Command shouldFilter={false}>
+                                    <CommandInput
+                                      placeholder="Search crew members..."
+                                      value={crewSearch}
+                                      onValueChange={setCrewSearch}
+                                    />
+                                    <CommandList className="max-h-[300px] overflow-y-auto">
+                                      <CommandEmpty>No crew members found.</CommandEmpty>
+                                      <CommandGroup>
+                                        {filteredCrew.map((c) => (
+                                          <CommandItem
+                                            key={c.id}
+                                            value={c.id}
+                                            onSelect={() => handleSelectCrew(actualIndex, c.id)}
+                                          >
+                                            {c.display_name || `${c.first_name} ${c.last_name}`}
+                                          </CommandItem>
+                                        ))}
+                                      </CommandGroup>
+                                    </CommandList>
+                                  </Command>
+                                </PopoverContent>
+                              </Popover>
                             </div>
-                            <div>
-                              <Label className="text-sm mb-1 block flex items-center gap-2">
-                                <Phone className="h-3.5 w-3.5 text-muted-foreground" />
-                                Phone
-                              </Label>
-                              <Input
-                                type="tel"
-                                placeholder="Enter phone (optional)"
-                                value={crewEntry.phone || ""}
-                                onChange={(e) => handleUpdateCrew(actualIndex, "phone", e.target.value)}
-                                className="h-9 text-sm"
-                              />
-                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleRemoveCrew(actualIndex)}
+                              className="text-muted-foreground hover:text-destructive h-8 w-8"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
                           <div>
                             <Label className="text-sm mb-1 block">Notes</Label>
                             <Textarea
                               placeholder="Enter notes (optional)"
                               value={crewEntry.notes || ""}
-                              onChange={(e) => handleUpdateCrew(actualIndex, "notes", e.target.value)}
+                              onChange={(e) => handleUpdateCrewNotes(actualIndex, e.target.value)}
                               className="text-sm min-h-[60px]"
                               rows={2}
                             />
@@ -834,68 +889,87 @@ export function EditItineraryDialog({
                   .filter((c) => c.role === "SIC")
                   .map((crewEntry) => {
                     const actualIndex = crewMembers.findIndex((c) => c.id === crewEntry.id)
+                    const crew = getCrewById(crewEntry.crew_id)
+                    const isOpen = crewComboboxOpen === `crew-${actualIndex}`
 
                     return (
                       <div
                         key={crewEntry.id}
                         className="border rounded-lg p-4 bg-card border-border mb-2"
                       >
-                        <div className="flex items-start justify-between mb-3">
-                          <div className="font-medium text-sm text-foreground">Crew Member</div>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleRemoveCrew(actualIndex)}
-                            className="text-muted-foreground hover:text-destructive h-8 w-8"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
                         <div className="space-y-4">
-                          <div>
-                            <Label className="text-sm mb-1 block">Name *</Label>
-                            <Input
-                              placeholder="Enter crew member name"
-                              value={crewEntry.name || ""}
-                              onChange={(e) => handleUpdateCrew(actualIndex, "name", e.target.value)}
-                              className="h-9 text-sm"
-                            />
-                          </div>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                              <Label className="text-sm mb-1 block flex items-center gap-2">
-                                <Mail className="h-3.5 w-3.5 text-muted-foreground" />
-                                Email
-                              </Label>
-                              <Input
-                                type="email"
-                                placeholder="Enter email (optional)"
-                                value={crewEntry.email || ""}
-                                onChange={(e) => handleUpdateCrew(actualIndex, "email", e.target.value)}
-                                className="h-9 text-sm"
-                              />
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <Label className="text-sm mb-2 block">Crew Member *</Label>
+                              <Popover
+                                open={isOpen}
+                                onOpenChange={(open) =>
+                                  setCrewComboboxOpen(open ? `crew-${actualIndex}` : null)
+                                }
+                                modal={true}
+                              >
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    role="combobox"
+                                    className={cn(
+                                      "w-full justify-between",
+                                      !crewEntry.crew_id && "text-muted-foreground"
+                                    )}
+                                    disabled={loadingCrew}
+                                  >
+                                    {crew
+                                      ? crew.display_name || `${crew.first_name} ${crew.last_name}`
+                                      : loadingCrew
+                                      ? "Loading crew..."
+                                      : "Select a crew member"}
+                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent
+                                  className="w-[var(--radix-popover-trigger-width)] p-0"
+                                  align="start"
+                                >
+                                  <Command shouldFilter={false}>
+                                    <CommandInput
+                                      placeholder="Search crew members..."
+                                      value={crewSearch}
+                                      onValueChange={setCrewSearch}
+                                    />
+                                    <CommandList className="max-h-[300px] overflow-y-auto">
+                                      <CommandEmpty>No crew members found.</CommandEmpty>
+                                      <CommandGroup>
+                                        {filteredCrew.map((c) => (
+                                          <CommandItem
+                                            key={c.id}
+                                            value={c.id}
+                                            onSelect={() => handleSelectCrew(actualIndex, c.id)}
+                                          >
+                                            {c.display_name || `${c.first_name} ${c.last_name}`}
+                                          </CommandItem>
+                                        ))}
+                                      </CommandGroup>
+                                    </CommandList>
+                                  </Command>
+                                </PopoverContent>
+                              </Popover>
                             </div>
-                            <div>
-                              <Label className="text-sm mb-1 block flex items-center gap-2">
-                                <Phone className="h-3.5 w-3.5 text-muted-foreground" />
-                                Phone
-                              </Label>
-                              <Input
-                                type="tel"
-                                placeholder="Enter phone (optional)"
-                                value={crewEntry.phone || ""}
-                                onChange={(e) => handleUpdateCrew(actualIndex, "phone", e.target.value)}
-                                className="h-9 text-sm"
-                              />
-                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleRemoveCrew(actualIndex)}
+                              className="text-muted-foreground hover:text-destructive h-8 w-8"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
                           <div>
                             <Label className="text-sm mb-1 block">Notes</Label>
                             <Textarea
                               placeholder="Enter notes (optional)"
                               value={crewEntry.notes || ""}
-                              onChange={(e) => handleUpdateCrew(actualIndex, "notes", e.target.value)}
+                              onChange={(e) => handleUpdateCrewNotes(actualIndex, e.target.value)}
                               className="text-sm min-h-[60px]"
                               rows={2}
                             />
@@ -924,68 +998,87 @@ export function EditItineraryDialog({
                   .filter((c) => c.role === "Cabin Attendance")
                   .map((crewEntry) => {
                     const actualIndex = crewMembers.findIndex((c) => c.id === crewEntry.id)
+                    const crew = getCrewById(crewEntry.crew_id)
+                    const isOpen = crewComboboxOpen === `crew-${actualIndex}`
 
                     return (
                       <div
                         key={crewEntry.id}
                         className="border rounded-lg p-4 bg-card border-border mb-2"
                       >
-                        <div className="flex items-start justify-between mb-3">
-                          <div className="font-medium text-sm text-foreground">Crew Member</div>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleRemoveCrew(actualIndex)}
-                            className="text-muted-foreground hover:text-destructive h-8 w-8"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
                         <div className="space-y-4">
-                          <div>
-                            <Label className="text-sm mb-1 block">Name *</Label>
-                            <Input
-                              placeholder="Enter crew member name"
-                              value={crewEntry.name || ""}
-                              onChange={(e) => handleUpdateCrew(actualIndex, "name", e.target.value)}
-                              className="h-9 text-sm"
-                            />
-                          </div>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                              <Label className="text-sm mb-1 block flex items-center gap-2">
-                                <Mail className="h-3.5 w-3.5 text-muted-foreground" />
-                                Email
-                              </Label>
-                              <Input
-                                type="email"
-                                placeholder="Enter email (optional)"
-                                value={crewEntry.email || ""}
-                                onChange={(e) => handleUpdateCrew(actualIndex, "email", e.target.value)}
-                                className="h-9 text-sm"
-                              />
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <Label className="text-sm mb-2 block">Crew Member *</Label>
+                              <Popover
+                                open={isOpen}
+                                onOpenChange={(open) =>
+                                  setCrewComboboxOpen(open ? `crew-${actualIndex}` : null)
+                                }
+                                modal={true}
+                              >
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    role="combobox"
+                                    className={cn(
+                                      "w-full justify-between",
+                                      !crewEntry.crew_id && "text-muted-foreground"
+                                    )}
+                                    disabled={loadingCrew}
+                                  >
+                                    {crew
+                                      ? crew.display_name || `${crew.first_name} ${crew.last_name}`
+                                      : loadingCrew
+                                      ? "Loading crew..."
+                                      : "Select a crew member"}
+                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent
+                                  className="w-[var(--radix-popover-trigger-width)] p-0"
+                                  align="start"
+                                >
+                                  <Command shouldFilter={false}>
+                                    <CommandInput
+                                      placeholder="Search crew members..."
+                                      value={crewSearch}
+                                      onValueChange={setCrewSearch}
+                                    />
+                                    <CommandList className="max-h-[300px] overflow-y-auto">
+                                      <CommandEmpty>No crew members found.</CommandEmpty>
+                                      <CommandGroup>
+                                        {filteredCrew.map((c) => (
+                                          <CommandItem
+                                            key={c.id}
+                                            value={c.id}
+                                            onSelect={() => handleSelectCrew(actualIndex, c.id)}
+                                          >
+                                            {c.display_name || `${c.first_name} ${c.last_name}`}
+                                          </CommandItem>
+                                        ))}
+                                      </CommandGroup>
+                                    </CommandList>
+                                  </Command>
+                                </PopoverContent>
+                              </Popover>
                             </div>
-                            <div>
-                              <Label className="text-sm mb-1 block flex items-center gap-2">
-                                <Phone className="h-3.5 w-3.5 text-muted-foreground" />
-                                Phone
-                              </Label>
-                              <Input
-                                type="tel"
-                                placeholder="Enter phone (optional)"
-                                value={crewEntry.phone || ""}
-                                onChange={(e) => handleUpdateCrew(actualIndex, "phone", e.target.value)}
-                                className="h-9 text-sm"
-                              />
-                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleRemoveCrew(actualIndex)}
+                              className="text-muted-foreground hover:text-destructive h-8 w-8"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
                           <div>
                             <Label className="text-sm mb-1 block">Notes</Label>
                             <Textarea
                               placeholder="Enter notes (optional)"
                               value={crewEntry.notes || ""}
-                              onChange={(e) => handleUpdateCrew(actualIndex, "notes", e.target.value)}
+                              onChange={(e) => handleUpdateCrewNotes(actualIndex, e.target.value)}
                               className="text-sm min-h-[60px]"
                               rows={2}
                             />
