@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { SimpleSelect } from "@/components/ui/simple-select"
 import { Archive } from "lucide-react"
 import { LeadTable } from "@/components/leads/lead-table"
 import { ErrorBoundary } from "@/components/ui/error-boundary"
@@ -192,17 +192,18 @@ export default function LeadsPage() {
       title: "Leads",
       subtitle: "Track and manage customer inquiries in real time.",
       actions: (
-        <Select value={statusFilter} onValueChange={(v: "active" | "expired" | "all") => setStatusFilter(v)}>
-          <SelectTrigger className="w-[180px]">
-            <Archive className="mr-2 h-4 w-4" />
-            <SelectValue placeholder="Filter status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="active">Active ({activeCount})</SelectItem>
-            <SelectItem value="expired">Expired ({expiredCount})</SelectItem>
-            <SelectItem value="all">All Leads</SelectItem>
-          </SelectContent>
-        </Select>
+        <SimpleSelect
+          value={statusFilter}
+          onValueChange={(v) => setStatusFilter(v as "active" | "expired" | "all")}
+          options={[
+            { value: "active", label: `Active (${activeCount})` },
+            { value: "expired", label: `Expired (${expiredCount})` },
+            { value: "all", label: "All Leads" },
+          ]}
+          placeholder="Filter status"
+          triggerClassName="w-[180px]"
+          icon={<Archive className="h-4 w-4" />}
+        />
       ),
     })
 

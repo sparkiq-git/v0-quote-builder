@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { SimpleSelect } from "@/components/ui/simple-select"
 import { Input } from "@/components/ui/input"
 import { Plus, Eye, Search, Trash2, FileSignature, ArrowUpDown, Filter, MoreHorizontal } from "lucide-react"
 import { formatDate, formatTimeAgo } from "@/lib/utils/format"
@@ -248,22 +248,23 @@ export default function QuotesPage() {
             </div>
             <div className="flex items-center gap-2">
               <Filter className="h-4 w-4 text-muted-foreground" />
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="draft">Draft</SelectItem>
-                  <SelectItem value="sent">Sent</SelectItem>
-                  <SelectItem value="opened">Opened</SelectItem>
-                  <SelectItem value="accepted">Accepted</SelectItem>
-                  <SelectItem value="declined">Declined</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
-                  <SelectItem value="invoiced">Invoiced</SelectItem>
-                  <SelectItem value="expired">Expired</SelectItem>
-                </SelectContent>
-              </Select>
+              <SimpleSelect
+                value={statusFilter}
+                onValueChange={setStatusFilter}
+                options={[
+                  { value: "all", label: "All Statuses" },
+                  { value: "draft", label: "Draft" },
+                  { value: "sent", label: "Sent" },
+                  { value: "opened", label: "Opened" },
+                  { value: "accepted", label: "Accepted" },
+                  { value: "declined", label: "Declined" },
+                  { value: "cancelled", label: "Cancelled" },
+                  { value: "invoiced", label: "Invoiced" },
+                  { value: "expired", label: "Expired" },
+                ]}
+                placeholder="Status"
+                triggerClassName="w-[180px]"
+              />
             </div>
           </div>
 

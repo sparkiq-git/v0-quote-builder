@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { SimpleSelect } from "@/components/ui/simple-select"
 import { Input } from "@/components/ui/input"
 import { Eye, Trash2, Search, Plus } from "lucide-react"
 import { formatDate, formatTimeAgo, formatCurrency } from "@/lib/utils/format"
@@ -60,7 +60,7 @@ export default function InvoicesPage() {
         const { data, error } = await supabase
           .from("invoice")
           .select(
-            `id, number, issued_at, amount, currency, status, aircraft_label, summary_itinerary, quote:quote_id(contact_name, contact_company)`
+            `id, number, issued_at, amount, currency, status, aircraft_label, summary_itinerary, quote:quote_id(contact_name, contact_company)`,
           )
           .eq("tenant_id", tenantId)
           .order("issued_at", { ascending: false })
@@ -165,18 +165,19 @@ export default function InvoicesPage() {
               />
             </div>
 
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="draft">Draft</SelectItem>
-                <SelectItem value="issued">Issued</SelectItem>
-                <SelectItem value="paid">Paid</SelectItem>
-                <SelectItem value="void">Void</SelectItem>
-              </SelectContent>
-            </Select>
+            <SimpleSelect
+              value={statusFilter}
+              onValueChange={setStatusFilter}
+              options={[
+                { value: "all", label: "All Statuses" },
+                { value: "draft", label: "Draft" },
+                { value: "issued", label: "Issued" },
+                { value: "paid", label: "Paid" },
+                { value: "void", label: "Void" },
+              ]}
+              placeholder="Status"
+              triggerClassName="w-[180px]"
+            />
           </div>
 
           {filteredInvoices.length > 0 ? (
