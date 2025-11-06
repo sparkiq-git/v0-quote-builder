@@ -26,6 +26,18 @@ interface SimpleDropdownComposableProps {
   className?: string
 }
 
+const SimpleDropdownContext = React.createContext<{
+  closeDropdown: () => void
+} | null>(null)
+
+const useSimpleDropdown = () => {
+  const context = React.useContext(SimpleDropdownContext)
+  if (!context) {
+    throw new Error("useSimpleDropdown must be used within SimpleDropdownComposable")
+  }
+  return context
+}
+
 export function SimpleDropdown({ trigger, items, align = "end" }: SimpleDropdownProps) {
   const [isOpen, setIsOpen] = React.useState(false)
   const dropdownRef = React.useRef<HTMLDivElement>(null)
@@ -225,6 +237,10 @@ export function SimpleDropdownComposable({
     }
   }, [isOpen])
 
+  const closeDropdown = React.useCallback(() => {
+    setIsOpen(false)
+  }, [])
+
   const handleTriggerClick = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
@@ -232,28 +248,30 @@ export function SimpleDropdownComposable({
   }
 
   return (
-    <div className="relative">
-      <div ref={triggerRef} onClick={handleTriggerClick}>
-        {trigger}
-      </div>
-
-      {isOpen && (
-        <div
-          ref={dropdownRef}
-          className={cn(
-            "fixed z-50 min-w-56 rounded-lg border bg-popover p-1 text-popover-foreground shadow-md",
-            "animate-in fade-in-0 zoom-in-95",
-            className,
-          )}
-          style={{
-            top: `${position.top}px`,
-            left: `${position.left}px`,
-          }}
-        >
-          {children}
+    <SimpleDropdownContext.Provider value={{ closeDropdown }}>
+      <div className="relative">
+        <div ref={triggerRef} onClick={handleTriggerClick}>
+          {trigger}
         </div>
-      )}
-    </div>
+
+        {isOpen && (
+          <div
+            ref={dropdownRef}
+            className={cn(
+              "fixed z-50 min-w-56 rounded-lg border bg-popover p-1 text-popover-foreground shadow-md",
+              "animate-in fade-in-0 zoom-in-95",
+              className,
+            )}
+            style={{
+              top: `${position.top}px`,
+              left: `${position.left}px`,
+            }}
+          >
+            {children}
+          </div>
+        )}
+      </div>
+    </SimpleDropdownContext.Provider>
   )
 }
 
@@ -261,14 +279,24 @@ export function SimpleDropdownItem({
   children,
   onSelect,
   className,
+  onClick,
   ...props
 }: {
   children: React.ReactNode
-  onSelect?: () => void
+  onSelect?: (e: React.MouseEvent) => void
   className?: string
-} & React.HTMLAttributes<HTMLDivElement>) {
-  const handleClick = () => {
-    onSelect?.()
+  onClick?: (e: React.MouseEvent) => void
+} & Omit<React.HTMLAttributes<HTMLDivElement>, "onClick">) {
+  const context = React.useContext(SimpleDropdownContext)
+
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    e.preventDefault()
+
+    onSelect?.(e)
+    onClick?.(e)
+
+    context?.closeDropdown()
   }
 
   return (

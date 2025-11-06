@@ -1,23 +1,22 @@
 "use client"
 
+import { AlertDialogContent } from "@/components/ui/alert-dialog"
+
+import { AlertDialogAction } from "@/components/ui/alert-dialog"
+import { AlertDialogCancel } from "@/components/ui/alert-dialog"
+import { AlertDialogFooter } from "@/components/ui/alert-dialog"
+import { AlertDialogDescription } from "@/components/ui/alert-dialog"
+import { AlertDialogTitle } from "@/components/ui/alert-dialog"
+import { AlertDialogHeader } from "@/components/ui/alert-dialog"
+import { AlertDialog, AlertDialogPortal, AlertDialogOverlay } from "@/components/ui/alert-dialog"
 import { useState } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { SimpleSelect } from "@/components/ui/simple-select"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+import { SimpleDropdownComposable, SimpleDropdownItem } from "@/components/ui/simple-dropdown"
 import {
   Search,
   MoreHorizontal,
@@ -148,9 +147,9 @@ export function TailsGrid() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "inactive" }),
       })
-      
+
       if (!response.ok) throw new Error("Failed to archive tail")
-      
+
       toast({
         title: "Tail archived",
         description: "The aircraft tail has been archived successfully.",
@@ -172,9 +171,9 @@ export function TailsGrid() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "active" }),
       })
-      
+
       if (!response.ok) throw new Error("Failed to unarchive tail")
-      
+
       toast({
         title: "Tail unarchived",
         description: "The aircraft tail has been unarchived successfully.",
@@ -194,9 +193,9 @@ export function TailsGrid() {
       const response = await fetch(`/api/aircraft/${tailId}`, {
         method: "DELETE",
       })
-      
+
       if (!response.ok) throw new Error("Failed to delete tail")
-      
+
       setDeleteTailId(null)
       toast({
         title: "Tail deleted",
@@ -247,36 +246,37 @@ export function TailsGrid() {
             className="flex-1"
           />
         </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger>
-            <SelectValue placeholder="All Statuses" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Statuses</SelectItem>
-            {uniqueStatuses.map((status) => (
-              <SelectItem key={status} value={status}>
-                {getStatusLabel(status)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={modelFilter} onValueChange={setModelFilter}>
-          <SelectTrigger>
-            <SelectValue placeholder="All Models" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Models</SelectItem>
-            {Array.from(new Set(aircraft.map(tail => tail.aircraftModel?.id).filter(Boolean)))
+        <SimpleSelect
+          value={statusFilter}
+          onValueChange={setStatusFilter}
+          options={[
+            { value: "all", label: "All Statuses" },
+            ...uniqueStatuses.map((status) => ({
+              value: status,
+              label: getStatusLabel(status),
+            })),
+          ]}
+          placeholder="All Statuses"
+        />
+        <SimpleSelect
+          value={modelFilter}
+          onValueChange={setModelFilter}
+          options={[
+            { value: "all", label: "All Models" },
+            ...Array.from(new Set(aircraft.map((tail) => tail.aircraftModel?.id).filter(Boolean)))
               .map((modelId) => {
-                const model = aircraft.find(tail => tail.aircraftModel?.id === modelId)?.aircraftModel
-                return model ? (
-                  <SelectItem key={modelId} value={modelId}>
-                    {model.name}
-                  </SelectItem>
-                ) : null
-              })}
-          </SelectContent>
-        </Select>
+                const model = aircraft.find((tail) => tail.aircraftModel?.id === modelId)?.aircraftModel
+                return model
+                  ? {
+                      value: modelId,
+                      label: model.name,
+                    }
+                  : null
+              })
+              .filter((item): item is { value: string; label: string } => item !== null),
+          ]}
+          placeholder="All Models"
+        />
         <ToggleGroup
           type="single"
           value={archiveFilter}
@@ -325,9 +325,7 @@ export function TailsGrid() {
                 <CardContent className="p-4 pt-0">
                   <div className="space-y-3">
                     <div>
-                      <h3 className="font-semibold text-lg">
-                        {tail.tailNumber}
-                      </h3>
+                      <h3 className="font-semibold text-lg">{tail.tailNumber}</h3>
                       <p className="text-sm text-muted-foreground">
                         {model?.name || "Unknown Model"}
                         {tail.year && ` • ${tail.year}`}
@@ -391,50 +389,47 @@ export function TailsGrid() {
                   </div>
                 </CardContent>
                 <CardFooter className="p-4 pt-0">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full bg-transparent"
-                        onClick={(e) => e.stopPropagation()}
-                      >
+                  <SimpleDropdownComposable
+                    trigger={
+                      <Button variant="outline" size="sm" className="w-full bg-transparent">
                         <MoreHorizontal className="h-4 w-4 mr-2" />
                         Actions
                       </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <TailCreateDialog tailId={tail.id}>
-                        <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                          <Edit className="mr-2 h-4 w-4" />
-                          Edit
-                        </DropdownMenuItem>
-                      </TailCreateDialog>
-                      <DropdownMenuItem onClick={() => {
-                        setImageTailId(tail.id)
-                        setImageDialogOpen(true)
-                      }}>
+                    }
+                    align="end"
+                  >
+                    <SimpleDropdownItem
+                      onClick={() => {
+                        setEditTailId(tail.id)
+                        setIsEditDialogOpen(true)
+                      }}
+                    >
+                      <Edit className="mr-2 h-4 w-4" />
+                      Edit
+                    </SimpleDropdownItem>
+                    <TailImageDialog tailId={tail.id}>
+                      <SimpleDropdownItem onSelect={(e) => e.preventDefault()}>
                         <ImageIcon className="mr-2 h-4 w-4" />
                         Add Images
-                      </DropdownMenuItem>
-                      {!tail.isArchived && (
-                        <DropdownMenuItem onClick={() => handleArchiveTail(tail.id)}>
-                          <Archive className="mr-2 h-4 w-4" />
-                          Archive
-                        </DropdownMenuItem>
-                      )}
-                      {tail.isArchived && (
-                        <DropdownMenuItem onClick={() => handleUnarchiveTail(tail.id)}>
-                          <ArchiveRestore className="mr-2 h-4 w-4" />
-                          Unarchive
-                        </DropdownMenuItem>
-                      )}
-                      <DropdownMenuItem onClick={() => setDeleteTailId(tail.id)} className="text-destructive">
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                      </SimpleDropdownItem>
+                    </TailImageDialog>
+                    {!tail.isArchived && (
+                      <SimpleDropdownItem onClick={() => handleArchiveTail(tail.id)}>
+                        <Archive className="mr-2 h-4 w-4" />
+                        Archive
+                      </SimpleDropdownItem>
+                    )}
+                    {tail.isArchived && (
+                      <SimpleDropdownItem onClick={() => handleUnarchiveTail(tail.id)}>
+                        <ArchiveRestore className="mr-2 h-4 w-4" />
+                        Unarchive
+                      </SimpleDropdownItem>
+                    )}
+                    <SimpleDropdownItem onClick={() => setDeleteTailId(tail.id)} className="text-destructive">
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete
+                    </SimpleDropdownItem>
+                  </SimpleDropdownComposable>
                 </CardFooter>
               </Card>
             )
@@ -470,23 +465,26 @@ export function TailsGrid() {
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!deleteTailId} onOpenChange={() => setDeleteTailId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Aircraft Tail</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete this aircraft tail? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => deleteTailId && handleDeleteTail(deleteTailId)}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
+        <AlertDialogPortal>
+          <AlertDialogOverlay />
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Aircraft Tail</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete this aircraft tail? This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => deleteTailId && handleDeleteTail(deleteTailId)}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialogPortal>
       </AlertDialog>
     </div>
   )

@@ -42,38 +42,60 @@ export function SimpleSelect({
     const rect = triggerRef.current.getBoundingClientRect()
     const viewportHeight = window.innerHeight
     const viewportWidth = window.innerWidth
-    const dropdownHeight = dropdownRef.current?.offsetHeight || 300
+
+    // Get actual dropdown height, or estimate based on number of options
+    const estimatedItemHeight = 36 // px per item
+    const estimatedHeight = Math.min(options.length * estimatedItemHeight + 16, 400)
+    const dropdownHeight = dropdownRef.current?.offsetHeight || estimatedHeight
     const dropdownWidth = rect.width
 
     const spaceBelow = viewportHeight - rect.bottom
     const spaceAbove = rect.top
+    const spaceRight = viewportWidth - rect.left
+    const spaceLeft = rect.right
 
     let top = rect.bottom + 4
     let left = rect.left
 
-    // Check if dropdown would go off-screen below
-    if (spaceBelow < dropdownHeight + 40 && spaceAbove > spaceBelow) {
-      // Position above if there's more space
-      const abovePosition = rect.top - dropdownHeight - 4
-      if (abovePosition >= 40) {
-        top = abovePosition
-      }
+    // Vertical positioning: prefer below, but position above if not enough space
+    if (spaceBelow < dropdownHeight + 20 && spaceAbove > spaceBelow) {
+      top = rect.top - dropdownHeight - 4
     }
 
-    // Ensure dropdown doesn't go off right edge
-    const maxLeft = viewportWidth - dropdownWidth - 40
-    left = Math.min(left, maxLeft)
-    left = Math.max(40, left)
+    // Ensure dropdown stays within viewport vertically
+    if (top < 10) {
+      top = 10
+    } else if (top + dropdownHeight > viewportHeight - 10) {
+      top = viewportHeight - dropdownHeight - 10
+    }
+
+    // Horizontal positioning: ensure dropdown doesn't go off-screen
+    if (spaceRight < dropdownWidth + 20 && spaceLeft > spaceRight) {
+      // Align to right edge of trigger
+      left = rect.right - dropdownWidth
+    }
+
+    // Ensure dropdown stays within viewport horizontally
+    if (left < 10) {
+      left = 10
+    } else if (left + dropdownWidth > viewportWidth - 10) {
+      left = viewportWidth - dropdownWidth - 10
+    }
 
     setPosition({ top, left, width: dropdownWidth })
-  }, [])
+  }, [options.length])
 
   React.useEffect(() => {
     if (isOpen) {
       calculatePosition()
+      // Recalculate after dropdown is rendered to get accurate height
+      const timeoutId = setTimeout(calculatePosition, 10)
+
       window.addEventListener("scroll", calculatePosition, true)
       window.addEventListener("resize", calculatePosition)
+
       return () => {
+        clearTimeout(timeoutId)
         window.removeEventListener("scroll", calculatePosition, true)
         window.removeEventListener("resize", calculatePosition)
       }
@@ -85,24 +107,21 @@ export function SimpleSelect({
 
     let cleanupFn: (() => void) | null = null
 
-    const timeoutId = setTimeout(() => {
-      const handleClickOutside = (e: MouseEvent) => {
-        if (
-          triggerRef.current &&
-          !triggerRef.current.contains(e.target as Node) &&
-          dropdownRef.current &&
-          !dropdownRef.current.contains(e.target as Node)
-        ) {
-          setIsOpen(false)
-        }
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        triggerRef.current &&
+        !triggerRef.current.contains(e.target as Node) &&
+        dropdownRef.current &&
+        !dropdownRef.current.contains(e.target as Node)
+      ) {
+        setIsOpen(false)
       }
+    }
 
-      document.addEventListener("mousedown", handleClickOutside)
-      cleanupFn = () => document.removeEventListener("mousedown", handleClickOutside)
-    }, 100)
+    document.addEventListener("mousedown", handleClickOutside)
+    cleanupFn = () => document.removeEventListener("mousedown", handleClickOutside)
 
     return () => {
-      clearTimeout(timeoutId)
       if (cleanupFn) cleanupFn()
     }
   }, [isOpen])
@@ -115,6 +134,7 @@ export function SimpleSelect({
   const handleToggle = (e: React.MouseEvent) => {
     e.stopPropagation()
     e.preventDefault()
+    console.log("[v0] SimpleSelect toggle clicked, isOpen:", !isOpen)
     setIsOpen(!isOpen)
   }
 
