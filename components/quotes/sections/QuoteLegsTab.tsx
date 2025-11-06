@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { SimpleAirportCombobox } from "@/components/ui/simple-airport-combobox"
-import { DateTimePicker } from "@/components/ui/date-time-picker"
+import { SimpleDateTimePicker } from "@/components/ui/simple-date-time-picker"
 import { Input } from "@/components/ui/input"
 import { Plane, ChevronRight, Plus, Trash2 } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -263,13 +263,14 @@ export function QuoteLegsTab({ quote, onUpdate, onLegsChange, onNext, onBack }: 
 
               <div>
                 <Label>Departure Date *</Label>
-                <DateTimePicker
-                  date={formState.departureDate}
+                <SimpleDateTimePicker
+                  date={formState.departureDate ? new Date(formState.departureDate) : undefined}
                   onDateChange={(d) => {
                     console.log("📅 Departure date changed:", d)
-                    setFormState((prev) => ({ ...prev, departureDate: d }))
+                    setFormState((prev) => ({ ...prev, departureDate: d?.toISOString() || "" }))
                   }}
                   showOnlyDate
+                  placeholder="mm / dd / yyyy"
                 />
               </div>
 
@@ -288,13 +289,14 @@ export function QuoteLegsTab({ quote, onUpdate, onLegsChange, onNext, onBack }: 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t">
                 <div>
                   <Label>Return Date *</Label>
-                  <DateTimePicker
-                    date={formState.returnDate}
+                  <SimpleDateTimePicker
+                    date={formState.returnDate ? new Date(formState.returnDate) : undefined}
                     onDateChange={(d) => {
                       console.log("📅 Return date changed:", d)
-                      setFormState((prev) => ({ ...prev, returnDate: d }))
+                      setFormState((prev) => ({ ...prev, returnDate: d?.toISOString() || "" }))
                     }}
                     showOnlyDate
+                    placeholder="mm / dd / yyyy"
                   />
                 </div>
 
@@ -390,13 +392,16 @@ export function QuoteLegsTab({ quote, onUpdate, onLegsChange, onNext, onBack }: 
 
                   <div>
                     <Label>Departure Date *</Label>
-                    <DateTimePicker
-                      date={leg.departureDate}
+                    <SimpleDateTimePicker
+                      date={leg.departureDate ? new Date(leg.departureDate) : undefined}
                       onDateChange={(d) => {
                         console.log("📅 Multi-city leg date changed:", { legId: leg.id, date: d })
-                        setMultiLegs((prev) => prev.map((l) => (l.id === leg.id ? { ...l, departureDate: d } : l)))
+                        setMultiLegs((prev) =>
+                          prev.map((l) => (l.id === leg.id ? { ...l, departureDate: d?.toISOString() || "" } : l)),
+                        )
                       }}
                       showOnlyDate
+                      placeholder="mm / dd / yyyy"
                     />
                   </div>
 
