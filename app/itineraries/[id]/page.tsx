@@ -24,6 +24,7 @@ import { Separator } from "@/components/ui/separator"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { formatDate } from "@/lib/utils/format"
 import { ItineraryStatusBadge } from "@/components/itineraries/itinerary-status-badge"
+import { EditItineraryDialog } from "@/components/itineraries/edit-itinerary-dialog"
 import { useToast } from "@/hooks/use-toast"
 import {
   Select,
@@ -96,6 +97,7 @@ export default function ItineraryDetailPage() {
   const [itinerary, setItinerary] = useState<Itinerary | null>(null)
   const [loading, setLoading] = useState(true)
   const [updatingStatus, setUpdatingStatus] = useState(false)
+  const [showEditDialog, setShowEditDialog] = useState(false)
 
   useEffect(() => {
     const fetchItinerary = async () => {
@@ -205,6 +207,15 @@ export default function ItineraryDetailPage() {
         </div>
         <div className="flex items-center gap-2">
           <ItineraryStatusBadge status={itinerary.status} />
+          {(itinerary.status === "draft" || itinerary.status === "trip_confirmed") && (
+            <Button
+              variant="outline"
+              onClick={() => setShowEditDialog(true)}
+            >
+              <Edit className="h-4 w-4 mr-2" />
+              Edit Itinerary
+            </Button>
+          )}
           {canConfirmTrip && (
             <Button
               onClick={() => handleStatusChange("trip_confirmed")}
@@ -476,6 +487,30 @@ export default function ItineraryDetailPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Edit Dialog */}
+      {itinerary && (
+        <EditItineraryDialog
+          open={showEditDialog}
+          onOpenChange={setShowEditDialog}
+          itinerary={itinerary}
+          onSuccess={() => {
+            // Refresh itinerary data
+            const fetchItinerary = async () => {
+              try {
+                const response = await fetch(`/api/itineraries/${id}`)
+                if (response.ok) {
+                  const { data } = await response.json()
+                  setItinerary(data)
+                }
+              } catch (error) {
+                console.error("Error refreshing itinerary:", error)
+              }
+            }
+            fetchItinerary()
+          }}
+        />
+      )}
     </div>
   )
 }

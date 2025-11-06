@@ -1,0 +1,875 @@
+"use client"
+
+import { useState, useEffect, useCallback } from "react"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import {
+  MapPin,
+  Loader2,
+  Save,
+  Users,
+  UserPlus,
+  Plane,
+  UserCog,
+  Plus,
+  Trash2,
+  X,
+  Upload,
+  Check,
+  ChevronsUpDown,
+} from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { cn } from "@/lib/utils"
+
+interface Passenger {
+  id: string
+  contact_id: string
+  full_name: string
+  email: string
+  phone: string | null
+  company: string | null
+  avatar_path: string | null
+  contact?: {
+    id: string
+    full_name: string
+    email: string
+  }
+}
+
+interface CrewMember {
+  id: string
+  user_id: string
+  display_name: string
+  first_name: string
+  last_name: string
+  phone_number: string | null
+  active: boolean
+}
+
+interface Itinerary {
+  id: string
+  contact_id: string
+  total_pax: number
+  contact?: {
+    id: string
+    full_name: string
+    email: string
+  }
+}
+
+interface EditItineraryDialogProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  itinerary: Itinerary
+  onSuccess?: () => void
+}
+
+export function EditItineraryDialog({
+  open,
+  onOpenChange,
+  itinerary,
+  onSuccess,
+}: EditItineraryDialogProps) {
+  const { toast } = useToast()
+  const [loading, setLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
+  
+  // Passengers state
+  const [passengers, setPassengers] = useState<Array<{ id: string; passenger_id: string }>>([])
+  const [availablePassengers, setAvailablePassengers] = useState<Passenger[]>([])
+  const [loadingPassengers, setLoadingPassengers] = useState(true)
+  const [passengerSearch, setPassengerSearch] = useState("")
+  const [passengerComboboxOpen, setPassengerComboboxOpen] = useState<string | null>(null)
+  
+  // Crew state
+  const [crewMembers, setCrewMembers] = useState<Array<{ id: string; crew_id: string; role: string }>>([])
+  const [availableCrew, setAvailableCrew] = useState<CrewMember[]>([])
+  const [loadingCrew, setLoadingCrew] = useState(true)
+  const [crewSearch, setCrewSearch] = useState("")
+  const [crewComboboxOpen, setCrewComboboxOpen] = useState<string | null>(null)
+
+  // Fetch existing passengers and crew for this itinerary
+  useEffect(() => {
+    if (open && itinerary.id) {
+      fetchItineraryData()
+    }
+  }, [open, itinerary.id])
+
+  // Fetch available passengers (linked to the contact)
+  useEffect(() => {
+    if (open && itinerary.contact_id) {
+      fetchAvailablePassengers()
+    }
+  }, [open, itinerary.contact_id])
+
+  // Fetch available crew
+  useEffect(() => {
+    if (open) {
+      fetchAvailableCrew()
+    }
+  }, [open])
+
+  const fetchItineraryData = async () => {
+    try {
+      const response = await fetch(`/api/itineraries/${itinerary.id}/passengers`)
+      if (response.ok) {
+        const { data } = await response.json()
+        setPassengers(data?.passengers || [])
+      }
+    } catch (error) {
+      console.error("Error fetching itinerary passengers:", error)
+    }
+
+    try {
+      const response = await fetch(`/api/itineraries/${itinerary.id}/crew`)
+      if (response.ok) {
+        const { data } = await response.json()
+        setCrewMembers(data?.crew || [])
+      }
+    } catch (error) {
+      console.error("Error fetching itinerary crew:", error)
+    }
+  }
+
+  const fetchAvailablePassengers = async () => {
+    setLoadingPassengers(true)
+    try {
+      const response = await fetch(`/api/passengers?contact_id=${itinerary.contact_id}&status=active`)
+      if (!response.ok) throw new Error("Failed to fetch passengers")
+      const { data } = await response.json()
+      setAvailablePassengers(data || [])
+    } catch (error: any) {
+      console.error("Error fetching passengers:", error)
+      toast({
+        title: "Error",
+        description: "Failed to load passengers",
+        variant: "destructive",
+      })
+    } finally {
+      setLoadingPassengers(false)
+    }
+  }
+
+  const fetchAvailableCrew = async () => {
+    setLoadingCrew(true)
+    try {
+      const response = await fetch("/api/crew?active=true")
+      if (!response.ok) throw new Error("Failed to fetch crew")
+      const { data } = await response.json()
+      setAvailableCrew(data || [])
+    } catch (error: any) {
+      console.error("Error fetching crew:", error)
+      toast({
+        title: "Error",
+        description: "Failed to load crew members",
+        variant: "destructive",
+      })
+    } finally {
+      setLoadingCrew(false)
+    }
+  }
+
+  const handleAddPassenger = () => {
+    if (passengers.length >= itinerary.total_pax) {
+      toast({
+        title: "Limit Reached",
+        description: `Maximum ${itinerary.total_pax} passengers allowed for this itinerary.`,
+        variant: "destructive",
+      })
+      return
+    }
+    setPassengers([...passengers, { id: `temp-${Date.now()}`, passenger_id: "" }])
+  }
+
+  const handleRemovePassenger = (index: number) => {
+    setPassengers(passengers.filter((_, i) => i !== index))
+  }
+
+  const handleSelectPassenger = (index: number, passengerId: string) => {
+    const updated = [...passengers]
+    updated[index].passenger_id = passengerId
+    setPassengers(updated)
+    setPassengerComboboxOpen(null)
+  }
+
+  const handleAddCrew = (role: "PIC" | "SIC" | "Cabin Attendance") => {
+    setCrewMembers([...crewMembers, { id: `temp-${Date.now()}`, crew_id: "", role }])
+  }
+
+  const handleRemoveCrew = (index: number) => {
+    setCrewMembers(crewMembers.filter((_, i) => i !== index))
+  }
+
+  const handleSelectCrew = (index: number, crewId: string) => {
+    const updated = [...crewMembers]
+    updated[index].crew_id = crewId
+    setCrewMembers(updated)
+    setCrewComboboxOpen(null)
+  }
+
+  const handleSave = async () => {
+    setSaving(true)
+    try {
+      // Validate passengers don't exceed total_pax
+      if (passengers.length > itinerary.total_pax) {
+        throw new Error(`Cannot exceed ${itinerary.total_pax} passengers`)
+      }
+
+      // Validate all passengers are selected
+      const incompletePassengers = passengers.filter((p) => !p.passenger_id)
+      if (incompletePassengers.length > 0) {
+        throw new Error("Please select a passenger for all entries")
+      }
+
+      // Validate all crew are selected
+      const incompleteCrew = crewMembers.filter((c) => !c.crew_id)
+      if (incompleteCrew.length > 0) {
+        throw new Error("Please select a crew member for all entries")
+      }
+
+      // Save passengers
+      const passengerResponse = await fetch(`/api/itineraries/${itinerary.id}/passengers`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          passengers: passengers.map((p) => ({ passenger_id: p.passenger_id })),
+        }),
+      })
+
+      if (!passengerResponse.ok) {
+        const error = await passengerResponse.json()
+        throw new Error(error.error || "Failed to save passengers")
+      }
+
+      // Save crew
+      const crewResponse = await fetch(`/api/itineraries/${itinerary.id}/crew`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          crew: crewMembers.map((c) => ({ crew_id: c.crew_id, role: c.role })),
+        }),
+      })
+
+      if (!crewResponse.ok) {
+        const error = await crewResponse.json()
+        throw new Error(error.error || "Failed to save crew")
+      }
+
+      toast({
+        title: "Success",
+        description: "Itinerary updated successfully",
+      })
+
+      if (onSuccess) {
+        onSuccess()
+      }
+      onOpenChange(false)
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to save itinerary",
+        variant: "destructive",
+      })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleClose = useCallback(() => {
+    onOpenChange(false)
+    setPassengers([])
+    setCrewMembers([])
+    setPassengerSearch("")
+    setCrewSearch("")
+    setPassengerComboboxOpen(null)
+    setCrewComboboxOpen(null)
+  }, [onOpenChange])
+
+  // Filter passengers based on search
+  const filteredPassengers = availablePassengers.filter((passenger) => {
+    if (!passengerSearch) return true
+    const search = passengerSearch.toLowerCase()
+    return (
+      passenger.full_name.toLowerCase().includes(search) ||
+      passenger.email.toLowerCase().includes(search) ||
+      (passenger.company && passenger.company.toLowerCase().includes(search))
+    )
+  })
+
+  // Filter crew based on search
+  const filteredCrew = availableCrew.filter((crew) => {
+    if (!crewSearch) return true
+    const search = crewSearch.toLowerCase()
+    return (
+      crew.display_name.toLowerCase().includes(search) ||
+      (crew.first_name && crew.first_name.toLowerCase().includes(search)) ||
+      (crew.last_name && crew.last_name.toLowerCase().includes(search))
+    )
+  })
+
+  const getPassengerById = (passengerId: string) => {
+    return availablePassengers.find((p) => p.id === passengerId)
+  }
+
+  const getCrewById = (crewId: string) => {
+    return availableCrew.find((c) => c.id === crewId)
+  }
+
+  const remainingPassengerSlots = itinerary.total_pax - passengers.length
+
+  return (
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="w-[60vw] sm:max-w-[92vw] md:max-w-[60vw] lg:max-w-[60vw] max-h-[95vh] p-5 flex flex-col overflow-hidden bg-background backdrop-blur-xl border shadow-2xl">
+        <DialogHeader className="border-b border-border pb-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-muted border border-border">
+                <MapPin className="h-5 w-5 text-muted-foreground" />
+              </div>
+              <div>
+                <DialogTitle className="text-2xl font-bold text-foreground">
+                  Edit Itinerary
+                </DialogTitle>
+                <DialogDescription className="text-base mt-1 text-muted-foreground">
+                  Add passengers and crew members to this itinerary
+                </DialogDescription>
+              </div>
+            </div>
+          </div>
+        </DialogHeader>
+
+        <div className="flex-1 overflow-y-auto py-6 px-1">
+          {/* Passengers Section */}
+          <div className="relative overflow-hidden rounded-xl border-2 border-border bg-muted/50 shadow-sm hover:shadow-md transition-shadow mb-6">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Users className="h-5 w-5 text-muted-foreground" />
+                  <h4 className="font-semibold text-lg text-foreground">Passengers</h4>
+                  <Badge variant="outline" className="text-xs">
+                    {passengers.length} / {itinerary.total_pax}
+                  </Badge>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAddPassenger}
+                  disabled={passengers.length >= itinerary.total_pax}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Passenger
+                </Button>
+              </div>
+
+              {passengers.length === 0 ? (
+                <div className="text-center py-8 text-sm text-muted-foreground">
+                  No passengers added yet. Click "Add Passenger" to get started.
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {passengers.map((passengerEntry, index) => {
+                    const passenger = getPassengerById(passengerEntry.passenger_id)
+                    const isOpen = passengerComboboxOpen === `passenger-${index}`
+
+                    return (
+                      <div
+                        key={passengerEntry.id}
+                        className="border rounded-lg p-4 bg-card border-border"
+                      >
+                        <div className="flex items-center gap-4">
+                          {/* Avatar */}
+                          <Avatar className="h-12 w-12">
+                            <AvatarImage
+                              src={
+                                passenger?.avatar_path
+                                  ? `/api/avatar/passenger/${passenger.id}`
+                                  : undefined
+                              }
+                              alt={passenger?.full_name || "Passenger"}
+                            />
+                            <AvatarFallback>
+                              {(passenger?.full_name || "P")
+                                .split(" ")
+                                .map((n) => n[0])
+                                .join("")
+                                .toUpperCase()
+                                .slice(0, 2)}
+                            </AvatarFallback>
+                          </Avatar>
+
+                          {/* Passenger Selection */}
+                          <div className="flex-1">
+                            <Popover
+                              open={isOpen}
+                              onOpenChange={(open) =>
+                                setPassengerComboboxOpen(open ? `passenger-${index}` : null)
+                              }
+                              modal={true}
+                            >
+                              <PopoverTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  role="combobox"
+                                  className={cn(
+                                    "w-full justify-between",
+                                    !passengerEntry.passenger_id && "text-muted-foreground"
+                                  )}
+                                  disabled={loadingPassengers}
+                                >
+                                  {passenger
+                                    ? `${passenger.full_name} ${passenger.email ? `(${passenger.email})` : ""}`
+                                    : loadingPassengers
+                                    ? "Loading passengers..."
+                                    : "Select a passenger"}
+                                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent
+                                className="w-[var(--radix-popover-trigger-width)] p-0"
+                                align="start"
+                              >
+                                <Command shouldFilter={false}>
+                                  <CommandInput
+                                    placeholder="Search passengers by name, email, or company..."
+                                    value={passengerSearch}
+                                    onValueChange={setPassengerSearch}
+                                  />
+                                  <CommandList className="max-h-[300px] overflow-y-auto">
+                                    <CommandEmpty>
+                                      {passengerSearch
+                                        ? `No passengers found matching "${passengerSearch}"`
+                                        : "No passengers available for this contact."}
+                                    </CommandEmpty>
+                                    <CommandGroup>
+                                      {filteredPassengers.map((p) => (
+                                        <CommandItem
+                                          key={p.id}
+                                          value={p.id}
+                                          onSelect={() => handleSelectPassenger(index, p.id)}
+                                        >
+                                          <div className="flex items-center gap-2 w-full">
+                                            <Avatar className="h-6 w-6">
+                                              <AvatarImage
+                                                src={
+                                                  p.avatar_path
+                                                    ? `/api/avatar/passenger/${p.id}`
+                                                    : undefined
+                                                }
+                                                alt={p.full_name}
+                                              />
+                                              <AvatarFallback className="text-xs">
+                                                {p.full_name
+                                                  .split(" ")
+                                                  .map((n) => n[0])
+                                                  .join("")
+                                                  .toUpperCase()
+                                                  .slice(0, 2)}
+                                              </AvatarFallback>
+                                            </Avatar>
+                                            <div className="flex flex-col flex-1">
+                                              <span className="font-medium">{p.full_name}</span>
+                                              <span className="text-xs text-muted-foreground">
+                                                {p.email}
+                                                {p.company && ` • ${p.company}`}
+                                              </span>
+                                            </div>
+                                          </div>
+                                        </CommandItem>
+                                      ))}
+                                    </CommandGroup>
+                                  </CommandList>
+                                </Command>
+                              </PopoverContent>
+                            </Popover>
+                          </div>
+
+                          {/* Remove Button */}
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleRemovePassenger(index)}
+                            className="text-muted-foreground hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+
+              {remainingPassengerSlots > 0 && (
+                <p className="text-xs text-muted-foreground mt-4">
+                  {remainingPassengerSlots} passenger slot{remainingPassengerSlots !== 1 ? "s" : ""} remaining
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Crew Section */}
+          <div className="relative overflow-hidden rounded-xl border-2 border-border bg-muted/50 shadow-sm hover:shadow-md transition-shadow">
+            <div className="p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <UserCog className="h-5 w-5 text-muted-foreground" />
+                <h4 className="font-semibold text-lg text-foreground">Crew Members</h4>
+              </div>
+
+              {/* PIC */}
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <Label className="text-sm font-medium">Pilot in Command (PIC)</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleAddCrew("PIC")}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add PIC
+                  </Button>
+                </div>
+                {crewMembers
+                  .filter((c) => c.role === "PIC")
+                  .map((crewEntry, index) => {
+                    const actualIndex = crewMembers.findIndex((c) => c.id === crewEntry.id)
+                    const crew = getCrewById(crewEntry.crew_id)
+                    const isOpen = crewComboboxOpen === `crew-${actualIndex}`
+
+                    return (
+                      <div
+                        key={crewEntry.id}
+                        className="border rounded-lg p-3 bg-card border-border mb-2"
+                      >
+                        <div className="flex items-center gap-3">
+                          <Popover
+                            open={isOpen}
+                            onOpenChange={(open) =>
+                              setCrewComboboxOpen(open ? `crew-${actualIndex}` : null)
+                            }
+                            modal={true}
+                          >
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                className={cn(
+                                  "flex-1 justify-between",
+                                  !crewEntry.crew_id && "text-muted-foreground"
+                                )}
+                                disabled={loadingCrew}
+                              >
+                                {crew
+                                  ? crew.display_name
+                                  : loadingCrew
+                                  ? "Loading crew..."
+                                  : "Select PIC"}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent
+                              className="w-[var(--radix-popover-trigger-width)] p-0"
+                              align="start"
+                            >
+                              <Command shouldFilter={false}>
+                                <CommandInput
+                                  placeholder="Search crew members..."
+                                  value={crewSearch}
+                                  onValueChange={setCrewSearch}
+                                />
+                                <CommandList className="max-h-[300px] overflow-y-auto">
+                                  <CommandEmpty>
+                                    {crewSearch
+                                      ? `No crew found matching "${crewSearch}"`
+                                      : "No crew members available."}
+                                  </CommandEmpty>
+                                  <CommandGroup>
+                                    {filteredCrew.map((c) => (
+                                      <CommandItem
+                                        key={c.id}
+                                        value={c.id}
+                                        onSelect={() => handleSelectCrew(actualIndex, c.id)}
+                                      >
+                                        <Check
+                                          className={cn(
+                                            "mr-2 h-4 w-4",
+                                            crewEntry.crew_id === c.id ? "opacity-100" : "opacity-0"
+                                          )}
+                                        />
+                                        {c.display_name}
+                                      </CommandItem>
+                                    ))}
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleRemoveCrew(actualIndex)}
+                            className="text-muted-foreground hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    )
+                  })}
+              </div>
+
+              {/* SIC */}
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <Label className="text-sm font-medium">Second in Command (SIC)</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleAddCrew("SIC")}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add SIC
+                  </Button>
+                </div>
+                {crewMembers
+                  .filter((c) => c.role === "SIC")
+                  .map((crewEntry) => {
+                    const actualIndex = crewMembers.findIndex((c) => c.id === crewEntry.id)
+                    const crew = getCrewById(crewEntry.crew_id)
+                    const isOpen = crewComboboxOpen === `crew-${actualIndex}`
+
+                    return (
+                      <div
+                        key={crewEntry.id}
+                        className="border rounded-lg p-3 bg-card border-border mb-2"
+                      >
+                        <div className="flex items-center gap-3">
+                          <Popover
+                            open={isOpen}
+                            onOpenChange={(open) =>
+                              setCrewComboboxOpen(open ? `crew-${actualIndex}` : null)
+                            }
+                            modal={true}
+                          >
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                className={cn(
+                                  "flex-1 justify-between",
+                                  !crewEntry.crew_id && "text-muted-foreground"
+                                )}
+                                disabled={loadingCrew}
+                              >
+                                {crew
+                                  ? crew.display_name
+                                  : loadingCrew
+                                  ? "Loading crew..."
+                                  : "Select SIC"}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent
+                              className="w-[var(--radix-popover-trigger-width)] p-0"
+                              align="start"
+                            >
+                              <Command shouldFilter={false}>
+                                <CommandInput
+                                  placeholder="Search crew members..."
+                                  value={crewSearch}
+                                  onValueChange={setCrewSearch}
+                                />
+                                <CommandList className="max-h-[300px] overflow-y-auto">
+                                  <CommandEmpty>
+                                    {crewSearch
+                                      ? `No crew found matching "${crewSearch}"`
+                                      : "No crew members available."}
+                                  </CommandEmpty>
+                                  <CommandGroup>
+                                    {filteredCrew.map((c) => (
+                                      <CommandItem
+                                        key={c.id}
+                                        value={c.id}
+                                        onSelect={() => handleSelectCrew(actualIndex, c.id)}
+                                      >
+                                        <Check
+                                          className={cn(
+                                            "mr-2 h-4 w-4",
+                                            crewEntry.crew_id === c.id ? "opacity-100" : "opacity-0"
+                                          )}
+                                        />
+                                        {c.display_name}
+                                      </CommandItem>
+                                    ))}
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleRemoveCrew(actualIndex)}
+                            className="text-muted-foreground hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    )
+                  })}
+              </div>
+
+              {/* Cabin Attendance */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <Label className="text-sm font-medium">Cabin Attendance</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleAddCrew("Cabin Attendance")}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Cabin Attendance
+                  </Button>
+                </div>
+                {crewMembers
+                  .filter((c) => c.role === "Cabin Attendance")
+                  .map((crewEntry) => {
+                    const actualIndex = crewMembers.findIndex((c) => c.id === crewEntry.id)
+                    const crew = getCrewById(crewEntry.crew_id)
+                    const isOpen = crewComboboxOpen === `crew-${actualIndex}`
+
+                    return (
+                      <div
+                        key={crewEntry.id}
+                        className="border rounded-lg p-3 bg-card border-border mb-2"
+                      >
+                        <div className="flex items-center gap-3">
+                          <Popover
+                            open={isOpen}
+                            onOpenChange={(open) =>
+                              setCrewComboboxOpen(open ? `crew-${actualIndex}` : null)
+                            }
+                            modal={true}
+                          >
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                className={cn(
+                                  "flex-1 justify-between",
+                                  !crewEntry.crew_id && "text-muted-foreground"
+                                )}
+                                disabled={loadingCrew}
+                              >
+                                {crew
+                                  ? crew.display_name
+                                  : loadingCrew
+                                  ? "Loading crew..."
+                                  : "Select Cabin Attendance"}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent
+                              className="w-[var(--radix-popover-trigger-width)] p-0"
+                              align="start"
+                            >
+                              <Command shouldFilter={false}>
+                                <CommandInput
+                                  placeholder="Search crew members..."
+                                  value={crewSearch}
+                                  onValueChange={setCrewSearch}
+                                />
+                                <CommandList className="max-h-[300px] overflow-y-auto">
+                                  <CommandEmpty>
+                                    {crewSearch
+                                      ? `No crew found matching "${crewSearch}"`
+                                      : "No crew members available."}
+                                  </CommandEmpty>
+                                  <CommandGroup>
+                                    {filteredCrew.map((c) => (
+                                      <CommandItem
+                                        key={c.id}
+                                        value={c.id}
+                                        onSelect={() => handleSelectCrew(actualIndex, c.id)}
+                                      >
+                                        <Check
+                                          className={cn(
+                                            "mr-2 h-4 w-4",
+                                            crewEntry.crew_id === c.id ? "opacity-100" : "opacity-0"
+                                          )}
+                                        />
+                                        {c.display_name}
+                                      </CommandItem>
+                                    ))}
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleRemoveCrew(actualIndex)}
+                            className="text-muted-foreground hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    )
+                  })}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <DialogFooter className="border-t border-border pt-4 gap-2">
+          <Button variant="outline" onClick={handleClose} className="min-w-[100px]">
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSave}
+            disabled={saving}
+            className="min-w-[200px] shadow-lg hover:shadow-xl transition-all"
+          >
+            {saving ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <Save className="mr-2 h-4 w-4" />
+                Save Changes
+              </>
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
