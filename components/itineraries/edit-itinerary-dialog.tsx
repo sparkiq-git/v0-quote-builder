@@ -107,21 +107,6 @@ export function EditItineraryDialog({
   // Crew state - crew members are stored directly, not referenced
   const [crewMembers, setCrewMembers] = useState<Array<{ id: string; name: string; role: string; email?: string; phone?: string; notes?: string }>>([])
 
-  // Fetch existing passengers and crew for this itinerary
-  useEffect(() => {
-    if (open && itinerary.id) {
-      fetchItineraryData()
-    }
-  }, [open, itinerary.id])
-
-  // Fetch available passengers (linked to the contact)
-  useEffect(() => {
-    if (open && itinerary.contact_id) {
-      fetchAvailablePassengers()
-    }
-  }, [open, itinerary.contact_id])
-
-
   const fetchItineraryData = async () => {
     try {
       const response = await fetch(`/api/itineraries/${itinerary.id}/passengers`)
@@ -171,6 +156,22 @@ export function EditItineraryDialog({
       setLoadingPassengers(false)
     }
   }
+
+  // Fetch existing passengers and crew for this itinerary
+  useEffect(() => {
+    if (open && itinerary.id) {
+      fetchItineraryData()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, itinerary.id])
+
+  // Fetch available passengers (linked to the contact)
+  useEffect(() => {
+    if (open && itinerary.contact_id) {
+      fetchAvailablePassengers()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, itinerary.contact_id])
 
 
   const handleAddPassenger = () => {
