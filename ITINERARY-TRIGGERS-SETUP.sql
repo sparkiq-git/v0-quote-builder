@@ -138,4 +138,3 @@ ORDER BY tgname;
 --    1. Invoice created → Draft itinerary created automatically
 --    2. Invoice paid → Itinerary ready for "trip_confirmed" status
 --    3. User changes itinerary status to "trip_confirmed" in application
-

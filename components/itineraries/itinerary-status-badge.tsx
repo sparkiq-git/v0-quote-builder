@@ -41,4 +41,3 @@ export function ItineraryStatusBadge({ status }: ItineraryStatusBadgeProps) {
 
   return <Badge variant={getStatusVariant(status)}>{getStatusLabel(status)}</Badge>
 }
-

@@ -62,4 +62,3 @@ The route consolidation is complete and simplified:
 - ✅ Only real API data is used (no mock data)
 - ✅ Cleaner, simpler implementation
 - ✅ All existing functionality preserved
-

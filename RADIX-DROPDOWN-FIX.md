@@ -38,7 +38,7 @@ Radix UI dropdowns were appearing at position (0,0) or not appearing at all in p
 
 The fix is automatically applied to all dropdowns using the `DropdownMenu` component. No changes needed to existing code:
 
-```tsx
+\`\`\`tsx
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -59,7 +59,7 @@ export function MyComponent() {
     </DropdownMenu>
   );
 }
-```
+\`\`\`
 
 ## Technical Details
 
@@ -106,4 +106,3 @@ The dropdowns should now:
 - No breaking changes to the API
 - Performance impact is minimal (only triggers on dropdown open)
 - Works with all Radix UI dropdown features (submenus, checkboxes, radio groups, etc.)
-

@@ -231,4 +231,3 @@ BEGIN
   RETURN v_itinerary_id;
 END;
 $$;
-

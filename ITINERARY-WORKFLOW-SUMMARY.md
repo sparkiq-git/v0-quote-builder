@@ -199,13 +199,13 @@ When an invoice is marked as paid, you should:
 ### 3. Status Change Validation
 
 Before allowing status change to "trip_confirmed":
-```sql
+\`\`\`sql
 SELECT can_confirm_itinerary_trip(itinerary_id);
 -- Returns true if invoice is paid
-```
+\`\`\`
 
 In your application code:
-```typescript
+\`\`\`typescript
 // Check if invoice is paid before allowing status change
 const canConfirm = await supabase.rpc('can_confirm_itinerary_trip', {
   p_itinerary_id: itineraryId
@@ -216,15 +216,15 @@ if (canConfirm.data && newStatus === 'trip_confirmed') {
 } else {
   // Show error: "Invoice must be paid before confirming trip"
 }
-```
+\`\`\`
 
 ## Status Flow
 
-```
+\`\`\`
 [draft] → [trip_confirmed] → [in_progress] → [completed]
                                     ↓
                               [cancelled]
-```
+\`\`\`
 
 - **draft**: Created automatically when quote accepted
 - **trip_confirmed**: Can only be set when invoice is paid
@@ -245,7 +245,7 @@ Users can upload images specific to an itinerary that override the quote/aircraf
 ### Image Display Logic
 
 When displaying itinerary images:
-```typescript
+\`\`\`typescript
 // Pseudo-code for image display logic
 const getItineraryImages = async (itineraryId: string) => {
   // 1. Check for itinerary-specific images
@@ -264,7 +264,7 @@ const getItineraryImages = async (itineraryId: string) => {
   const quoteImages = await getQuoteAircraftImages(itinerary.quote_id);
   return quoteImages;
 };
-```
+\`\`\`
 
 ### API Endpoints Needed
 
@@ -291,4 +291,3 @@ You'll need to create:
 ## Questions?
 
 If you need any adjustments to the schema or workflow, let me know! The schema is designed to be flexible and can be extended as needed.
-

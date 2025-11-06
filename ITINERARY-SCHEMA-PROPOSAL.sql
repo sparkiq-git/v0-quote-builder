@@ -635,4 +635,3 @@ COMMENT ON FUNCTION public.create_itinerary_from_quote IS 'Creates a draft itine
 COMMENT ON FUNCTION public.handle_invoice_insert IS 'Trigger function that automatically creates a draft itinerary when an invoice is created.';
 COMMENT ON FUNCTION public.handle_invoice_paid IS 'Trigger function that ensures invoice_id is linked to itinerary when invoice status changes to paid.';
 COMMENT ON FUNCTION public.can_confirm_itinerary_trip IS 'Helper function to check if an itinerary can be confirmed (invoice must be paid).';
-

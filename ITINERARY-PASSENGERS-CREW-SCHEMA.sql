@@ -144,4 +144,3 @@ CREATE TRIGGER trg_itinerary_crew_updated_at
 -- ============================================
 COMMENT ON TABLE public.itinerary_passenger IS 'Links passengers (contact_passenger) to itineraries. Allows multiple passengers per itinerary up to total_pax.';
 COMMENT ON TABLE public.itinerary_crew IS 'Stores crew members assigned to itineraries. Crew members are added freely without linking to a crew table. Supports PIC, SIC, and Cabin Attendance roles.';
-

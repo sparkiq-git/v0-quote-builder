@@ -7,7 +7,7 @@ To enable avatar functionality for contacts and passengers, you need to add `ava
 
 Run the following SQL in your Supabase SQL Editor:
 
-```sql
+\`\`\`sql
 -- Add avatar_path column to contact table
 ALTER TABLE public.contact 
 ADD COLUMN IF NOT EXISTS avatar_path TEXT NULL;
@@ -22,7 +22,7 @@ WHERE avatar_path IS NOT NULL;
 
 CREATE INDEX IF NOT EXISTS contact_passenger_avatar_path_idx ON public.contact_passenger(avatar_path) 
 WHERE avatar_path IS NOT NULL;
-```
+\`\`\`
 
 ## Notes
 - The `avatar_path` stores the storage path in Supabase Storage (bucket: "avatar")

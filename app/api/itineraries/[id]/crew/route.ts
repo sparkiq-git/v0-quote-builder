@@ -131,4 +131,3 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     return NextResponse.json({ error: error.message || "Internal server error" }, { status: 500 })
   }
 }
-

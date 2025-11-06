@@ -108,4 +108,3 @@ INSERT INTO public.invoice (
 -- Check if itinerary was created
 SELECT * FROM public.itinerary WHERE quote_id = 'your-quote-id';
 */
-
