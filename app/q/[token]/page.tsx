@@ -562,7 +562,7 @@ export default function PublicQuotePage({ params }: PublicQuotePageProps) {
             <div className="space-y-3 pb-6">
               {quote.status === "itinerary_created" && existingItinerary && (
                 <Button asChild className="w-full !bg-blue-600 hover:!bg-blue-700 !text-white !font-semibold">
-                  <a href={`/itineraries/${existingItinerary.publicHash}`} target="_blank" rel="noopener noreferrer">
+                  <a href={`/itineraries/${existingItinerary.id}`} target="_blank" rel="noopener noreferrer">
                     View Your Itinerary
                   </a>
                 </Button>
@@ -747,7 +747,7 @@ export default function PublicQuotePage({ params }: PublicQuotePageProps) {
                     {quote.status === "itinerary_created" && existingItinerary && (
                       <Button asChild className="w-full !bg-blue-600 hover:!bg-blue-700 !text-white !font-semibold">
                         <a
-                          href={`/itineraries/${existingItinerary.publicHash}`}
+                          href={`/itineraries/${existingItinerary.id}`}
                           target="_blank"
                           rel="noopener noreferrer"
                         >
