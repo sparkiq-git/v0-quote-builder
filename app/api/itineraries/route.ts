@@ -14,15 +14,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const tenantId = user.app_metadata?.tenant_id
-    if (!tenantId) {
-      return NextResponse.json({ error: "Missing tenant_id" }, { status: 400 })
-    }
-
     const searchParams = request.nextUrl.searchParams
     const search = searchParams.get("search") || ""
     const status = searchParams.get("status") || ""
 
+    // RLS will handle tenant filtering at the database level
     let query = supabase
       .from("itinerary")
       .select(`
@@ -40,10 +36,6 @@ export async function GET(request: NextRequest) {
           contact_email
         )
       `)
-      .eq("tenant_id", tenantId)
-    
-    // Add debug logging
-    console.log(`[ITINERARIES API] Querying itineraries for tenant: ${tenantId}`)
 
     if (status && status !== "all") {
       query = query.eq("status", status)
@@ -62,7 +54,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    console.log(`[ITINERARIES API] Fetched ${rawData?.length || 0} itineraries for tenant ${tenantId}`)
+    console.log(`[ITINERARIES API] Fetched ${rawData?.length || 0} itineraries (RLS filtered)`)
 
     // Filter by search in contact name if search query provided
     let data = rawData || []
