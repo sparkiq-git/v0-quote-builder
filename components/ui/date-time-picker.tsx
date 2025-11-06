@@ -38,6 +38,11 @@ export function DateTimePicker({
   const [selectedDate, setSelectedDate] = React.useState<Date | undefined>(
     date ? new Date(date + "T00:00:00") : undefined,
   )
+  const [mounted, setMounted] = React.useState(false)
+
+  React.useEffect(() => {
+    setMounted(true)
+  }, [])
 
   React.useEffect(() => {
     if (date) {
@@ -77,29 +82,45 @@ export function DateTimePicker({
             {required && <span className="text-destructive">*</span>}
           </label>
         )}
-        <Popover open={open} onOpenChange={setOpen} modal={true}>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              id={dateId}
-              className="w-full h-11 justify-start font-normal bg-background/40 backdrop-blur-md border-border/30 hover:bg-background/60 hover:border-border/50"
+        {mounted ? (
+          <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                id={dateId}
+                className="w-full h-11 justify-start font-normal bg-background/40 backdrop-blur-md border-border/30 hover:bg-background/60 hover:border-border/50"
+              >
+                {selectedDate ? selectedDate.toLocaleDateString() : "mm / dd / yyyy"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent
+              className="w-auto overflow-hidden p-0 pointer-events-auto"
+              align="start"
+              side="bottom"
+              sideOffset={8}
             >
-              {selectedDate ? selectedDate.toLocaleDateString() : "mm / dd / yyyy"}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto overflow-hidden p-0 pointer-events-auto" align="start">
-            <Calendar
-              mode="single"
-              selected={selectedDate}
-              captionLayout="dropdown"
-              onSelect={handleDateSelect}
-              fromYear={2024}
-              toYear={2030}
-              initialFocus
-              className="pointer-events-auto"
-            />
-          </PopoverContent>
-        </Popover>
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                captionLayout="dropdown"
+                onSelect={handleDateSelect}
+                fromYear={2024}
+                toYear={2030}
+                initialFocus
+                className="pointer-events-auto"
+              />
+            </PopoverContent>
+          </Popover>
+        ) : (
+          <Button
+            variant="outline"
+            id={dateId}
+            disabled
+            className="w-full h-11 justify-start font-normal bg-background/40 backdrop-blur-md border-border/30"
+          >
+            {selectedDate ? selectedDate.toLocaleDateString() : "mm / dd / yyyy"}
+          </Button>
+        )}
       </div>
     )
   }
@@ -135,29 +156,45 @@ export function DateTimePicker({
             {required && <span className="text-destructive">*</span>}
           </label>
         )}
-        <Popover open={open} onOpenChange={setOpen} modal={true}>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              id={dateId}
-              className="justify-start font-normal bg-background/40 backdrop-blur-md border-border/30 hover:bg-background/60 hover:border-border/50"
+        {mounted ? (
+          <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                id={dateId}
+                className="justify-start font-normal bg-background/40 backdrop-blur-md border-border/30 hover:bg-background/60 hover:border-border/50"
+              >
+                {selectedDate ? selectedDate.toLocaleDateString() : "mm / dd / yyyy"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent
+              className="w-auto overflow-hidden p-0 pointer-events-auto"
+              align="start"
+              side="bottom"
+              sideOffset={8}
             >
-              {selectedDate ? selectedDate.toLocaleDateString() : "mm / dd / yyyy"}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto overflow-hidden p-0 pointer-events-auto" align="start">
-            <Calendar
-              mode="single"
-              selected={selectedDate}
-              captionLayout="dropdown"
-              onSelect={handleDateSelect}
-              fromYear={2024}
-              toYear={2030}
-              initialFocus
-              className="pointer-events-auto"
-            />
-          </PopoverContent>
-        </Popover>
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                captionLayout="dropdown"
+                onSelect={handleDateSelect}
+                fromYear={2024}
+                toYear={2030}
+                initialFocus
+                className="pointer-events-auto"
+              />
+            </PopoverContent>
+          </Popover>
+        ) : (
+          <Button
+            variant="outline"
+            id={dateId}
+            disabled
+            className="justify-start font-normal bg-background/40 backdrop-blur-md border-border/30"
+          >
+            {selectedDate ? selectedDate.toLocaleDateString() : "mm / dd / yyyy"}
+          </Button>
+        )}
       </div>
       <div className="flex flex-col gap-2 flex-1">
         {timeLabel && (
