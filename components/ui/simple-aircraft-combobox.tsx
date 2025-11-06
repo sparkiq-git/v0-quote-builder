@@ -39,7 +39,6 @@ export function SimpleAircraftCombobox({ value, onSelect, onClickAdd }: Props) {
         left: rect.left + window.scrollX,
         width: rect.width,
       })
-      console.log("[v0] Aircraft combobox position calculated:", rect)
     } else {
       setPosition(null)
     }
@@ -80,7 +79,6 @@ export function SimpleAircraftCombobox({ value, onSelect, onClickAdd }: Props) {
         const json = await res.json()
         if (!res.ok) throw new Error(json?.error || "Failed to load aircraft")
         setList(json.data || [])
-        console.log("[v0] Loaded aircraft:", json.data?.length || 0)
       } catch (e: any) {
         toast({
           title: "Error loading aircraft",
@@ -132,17 +130,6 @@ export function SimpleAircraftCombobox({ value, onSelect, onClickAdd }: Props) {
 
   const selectedThumbnail = getSelectedThumbnail()
 
-  console.log(
-    "[v0] SimpleAircraftCombobox render - mounted:",
-    mounted,
-    "open:",
-    open,
-    "position:",
-    position,
-    "triggerRef:",
-    !!triggerRef.current,
-  )
-
   return (
     <>
       <button
@@ -150,7 +137,6 @@ export function SimpleAircraftCombobox({ value, onSelect, onClickAdd }: Props) {
         type="button"
         className="inline-flex items-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] border shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50 h-9 px-4 py-2 justify-between w-full bg-transparent"
         onClick={() => {
-          console.log("[v0] Aircraft combobox clicked, open:", !open)
           setOpen(!open)
         }}
       >
@@ -183,7 +169,7 @@ export function SimpleAircraftCombobox({ value, onSelect, onClickAdd }: Props) {
               top: position.top,
               left: position.left,
               width: Math.max(position.width, 420),
-              zIndex: 999999,
+              zIndex: 2147483647,
               border: "2px solid red",
             }}
           >
@@ -233,7 +219,6 @@ export function SimpleAircraftCombobox({ value, onSelect, onClickAdd }: Props) {
                       type="button"
                       className="w-full flex items-center gap-3 px-2 py-2 rounded-sm hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors text-left"
                       onClick={() => {
-                        console.log("[v0] Aircraft selected:", a.tail_number)
                         onSelect(a)
                         setOpen(false)
                       }}

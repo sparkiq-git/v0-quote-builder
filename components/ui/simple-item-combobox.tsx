@@ -46,7 +46,6 @@ export function SimpleItemCombobox({ tenantId, value, onSelect, placeholder = "S
         left: rect.left + window.scrollX,
         width: rect.width,
       })
-      console.log("[v0] Item combobox opened, position:", { top: rect.bottom, left: rect.left })
     } else {
       setPosition(null)
     }
@@ -132,10 +131,7 @@ export function SimpleItemCombobox({ tenantId, value, onSelect, placeholder = "S
       <button
         ref={triggerRef}
         type="button"
-        onClick={() => {
-          console.log("[v0] Item combobox clicked, open:", !isOpen)
-          setIsOpen(!isOpen)
-        }}
+        onClick={() => setIsOpen(!isOpen)}
         className={cn(
           "flex h-9 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm shadow-xs",
           "hover:bg-accent hover:text-accent-foreground",

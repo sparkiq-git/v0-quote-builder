@@ -39,7 +39,6 @@ export function SimpleContactCombobox({ tenantId, value, selectedName, onSelect 
     setMounted(true)
     const root = document.getElementById("portal-root") || document.body
     setPortalRoot(root)
-    console.log("[v0] SimpleContactCombobox mounted, portal target:", root.id || "body")
   }, [])
 
   // Initialize supabase client
@@ -70,14 +69,12 @@ export function SimpleContactCombobox({ tenantId, value, selectedName, onSelect 
         .limit(25)
 
       if (error) {
-        console.error("[v0] Error loading contacts:", error)
         toast({
           title: "Error loading contacts",
           description: error.message,
           variant: "destructive",
         })
       } else {
-        console.log("[v0] Loaded contacts:", data?.length)
         setContacts(data || [])
       }
     }
@@ -112,14 +109,6 @@ export function SimpleContactCombobox({ tenantId, value, selectedName, onSelect 
         width: rect.width,
       }
 
-      console.log(
-        "[v0] Position calculated:",
-        newPosition,
-        "viewport:",
-        { viewportHeight, viewportWidth },
-        "rect:",
-        rect,
-      )
       setPosition(newPosition)
     } else {
       setPosition(null)
@@ -194,19 +183,6 @@ export function SimpleContactCombobox({ tenantId, value, selectedName, onSelect 
     }
   }
 
-  console.log(
-    "[v0] Render - mounted:",
-    mounted,
-    "open:",
-    open,
-    "position:",
-    position,
-    "triggerRef:",
-    !!triggerRef.current,
-    "portalRoot:",
-    portalRoot?.id || "none",
-  )
-
   return (
     <>
       <button
@@ -214,9 +190,7 @@ export function SimpleContactCombobox({ tenantId, value, selectedName, onSelect 
         type="button"
         className="inline-flex items-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] border shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50 h-9 px-4 py-2 justify-between w-full bg-transparent"
         onClick={() => {
-          const newOpen = !open
-          console.log("[v0] Contact combobox clicked, open:", newOpen)
-          setOpen(newOpen)
+          setOpen(!open)
         }}
       >
         {selectedName || "Select contact"}
@@ -236,42 +210,16 @@ export function SimpleContactCombobox({ tenantId, value, selectedName, onSelect 
               left: `${position.left}px`,
               width: `${position.width}px`,
               zIndex: 2147483647,
-              border: "10px solid red",
-              background: "yellow",
-              boxShadow: "0 0 100px 50px rgba(255, 0, 0, 1)",
-              outline: "10px solid blue",
               pointerEvents: "auto",
             }}
-            className="rounded-md p-4"
+            className="rounded-md border bg-popover text-popover-foreground shadow-md p-0"
           >
-            <div
-              style={{
-                background: "white",
-                padding: "20px",
-                border: "5px solid green",
-                fontSize: "20px",
-                fontWeight: "bold",
-                color: "red",
-                textAlign: "center",
-              }}
-            >
-              <div style={{ background: "yellow", padding: "10px", marginBottom: "10px" }}>
-                🚨 DROPDOWN IS RENDERING 🚨
-              </div>
-              <div>
-                Position: top={position.top}px, left={position.left}px
-              </div>
-              <div>Z-index: 2147483647 (MAX)</div>
-              <div>Contacts: {contacts.length}</div>
-              <div>Portal: {portalRoot.id || "body"}</div>
-            </div>
-
             {!creating ? (
-              <div className="flex flex-col bg-white">
-                <div className="flex items-center border-b px-3 bg-white">
+              <div className="flex flex-col">
+                <div className="flex items-center border-b px-3">
                   <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
                   <input
-                    className="flex h-10 w-full rounded-md bg-white py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                    className="flex h-10 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
                     placeholder="Search contacts..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
@@ -287,7 +235,7 @@ export function SimpleContactCombobox({ tenantId, value, selectedName, onSelect 
                   )}
                 </div>
 
-                <div className="max-h-[320px] overflow-y-auto overflow-x-hidden p-1 bg-white">
+                <div className="max-h-[320px] overflow-y-auto overflow-x-hidden p-1">
                   {contacts.length === 0 ? (
                     <div className="flex flex-col items-center py-6">
                       <p className="text-sm text-muted-foreground mb-2">No contacts found</p>
@@ -305,7 +253,6 @@ export function SimpleContactCombobox({ tenantId, value, selectedName, onSelect 
                         key={c.id}
                         className="relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
                         onClick={() => {
-                          console.log("[v0] Contact selected:", c.full_name)
                           onSelect(c)
                           setOpen(false)
                         }}
@@ -323,7 +270,7 @@ export function SimpleContactCombobox({ tenantId, value, selectedName, onSelect 
               </div>
             ) : (
               <form
-                className="p-4 space-y-2 bg-white"
+                className="p-4 space-y-2"
                 onSubmit={(e) => {
                   e.preventDefault()
                   handleCreate(new FormData(e.currentTarget))
