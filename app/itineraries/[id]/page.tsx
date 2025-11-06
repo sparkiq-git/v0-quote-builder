@@ -230,17 +230,24 @@ export default function ItineraryDetailPage() {
                 </div>
                 <div className="text-sm text-muted-foreground">Trip Summary</div>
               </div>
-              <div className="space-y-2">
-                {itinerary.trip_type && (
-                  <Badge variant="outline" className="text-sm">
-                    {itinerary.trip_type}
-                  </Badge>
+              <div className="space-y-3">
+                {itinerary.trip_summary && (
+                  <p className="text-sm leading-relaxed line-clamp-3" title={itinerary.trip_summary}>
+                    {itinerary.trip_summary}
+                  </p>
                 )}
-                {itinerary.asap && (
-                  <Badge variant="destructive" className="text-xs">
-                    ASAP - Urgent
-                  </Badge>
-                )}
+                <div className="flex flex-wrap gap-2">
+                  {itinerary.trip_type && (
+                    <Badge variant="outline" className="text-sm">
+                      {itinerary.trip_type}
+                    </Badge>
+                  )}
+                  {itinerary.asap && (
+                    <Badge variant="destructive" className="text-xs">
+                      ASAP - Urgent
+                    </Badge>
+                  )}
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -290,7 +297,7 @@ export default function ItineraryDetailPage() {
         </div>
 
         <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-3">
-          {/* Left column - Flight Details spans 2 columns */}
+          {/* Flight Details spans 2 columns */}
           <Card className="lg:col-span-2 shadow-md border-border/50 flex flex-col">
             <CardHeader className="space-y-1">
               <CardTitle className="text-xl sm:text-2xl flex items-center gap-2">
@@ -379,7 +386,7 @@ export default function ItineraryDetailPage() {
             </CardContent>
           </Card>
 
-          {/* Right column - Contact Information with equal height */}
+          {/* Contact Information with equal height */}
           <Card className="shadow-md border-border/50 flex flex-col">
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
@@ -403,52 +410,6 @@ export default function ItineraryDetailPage() {
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground">No contact information</p>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-3">
-          {/* Trip Summary Text - spans 2 columns */}
-          {itinerary.trip_summary && (
-            <Card className="lg:col-span-2 shadow-md border-border/50">
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <FileText className="h-5 w-5 text-primary" />
-                  Trip Details
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground leading-relaxed p-4 bg-muted/30 rounded-lg">
-                  {itinerary.trip_summary}
-                </p>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Important Dates Card */}
-          <Card className="shadow-md border-border/50">
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Calendar className="h-5 w-5 text-primary" />
-                Important Dates
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {itinerary.earliest_departure && (
-                <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
-                  <span className="text-sm text-muted-foreground">Earliest Departure</span>
-                  <span className="font-medium text-sm">{formatDate(itinerary.earliest_departure)}</span>
-                </div>
-              )}
-              {itinerary.latest_return && (
-                <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
-                  <span className="text-sm text-muted-foreground">Latest Return</span>
-                  <span className="font-medium text-sm">{formatDate(itinerary.latest_return)}</span>
-                </div>
-              )}
-              {!itinerary.earliest_departure && !itinerary.latest_return && (
-                <p className="text-sm text-muted-foreground">No dates specified</p>
               )}
             </CardContent>
           </Card>
