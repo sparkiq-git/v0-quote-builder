@@ -41,36 +41,43 @@ export function SimpleAirportCombobox({ value, onSelect, placeholder = "Search a
   const calculatePosition = () => {
     if (!triggerRef.current) return
 
-    const rect = triggerRef.current.getBoundingClientRect()
-    const viewportHeight = window.innerHeight
-    const viewportWidth = window.innerWidth
-    const dropdownHeight = 400
+    requestAnimationFrame(() => {
+      if (!triggerRef.current) return
 
-    console.log("[v0] Airport button rect:", rect)
+      const rect = triggerRef.current.getBoundingClientRect()
+      const viewportHeight = window.innerHeight
+      const viewportWidth = window.innerWidth
 
-    const spaceBelow = viewportHeight - rect.bottom
-    const spaceAbove = rect.top
+      const dropdownHeight = dropdownRef.current?.offsetHeight || 350
 
-    let top = rect.bottom + 4
-    let left = rect.left
+      console.log("[v0] Airport button rect:", rect)
 
-    const wouldBeAbovePosition = rect.top - dropdownHeight - 4
-    if (spaceBelow < dropdownHeight && spaceAbove >= dropdownHeight && wouldBeAbovePosition >= 50) {
-      top = wouldBeAbovePosition
-    }
+      const spaceBelow = viewportHeight - rect.bottom
+      const spaceAbove = rect.top
 
-    if (left + rect.width > viewportWidth) {
-      left = viewportWidth - rect.width - 8
-    }
+      let top = rect.bottom + 4
+      let left = rect.left
 
-    const finalPosition = {
-      top: Math.max(4, top),
-      left: Math.max(4, left),
-      width: rect.width,
-    }
+      if (spaceBelow < dropdownHeight * 0.25 && spaceAbove >= 200) {
+        const abovePosition = rect.top - dropdownHeight - 4
+        if (abovePosition >= 100) {
+          top = abovePosition
+        }
+      }
 
-    console.log("[v0] Airport calculated position:", finalPosition)
-    setPosition(finalPosition)
+      if (left + rect.width > viewportWidth) {
+        left = viewportWidth - rect.width - 8
+      }
+
+      const finalPosition = {
+        top: Math.max(4, top),
+        left: Math.max(4, left),
+        width: rect.width,
+      }
+
+      console.log("[v0] Airport calculated position:", finalPosition)
+      setPosition(finalPosition)
+    })
   }
 
   useEffect(() => {
