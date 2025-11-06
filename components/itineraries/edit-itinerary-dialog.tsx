@@ -45,6 +45,7 @@ interface Passenger {
 interface ItineraryCrewMember {
   id: string
   role: string
+  full_name: string | null
   notes: string | null
   confirmed: boolean
 }
@@ -92,17 +93,44 @@ export function EditItineraryDialog({
   })
   
   // Crew state - stored independently (no crew_id foreign key)
-  const [crewMembers, setCrewMembers] = useState<Array<{ id: string; role: string; notes?: string }>>([])
+  const [crewMembers, setCrewMembers] = useState<Array<{ id: string; role: string; full_name?: string; notes?: string }>>([])
 
   const fetchItineraryData = async () => {
     try {
       const response = await fetch(`/api/itineraries/${itinerary.id}/passengers`)
       if (response.ok) {
         const { data } = await response.json()
-        setPassengers((data?.passengers || []).map((p: any) => ({
+        // Map passengers - the API returns itinerary_passenger records with nested passenger data
+        const mappedPassengers = (data?.passengers || []).map((p: any) => ({
           id: p.id || `temp-${Date.now()}-${Math.random()}`,
           passenger_id: p.passenger_id,
-        })))
+        }))
+        setPassengers(mappedPassengers)
+        
+        // Also add passengers from itinerary to availablePassengers if they're not already there
+        // This ensures passengers already on the itinerary are visible even if they're not in the filtered list
+        setAvailablePassengers((prev) => {
+          const existingPassengerIds = new Set(prev.map((p) => p.id))
+          
+          // Extract passenger data from the nested structure
+          const newPassengers = (data?.passengers || [])
+            .filter((p: any) => p.passenger && !existingPassengerIds.has(p.passenger_id))
+            .map((p: any) => ({
+              ...p.passenger,
+              // Ensure we have all required fields
+              id: p.passenger_id,
+              contact_id: p.passenger.contact_id || itinerary.contact_id,
+            }))
+          
+          if (newPassengers.length > 0) {
+            console.log("Adding passengers from itinerary to available list:", newPassengers)
+            return [...prev, ...newPassengers]
+          }
+          
+          return prev
+        })
+        
+        console.log("Fetched itinerary passengers:", mappedPassengers)
       }
     } catch (error) {
       console.error("Error fetching itinerary passengers:", error)
@@ -116,6 +144,7 @@ export function EditItineraryDialog({
         const crewData = (data?.crew || []).map((c: any) => ({
           id: c.id,
           role: c.role,
+          full_name: c.full_name || "",
           notes: c.notes || "",
         }))
         setCrewMembers(crewData)
@@ -128,15 +157,28 @@ export function EditItineraryDialog({
   const fetchAvailablePassengers = async () => {
     setLoadingPassengers(true)
     try {
-      const response = await fetch(`/api/passengers?contact_id=${itinerary.contact_id}&status=active`)
-      if (!response.ok) throw new Error("Failed to fetch passengers")
+      if (!itinerary.contact_id) {
+        console.warn("No contact_id provided for itinerary")
+        setAvailablePassengers([])
+        setLoadingPassengers(false)
+        return
+      }
+      
+      // Fetch all passengers for this contact (not just active ones)
+      // This ensures we can see passengers already on the itinerary
+      const response = await fetch(`/api/passengers?contact_id=${itinerary.contact_id}`)
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || `Failed to fetch passengers: ${response.status}`)
+      }
       const { data } = await response.json()
+      console.log("Fetched available passengers for contact:", itinerary.contact_id, data?.length || 0, "passengers")
       setAvailablePassengers(data || [])
     } catch (error: any) {
       console.error("Error fetching passengers:", error)
       toast({
         title: "Error",
-        description: "Failed to load passengers",
+        description: error.message || "Failed to load passengers",
         variant: "destructive",
       })
     } finally {
@@ -145,6 +187,14 @@ export function EditItineraryDialog({
   }
 
 
+  // Fetch available passengers first (linked to the contact)
+  useEffect(() => {
+    if (open && itinerary.contact_id) {
+      fetchAvailablePassengers()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, itinerary.contact_id])
+
   // Fetch existing passengers and crew for this itinerary
   useEffect(() => {
     if (open && itinerary.id) {
@@ -152,14 +202,6 @@ export function EditItineraryDialog({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, itinerary.id])
-
-  // Fetch available passengers (linked to the contact)
-  useEffect(() => {
-    if (open && itinerary.contact_id) {
-      fetchAvailablePassengers()
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, itinerary.contact_id])
 
 
   const handleAddPassengerSlot = () => {
@@ -251,7 +293,7 @@ export function EditItineraryDialog({
   }
 
   const handleAddCrew = (role: "PIC" | "SIC" | "Cabin Attendance") => {
-    setCrewMembers([...crewMembers, { id: `temp-${Date.now()}`, role, notes: "" }])
+    setCrewMembers([...crewMembers, { id: `temp-${Date.now()}`, role, full_name: "", notes: "" }])
   }
 
   const handleRemoveCrew = (index: number) => {
@@ -261,6 +303,12 @@ export function EditItineraryDialog({
   const handleUpdateCrewNotes = (index: number, notes: string) => {
     const updated = [...crewMembers]
     updated[index].notes = notes
+    setCrewMembers(updated)
+  }
+
+  const handleUpdateCrewName = (index: number, full_name: string) => {
+    const updated = [...crewMembers]
+    updated[index].full_name = full_name
     setCrewMembers(updated)
   }
 
@@ -305,6 +353,7 @@ export function EditItineraryDialog({
         body: JSON.stringify({
           crew: crewMembers.map((c) => ({
             role: c.role,
+            full_name: c.full_name || undefined,
             notes: c.notes || undefined,
           })),
         }),
@@ -723,9 +772,20 @@ export function EditItineraryDialog({
                       >
                         <div className="space-y-4">
                           <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <Label className="text-sm mb-2 block">Role</Label>
-                              <div className="text-sm font-medium text-muted-foreground">{crewEntry.role}</div>
+                            <div className="flex-1 space-y-4">
+                              <div>
+                                <Label className="text-sm mb-2 block">Role</Label>
+                                <div className="text-sm font-medium text-muted-foreground">{crewEntry.role}</div>
+                              </div>
+                              <div>
+                                <Label className="text-sm mb-1 block">Full Name</Label>
+                                <Input
+                                  placeholder="Enter crew member name (optional)"
+                                  value={crewEntry.full_name || ""}
+                                  onChange={(e) => handleUpdateCrewName(actualIndex, e.target.value)}
+                                  className="h-9 text-sm"
+                                />
+                              </div>
                             </div>
                             <Button
                               type="button"
@@ -779,9 +839,20 @@ export function EditItineraryDialog({
                       >
                         <div className="space-y-4">
                           <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <Label className="text-sm mb-2 block">Role</Label>
-                              <div className="text-sm font-medium text-muted-foreground">{crewEntry.role}</div>
+                            <div className="flex-1 space-y-4">
+                              <div>
+                                <Label className="text-sm mb-2 block">Role</Label>
+                                <div className="text-sm font-medium text-muted-foreground">{crewEntry.role}</div>
+                              </div>
+                              <div>
+                                <Label className="text-sm mb-1 block">Full Name</Label>
+                                <Input
+                                  placeholder="Enter crew member name (optional)"
+                                  value={crewEntry.full_name || ""}
+                                  onChange={(e) => handleUpdateCrewName(actualIndex, e.target.value)}
+                                  className="h-9 text-sm"
+                                />
+                              </div>
                             </div>
                             <Button
                               type="button"
@@ -835,9 +906,20 @@ export function EditItineraryDialog({
                       >
                         <div className="space-y-4">
                           <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <Label className="text-sm mb-2 block">Role</Label>
-                              <div className="text-sm font-medium text-muted-foreground">{crewEntry.role}</div>
+                            <div className="flex-1 space-y-4">
+                              <div>
+                                <Label className="text-sm mb-2 block">Role</Label>
+                                <div className="text-sm font-medium text-muted-foreground">{crewEntry.role}</div>
+                              </div>
+                              <div>
+                                <Label className="text-sm mb-1 block">Full Name</Label>
+                                <Input
+                                  placeholder="Enter crew member name (optional)"
+                                  value={crewEntry.full_name || ""}
+                                  onChange={(e) => handleUpdateCrewName(actualIndex, e.target.value)}
+                                  className="h-9 text-sm"
+                                />
+                              </div>
                             </div>
                             <Button
                               type="button"

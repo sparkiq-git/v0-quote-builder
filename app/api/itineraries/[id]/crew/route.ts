@@ -103,12 +103,13 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ error: deleteError.message }, { status: 500 })
     }
 
-    // Insert new crew (no crew_id - stored independently with just role and notes)
+    // Insert new crew (no crew_id - stored independently with role, full_name, and notes)
     if (crew.length > 0) {
-      const crewInserts = crew.map((c: { role: string; notes?: string; confirmed?: boolean }) => ({
+      const crewInserts = crew.map((c: { role: string; full_name?: string; notes?: string; confirmed?: boolean }) => ({
         itinerary_id: id,
         tenant_id: itinerary.tenant_id,
         role: c.role,
+        full_name: c.full_name || null,
         notes: c.notes || null,
         confirmed: c.confirmed || false,
       }))
