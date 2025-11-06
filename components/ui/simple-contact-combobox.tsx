@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from "react"
 import { createPortal } from "react-dom"
-import { Button } from "@/components/ui/button"
 import { Plus, User, Search, X } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -31,13 +30,16 @@ export function SimpleContactCombobox({ tenantId, value, selectedName, onSelect 
   const [supabase, setSupabase] = useState<any>(null)
   const [mounted, setMounted] = useState(false)
   const [position, setPosition] = useState<{ top: number; left: number; width: number } | null>(null)
+  const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const { toast } = useToast()
 
   useEffect(() => {
     setMounted(true)
-    console.log("[v0] SimpleContactCombobox mounted")
+    const root = document.getElementById("portal-root") || document.body
+    setPortalRoot(root)
+    console.log("[v0] SimpleContactCombobox mounted, portal target:", root.id || "body")
   }, [])
 
   // Initialize supabase client
@@ -86,12 +88,38 @@ export function SimpleContactCombobox({ tenantId, value, selectedName, onSelect 
   useEffect(() => {
     if (open && triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect()
+      const viewportHeight = window.innerHeight
+      const viewportWidth = window.innerWidth
+      const dropdownHeight = 400 // estimated max height
+
+      // Calculate position, ensuring it stays within viewport
+      let top = rect.bottom + 4
+      let left = rect.left
+
+      // If dropdown would go off bottom of screen, show above button instead
+      if (top + dropdownHeight > viewportHeight) {
+        top = rect.top - dropdownHeight - 4
+      }
+
+      // If dropdown would go off right of screen, align to right edge
+      if (left + rect.width > viewportWidth) {
+        left = viewportWidth - rect.width - 8
+      }
+
       const newPosition = {
-        top: rect.bottom + 4,
-        left: rect.left,
+        top: Math.max(4, top), // At least 4px from top
+        left: Math.max(4, left), // At least 4px from left
         width: rect.width,
       }
-      console.log("[v0] Position calculated:", newPosition, "scrollY:", window.scrollY)
+
+      console.log(
+        "[v0] Position calculated:",
+        newPosition,
+        "viewport:",
+        { viewportHeight, viewportWidth },
+        "rect:",
+        rect,
+      )
       setPosition(newPosition)
     } else {
       setPosition(null)
@@ -175,28 +203,30 @@ export function SimpleContactCombobox({ tenantId, value, selectedName, onSelect 
     position,
     "triggerRef:",
     !!triggerRef.current,
+    "portalRoot:",
+    portalRoot?.id || "none",
   )
 
   return (
     <>
-      <Button
+      <button
         ref={triggerRef}
-        variant="outline"
-        className="justify-between w-full bg-transparent"
+        type="button"
+        className="inline-flex items-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] border shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50 h-9 px-4 py-2 justify-between w-full bg-transparent"
         onClick={() => {
           const newOpen = !open
           console.log("[v0] Contact combobox clicked, open:", newOpen)
           setOpen(newOpen)
         }}
-        type="button"
       >
         {selectedName || "Select contact"}
         <User className="ml-2 h-4 w-4 opacity-50" />
-      </Button>
+      </button>
 
       {mounted &&
         open &&
         position &&
+        portalRoot &&
         createPortal(
           <div
             ref={dropdownRef}
@@ -205,17 +235,43 @@ export function SimpleContactCombobox({ tenantId, value, selectedName, onSelect 
               top: `${position.top}px`,
               left: `${position.left}px`,
               width: `${position.width}px`,
-              zIndex: 999999,
-              border: "3px solid red",
+              zIndex: 2147483647,
+              border: "10px solid red",
+              background: "yellow",
+              boxShadow: "0 0 100px 50px rgba(255, 0, 0, 1)",
+              outline: "10px solid blue",
+              pointerEvents: "auto",
             }}
-            className="rounded-md bg-popover p-0 text-popover-foreground shadow-lg"
+            className="rounded-md p-4"
           >
+            <div
+              style={{
+                background: "white",
+                padding: "20px",
+                border: "5px solid green",
+                fontSize: "20px",
+                fontWeight: "bold",
+                color: "red",
+                textAlign: "center",
+              }}
+            >
+              <div style={{ background: "yellow", padding: "10px", marginBottom: "10px" }}>
+                🚨 DROPDOWN IS RENDERING 🚨
+              </div>
+              <div>
+                Position: top={position.top}px, left={position.left}px
+              </div>
+              <div>Z-index: 2147483647 (MAX)</div>
+              <div>Contacts: {contacts.length}</div>
+              <div>Portal: {portalRoot.id || "body"}</div>
+            </div>
+
             {!creating ? (
-              <div className="flex flex-col">
-                <div className="flex items-center border-b px-3">
+              <div className="flex flex-col bg-white">
+                <div className="flex items-center border-b px-3 bg-white">
                   <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
                   <input
-                    className="flex h-10 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                    className="flex h-10 w-full rounded-md bg-white py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
                     placeholder="Search contacts..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
@@ -231,13 +287,17 @@ export function SimpleContactCombobox({ tenantId, value, selectedName, onSelect 
                   )}
                 </div>
 
-                <div className="max-h-[320px] overflow-y-auto overflow-x-hidden p-1">
+                <div className="max-h-[320px] overflow-y-auto overflow-x-hidden p-1 bg-white">
                   {contacts.length === 0 ? (
                     <div className="flex flex-col items-center py-6">
                       <p className="text-sm text-muted-foreground mb-2">No contacts found</p>
-                      <Button variant="outline" size="sm" onClick={() => setCreating(true)} className="text-xs">
-                        <Plus className="h-3 w-3 mr-1" /> Create new contact
-                      </Button>
+                      <button
+                        type="button"
+                        onClick={() => setCreating(true)}
+                        className="inline-flex items-center gap-2 rounded-md text-xs px-3 py-1.5 border shadow-xs hover:bg-accent hover:text-accent-foreground transition-colors"
+                      >
+                        <Plus className="h-3 w-3" /> Create new contact
+                      </button>
                     </div>
                   ) : (
                     contacts.map((c) => (
@@ -263,7 +323,7 @@ export function SimpleContactCombobox({ tenantId, value, selectedName, onSelect 
               </div>
             ) : (
               <form
-                className="p-4 space-y-2"
+                className="p-4 space-y-2 bg-white"
                 onSubmit={(e) => {
                   e.preventDefault()
                   handleCreate(new FormData(e.currentTarget))
@@ -286,15 +346,24 @@ export function SimpleContactCombobox({ tenantId, value, selectedName, onSelect 
                   <Input name="company" />
                 </div>
                 <div className="flex justify-between pt-2">
-                  <Button type="button" variant="ghost" onClick={() => setCreating(false)}>
+                  <button
+                    type="button"
+                    onClick={() => setCreating(false)}
+                    className="inline-flex items-center gap-2 rounded-md text-sm px-4 py-2 hover:bg-accent hover:text-accent-foreground transition-colors"
+                  >
                     Cancel
-                  </Button>
-                  <Button type="submit">Save Contact</Button>
+                  </button>
+                  <button
+                    type="submit"
+                    className="inline-flex items-center gap-2 rounded-md text-sm px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                  >
+                    Save Contact
+                  </button>
                 </div>
               </form>
             )}
           </div>,
-          document.body,
+          portalRoot,
         )}
     </>
   )

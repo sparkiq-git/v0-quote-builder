@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState, useRef } from "react"
 import { createPortal } from "react-dom"
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Plus, Plane, Search } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
@@ -146,11 +145,10 @@ export function SimpleAircraftCombobox({ value, onSelect, onClickAdd }: Props) {
 
   return (
     <>
-      <Button
+      <button
         ref={triggerRef}
         type="button"
-        variant="outline"
-        className="justify-between w-full bg-transparent"
+        className="inline-flex items-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] border shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50 h-9 px-4 py-2 justify-between w-full bg-transparent"
         onClick={() => {
           console.log("[v0] Aircraft combobox clicked, open:", !open)
           setOpen(!open)
@@ -171,7 +169,7 @@ export function SimpleAircraftCombobox({ value, onSelect, onClickAdd }: Props) {
           <span className="truncate">{selectedLabel}</span>
         </div>
         <Plane className="ml-2 h-4 w-4 opacity-50" />
-      </Button>
+      </button>
 
       {mounted &&
         open &&
@@ -186,7 +184,7 @@ export function SimpleAircraftCombobox({ value, onSelect, onClickAdd }: Props) {
               left: position.left,
               width: Math.max(position.width, 420),
               zIndex: 999999,
-              border: "2px solid red", // DEBUG: Make it obvious
+              border: "2px solid red",
             }}
           >
             {/* Search Input */}
@@ -207,18 +205,16 @@ export function SimpleAircraftCombobox({ value, onSelect, onClickAdd }: Props) {
                 <div className="flex flex-col items-center py-6 gap-2">
                   <p className="text-sm text-muted-foreground">No aircraft found</p>
                   {onClickAdd && (
-                    <Button
+                    <button
                       type="button"
-                      variant="outline"
-                      size="sm"
                       onClick={() => {
                         setOpen(false)
                         onClickAdd()
                       }}
-                      className="text-xs"
+                      className="inline-flex items-center gap-2 rounded-md text-xs px-3 py-1.5 border shadow-xs hover:bg-accent hover:text-accent-foreground transition-colors"
                     >
-                      <Plus className="h-3 w-3 mr-1" /> Create new aircraft
-                    </Button>
+                      <Plus className="h-3 w-3" /> Create new aircraft
+                    </button>
                   )}
                 </div>
               ) : (
@@ -272,20 +268,18 @@ export function SimpleAircraftCombobox({ value, onSelect, onClickAdd }: Props) {
               )}
             </div>
 
-            {/* Add Aircraft Button */}
             {onClickAdd && (
               <div className="border-t p-2 flex justify-end">
-                <Button
+                <button
                   type="button"
-                  variant="ghost"
-                  size="sm"
                   onClick={() => {
                     setOpen(false)
                     onClickAdd()
                   }}
+                  className="inline-flex items-center gap-2 rounded-md text-sm px-3 py-1.5 hover:bg-accent hover:text-accent-foreground transition-colors"
                 >
                   <Plus className="h-4 w-4 mr-1" /> Add Aircraft
-                </Button>
+                </button>
               </div>
             )}
           </div>,
