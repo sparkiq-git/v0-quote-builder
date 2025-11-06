@@ -386,115 +386,118 @@ export default function ItineraryDetailPage() {
             </CardContent>
           </Card>
 
-          {/* Contact Information with equal height */}
-          <Card className="shadow-md border-border/50 flex flex-col">
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Contact className="h-5 w-5 text-primary" />
-                Contact
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="flex-1">
-              {itinerary.contact ? (
-                <div className="space-y-3">
-                  <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
-                    <div className="font-semibold text-base mb-1">{itinerary.contact.full_name}</div>
-                    <div className="text-sm text-muted-foreground break-all">{itinerary.contact.email}</div>
-                    {itinerary.contact.company && (
-                      <div className="text-sm text-muted-foreground mt-2 flex items-center gap-1.5">
-                        <Contact className="h-3.5 w-3.5" />
-                        {itinerary.contact.company}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">No contact information</p>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-3">
-          {/* Notes Card - spans 2 columns */}
-          {(itinerary.notes || itinerary.special_requirements) && (
-            <Card className="lg:col-span-2 shadow-md border-border/50">
+          <div className="space-y-4 sm:space-y-6 flex flex-col">
+            {/* Contact Information */}
+            <Card className="shadow-md border-border/50">
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
-                  <FileText className="h-5 w-5 text-primary" />
-                  Notes & Requirements
+                  <Contact className="h-5 w-5 text-primary" />
+                  Contact
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                {itinerary.notes && (
-                  <div className="p-4 bg-muted/30 rounded-lg border border-border/50">
-                    <div className="text-xs font-medium text-muted-foreground mb-2">General Notes</div>
-                    <p className="text-sm whitespace-pre-line">{itinerary.notes}</p>
-                  </div>
-                )}
-                {itinerary.special_requirements && (
-                  <div className="p-4 bg-amber-50/50 dark:bg-amber-950/20 rounded-lg border border-amber-500/30">
-                    <div className="text-xs font-medium text-amber-800 dark:text-amber-200 mb-2">
-                      Special Requirements
+              <CardContent>
+                {itinerary.contact ? (
+                  <div className="space-y-3">
+                    <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
+                      <div className="font-semibold text-base mb-1">{itinerary.contact.full_name}</div>
+                      <div className="text-sm text-muted-foreground break-all">{itinerary.contact.email}</div>
+                      {itinerary.contact.company && (
+                        <div className="text-sm text-muted-foreground mt-2 flex items-center gap-1.5">
+                          <Contact className="h-3.5 w-3.5" />
+                          {itinerary.contact.company}
+                        </div>
+                      )}
                     </div>
-                    <p className="text-sm text-amber-900 dark:text-amber-100 whitespace-pre-line">
-                      {itinerary.special_requirements}
-                    </p>
                   </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No contact information</p>
                 )}
               </CardContent>
             </Card>
-          )}
 
-          {/* Related Information Card */}
-          <Card className="shadow-md border-border/50">
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <FileText className="h-5 w-5 text-primary" />
-                Related
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {itinerary.quote && (
-                <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
-                  <div className="text-xs font-medium text-muted-foreground mb-1.5">Quote</div>
-                  <Link
-                    href={`/quotes/${itinerary.quote.id}`}
-                    className="font-medium text-primary hover:underline flex items-center gap-1.5"
-                  >
-                    {itinerary.quote.title || "View Quote"}
-                    <ArrowLeft className="h-3.5 w-3.5 rotate-180" />
-                  </Link>
-                </div>
-              )}
-              {itinerary.invoice && (
-                <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
-                  <div className="text-xs font-medium text-muted-foreground mb-1.5">Invoice</div>
-                  <Link
-                    href={`/invoices/${itinerary.invoice.id}`}
-                    className="font-medium text-primary hover:underline flex items-center gap-1.5"
-                  >
-                    {itinerary.invoice.number}
-                    <ArrowLeft className="h-3.5 w-3.5 rotate-180" />
-                  </Link>
-                  <div className="flex items-center gap-2 mt-2">
-                    <Badge variant={itinerary.invoice.status === "paid" ? "default" : "secondary"} className="text-xs">
-                      {itinerary.invoice.status}
-                    </Badge>
-                    <span className="text-sm font-medium">
-                      {new Intl.NumberFormat("en-US", {
-                        style: "currency",
-                        currency: itinerary.invoice.currency || "USD",
-                      }).format(itinerary.invoice.amount)}
-                    </span>
+            {/* Notes & Requirements */}
+            {(itinerary.notes || itinerary.special_requirements) && (
+              <Card className="shadow-md border-border/50">
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <FileText className="h-5 w-5 text-primary" />
+                    Notes & Requirements
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {itinerary.notes && (
+                    <div className="p-4 bg-muted/30 rounded-lg border border-border/50">
+                      <div className="text-xs font-medium text-muted-foreground mb-2">General Notes</div>
+                      <p className="text-sm whitespace-pre-line">{itinerary.notes}</p>
+                    </div>
+                  )}
+                  {itinerary.special_requirements && (
+                    <div className="p-4 bg-amber-50/50 dark:bg-amber-950/20 rounded-lg border border-amber-500/30">
+                      <div className="text-xs font-medium text-amber-800 dark:text-amber-200 mb-2">
+                        Special Requirements
+                      </div>
+                      <p className="text-sm text-amber-900 dark:text-amber-100 whitespace-pre-line">
+                        {itinerary.special_requirements}
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Related Information */}
+            <Card className="shadow-md border-border/50">
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-primary" />
+                  Related
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {itinerary.quote && (
+                  <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
+                    <div className="text-xs font-medium text-muted-foreground mb-1.5">Quote</div>
+                    <Link
+                      href={`/quotes/${itinerary.quote.id}`}
+                      className="font-medium text-primary hover:underline flex items-center gap-1.5"
+                    >
+                      {itinerary.quote.title || "View Quote"}
+                      <ArrowLeft className="h-3.5 w-3.5 rotate-180" />
+                    </Link>
                   </div>
-                </div>
-              )}
-              {!itinerary.quote && !itinerary.invoice && (
-                <p className="text-sm text-muted-foreground">No related documents</p>
-              )}
-            </CardContent>
-          </Card>
+                )}
+                {itinerary.invoice && (
+                  <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
+                    <div className="text-xs font-medium text-muted-foreground mb-1.5">Invoice</div>
+                    <Link
+                      href={`/invoices/${itinerary.invoice.id}`}
+                      className="font-medium text-primary hover:underline flex items-center gap-1.5"
+                    >
+                      {itinerary.invoice.number}
+                      <ArrowLeft className="h-3.5 w-3.5 rotate-180" />
+                    </Link>
+                    <div className="flex items-center gap-2 mt-2">
+                      <Badge
+                        variant={itinerary.invoice.status === "paid" ? "default" : "secondary"}
+                        className="text-xs"
+                      >
+                        {itinerary.invoice.status}
+                      </Badge>
+                      <span className="text-sm font-medium">
+                        {new Intl.NumberFormat("en-US", {
+                          style: "currency",
+                          currency: itinerary.invoice.currency || "USD",
+                        }).format(itinerary.invoice.amount)}
+                      </span>
+                    </div>
+                  </div>
+                )}
+                {!itinerary.quote && !itinerary.invoice && (
+                  <p className="text-sm text-muted-foreground">No related documents</p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
 
