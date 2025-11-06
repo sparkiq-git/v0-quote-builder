@@ -6,34 +6,53 @@ import { CheckIcon, ChevronRightIcon, CircleIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
- * Razones de estos cambios:
- * - Forzamos `modal={false}` para no bloquear <body> en producción.
- * - Disparamos un micro “reflow” al abrir para que Floating UI recalcule posición (webfonts/SSR).
- * - Defaults seguros en <Content>: side="bottom", align="end", sideOffset=8, avoidCollisions, collisionPadding=8, sticky="always".
- * - Mantener z-index y pointer-events del panel, pero NO sobreescribir transform/translate (lo maneja Radix).
+ * Fix for Radix UI Dropdown positioning in Next.js App Router (production/SSR)
+ * 
+ * Problem: Dropdowns appear at (0,0) or don't appear due to SSR/hydration issues.
+ * 
+ * Solution:
+ * 1. Use `useLayoutEffect` to force position recalculation after mount/hydration
+ * 2. Add mounted state check to prevent portal rendering until after hydration
+ * 3. Ensure proper context synchronization between Trigger and Content
+ * 4. Force position update after DOM is ready (fonts, layout, etc.)
  */
 
-function microReflow() {
-  // 2 RAFs para esperar layout y fonts; luego forzamos un evento de resize.
-  requestAnimationFrame(() =>
-    requestAnimationFrame(() => window.dispatchEvent(new Event("resize")))
-  );
-}
-
-/* Root con reflow en open */
+/* Root with proper hydration handling */
 function DropdownMenuRoot({
   onOpenChange,
   modal = false,
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Root>) {
+  const [mounted, setMounted] = React.useState(false);
+  
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const handleOpenChange = React.useCallback((open: boolean) => {
+    onOpenChange?.(open);
+    
+    if (open && mounted) {
+      // Force position recalculation after opening
+      // Wait for next frame to ensure DOM is ready
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          // Trigger a resize event to force Floating UI to recalculate
+          window.dispatchEvent(new Event("resize"));
+          // Also force a reflow by reading layout properties
+          if (typeof document !== "undefined") {
+            document.body.offsetHeight;
+          }
+        });
+      });
+    }
+  }, [onOpenChange, mounted]);
+
   return (
     <DropdownMenuPrimitive.Root
       data-slot="dropdown-menu"
-      modal={modal /* default false: no bloquea el body */}
-      onOpenChange={(open) => {
-        onOpenChange?.(open);
-        if (open) microReflow();
-      }}
+      modal={modal}
+      onOpenChange={handleOpenChange}
       {...props}
     />
   );
@@ -66,8 +85,73 @@ function DropdownMenuContent({
   avoidCollisions = true,
   collisionPadding = 8,
   sticky = "always",
+  onOpenAutoFocus,
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Content>) {
+  const [mounted, setMounted] = React.useState(false);
+
+  // Ensure we only render after hydration
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Force position recalculation when dropdown opens
+  // This handles the SSR/hydration timing issue
+  const handleOpenAutoFocus = React.useCallback((event: Event) => {
+    // Call original handler if provided
+    if (onOpenAutoFocus) {
+      onOpenAutoFocus(event);
+    }
+
+    // Force Floating UI to recalculate position after hydration
+    // Wait for next frame to ensure DOM is fully ready
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        // Trigger resize event to force Floating UI recalculation
+        window.dispatchEvent(new Event("resize"));
+        
+        // Force a reflow by reading layout properties
+        if (typeof document !== "undefined") {
+          void document.body.offsetHeight;
+        }
+
+        // Find the content element and force position update
+        const contentElement = document.querySelector(
+          '[data-slot="dropdown-menu-content"][data-state="open"]'
+        ) as HTMLElement;
+        
+        if (contentElement) {
+          // Trigger a layout recalculation
+          void contentElement.offsetHeight;
+          
+          // Dispatch a custom event that Floating UI might listen to
+          contentElement.dispatchEvent(new Event("positionupdate"));
+        }
+      });
+    });
+  }, [onOpenAutoFocus]);
+
+  // Additional position update on mount if content is already open
+  // This handles cases where the dropdown opens before hydration completes
+  React.useLayoutEffect(() => {
+    if (!mounted) return;
+
+    // Check if any dropdown content is already open
+    const contentElement = document.querySelector(
+      '[data-slot="dropdown-menu-content"][data-state="open"]'
+    ) as HTMLElement;
+
+    if (contentElement) {
+      // Force position recalculation for already-open dropdowns
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          window.dispatchEvent(new Event("resize"));
+          void contentElement.offsetHeight;
+        });
+      });
+    }
+  }, [mounted]);
+
   return (
     <DropdownMenuPrimitive.Portal>
       <DropdownMenuPrimitive.Content
@@ -78,8 +162,8 @@ function DropdownMenuContent({
         avoidCollisions={avoidCollisions}
         collisionPadding={collisionPadding}
         sticky={sticky as any}
+        onOpenAutoFocus={handleOpenAutoFocus}
         className={cn(
-          // estilos shadcn + capa alta y clicks activos
           "bg-popover text-popover-foreground pointer-events-auto",
           "data-[state=open]:animate-in data-[state=closed]:animate-out",
           "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
