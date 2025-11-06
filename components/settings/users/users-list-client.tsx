@@ -6,12 +6,11 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { SimpleSelect } from "@/components/ui/simple-select"
+import { SimpleDropdownComposable, SimpleDropdownItem } from "@/components/ui/simple-dropdown"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useToast } from "@/hooks/use-toast"
 import { getUsers, deleteUser, resendInvite, resetPassword } from "@/lib/actions/admin-users"
-import { CreateUserModal } from "./create-user-modal"
 import { CreateUserModalClean } from "./create-user-modal-clean"
 import { EditUserModal } from "./edit-user-modal"
 import { RoleManagementModal } from "./role-management-modal"
@@ -263,29 +262,30 @@ export function UsersListClient() {
                 />
               </div>
             </div>
-            <Select value={roleFilter} onValueChange={setRoleFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filter by role" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All roles</SelectItem>
-                {AVAILABLE_ROLES.map((role) => (
-                  <SelectItem key={role} value={role}>
-                    {role.charAt(0).toUpperCase() + role.slice(1)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={crewFilter} onValueChange={setCrewFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filter by type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All users</SelectItem>
-                <SelectItem value="crew">Crew only</SelectItem>
-                <SelectItem value="non-crew">Staff only</SelectItem>
-              </SelectContent>
-            </Select>
+            <SimpleSelect
+              value={roleFilter}
+              onValueChange={setRoleFilter}
+              options={[
+                { value: "all", label: "All roles" },
+                ...AVAILABLE_ROLES.map((role) => ({
+                  value: role,
+                  label: role.charAt(0).toUpperCase() + role.slice(1),
+                })),
+              ]}
+              placeholder="Filter by role"
+              className="w-[180px]"
+            />
+            <SimpleSelect
+              value={crewFilter}
+              onValueChange={setCrewFilter}
+              options={[
+                { value: "all", label: "All users" },
+                { value: "crew", label: "Crew only" },
+                { value: "non-crew", label: "Staff only" },
+              ]}
+              placeholder="Filter by type"
+              className="w-[180px]"
+            />
           </div>
         </CardContent>
       </Card>
@@ -357,34 +357,34 @@ export function UsersListClient() {
                     <TableCell>{formatDate(user.created_at)}</TableCell>
                     <TableCell>{user.last_sign_in_at ? formatDate(user.last_sign_in_at) : "Never"}</TableCell>
                     <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
+                      <SimpleDropdownComposable
+                        trigger={
                           <Button variant="ghost" size="sm">
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleEditUser(user)}>
-                            <Edit className="h-4 w-4 mr-2" />
-                            Edit User
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleResendInvite(user.email)}>
-                            <Mail className="h-4 w-4 mr-2" />
-                            Resend Invite
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleResetPassword(user.email)}>
-                            <Key className="h-4 w-4 mr-2" />
-                            Reset Password
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => handleDeleteUser(user.id, user.email)}
-                            className="text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                        }
+                        align="end"
+                      >
+                        <SimpleDropdownItem onClick={() => handleEditUser(user)}>
+                          <Edit className="h-4 w-4 mr-2" />
+                          Edit User
+                        </SimpleDropdownItem>
+                        <SimpleDropdownItem onClick={() => handleResendInvite(user.email)}>
+                          <Mail className="h-4 w-4 mr-2" />
+                          Resend Invite
+                        </SimpleDropdownItem>
+                        <SimpleDropdownItem onClick={() => handleResetPassword(user.email)}>
+                          <Key className="h-4 w-4 mr-2" />
+                          Reset Password
+                        </SimpleDropdownItem>
+                        <SimpleDropdownItem
+                          onClick={() => handleDeleteUser(user.id, user.email)}
+                          className="text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete
+                        </SimpleDropdownItem>
+                      </SimpleDropdownComposable>
                     </TableCell>
                   </TableRow>
                 ))
@@ -400,9 +400,9 @@ export function UsersListClient() {
 
       <EditUserModal open={showEditModal} onOpenChange={setShowEditModal} onSuccess={loadUsers} user={selectedUser} />
 
-      <RoleManagementModal 
-        open={showRoleManagement} 
-        onOpenChange={setShowRoleManagement} 
+      <RoleManagementModal
+        open={showRoleManagement}
+        onOpenChange={setShowRoleManagement}
         users={users}
         onRoleUpdate={loadUsers}
       />
