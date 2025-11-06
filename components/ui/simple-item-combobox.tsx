@@ -41,30 +41,52 @@ export function SimpleItemCombobox({ tenantId, value, onSelect, placeholder = "S
   const calculatePosition = () => {
     if (!triggerRef.current) return
 
-    const rect = triggerRef.current.getBoundingClientRect()
-    const viewportHeight = window.innerHeight
-    const viewportWidth = window.innerWidth
-    const dropdownHeight = 400
+    requestAnimationFrame(() => {
+      if (!triggerRef.current) return
 
-    const spaceBelow = viewportHeight - rect.bottom
-    const spaceAbove = rect.top
+      const rect = triggerRef.current.getBoundingClientRect()
+      const viewportHeight = window.innerHeight
+      const viewportWidth = window.innerWidth
 
-    let top = rect.bottom + 4
-    let left = rect.left
+      // Use actual dropdown height if available, otherwise estimate
+      const dropdownHeight = dropdownRef.current?.offsetHeight || 400
 
-    // Only show above if there's actually enough space above (at least 400px)
-    if (spaceBelow < dropdownHeight && spaceAbove >= dropdownHeight) {
-      top = rect.top - dropdownHeight - 4
-    }
+      const spaceBelow = viewportHeight - rect.bottom
+      const spaceAbove = rect.top
 
-    if (left + rect.width > viewportWidth) {
-      left = viewportWidth - rect.width - 8
-    }
+      let top = rect.bottom + 4
+      let left = rect.left
 
-    setPosition({
-      top: Math.max(4, Math.min(top, viewportHeight - dropdownHeight - 8)),
-      left: Math.max(4, left),
-      width: rect.width,
+      // Only show above if:
+      // 1. More than 75% of dropdown would be off-screen below
+      // 2. There's at least 200px of space above
+      // 3. The resulting position would be at least 100px from top
+      const wouldBeOffScreenBelow = spaceBelow < dropdownHeight * 0.75
+      const hasEnoughSpaceAbove = spaceAbove >= 200
+      const wouldBeAbovePosition = rect.top - dropdownHeight - 4
+      const wouldBeReasonablyPositioned = wouldBeAbovePosition >= 100
+
+      if (wouldBeOffScreenBelow && hasEnoughSpaceAbove && wouldBeReasonablyPositioned) {
+        top = wouldBeAbovePosition
+      }
+
+      // Ensure dropdown doesn't go off right edge
+      if (left + rect.width > viewportWidth) {
+        left = viewportWidth - rect.width - 8
+      }
+
+      // Clamp to safe viewport boundaries
+      const finalTop = Math.max(8, Math.min(top, viewportHeight - 100))
+      const finalLeft = Math.max(8, left)
+
+      console.log("[v0] Item button rect:", rect)
+      console.log("[v0] Item calculated position:", { top: finalTop, left: finalLeft, width: rect.width })
+
+      setPosition({
+        top: finalTop,
+        left: finalLeft,
+        width: rect.width,
+      })
     })
   }
 
