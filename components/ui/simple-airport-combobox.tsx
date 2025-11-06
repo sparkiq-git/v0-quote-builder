@@ -38,34 +38,62 @@ export function SimpleAirportCombobox({ value, onSelect, placeholder = "Search a
     setMounted(true)
   }, [])
 
+  const calculatePosition = () => {
+    if (!triggerRef.current) return
+
+    const rect = triggerRef.current.getBoundingClientRect()
+    const viewportHeight = window.innerHeight
+    const viewportWidth = window.innerWidth
+    const dropdownHeight = 400
+
+    console.log("[v0] Airport button rect:", rect)
+
+    const spaceBelow = viewportHeight - rect.bottom
+    const spaceAbove = rect.top
+
+    let top = rect.bottom + 4
+    let left = rect.left
+
+    const wouldBeAbovePosition = rect.top - dropdownHeight - 4
+    if (spaceBelow < dropdownHeight && spaceAbove >= dropdownHeight && wouldBeAbovePosition >= 50) {
+      top = wouldBeAbovePosition
+    }
+
+    if (left + rect.width > viewportWidth) {
+      left = viewportWidth - rect.width - 8
+    }
+
+    const finalPosition = {
+      top: Math.max(4, top),
+      left: Math.max(4, left),
+      width: rect.width,
+    }
+
+    console.log("[v0] Airport calculated position:", finalPosition)
+    setPosition(finalPosition)
+  }
+
   useEffect(() => {
-    if (isOpen && triggerRef.current) {
-      const rect = triggerRef.current.getBoundingClientRect()
-      const viewportHeight = window.innerHeight
-      const viewportWidth = window.innerWidth
-      const dropdownHeight = 400 // estimated max height
-
-      // Calculate position, ensuring it stays within viewport
-      let top = rect.bottom + 4
-      let left = rect.left
-
-      // If dropdown would go off bottom of screen, show above button instead
-      if (top + dropdownHeight > viewportHeight) {
-        top = rect.top - dropdownHeight - 4
-      }
-
-      // If dropdown would go off right of screen, align to right edge
-      if (left + rect.width > viewportWidth) {
-        left = viewportWidth - rect.width - 8
-      }
-
-      setPosition({
-        top: Math.max(4, top), // At least 4px from top
-        left: Math.max(4, left), // At least 4px from left
-        width: rect.width,
-      })
+    if (isOpen) {
+      calculatePosition()
     } else {
       setPosition(null)
+    }
+  }, [isOpen])
+
+  useEffect(() => {
+    if (!isOpen) return
+
+    const handleScrollOrResize = () => {
+      calculatePosition()
+    }
+
+    window.addEventListener("scroll", handleScrollOrResize, true)
+    window.addEventListener("resize", handleScrollOrResize)
+
+    return () => {
+      window.removeEventListener("scroll", handleScrollOrResize, true)
+      window.removeEventListener("resize", handleScrollOrResize)
     }
   }, [isOpen])
 

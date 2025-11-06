@@ -38,34 +38,57 @@ export function SimpleItemCombobox({ tenantId, value, onSelect, placeholder = "S
     setMounted(true)
   }, [])
 
+  const calculatePosition = () => {
+    if (!triggerRef.current) return
+
+    const rect = triggerRef.current.getBoundingClientRect()
+    const viewportHeight = window.innerHeight
+    const viewportWidth = window.innerWidth
+    const dropdownHeight = 400
+
+    const spaceBelow = viewportHeight - rect.bottom
+    const spaceAbove = rect.top
+
+    let top = rect.bottom + 4
+    let left = rect.left
+
+    // Only show above if there's actually enough space above (at least 400px)
+    if (spaceBelow < dropdownHeight && spaceAbove >= dropdownHeight) {
+      top = rect.top - dropdownHeight - 4
+    }
+
+    if (left + rect.width > viewportWidth) {
+      left = viewportWidth - rect.width - 8
+    }
+
+    setPosition({
+      top: Math.max(4, Math.min(top, viewportHeight - dropdownHeight - 8)),
+      left: Math.max(4, left),
+      width: rect.width,
+    })
+  }
+
   useEffect(() => {
-    if (isOpen && triggerRef.current) {
-      const rect = triggerRef.current.getBoundingClientRect()
-      const viewportHeight = window.innerHeight
-      const viewportWidth = window.innerWidth
-      const dropdownHeight = 400 // estimated max height
-
-      // Calculate position, ensuring it stays within viewport
-      let top = rect.bottom + 4
-      let left = rect.left
-
-      // If dropdown would go off bottom of screen, show above button instead
-      if (top + dropdownHeight > viewportHeight) {
-        top = rect.top - dropdownHeight - 4
-      }
-
-      // If dropdown would go off right of screen, align to right edge
-      if (left + rect.width > viewportWidth) {
-        left = viewportWidth - rect.width - 8
-      }
-
-      setPosition({
-        top: Math.max(4, top), // At least 4px from top
-        left: Math.max(4, left), // At least 4px from left
-        width: rect.width,
-      })
+    if (isOpen) {
+      calculatePosition()
     } else {
       setPosition(null)
+    }
+  }, [isOpen])
+
+  useEffect(() => {
+    if (!isOpen) return
+
+    const handleScrollOrResize = () => {
+      calculatePosition()
+    }
+
+    window.addEventListener("scroll", handleScrollOrResize, true)
+    window.addEventListener("resize", handleScrollOrResize)
+
+    return () => {
+      window.removeEventListener("scroll", handleScrollOrResize, true)
+      window.removeEventListener("resize", handleScrollOrResize)
     }
   }, [isOpen])
 
