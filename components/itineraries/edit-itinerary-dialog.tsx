@@ -95,6 +95,14 @@ export function EditItineraryDialog({
   const [loadingPassengers, setLoadingPassengers] = useState(true)
   const [passengerSearch, setPassengerSearch] = useState("")
   const [passengerComboboxOpen, setPassengerComboboxOpen] = useState<string | null>(null)
+  const [showCreatePassengerForm, setShowCreatePassengerForm] = useState(false)
+  const [creatingPassenger, setCreatingPassenger] = useState(false)
+  const [newPassengerData, setNewPassengerData] = useState({
+    full_name: "",
+    email: "",
+    phone: "",
+    company: "",
+  })
   
   // Crew state - crew members are stored directly, not referenced
   const [crewMembers, setCrewMembers] = useState<Array<{ id: string; name: string; role: string; email?: string; phone?: string; notes?: string }>>([])
@@ -186,6 +194,71 @@ export function EditItineraryDialog({
     updated[index].passenger_id = passengerId
     setPassengers(updated)
     setPassengerComboboxOpen(null)
+  }
+
+  const handleCreatePassenger = async () => {
+    if (!newPassengerData.full_name || !newPassengerData.email) {
+      toast({
+        title: "Validation Error",
+        description: "Full name and email are required",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setCreatingPassenger(true)
+    try {
+      const response = await fetch("/api/passengers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contact_id: itinerary.contact_id,
+          full_name: newPassengerData.full_name,
+          email: newPassengerData.email,
+          phone: newPassengerData.phone || undefined,
+          company: newPassengerData.company || undefined,
+          status: "active",
+        }),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || "Failed to create passenger")
+      }
+
+      const { data: newPassenger } = await response.json()
+
+      // Refresh available passengers
+      await fetchAvailablePassengers()
+
+      // Add the new passenger to the current passenger list if there's an empty slot
+      const emptySlotIndex = passengers.findIndex((p) => !p.passenger_id)
+      if (emptySlotIndex !== -1) {
+        const updated = [...passengers]
+        updated[emptySlotIndex].passenger_id = newPassenger.id
+        setPassengers(updated)
+      } else if (passengers.length < itinerary.total_pax) {
+        // Add new passenger entry
+        setPassengers([...passengers, { id: `temp-${Date.now()}`, passenger_id: newPassenger.id }])
+      }
+
+      // Reset form
+      setNewPassengerData({ full_name: "", email: "", phone: "", company: "" })
+      setShowCreatePassengerForm(false)
+
+      toast({
+        title: "Success",
+        description: "Passenger created and added to itinerary",
+      })
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create passenger",
+        variant: "destructive",
+      })
+    } finally {
+      setCreatingPassenger(false)
+    }
   }
 
   const handleAddCrew = (role: "PIC" | "SIC" | "Cabin Attendance") => {
@@ -282,6 +355,8 @@ export function EditItineraryDialog({
     setCrewMembers([])
     setPassengerSearch("")
     setPassengerComboboxOpen(null)
+    setShowCreatePassengerForm(false)
+    setNewPassengerData({ full_name: "", email: "", phone: "", company: "" })
   }, [onOpenChange])
 
   // Filter passengers based on search
@@ -334,23 +409,136 @@ export function EditItineraryDialog({
                     {passengers.length} / {itinerary.total_pax}
                   </Badge>
                 </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleAddPassenger}
-                  disabled={passengers.length >= itinerary.total_pax}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Passenger
-                </Button>
+                <div className="flex gap-2">
+                  {!showCreatePassengerForm && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowCreatePassengerForm(true)}
+                      disabled={passengers.length >= itinerary.total_pax}
+                    >
+                      <UserPlus className="h-4 w-4 mr-2" />
+                      Create New
+                    </Button>
+                  )}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleAddPassenger}
+                    disabled={passengers.length >= itinerary.total_pax}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Existing
+                  </Button>
+                </div>
               </div>
 
-              {passengers.length === 0 ? (
-                <div className="text-center py-8 text-sm text-muted-foreground">
-                  No passengers added yet. Click "Add Passenger" to get started.
+              {/* Create New Passenger Form */}
+              {showCreatePassengerForm && (
+                <div className="mb-4 p-4 border rounded-lg bg-muted/30 border-border">
+                  <div className="flex items-center justify-between mb-3">
+                    <h5 className="font-medium text-sm">Create New Passenger</h5>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setShowCreatePassengerForm(false)
+                        setNewPassengerData({ full_name: "", email: "", phone: "", company: "" })
+                      }}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-xs mb-1 block">Full Name *</Label>
+                      <Input
+                        placeholder="Enter full name"
+                        value={newPassengerData.full_name}
+                        onChange={(e) =>
+                          setNewPassengerData({ ...newPassengerData, full_name: e.target.value })
+                        }
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs mb-1 block">Email *</Label>
+                      <Input
+                        type="email"
+                        placeholder="Enter email"
+                        value={newPassengerData.email}
+                        onChange={(e) =>
+                          setNewPassengerData({ ...newPassengerData, email: e.target.value })
+                        }
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs mb-1 block">Phone</Label>
+                      <Input
+                        type="tel"
+                        placeholder="Enter phone (optional)"
+                        value={newPassengerData.phone}
+                        onChange={(e) =>
+                          setNewPassengerData({ ...newPassengerData, phone: e.target.value })
+                        }
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs mb-1 block">Company</Label>
+                      <Input
+                        placeholder="Enter company (optional)"
+                        value={newPassengerData.company}
+                        onChange={(e) =>
+                          setNewPassengerData({ ...newPassengerData, company: e.target.value })
+                        }
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-2 mt-3">
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={handleCreatePassenger}
+                      disabled={creatingPassenger || !newPassengerData.full_name || !newPassengerData.email}
+                    >
+                      {creatingPassenger ? (
+                        <>
+                          <Loader2 className="h-3 w-3 mr-2 animate-spin" />
+                          Creating...
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="h-3 w-3 mr-2" />
+                          Create & Add
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setShowCreatePassengerForm(false)
+                        setNewPassengerData({ full_name: "", email: "", phone: "", company: "" })
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
                 </div>
-              ) : (
+              )}
+
+              {passengers.length === 0 && !showCreatePassengerForm ? (
+                <div className="text-center py-8 text-sm text-muted-foreground">
+                  No passengers added yet. Click "Create New" or "Add Existing" to get started.
+                </div>
+              ) : passengers.length > 0 ? (
                 <div className="space-y-4">
                   {passengers.map((passengerEntry, index) => {
                     const passenger = getPassengerById(passengerEntry.passenger_id)
@@ -421,9 +609,45 @@ export function EditItineraryDialog({
                                   />
                                   <CommandList className="max-h-[300px] overflow-y-auto">
                                     <CommandEmpty>
-                                      {passengerSearch
-                                        ? `No passengers found matching "${passengerSearch}"`
-                                        : "No passengers available for this contact."}
+                                      {passengerSearch ? (
+                                        <div className="py-2 text-center text-sm">
+                                          <p className="text-muted-foreground mb-2">
+                                            No passengers found matching "{passengerSearch}"
+                                          </p>
+                                          <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => {
+                                              setPassengerComboboxOpen(null)
+                                              setShowCreatePassengerForm(true)
+                                            }}
+                                            className="mt-2"
+                                          >
+                                            <UserPlus className="h-3 w-3 mr-2" />
+                                            Create New Passenger
+                                          </Button>
+                                        </div>
+                                      ) : (
+                                        <div className="py-2 text-center text-sm">
+                                          <p className="text-muted-foreground mb-2">
+                                            No passengers available for this contact.
+                                          </p>
+                                          <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => {
+                                              setPassengerComboboxOpen(null)
+                                              setShowCreatePassengerForm(true)
+                                            }}
+                                            className="mt-2"
+                                          >
+                                            <UserPlus className="h-3 w-3 mr-2" />
+                                            Create New Passenger
+                                          </Button>
+                                        </div>
+                                      )}
                                     </CommandEmpty>
                                     <CommandGroup>
                                       {filteredPassengers.map((p) => (
