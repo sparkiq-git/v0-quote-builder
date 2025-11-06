@@ -3,31 +3,9 @@
 import { useState } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
-import {
-  Search,
-  MoreHorizontal,
-  Edit,
-  Archive,
-  Trash2,
-  ArchiveRestore,
-  ChevronLeft,
-  ChevronRight,
-  ImageIcon,
-} from "lucide-react"
+import { SimpleDropdownComposable, SimpleDropdownItem } from "@/components/ui/simple-dropdown"
+import { Search, MoreHorizontal, Edit, ChevronLeft, ChevronRight, ImageIcon } from "lucide-react"
 
 import { useToast } from "@/hooks/use-toast"
 import { useAircraftModels } from "@/hooks/use-aircraft-models"
@@ -49,9 +27,9 @@ function ImageCarousel({ images, alt }: { images: string[]; alt: string }) {
 
   return (
     <div className="relative aspect-video bg-muted rounded-lg overflow-hidden group">
-      <img 
-        src={images[currentIndex]} 
-        alt={alt} 
+      <img
+        src={images[currentIndex] || "/placeholder.svg"}
+        alt={alt}
         className="w-full h-full object-cover"
         onError={(e) => {
           const target = e.target as HTMLImageElement
@@ -128,13 +106,9 @@ export function ModelsGrid() {
 
   return (
     <>
-        {imageModelId && (
-          <ModelImageDialog
-            open={imageDialogOpen}
-            onOpenChange={setImageDialogOpen}
-            modelId={imageModelId}
-          />
-        )}
+      {imageModelId && (
+        <ModelImageDialog open={imageDialogOpen} onOpenChange={setImageDialogOpen} modelId={imageModelId} />
+      )}
 
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row gap-4">
@@ -156,21 +130,17 @@ export function ModelsGrid() {
               <Card
                 key={m.id}
                 className="hover:shadow-lg transition-shadow cursor-pointer"
-                    onClick={() => {
-                      setImageModelId(m.id)
-                      setImageDialogOpen(true)
-                    }}
+                onClick={() => {
+                  setImageModelId(m.id)
+                  setImageDialogOpen(true)
+                }}
               >
                 <CardHeader className="p-4">
                   <ImageCarousel images={m.images || []} alt={m.name} />
                 </CardHeader>
                 <CardContent className="p-4 pt-0 space-y-3">
-                  <h3 className="font-semibold text-lg">
-                    {m.name}
-                  </h3>
-                  {m.manufacturer && (
-                    <p className="text-sm text-muted-foreground">{m.manufacturer}</p>
-                  )}
+                  <h3 className="font-semibold text-lg">{m.name}</h3>
+                  {m.manufacturer && <p className="text-sm text-muted-foreground">{m.manufacturer}</p>}
                   <div className="text-sm space-y-1">
                     {m.capacityPax && <div>Capacity: {m.capacityPax} pax</div>}
                     {m.rangeNm && <div>Range: {m.rangeNm} nm</div>}
@@ -179,30 +149,25 @@ export function ModelsGrid() {
                   </div>
                 </CardContent>
                 <CardFooter className="p-4 pt-0">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full bg-transparent"
-                        onClick={(e) => e.stopPropagation()}
-                      >
+                  <SimpleDropdownComposable
+                    trigger={
+                      <Button variant="outline" size="sm" className="w-full bg-transparent">
                         <MoreHorizontal className="h-4 w-4 mr-2" />
                         Actions
                       </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setImageModelId(m.id)
-                          setImageDialogOpen(true)
-                        }}
-                      >
-                        <Edit className="mr-2 h-4 w-4" /> Add Images
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                    }
+                    align="end"
+                  >
+                    <SimpleDropdownItem
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setImageModelId(m.id)
+                        setImageDialogOpen(true)
+                      }}
+                    >
+                      <Edit className="mr-2 h-4 w-4" /> Add Images
+                    </SimpleDropdownItem>
+                  </SimpleDropdownComposable>
                 </CardFooter>
               </Card>
             ))}
@@ -210,9 +175,7 @@ export function ModelsGrid() {
         ) : (
           <div className="text-center py-10">
             <p className="text-muted-foreground mb-4">No models found.</p>
-            <p className="text-sm text-muted-foreground">
-              No aircraft models match your search criteria.
-            </p>
+            <p className="text-sm text-muted-foreground">No aircraft models match your search criteria.</p>
           </div>
         )}
 
