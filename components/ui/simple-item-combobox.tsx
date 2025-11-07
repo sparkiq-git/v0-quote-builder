@@ -126,7 +126,13 @@ export function SimpleItemCombobox({ tenantId, value, onSelect, placeholder = "S
       try {
         const res = await fetch(`/api/items?tenant_id=${tenantId}`)
         const data = await res.json()
-        setItems(data.items || [])
+        const mappedItems = (data.items || []).map((item: any) => ({
+          id: item.id,
+          name: item.name,
+          description: item.default_notes || item.code,
+          price: item.default_unit_price,
+        }))
+        setItems(mappedItems)
       } catch (error) {
         console.error("Failed to fetch items:", error)
         setItems([])
@@ -141,8 +147,6 @@ export function SimpleItemCombobox({ tenantId, value, onSelect, placeholder = "S
   }, [isOpen, tenantId])
 
   useEffect(() => {
-    if (!isOpen) return
-
     const handleClickOutside = (e: MouseEvent) => {
       if (
         dropdownRef.current &&
