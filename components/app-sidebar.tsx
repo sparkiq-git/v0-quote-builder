@@ -82,6 +82,7 @@ const settingsNavigation = [
     title: "Settings",
     href: "/settings",
     icon: Settings,
+    disabled: true,
   },
   {
     title: "Users",
@@ -273,12 +274,22 @@ export function AppSidebar() {
 
                 return (
                   <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton asChild isActive={isActive}>
-                      <Link href={item.href} className="flex items-center gap-3 text-gray-500 hover:text-gray-900">
+                    {item.disabled ? (
+                      <SidebarMenuButton
+                        disabled
+                        className="flex items-center gap-3 text-gray-400 cursor-not-allowed opacity-50"
+                      >
                         <item.icon className="h-4 w-4" />
                         <span>{item.title}</span>
-                      </Link>
-                    </SidebarMenuButton>
+                      </SidebarMenuButton>
+                    ) : (
+                      <SidebarMenuButton asChild isActive={isActive}>
+                        <Link href={item.href} className="flex items-center gap-3 text-gray-500 hover:text-gray-900">
+                          <item.icon className="h-4 w-4" />
+                          <span>{item.title}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    )}
                   </SidebarMenuItem>
                 )
               })}
