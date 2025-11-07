@@ -733,13 +733,7 @@ export default function ItineraryDetailPage() {
                               </Badge>
                             )}
                           </div>
-                          {member.notes && (
-                            <>
-                              <Separator className="my-3 bg-gray-300/50 dark:bg-gray-600/50" />
-                              <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed line-clamp-2">
-                                {member.notes}
-                              </p>
-                            </>
+                      
                           )}
                         </div>
                       ))}
