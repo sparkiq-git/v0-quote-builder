@@ -285,13 +285,13 @@ export function SimpleContactCombobox({ tenantId, value, selectedName, onSelect 
                     contacts.map((c) => (
                       <button
                         key={c.id}
-                        className="relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
+                        className="relative flex w-full cursor-pointer select-none items-start rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground text-left"
                         onClick={() => {
                           onSelect(c)
                           setOpen(false)
                         }}
                       >
-                        <div>
+                        <div className="w-full">
                           <div className="font-medium">{c.full_name}</div>
                           <div className="text-xs text-muted-foreground">
                             {c.company} • {c.email} • {c.phone}
