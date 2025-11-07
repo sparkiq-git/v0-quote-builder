@@ -716,7 +716,7 @@ export default function ItineraryDetailPage() {
                       {crew.map((member) => (
                         <div
                           key={member.id}
-                          className="relative group rounded-2xl backdrop-blur-2xl bg-gradient-to-br from-white/70 to-white/50 dark:from-gray-900/70 dark:to-gray-900/50 border border-white/40 dark:border-gray-700/40 p-5 hover:shadow-xl hover:border-primary/30 transition-all duration-300"
+                          className="relative group rounded-2xl backdrop-blur-2xl bg-gradient-to-br from-white/70 to-white/50 dark:from-gray-900/70 dark:to-gray-900/50 border border-white/40 dark:border-gray-700/40 p-2 hover:shadow-xl hover:border-primary/30 transition-all duration-300"
                         >
                           <div className="flex items-start justify-between gap-3 mb-3">
                             <div className="flex-1 min-w-0 space-y-1.5">
