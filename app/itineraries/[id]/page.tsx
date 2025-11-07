@@ -733,7 +733,10 @@ export default function ItineraryDetailPage() {
                               </Badge>
                             )}
                           </div>
-                      
+                          {member.notes && (
+                            <div className="text-xs text-gray-600 dark:text-gray-400 italic line-clamp-2">
+                              {member.notes}
+                            </div>
                           )}
                         </div>
                       ))}
