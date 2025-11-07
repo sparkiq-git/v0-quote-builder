@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { SimpleSelect } from "@/components/ui/simple-select"
 import { useMockStore } from "@/lib/mock/store"
 import { useToast } from "@/hooks/use-toast"
 import type { CrewMember } from "@/lib/types"
@@ -139,6 +139,11 @@ export function CrewCreateDialog({ children, crewId, open: controlledOpen, onOpe
     ...(state.customCrewRoles || []).map((role) => ({ value: role, label: role })),
   ]
 
+  const statusOptions = [
+    { value: "active", label: "Active" },
+    { value: "inactive", label: "Inactive" },
+  ]
+
   return (
     <>
       <Dialog open={open} onOpenChange={setOpen}>
@@ -165,21 +170,12 @@ export function CrewCreateDialog({ children, crewId, open: controlledOpen, onOpe
               <div className="grid gap-2">
                 <Label htmlFor="role">Role *</Label>
                 <div className="flex gap-2">
-                  <Select
-                    value={formData.role}
+                  <SimpleSelect
+                    value={formData.role || "PIC"}
                     onValueChange={(value) => setFormData({ ...formData, role: value as any })}
-                  >
-                    <SelectTrigger className="flex-1">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {allRoles.map((role) => (
-                        <SelectItem key={role.value} value={role.value}>
-                          {role.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    options={allRoles}
+                    triggerClassName="flex-1"
+                  />
                   <Button
                     type="button"
                     variant="outline"
@@ -222,18 +218,11 @@ export function CrewCreateDialog({ children, crewId, open: controlledOpen, onOpe
 
               <div className="grid gap-2">
                 <Label htmlFor="status">Status</Label>
-                <Select
-                  value={formData.status}
+                <SimpleSelect
+                  value={formData.status || "active"}
                   onValueChange={(value) => setFormData({ ...formData, status: value as any })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
-                  </SelectContent>
-                </Select>
+                  options={statusOptions}
+                />
               </div>
 
               <div className="grid gap-2">
