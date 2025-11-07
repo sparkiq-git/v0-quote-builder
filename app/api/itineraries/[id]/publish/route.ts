@@ -101,13 +101,23 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       )
     }
 
-    // Get Supabase URL and anon key for edge function call
+    // Get Supabase URL and keys for edge function call
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
     const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-    if (!supabaseUrl || !anonKey) {
+    if (!supabaseUrl) {
       return NextResponse.json(
-        { error: "Missing Supabase configuration" },
+        { error: "Missing Supabase URL configuration" },
+        { status: 500 }
+      )
+    }
+
+    // Prefer service role key for server-side calls, fallback to anon key
+    const authKey = serviceRoleKey || anonKey
+    if (!authKey) {
+      return NextResponse.json(
+        { error: "Missing Supabase authentication key" },
         { status: 500 }
       )
     }
@@ -131,29 +141,73 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
           created_by: user.id,
         }
 
-        const res = await fetch(fnUrl, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            apikey: anonKey,
-            Authorization: `Bearer ${anonKey}`,
-          },
-          body: JSON.stringify(payload),
-        })
+        // Try SDK method first
+        let edgeData: any = null
+        let edgeError: any = null
 
-        const json = await res.json().catch(() => ({}))
-
-        if (!res.ok || !json.ok) {
-          console.error(`Error creating link for ${recipient.email}:`, json)
-          errors.push({
-            email: recipient.email,
-            error: json.error || `Failed (${res.status})`,
+        try {
+          const result = await supabase.functions.invoke("create-action-link", {
+            body: payload,
           })
+          edgeData = result.data
+          edgeError = result.error
+        } catch (invokeErr: any) {
+          console.warn(`SDK invoke failed for ${recipient.email}, trying direct fetch:`, invokeErr)
+          edgeError = invokeErr
+        }
+
+        // If SDK failed, try direct fetch as fallback
+        if (edgeError || !edgeData?.ok) {
+          console.log(`Trying direct fetch for ${recipient.email}`)
+          console.log(`Edge function URL: ${fnUrl}`)
+          console.log(`Payload:`, JSON.stringify(payload, null, 2))
+          
+          const res = await fetch(fnUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              apikey: authKey,
+              Authorization: `Bearer ${authKey}`,
+            },
+            body: JSON.stringify(payload),
+          })
+
+          const responseText = await res.text()
+          let json: any = {}
+          
+          try {
+            json = JSON.parse(responseText)
+          } catch (parseErr) {
+            console.error(`Failed to parse response for ${recipient.email}:`, responseText)
+            json = { raw: responseText }
+          }
+
+          console.log(`Direct fetch response for ${recipient.email}:`, {
+            status: res.status,
+            statusText: res.statusText,
+            body: json,
+            rawText: responseText,
+          })
+
+          if (!res.ok || !json.ok) {
+            console.error(`Error creating link for ${recipient.email}:`, json)
+            errors.push({
+              email: recipient.email,
+              error: json.error || `Failed (${res.status}): ${responseText.slice(0, 200)}`,
+            })
+          } else {
+            results.push({
+              email: recipient.email,
+              link_id: json.id,
+              link_url: json.link_url,
+            })
+          }
         } else {
+          // SDK succeeded
           results.push({
             email: recipient.email,
-            link_id: json.id,
-            link_url: json.link_url,
+            link_id: edgeData.id,
+            link_url: edgeData.link_url,
           })
         }
       } catch (err: any) {
