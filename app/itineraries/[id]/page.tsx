@@ -3,7 +3,19 @@
 import { useEffect, useState, useCallback } from "react"
 import { useParams } from "next/navigation"
 import Link from "next/link"
-import { Loader2, Calendar, Users, Plane, MapPin, Contact, FileText, ArrowLeft, Edit, CheckCircle2, UserCog } from "lucide-react"
+import {
+  Loader2,
+  Calendar,
+  Users,
+  Plane,
+  MapPin,
+  Contact,
+  FileText,
+  ArrowLeft,
+  Edit,
+  CheckCircle2,
+  UserCog,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -258,8 +270,8 @@ export default function ItineraryDetailPage() {
   const canConfirmTrip = itinerary.status === "draft" && itinerary.invoice?.status === "paid"
 
   return (
-    <div className="w-full flex justify-center px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-      <div className="w-full lg:w-[75vw] space-y-6 sm:space-y-8">
+    <div className="w-full flex justify-center px-4 sm:px-6 lg:px-8 py-8">
+      <div className="w-full max-w-[1400px] space-y-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6 border-b">
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="sm" asChild>
@@ -269,7 +281,7 @@ export default function ItineraryDetailPage() {
               </Link>
             </Button>
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+              <h1 className="text-3xl font-bold tracking-tight">
                 {itinerary.title || itinerary.trip_summary || "Itinerary"}
               </h1>
               <p className="text-sm text-muted-foreground mt-1.5 flex items-center gap-2">
@@ -309,15 +321,15 @@ export default function ItineraryDetailPage() {
           </div>
         </div>
 
-        <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
           {/* Trip Summary Card with Trip Type inside */}
-          <Card className="shadow-md border-border/50 hover:shadow-lg transition-shadow">
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3 mb-3">
+          <Card className="shadow-sm border-border/50 hover:shadow-md transition-shadow">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-3 mb-4">
                 <div className="p-2 rounded-lg bg-primary/10">
                   <FileText className="h-5 w-5 text-primary" />
                 </div>
-                <div className="text-sm text-muted-foreground">Trip Summary</div>
+                <div className="text-sm font-medium text-muted-foreground">Trip Summary</div>
               </div>
               <div className="space-y-3">
                 {itinerary.trip_summary && (
@@ -327,7 +339,7 @@ export default function ItineraryDetailPage() {
                 )}
                 <div className="flex flex-wrap gap-2">
                   {itinerary.trip_type && (
-                    <Badge variant="outline" className="text-sm">
+                    <Badge variant="outline" className="text-xs">
                       {itinerary.trip_type}
                     </Badge>
                   )}
@@ -342,64 +354,64 @@ export default function ItineraryDetailPage() {
           </Card>
 
           {/* Legs Card */}
-          <Card className="shadow-md border-border/50 hover:shadow-lg transition-shadow">
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3 mb-2">
+          <Card className="shadow-sm border-border/50 hover:shadow-md transition-shadow">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-3 mb-4">
                 <div className="p-2 rounded-lg bg-primary/10">
                   <MapPin className="h-5 w-5 text-primary" />
                 </div>
-                <div className="text-sm text-muted-foreground">Flight Legs</div>
+                <div className="text-sm font-medium text-muted-foreground">Flight Legs</div>
               </div>
-              <div className="font-bold text-2xl text-primary">{itinerary.leg_count}</div>
-              <div className="text-xs text-muted-foreground mt-1">
+              <div className="font-bold text-3xl text-primary">{itinerary.leg_count}</div>
+              <div className="text-xs text-muted-foreground mt-2">
                 {itinerary.domestic_trip ? "Domestic" : "International"}
               </div>
             </CardContent>
           </Card>
 
           {/* Passengers Card */}
-          <Card className="shadow-md border-border/50 hover:shadow-lg transition-shadow">
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3 mb-2">
+          <Card className="shadow-sm border-border/50 hover:shadow-md transition-shadow">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-3 mb-4">
                 <div className="p-2 rounded-lg bg-primary/10">
                   <Users className="h-5 w-5 text-primary" />
                 </div>
-                <div className="text-sm text-muted-foreground">Passengers</div>
+                <div className="text-sm font-medium text-muted-foreground">Passengers</div>
               </div>
-              <div className="font-bold text-2xl text-primary">{itinerary.total_pax}</div>
-              <div className="text-xs text-muted-foreground mt-1">Total PAX</div>
+              <div className="font-bold text-3xl text-primary">{itinerary.total_pax}</div>
+              <div className="text-xs text-muted-foreground mt-2">Total PAX</div>
             </CardContent>
           </Card>
 
           {/* Aircraft Card */}
-          <Card className="shadow-md border-border/50 hover:shadow-lg transition-shadow">
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3 mb-2">
+          <Card className="shadow-sm border-border/50 hover:shadow-md transition-shadow">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-3 mb-4">
                 <div className="p-2 rounded-lg bg-primary/10">
                   <Plane className="h-5 w-5 text-primary" />
                 </div>
-                <div className="text-sm text-muted-foreground">Aircraft</div>
+                <div className="text-sm font-medium text-muted-foreground">Aircraft</div>
               </div>
-              <div className="font-semibold text-lg truncate">{itinerary.aircraft_tail_no || "Not assigned"}</div>
+              <div className="font-semibold text-xl truncate">{itinerary.aircraft_tail_no || "Not assigned"}</div>
             </CardContent>
           </Card>
         </div>
 
-        <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-3">
-          {/* Flight Details spans 2 columns */}
-          <Card className="lg:col-span-2 shadow-md border-border/50 flex flex-col">
-            <CardHeader className="space-y-1">
-              <CardTitle className="text-xl sm:text-2xl flex items-center gap-2">
-                <Plane className="h-6 w-6 text-primary" />
+        <div className="grid gap-6 grid-cols-1 lg:grid-cols-3">
+          {/* Flight Details - spans 2 columns */}
+          <Card className="lg:col-span-2 shadow-sm border-border/50">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-xl flex items-center gap-2">
+                <Plane className="h-5 w-5 text-primary" />
                 Flight Details
               </CardTitle>
               <CardDescription>{itinerary.details.length} flight leg(s)</CardDescription>
             </CardHeader>
-            <CardContent className="flex-1">
+            <CardContent>
               {itinerary.details.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-8">No flight details available</p>
               ) : (
-                <div className="overflow-x-auto overflow-y-auto max-w-full max-h-[500px] border rounded-lg shadow-sm">
+                <div className="overflow-x-auto border rounded-lg">
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-muted/50">
@@ -408,7 +420,7 @@ export default function ItineraryDetailPage() {
                         <TableHead className="min-w-[120px]">Destination</TableHead>
                         <TableHead className="min-w-[140px]">Departure</TableHead>
                         <TableHead className="min-w-[140px]">Arrival</TableHead>
-                        <TableHead className="text-center">PAX</TableHead>
+                        <TableHead className="text-center w-[60px]">PAX</TableHead>
                         <TableHead className="min-w-[150px]">Notes</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -475,10 +487,10 @@ export default function ItineraryDetailPage() {
             </CardContent>
           </Card>
 
-          <div className="space-y-4 sm:space-y-6 flex flex-col">
+          <div className="space-y-6 flex flex-col">
             {/* Contact Information */}
-            <Card className="shadow-md border-border/50">
-              <CardHeader>
+            <Card className="shadow-sm border-border/50">
+              <CardHeader className="pb-4">
                 <CardTitle className="text-lg flex items-center gap-2">
                   <Contact className="h-5 w-5 text-primary" />
                   Contact
@@ -486,17 +498,15 @@ export default function ItineraryDetailPage() {
               </CardHeader>
               <CardContent>
                 {itinerary.contact ? (
-                  <div className="space-y-3">
-                    <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
-                      <div className="font-semibold text-base mb-1">{itinerary.contact.full_name}</div>
-                      <div className="text-sm text-muted-foreground break-all">{itinerary.contact.email}</div>
-                      {itinerary.contact.company && (
-                        <div className="text-sm text-muted-foreground mt-2 flex items-center gap-1.5">
-                          <Contact className="h-3.5 w-3.5" />
-                          {itinerary.contact.company}
-                        </div>
-                      )}
-                    </div>
+                  <div className="p-4 rounded-lg bg-muted/30 border border-border/50">
+                    <div className="font-semibold text-base mb-2">{itinerary.contact.full_name}</div>
+                    <div className="text-sm text-muted-foreground break-all mb-1">{itinerary.contact.email}</div>
+                    {itinerary.contact.company && (
+                      <div className="text-sm text-muted-foreground mt-3 flex items-center gap-1.5">
+                        <Contact className="h-3.5 w-3.5" />
+                        {itinerary.contact.company}
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <p className="text-sm text-muted-foreground">No contact information</p>
@@ -506,8 +516,8 @@ export default function ItineraryDetailPage() {
 
             {/* Notes & Requirements */}
             {(itinerary.notes || itinerary.special_requirements) && (
-              <Card className="shadow-md border-border/50">
-                <CardHeader>
+              <Card className="shadow-sm border-border/50">
+                <CardHeader className="pb-4">
                   <CardTitle className="text-lg flex items-center gap-2">
                     <FileText className="h-5 w-5 text-primary" />
                     Notes & Requirements
@@ -516,16 +526,16 @@ export default function ItineraryDetailPage() {
                 <CardContent className="space-y-4">
                   {itinerary.notes && (
                     <div className="p-4 bg-muted/30 rounded-lg border border-border/50">
-                      <div className="text-xs font-medium text-muted-foreground mb-2">General Notes</div>
-                      <p className="text-sm whitespace-pre-line">{itinerary.notes}</p>
+                      <div className="text-xs font-semibold text-muted-foreground mb-2">General Notes</div>
+                      <p className="text-sm leading-relaxed whitespace-pre-line">{itinerary.notes}</p>
                     </div>
                   )}
                   {itinerary.special_requirements && (
                     <div className="p-4 bg-amber-50/50 dark:bg-amber-950/20 rounded-lg border border-amber-500/30">
-                      <div className="text-xs font-medium text-amber-800 dark:text-amber-200 mb-2">
+                      <div className="text-xs font-semibold text-amber-800 dark:text-amber-200 mb-2">
                         Special Requirements
                       </div>
-                      <p className="text-sm text-amber-900 dark:text-amber-100 whitespace-pre-line">
+                      <p className="text-sm leading-relaxed text-amber-900 dark:text-amber-100 whitespace-pre-line">
                         {itinerary.special_requirements}
                       </p>
                     </div>
@@ -535,8 +545,8 @@ export default function ItineraryDetailPage() {
             )}
 
             {/* Related Information */}
-            <Card className="shadow-md border-border/50">
-              <CardHeader>
+            <Card className="shadow-sm border-border/50">
+              <CardHeader className="pb-4">
                 <CardTitle className="text-lg flex items-center gap-2">
                   <FileText className="h-5 w-5 text-primary" />
                   Related
@@ -544,8 +554,8 @@ export default function ItineraryDetailPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 {itinerary.quote && (
-                  <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
-                    <div className="text-xs font-medium text-muted-foreground mb-1.5">Quote</div>
+                  <div className="p-4 rounded-lg bg-muted/30 border border-border/50">
+                    <div className="text-xs font-semibold text-muted-foreground mb-2">Quote</div>
                     <Link
                       href={`/quotes/${itinerary.quote.id}`}
                       className="font-medium text-primary hover:underline flex items-center gap-1.5"
@@ -556,16 +566,16 @@ export default function ItineraryDetailPage() {
                   </div>
                 )}
                 {itinerary.invoice && (
-                  <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
-                    <div className="text-xs font-medium text-muted-foreground mb-1.5">Invoice</div>
+                  <div className="p-4 rounded-lg bg-muted/30 border border-border/50">
+                    <div className="text-xs font-semibold text-muted-foreground mb-2">Invoice</div>
                     <Link
                       href={`/invoices/${itinerary.invoice.id}`}
-                      className="font-medium text-primary hover:underline flex items-center gap-1.5"
+                      className="font-medium text-primary hover:underline flex items-center gap-1.5 mb-3"
                     >
                       {itinerary.invoice.number}
                       <ArrowLeft className="h-3.5 w-3.5 rotate-180" />
                     </Link>
-                    <div className="flex items-center gap-2 mt-2">
+                    <div className="flex items-center gap-2">
                       <Badge
                         variant={itinerary.invoice.status === "paid" ? "default" : "secondary"}
                         className="text-xs"
@@ -589,9 +599,9 @@ export default function ItineraryDetailPage() {
           </div>
         </div>
 
-        <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-2">
-          <Card className="shadow-md border-border/50">
-            <CardHeader>
+        <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
+          <Card className="shadow-sm border-border/50">
+            <CardHeader className="pb-4">
               <CardTitle className="flex items-center gap-2">
                 <Users className="h-5 w-5 text-primary" />
                 Passengers
@@ -613,29 +623,17 @@ export default function ItineraryDetailPage() {
                   {passengers.map((assignment) => {
                     const passenger = assignment.passenger
                     return (
-                      <div
-                        key={assignment.id}
-                        className="rounded-lg border border-border/40 bg-muted/20 p-3 space-y-1.5"
-                      >
+                      <div key={assignment.id} className="rounded-lg border border-border/40 bg-muted/20 p-4 space-y-2">
                         <div className="flex items-center justify-between gap-2">
-                          <div className="font-medium text-sm sm:text-base">
-                            {passenger?.full_name || "Unknown passenger"}
-                          </div>
+                          <div className="font-medium text-base">{passenger?.full_name || "Unknown passenger"}</div>
                           {passenger?.company && (
                             <Badge variant="outline" className="text-xs">
                               {passenger.company}
                             </Badge>
                           )}
                         </div>
-                        {passenger?.email && (
-                          <div className="text-xs text-muted-foreground">{passenger.email}</div>
-                        )}
-                        {passenger?.phone && (
-                          <div className="text-xs text-muted-foreground">{passenger.phone}</div>
-                        )}
-                        {!passenger?.email && !passenger?.phone && !passenger?.company && (
-                          <div className="text-xs text-muted-foreground/80">No additional contact details provided.</div>
-                        )}
+                        {passenger?.email && <div className="text-sm text-muted-foreground">{passenger.email}</div>}
+                        {passenger?.phone && <div className="text-sm text-muted-foreground">{passenger.phone}</div>}
                       </div>
                     )
                   })}
@@ -644,8 +642,8 @@ export default function ItineraryDetailPage() {
             </CardContent>
           </Card>
 
-          <Card className="shadow-md border-border/50">
-            <CardHeader>
+          <Card className="shadow-sm border-border/50">
+            <CardHeader className="pb-4">
               <CardTitle className="flex items-center gap-2">
                 <UserCog className="h-5 w-5 text-primary" />
                 Crew
@@ -665,10 +663,7 @@ export default function ItineraryDetailPage() {
               ) : (
                 <div className="space-y-3">
                   {crew.map((member) => (
-                    <div
-                      key={member.id}
-                      className="rounded-lg border border-border/40 bg-muted/20 p-3 space-y-2"
-                    >
+                    <div key={member.id} className="rounded-lg border border-border/40 bg-muted/20 p-4 space-y-2">
                       <div className="flex items-center justify-between gap-2">
                         <Badge variant="secondary" className="text-xs uppercase tracking-wide">
                           {member.role}
@@ -679,16 +674,9 @@ export default function ItineraryDetailPage() {
                           </Badge>
                         )}
                       </div>
-                      <div className="font-medium text-sm sm:text-base">
-                        {member.full_name || "Crew member"}
-                      </div>
+                      <div className="font-medium text-base">{member.full_name || "Crew member"}</div>
                       {member.notes && (
-                        <p className="text-xs text-muted-foreground whitespace-pre-line">
-                          {member.notes}
-                        </p>
-                      )}
-                      {!member.notes && (
-                        <p className="text-xs text-muted-foreground/80">No additional notes.</p>
+                        <p className="text-sm text-muted-foreground whitespace-pre-line">{member.notes}</p>
                       )}
                     </div>
                   ))}
