@@ -15,6 +15,7 @@ import {
   Edit,
   CheckCircle2,
   UserCog,
+  Info,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -283,58 +284,60 @@ export default function ItineraryDetailPage() {
   return (
     <div className="w-full flex justify-center px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
       <div className="w-full max-w-[1400px] space-y-6 sm:space-y-8">
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 sm:gap-6 pb-6 border-b">
-          <div className="flex items-start gap-3 sm:gap-4">
-            <Button variant="outline" size="icon" asChild className="shrink-0 mt-1 bg-transparent">
+        <div className="flex flex-col gap-6">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" asChild className="shrink-0">
               <Link href="/itineraries">
-                <ArrowLeft className="h-4 w-4" />
+                <ArrowLeft className="h-5 w-5" />
               </Link>
             </Button>
             <div className="flex-1 min-w-0">
-              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+              <h1 className="text-3xl font-bold tracking-tight">
                 {itinerary.title || itinerary.trip_summary || "Itinerary"}
               </h1>
-              <p className="text-sm text-muted-foreground mt-1.5 flex items-center gap-2">
-                <Calendar className="h-3.5 w-3.5" />
+              <p className="text-sm text-muted-foreground mt-2 flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
                 Created {formatDate(itinerary.created_at)}
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+
+          <div className="flex items-center justify-between flex-wrap gap-3 border-b pb-4">
             <ItineraryStatusBadge status={itinerary.status} />
-            {(itinerary.status === "draft" || itinerary.status === "trip_confirmed") && (
-              <Button variant="outline" size="default" onClick={() => setShowEditDialog(true)}>
-                <Edit className="h-4 w-4 mr-2" />
-                Edit
-              </Button>
-            )}
-            {canConfirmTrip && (
-              <Button onClick={() => handleStatusChange("trip_confirmed")} disabled={updatingStatus}>
-                <CheckCircle2 className="h-4 w-4 mr-2" />
-                Confirm Trip
-              </Button>
-            )}
-            {itinerary.status === "draft" && (
-              <Select value={itinerary.status} onValueChange={handleStatusChange} disabled={updatingStatus}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="draft">Draft</SelectItem>
-                  {itinerary.invoice?.status === "paid" && (
-                    <SelectItem value="trip_confirmed">Trip Confirmed</SelectItem>
-                  )}
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
-                </SelectContent>
-              </Select>
-            )}
+            <div className="flex items-center gap-2">
+              {(itinerary.status === "draft" || itinerary.status === "trip_confirmed") && (
+                <Button variant="outline" size="default" onClick={() => setShowEditDialog(true)}>
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit
+                </Button>
+              )}
+              {canConfirmTrip && (
+                <Button onClick={() => handleStatusChange("trip_confirmed")} disabled={updatingStatus}>
+                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                  Confirm Trip
+                </Button>
+              )}
+              {itinerary.status === "draft" && (
+                <Select value={itinerary.status} onValueChange={handleStatusChange} disabled={updatingStatus}>
+                  <SelectTrigger className="w-[160px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="draft">Draft</SelectItem>
+                    {itinerary.invoice?.status === "paid" && (
+                      <SelectItem value="trip_confirmed">Trip Confirmed</SelectItem>
+                    )}
+                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
           </div>
         </div>
 
         <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-          {/* Trip Summary Card */}
           <Card className="shadow-sm border-border/50 hover:shadow-md transition-shadow">
-            <CardContent className="p-5">
+            <CardContent className="p-6">
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-2 rounded-lg bg-primary/10">
                   <FileText className="h-5 w-5 text-primary" />
@@ -363,9 +366,8 @@ export default function ItineraryDetailPage() {
             </CardContent>
           </Card>
 
-          {/* Legs Card */}
           <Card className="shadow-sm border-border/50 hover:shadow-md transition-shadow">
-            <CardContent className="p-5">
+            <CardContent className="p-6">
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-2 rounded-lg bg-primary/10">
                   <MapPin className="h-5 w-5 text-primary" />
@@ -379,9 +381,8 @@ export default function ItineraryDetailPage() {
             </CardContent>
           </Card>
 
-          {/* Passengers Card */}
           <Card className="shadow-sm border-border/50 hover:shadow-md transition-shadow">
-            <CardContent className="p-5">
+            <CardContent className="p-6">
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-2 rounded-lg bg-primary/10">
                   <Users className="h-5 w-5 text-primary" />
@@ -393,9 +394,8 @@ export default function ItineraryDetailPage() {
             </CardContent>
           </Card>
 
-          {/* Aircraft Card */}
           <Card className="shadow-sm border-border/50 hover:shadow-md transition-shadow">
-            <CardContent className="p-5">
+            <CardContent className="p-6">
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-2 rounded-lg bg-primary/10">
                   <Plane className="h-5 w-5 text-primary" />
@@ -407,9 +407,9 @@ export default function ItineraryDetailPage() {
           </Card>
         </div>
 
-        <div className="grid gap-6 grid-cols-1 lg:grid-cols-3">
-          {/* Left Column - Main Content (2/3 width) */}
-          <div className="lg:col-span-2 space-y-6">
+        <div className="grid gap-6 grid-cols-1 lg:grid-cols-12">
+          {/* Main Content Area */}
+          <div className="lg:col-span-8 space-y-6">
             {/* Flight Details */}
             <Card className="shadow-sm border-border/50">
               <CardHeader>
@@ -524,7 +524,7 @@ export default function ItineraryDetailPage() {
                   </div>
                 ) : (
                   <TooltipProvider>
-                    <div className="flex flex-wrap items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-4">
                       {passengers.map((assignment) => {
                         const passenger = assignment.passenger
                         const initials =
@@ -535,28 +535,36 @@ export default function ItineraryDetailPage() {
                             .toUpperCase() || "?"
 
                         return (
-                          <Tooltip key={assignment.id}>
+                          <Tooltip key={assignment.id} delayDuration={200}>
                             <TooltipTrigger asChild>
-                              <div className="flex flex-col items-center gap-2 group cursor-pointer">
-                                <Avatar className="h-12 w-12 sm:h-14 sm:w-14 border-2 border-border hover:border-primary transition-all">
-                                  <AvatarFallback className="bg-primary/10 text-primary font-semibold group-hover:bg-primary/20 transition-colors">
-                                    {initials}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <span className="text-xs font-medium text-center max-w-[80px] truncate">
-                                  {passenger?.full_name?.split(" ")[0] || "Unknown"}
-                                </span>
+                              <div className="relative group cursor-pointer">
+                                <div className="relative">
+                                  <Avatar className="h-16 w-16 border-2 border-border group-hover:border-primary transition-all group-hover:scale-110">
+                                    <AvatarFallback className="bg-primary/10 text-primary font-semibold text-lg">
+                                      {initials}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <div className="absolute inset-0 flex items-end justify-center pb-1 bg-gradient-to-t from-black/60 to-transparent rounded-full opacity-100 transition-opacity">
+                                    <span className="text-[10px] font-semibold text-white px-2 truncate max-w-[60px]">
+                                      {passenger?.full_name?.split(" ")[0] || "Unknown"}
+                                    </span>
+                                  </div>
+                                </div>
                               </div>
                             </TooltipTrigger>
-                            <TooltipContent side="bottom" className="max-w-[300px]">
-                              <div className="space-y-2 p-2">
+                            <TooltipContent
+                              side="bottom"
+                              className="backdrop-blur-xl bg-background/95 border-border/50 shadow-xl max-w-[300px] p-4"
+                            >
+                              <div className="space-y-3">
                                 <div className="font-semibold text-base">
                                   {passenger?.full_name || "Unknown passenger"}
                                 </div>
+                                <Separator className="bg-border/50" />
                                 {passenger?.email && (
                                   <div className="text-sm text-muted-foreground flex items-center gap-2">
-                                    <Contact className="h-3.5 w-3.5" />
-                                    {passenger.email}
+                                    <Contact className="h-4 w-4 shrink-0" />
+                                    <span className="break-all">{passenger.email}</span>
                                   </div>
                                 )}
                                 {passenger?.phone && (
@@ -578,94 +586,6 @@ export default function ItineraryDetailPage() {
               </CardContent>
             </Card>
 
-            {/* Crew */}
-            <Card className="shadow-sm border-border/50">
-              <CardHeader>
-                <CardTitle className="text-lg sm:text-xl flex items-center gap-2">
-                  <UserCog className="h-5 w-5 text-primary" />
-                  Crew
-                </CardTitle>
-                <CardDescription>
-                  {loadingCrew ? "Loading crew assignments..." : `${crew.length} assigned`}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {loadingCrew ? (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Loading crew...
-                  </div>
-                ) : crew.length === 0 ? (
-                  <div className="text-center py-8">
-                    <UserCog className="h-12 w-12 mx-auto mb-3 text-muted-foreground/50" />
-                    <p className="text-sm text-muted-foreground">No crew members assigned to this itinerary.</p>
-                  </div>
-                ) : (
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    {crew.map((member) => (
-                      <div key={member.id} className="rounded-lg border border-border/40 bg-muted/20 p-4 space-y-2">
-                        <div className="flex items-center justify-between gap-2">
-                          <Badge variant="secondary" className="text-xs uppercase tracking-wide">
-                            {member.role}
-                          </Badge>
-                          {member.confirmed && (
-                            <Badge variant="default" className="text-xs">
-                              Confirmed
-                            </Badge>
-                          )}
-                        </div>
-                        <div className="font-medium text-base">{member.full_name || "Crew member"}</div>
-                        {member.notes && <p className="text-sm text-muted-foreground line-clamp-2">{member.notes}</p>}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Right Column - Supporting Info (1/3 width) */}
-          <div className="space-y-6">
-            {/* Contact Information */}
-            <Card className="shadow-sm border-border/50">
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Contact className="h-5 w-5 text-primary" />
-                  Contact
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {itinerary.contact ? (
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-12 w-12">
-                        <AvatarFallback className="bg-primary/10 text-primary font-semibold">
-                          {itinerary.contact.full_name
-                            .split(" ")
-                            .map((n) => n[0])
-                            .join("")}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-semibold text-base truncate">{itinerary.contact.full_name}</div>
-                        {itinerary.contact.company && (
-                          <Badge variant="outline" className="text-xs mt-1">
-                            {itinerary.contact.company}
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                    <Separator />
-                    <div className="space-y-2 text-sm">
-                      <div className="text-muted-foreground break-all">{itinerary.contact.email}</div>
-                    </div>
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground text-center py-6">No contact information</p>
-                )}
-              </CardContent>
-            </Card>
-
             {/* Important Dates */}
             <Card className="shadow-sm border-border/50">
               <CardHeader>
@@ -675,18 +595,20 @@ export default function ItineraryDetailPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {itinerary.earliest_departure && (
-                  <div className="p-3 rounded-lg bg-muted/30">
-                    <div className="text-xs font-medium text-muted-foreground mb-1">Earliest Departure</div>
-                    <div className="font-medium">{formatDate(itinerary.earliest_departure)}</div>
-                  </div>
-                )}
-                {itinerary.latest_return && (
-                  <div className="p-3 rounded-lg bg-muted/30">
-                    <div className="text-xs font-medium text-muted-foreground mb-1">Latest Return</div>
-                    <div className="font-medium">{formatDate(itinerary.latest_return)}</div>
-                  </div>
-                )}
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {itinerary.earliest_departure && (
+                    <div className="p-4 rounded-lg bg-muted/30 border border-border/40">
+                      <div className="text-xs font-medium text-muted-foreground mb-2">Earliest Departure</div>
+                      <div className="font-medium text-lg">{formatDate(itinerary.earliest_departure)}</div>
+                    </div>
+                  )}
+                  {itinerary.latest_return && (
+                    <div className="p-4 rounded-lg bg-muted/30 border border-border/40">
+                      <div className="text-xs font-medium text-muted-foreground mb-2">Latest Return</div>
+                      <div className="font-medium text-lg">{formatDate(itinerary.latest_return)}</div>
+                    </div>
+                  )}
+                </div>
                 {!itinerary.earliest_departure && !itinerary.latest_return && (
                   <p className="text-sm text-muted-foreground text-center py-4">No dates specified</p>
                 )}
@@ -722,59 +644,193 @@ export default function ItineraryDetailPage() {
                 </CardContent>
               </Card>
             )}
+          </div>
 
-            {/* Related Information */}
-            <Card className="shadow-sm border-border/50">
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <FileText className="h-5 w-5 text-primary" />
-                  Related
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {itinerary.quote && (
-                  <div className="p-4 rounded-lg bg-muted/30 border border-border/50">
-                    <div className="text-xs font-semibold text-muted-foreground mb-2">Quote</div>
-                    <Link
-                      href={`/quotes/${itinerary.quote.id}`}
-                      className="font-medium text-primary hover:underline flex items-center gap-1.5"
-                    >
-                      {itinerary.quote.title || "View Quote"}
-                      <ArrowLeft className="h-3.5 w-3.5 rotate-180" />
-                    </Link>
-                  </div>
-                )}
-                {itinerary.invoice && (
-                  <div className="p-4 rounded-lg bg-muted/30 border border-border/50">
-                    <div className="text-xs font-semibold text-muted-foreground mb-2">Invoice</div>
-                    <Link
-                      href={`/invoices/${itinerary.invoice.id}`}
-                      className="font-medium text-primary hover:underline flex items-center gap-1.5 mb-3"
-                    >
-                      {itinerary.invoice.number}
-                      <ArrowLeft className="h-3.5 w-3.5 rotate-180" />
-                    </Link>
-                    <div className="flex items-center gap-2">
-                      <Badge
-                        variant={itinerary.invoice.status === "paid" ? "default" : "secondary"}
-                        className="text-xs"
-                      >
-                        {itinerary.invoice.status}
-                      </Badge>
-                      <span className="text-sm font-medium">
-                        {new Intl.NumberFormat("en-US", {
-                          style: "currency",
-                          currency: itinerary.invoice.currency || "USD",
-                        }).format(itinerary.invoice.amount)}
+          <div className="lg:col-span-4 space-y-6">
+            <div className="lg:sticky lg:top-6 space-y-6">
+              {/* Contact Information */}
+              <Card className="shadow-sm border-border/50">
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Contact className="h-5 w-5 text-primary" />
+                    Contact
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {itinerary.contact ? (
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-12 w-12">
+                          <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+                            {itinerary.contact.full_name
+                              .split(" ")
+                              .map((n) => n[0])
+                              .join("")}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-base truncate">{itinerary.contact.full_name}</div>
+                          {itinerary.contact.company && (
+                            <Badge variant="outline" className="text-xs mt-1">
+                              {itinerary.contact.company}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                      <Separator />
+                      <div className="space-y-2 text-sm">
+                        <div className="text-muted-foreground break-all">{itinerary.contact.email}</div>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground text-center py-6">No contact information</p>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card className="shadow-sm border-border/50 backdrop-blur-sm">
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <UserCog className="h-5 w-5 text-primary" />
+                    Crew
+                  </CardTitle>
+                  <CardDescription>{loadingCrew ? "Loading..." : `${crew.length} assigned`}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {loadingCrew ? (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Loading crew...
+                    </div>
+                  ) : crew.length === 0 ? (
+                    <div className="text-center py-6">
+                      <UserCog className="h-10 w-10 mx-auto mb-2 text-muted-foreground/50" />
+                      <p className="text-sm text-muted-foreground">No crew assigned</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {crew.map((member) => (
+                        <div
+                          key={member.id}
+                          className="rounded-lg backdrop-blur-md bg-muted/40 border border-border/40 p-4 space-y-2 hover:bg-muted/60 transition-colors"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <div className="font-semibold text-base truncate">
+                                {member.full_name || "Crew member"}
+                              </div>
+                              <div className="text-xs text-muted-foreground uppercase tracking-wide mt-0.5">
+                                {member.role}
+                              </div>
+                            </div>
+                            {member.confirmed && (
+                              <Badge variant="default" className="text-xs shrink-0">
+                                Confirmed
+                              </Badge>
+                            )}
+                          </div>
+                          {member.notes && (
+                            <p className="text-sm text-muted-foreground line-clamp-2 pt-2 border-t border-border/30">
+                              {member.notes}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card className="shadow-sm border-border/50 bg-gradient-to-br from-primary/5 to-primary/10">
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Info className="h-5 w-5 text-primary" />
+                    Trip Information
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-background/60 backdrop-blur-sm">
+                      <span className="text-sm font-medium text-muted-foreground">Trip Type</span>
+                      <span className="text-sm font-semibold">
+                        {itinerary.domestic_trip ? "Domestic" : "International"}
                       </span>
                     </div>
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-background/60 backdrop-blur-sm">
+                      <span className="text-sm font-medium text-muted-foreground">Total Legs</span>
+                      <span className="text-sm font-semibold">{itinerary.leg_count}</span>
+                    </div>
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-background/60 backdrop-blur-sm">
+                      <span className="text-sm font-medium text-muted-foreground">Currency</span>
+                      <span className="text-sm font-semibold">{itinerary.currency || "USD"}</span>
+                    </div>
+                    {itinerary.asap && (
+                      <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="destructive" className="text-xs">
+                            URGENT
+                          </Badge>
+                          <span className="text-sm font-medium">ASAP Trip</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                )}
-                {!itinerary.quote && !itinerary.invoice && (
-                  <p className="text-sm text-muted-foreground text-center py-4">No related documents</p>
-                )}
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+
+              {/* Related Information */}
+              <Card className="shadow-sm border-border/50">
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <FileText className="h-5 w-5 text-primary" />
+                    Related
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {itinerary.quote && (
+                    <div className="p-4 rounded-lg bg-muted/30 border border-border/50">
+                      <div className="text-xs font-semibold text-muted-foreground mb-2">Quote</div>
+                      <Link
+                        href={`/quotes/${itinerary.quote.id}`}
+                        className="font-medium text-primary hover:underline flex items-center gap-1.5"
+                      >
+                        {itinerary.quote.title || "View Quote"}
+                        <ArrowLeft className="h-3.5 w-3.5 rotate-180" />
+                      </Link>
+                    </div>
+                  )}
+                  {itinerary.invoice && (
+                    <div className="p-4 rounded-lg bg-muted/30 border border-border/50">
+                      <div className="text-xs font-semibold text-muted-foreground mb-2">Invoice</div>
+                      <Link
+                        href={`/invoices/${itinerary.invoice.id}`}
+                        className="font-medium text-primary hover:underline flex items-center gap-1.5 mb-3"
+                      >
+                        {itinerary.invoice.number}
+                        <ArrowLeft className="h-3.5 w-3.5 rotate-180" />
+                      </Link>
+                      <div className="flex items-center gap-2">
+                        <Badge
+                          variant={itinerary.invoice.status === "paid" ? "default" : "secondary"}
+                          className="text-xs"
+                        >
+                          {itinerary.invoice.status}
+                        </Badge>
+                        <span className="text-sm font-medium">
+                          {new Intl.NumberFormat("en-US", {
+                            style: "currency",
+                            currency: itinerary.invoice.currency || "USD",
+                          }).format(itinerary.invoice.amount)}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                  {!itinerary.quote && !itinerary.invoice && (
+                    <p className="text-sm text-muted-foreground text-center py-4">No related documents</p>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </div>
 
