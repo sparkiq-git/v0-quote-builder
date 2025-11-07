@@ -349,10 +349,10 @@ export function RouteMap() {
   const handleRefresh = () => setRefreshKey((k) => k + 1)
 
   return (
-    <Card className="relative flex-1 h-full overflow-hidden border border-gray-200 rounded-2xl shadow-sm">
+    <Card className="relative flex-1 h-full overflow-hidden border border-gray-200 rounded-2xl shadow-sm z-10">
       <div className="relative w-full h-full bg-slate-50 rounded-2xl overflow-hidden">
         {/* Filters */}
-        <div className="absolute top-4 left-4 z-[1000] flex items-center gap-2 bg-white/10 rounded-lg p-2 shadow-lg border border-white/10">
+        <div className="absolute top-4 left-4 z-50 flex items-center gap-2 bg-white/10 rounded-lg p-2 shadow-lg border border-white/10">
           {(["leads", "upcoming"] as FilterType[]).map((filter) => {
             const isActive = activeFilter === filter
             const cnt = filter === "leads" ? leadRoutes.length : upcomingRoutes.length
@@ -375,7 +375,7 @@ export function RouteMap() {
         </div>
 
         {/* Zoom / Refresh */}
-        <div className="absolute top-20 right-4 z-[1000] flex flex-col gap-1 bg-white/80 rounded-lg p-1 shadow-lg border border-gray-200">
+        <div className="absolute top-20 right-4 z-50 flex flex-col gap-1 bg-white/80 rounded-lg p-1 shadow-lg border border-gray-200">
           <Button variant="ghost" size="sm" onClick={handleZoomIn}>
             <Plus className="h-4 w-4" />
           </Button>
