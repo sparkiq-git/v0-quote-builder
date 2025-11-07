@@ -90,12 +90,7 @@ export function RouteMap() {
 
         const formatted: Route[] = (data ?? [])
           .filter(
-            (r) =>
-              r.lead?.status === "new" &&
-              r.origin_lat &&
-              r.origin_long &&
-              r.destination_lat &&
-              r.destination_long
+            (r) => r.lead?.status === "new" && r.origin_lat && r.origin_long && r.destination_lat && r.destination_long,
           )
           .map((r) => ({
             id: String(r.lead_id),
@@ -165,9 +160,7 @@ export function RouteMap() {
         }
 
         const formatted: Route[] = (data ?? [])
-          .filter(
-            (r) => r.origin_lat && r.origin_long && r.destination_lat && r.destination_long
-          )
+          .filter((r) => r.origin_lat && r.origin_long && r.destination_lat && r.destination_long)
           .map((r) => ({
             id: String(r.quote_id),
             customerName: r.quote?.contact_name ?? "Unknown",
@@ -245,14 +238,11 @@ export function RouteMap() {
           attributionControl: false,
         })
 
-        window.L.tileLayer(
-          "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-          {
-            attribution: "© OpenStreetMap contributors © CARTO",
-            maxZoom: 18,
-            subdomains: "abcd",
-          }
-        ).addTo(map.current)
+        window.L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+          attribution: "© OpenStreetMap contributors © CARTO",
+          maxZoom: 18,
+          subdomains: "abcd",
+        }).addTo(map.current)
 
         setMapLoaded(true)
       } catch (err) {
@@ -285,48 +275,72 @@ export function RouteMap() {
 
     const allCoords: [number, number][] = []
 
+    const originCounts = new Map<string, { coords: [number, number]; name: string; count: number }>()
+
     routes.forEach((route) => {
       route.legs.forEach((leg) => {
         const originLatLng: [number, number] = [leg.originCoords.lat, leg.originCoords.lng]
-        const destLatLng: [number, number] = [leg.destCoords.lat, leg.destCoords.lng]
-        allCoords.push(originLatLng, destLatLng)
+        const key = `${originLatLng[0]},${originLatLng[1]}`
 
-        const color = activeFilter === "leads" ? "#2563eb" : "#16a34a"
+        if (originCounts.has(key)) {
+          const existing = originCounts.get(key)!
+          originCounts.set(key, { ...existing, count: existing.count + 1 })
+        } else {
+          originCounts.set(key, {
+            coords: originLatLng,
+            name: leg.originCoords.name,
+            count: 1,
+          })
+        }
 
-        // Draw route line
-        const routeLine = window.L.polyline([originLatLng, destLatLng], {
-          color,
-          weight: 1.5,
-          opacity: 0.9,
-          dashArray: "3, 2",
-        }).addTo(map.current)
-
-        routeLayers.current.push(routeLine)
-
-        // --- Minimalist start/end circle markers ---
-        const originCircle = window.L.circleMarker(originLatLng, {
-          radius: 4,
-          color,
-          fillColor: color,
-          fillOpacity: 1,
-          weight: 0,
-        }).addTo(map.current)
-
-        const destCircle = window.L.circleMarker(destLatLng, {
-          radius: 4,
-          color,
-          fillColor: color,
-          fillOpacity: 1,
-          weight: 0,
-        }).addTo(map.current)
-
-        airportMarkers.current.push(originCircle, destCircle)
+        allCoords.push(originLatLng)
       })
     })
 
+    const color = activeFilter === "leads" ? "#2563eb" : "#16a34a"
+
+    originCounts.forEach((origin) => {
+      const markerHtml = `
+        <div style="
+          background: ${color};
+          color: white;
+          border-radius: 50%;
+          width: ${Math.max(24, origin.count * 4)}px;
+          height: ${Math.max(24, origin.count * 4)}px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: bold;
+          font-size: ${origin.count > 9 ? "11px" : "13px"};
+          border: 2px solid white;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        ">
+          ${origin.count}
+        </div>
+      `
+
+      const marker = window.L.marker(origin.coords, {
+        icon: window.L.divIcon({
+          className: "custom-origin-marker",
+          html: markerHtml,
+          iconSize: [Math.max(24, origin.count * 4), Math.max(24, origin.count * 4)],
+          iconAnchor: [Math.max(12, origin.count * 2), Math.max(12, origin.count * 2)],
+        }),
+      }).addTo(map.current)
+
+      marker.bindPopup(`
+        <div style="font-size: 12px; padding: 4px;">
+          <strong>${origin.name}</strong><br/>
+          ${origin.count} ${activeFilter === "leads" ? "lead(s)" : "trip(s)"}
+        </div>
+      `)
+
+      airportMarkers.current.push(marker)
+    })
+
     if (allCoords.length) {
-      const group = window.L.featureGroup(routeLayers.current)
-      map.current.fitBounds(group.getBounds(), { padding: [20, 20], maxZoom: 6 })
+      const group = window.L.featureGroup(airportMarkers.current)
+      map.current.fitBounds(group.getBounds(), { padding: [50, 50], maxZoom: 6 })
     }
   }, [routes, mapLoaded, activeFilter])
 
@@ -352,10 +366,7 @@ export function RouteMap() {
                 onClick={() => setActiveFilter(filter)}
               >
                 {label}
-                <Badge
-                  variant={isActive ? "secondary" : "outline"}
-                  className="ml-2 h-4 px-1 text-[10px]"
-                >
+                <Badge variant={isActive ? "secondary" : "outline"} className="ml-2 h-4 px-1 text-[10px]">
                   {cnt}
                 </Badge>
               </Button>
