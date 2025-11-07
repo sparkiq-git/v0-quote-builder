@@ -554,7 +554,7 @@ export default function ItineraryDetailPage() {
                             </TooltipTrigger>
                             <TooltipContent
                               side="bottom"
-                              className="backdrop-blur-xl bg-background/95 border-border/50 shadow-xl max-w-[300px] p-4"
+                              className="backdrop-blur-2xl bg-background/80 border-border/30 shadow-2xl max-w-[300px] p-4 rounded-xl"
                             >
                               <div className="space-y-3">
                                 <div className="font-semibold text-base">
@@ -712,16 +712,14 @@ export default function ItineraryDetailPage() {
                       {crew.map((member) => (
                         <div
                           key={member.id}
-                          className="rounded-lg backdrop-blur-md bg-muted/40 border border-border/40 p-4 space-y-2 hover:bg-muted/60 transition-colors"
+                          className="rounded-xl backdrop-blur-2xl bg-background/60 border border-border/30 p-4 space-y-2 hover:bg-background/80 hover:shadow-lg transition-all"
                         >
                           <div className="flex items-start justify-between gap-2">
-                            <div className="flex-1 min-w-0">
+                            <div className="flex-1 min-w-0 space-y-1">
                               <div className="font-semibold text-base truncate">
                                 {member.full_name || "Crew member"}
                               </div>
-                              <div className="text-xs text-muted-foreground uppercase tracking-wide mt-0.5">
-                                {member.role}
-                              </div>
+                              <div className="text-xs text-muted-foreground uppercase tracking-wide">{member.role}</div>
                             </div>
                             {member.confirmed && (
                               <Badge variant="default" className="text-xs shrink-0">
@@ -730,7 +728,7 @@ export default function ItineraryDetailPage() {
                             )}
                           </div>
                           {member.notes && (
-                            <p className="text-sm text-muted-foreground line-clamp-2 pt-2 border-t border-border/30">
+                            <p className="text-sm text-muted-foreground line-clamp-2 pt-2 border-t border-border/20">
                               {member.notes}
                             </p>
                           )}
