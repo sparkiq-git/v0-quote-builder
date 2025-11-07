@@ -121,7 +121,15 @@ export function SimpleAirportCombobox({ value, onSelect, placeholder = "Search a
       try {
         const res = await fetch(`/api/airports?q=${encodeURIComponent(search)}`)
         const data = await res.json()
-        setAirports(data.airports || [])
+        const mappedAirports: Airport[] = (data.items || []).map((item: any) => ({
+          airport: item.airport || "",
+          airport_code: item.airport_code || item.iata || item.icao || "",
+          city: item.municipality || "",
+          country: item.country_name || item.country_code || "",
+          lat: item.lat ?? null,
+          lon: item.lon ?? null,
+        }))
+        setAirports(mappedAirports)
       } catch (error) {
         console.error("Failed to fetch airports:", error)
         setAirports([])
