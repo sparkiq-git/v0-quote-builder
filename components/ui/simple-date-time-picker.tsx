@@ -13,6 +13,7 @@ interface SimpleDateTimePickerProps {
   placeholder?: string
   className?: string
   disabled?: boolean
+  size?: "default" | "sm"
 }
 
 export function SimpleDateTimePicker({
@@ -23,6 +24,7 @@ export function SimpleDateTimePicker({
   placeholder = "mm / dd / yyyy",
   className,
   disabled = false,
+  size = "default",
 }: SimpleDateTimePickerProps) {
   const [isOpen, setIsOpen] = React.useState(false)
   const [position, setPosition] = React.useState({ top: 0, left: 0, width: 0 })
@@ -52,7 +54,7 @@ export function SimpleDateTimePicker({
       const viewportHeight = window.innerHeight
       const viewportWidth = window.innerWidth
 
-      const dropdownWidth = showOnlyTime ? 320 : 350 // Time picker needs 320px, calendar needs ~350px
+      const dropdownWidth = showOnlyTime ? (size === "sm" ? 280 : 320) : 350
       const actualDropdownHeight = dropdownRef.current?.offsetHeight
       const dropdownHeight = actualDropdownHeight || (showOnlyTime ? 420 : 450)
 
@@ -86,7 +88,7 @@ export function SimpleDateTimePicker({
         width: rect.width,
       })
     })
-  }, [showOnlyTime])
+  }, [showOnlyTime, size])
 
   React.useEffect(() => {
     if (isOpen) {
@@ -199,13 +201,14 @@ export function SimpleDateTimePicker({
           "disabled:pointer-events-none disabled:opacity-50",
           "outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]",
           "border shadow-xs hover:text-accent-foreground",
-          "px-4 py-2 w-full h-11 justify-start font-normal",
+          "w-full justify-start font-normal",
           "bg-background/40 backdrop-blur-md border-border/30",
           "hover:bg-background/60 hover:border-border/50",
+          size === "sm" ? "h-9 px-3 py-1.5" : "h-11 px-4 py-2",
           className,
         )}
       >
-        <CalendarIcon className="h-4 w-4 opacity-50" />
+        <CalendarIcon className={cn("opacity-50", size === "sm" ? "h-3.5 w-3.5" : "h-4 w-4")} />
         <span className={cn(!date && "text-muted-foreground")}>{formatDate(date)}</span>
       </button>
 
@@ -216,7 +219,7 @@ export function SimpleDateTimePicker({
             position: "fixed",
             top: `${position.top}px`,
             left: `${position.left}px`,
-            width: showOnlyTime ? `${Math.max(position.width, 320)}px` : "auto",
+            width: showOnlyTime ? `${Math.max(position.width, size === "sm" ? 280 : 320)}px` : "auto",
             zIndex: 2147483647,
             pointerEvents: "auto",
           }}

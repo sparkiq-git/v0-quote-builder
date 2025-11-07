@@ -6,8 +6,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Label } from "@/components/ui/label"
-import { SimpleDatePicker } from "@/components/ui/simple-date-picker"
-import { Input } from "@/components/ui/input"
+import { SimpleDateTimePicker } from "@/components/ui/simple-date-time-picker"
 import { FileText, ChevronRight, Send, Clock, Users, Plane, Wifi, Coffee, Utensils } from "lucide-react"
 import { formatCurrency } from "@/lib/utils/format"
 import { useToast } from "@/hooks/use-toast"
@@ -24,13 +23,11 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
   const { toast } = useToast()
   const [publishing, setPublishing] = useState(false)
   const [publishedUrl, setPublishedUrl] = useState<string | null>(null)
-  const [expirationDate, setExpirationDate] = useState<string>("")
-  const [expirationTime, setExpirationTime] = useState<string>("")
+  const [expirationDate, setExpirationDate] = useState<Date | undefined>(undefined)
+  const [expirationTime, setExpirationTime] = useState<Date | undefined>(undefined)
 
-  // ✅ Fallback URL
   const quoteUrl = publishedUrl ?? `${process.env.NEXT_PUBLIC_APP_URL}/q/${quote.magic_link_slug}`
 
-  /* ---------------- 💰 Totals ---------------- */
   const totalOptions = useMemo(() => {
     if (!quote.options?.length) return 0
     return quote.options.reduce((sum, o) => {
@@ -49,13 +46,17 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
 
   const grandTotal = totalOptions + totalServices
 
-  // ✅ Validate expiration date/time
   const isExpirationValid = expirationDate && expirationTime
-  const expirationDateTime = isExpirationValid ? `${expirationDate}T${expirationTime}:00.000Z` : null
+  const expirationDateTime = isExpirationValid
+    ? (() => {
+        const dateStr = expirationDate.toISOString().split("T")[0]
+        const hours = expirationTime.getHours().toString().padStart(2, "0")
+        const minutes = expirationTime.getMinutes().toString().padStart(2, "0")
+        return `${dateStr}T${hours}:${minutes}:00.000Z`
+      })()
+    : null
 
-  /* ---------------- 🚀 Publish quote ---------------- */
   const handlePublish = async () => {
-    // Validate expiration date/time before publishing
     if (!isExpirationValid) {
       toast({
         title: "Expiration Required",
@@ -98,7 +99,6 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
         throw new Error(json.error || `Failed (${res.status})`)
       }
 
-      // If publish is successful (200 status), update quote status and timestamps
       let statusUpdated = false
       if (res.status === 200) {
         try {
@@ -110,8 +110,8 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
             credentials: "include",
             body: JSON.stringify({
               status: "awaiting response",
-              sent_at: new Date().toISOString(), // Set sent_at to current timestamp
-              valid_until: expirationDateTime, // Set valid_until to the expiration date/time
+              sent_at: new Date().toISOString(),
+              valid_until: expirationDateTime,
             }),
           })
 
@@ -125,14 +125,11 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
           }
         } catch (updateErr) {
           console.error("❌ Error updating quote status:", updateErr)
-          // Don't throw here - the publish was successful
         }
       }
 
       setPublishedUrl(json.link || json.link_url || null)
 
-      // Show success toast with status update confirmation
-      console.log("🎉 Showing success toast for quote publish")
       toast({
         title: "Quote Published Successfully!",
         description: statusUpdated
@@ -140,10 +137,9 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
           : "Your client has been emailed a secure link to view and confirm the quote. Status update pending.",
       })
 
-      // Redirect to leads page after successful publish
       setTimeout(() => {
         router.push("/leads")
-      }, 2000) // Give user time to see the success message
+      }, 2000)
     } catch (err: any) {
       console.error("Publish error:", err)
       toast({
@@ -158,11 +154,8 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
 
   useEffect(() => {
     if (!quote?.options?.length) return
-    // Note: Aircraft data is already in quote options
-    // No need to fetch separately
   }, [quote?.options])
 
-  /* ---------------- 🧾 Render ---------------- */
   return (
     <Card>
       <CardHeader>
@@ -174,7 +167,6 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
       </CardHeader>
 
       <CardContent className="space-y-8">
-        {/* Contact */}
         <div>
           <h3 className="text-lg font-semibold mb-2">Contact</h3>
           <div className="grid md:grid-cols-2 gap-2 text-sm">
@@ -199,7 +191,6 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
 
         <Separator />
 
-        {/* Trip Itinerary */}
         <div>
           <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
             <Users className="h-5 w-5" />
@@ -236,7 +227,6 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
 
         <Separator />
 
-        {/* Aircraft Options */}
         <div>
           <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
             <Plane className="h-5 w-5" />
@@ -253,14 +243,12 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
                   (Number(option?.price_commission) || 0) +
                   (Number(option?.price_base) || 0)
 
-                // Use the aircraft data that comes from the API
                 const aircraftModel = option?.aircraftModel
                 const aircraftTail = option?.aircraftTail
                 const amenities = option?.selectedAmenities || []
 
                 return (
                   <div key={option.id ?? i} className="border rounded-lg bg-muted/30 overflow-hidden">
-                    {/* Header */}
                     <div className="p-4 border-b bg-muted/50">
                       <div className="flex justify-between items-start">
                         <div>
@@ -274,10 +262,8 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
                       </div>
                     </div>
 
-                    {/* Aircraft Details */}
                     <div className="p-4">
                       <div className="grid md:grid-cols-2 gap-6">
-                        {/* Aircraft Info */}
                         <div>
                           <h5 className="font-medium mb-3 flex items-center gap-2">
                             <Plane className="h-4 w-4" />
@@ -330,7 +316,6 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
                           </div>
                         </div>
 
-                        {/* Amenities */}
                         <div>
                           <h5 className="font-medium mb-3 flex items-center gap-2">
                             <Coffee className="h-4 w-4" />
@@ -363,13 +348,12 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
                         </div>
                       </div>
 
-                      {/* Image Gallery */}
                       {(aircraftModel?.images?.length > 0 || aircraftTail?.images?.length > 0) && (
                         <div className="mt-4">
                           <h5 className="font-medium mb-3">Aircraft Images</h5>
                           <div className="flex gap-2 overflow-x-auto pb-2">
                             {[...(aircraftModel?.images || []), ...(aircraftTail?.images || [])]
-                              .slice(0, 6) // Limit to 6 images
+                              .slice(0, 6)
                               .map((image: string, idx: number) => (
                                 <div
                                   key={idx}
@@ -388,7 +372,6 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
                         </div>
                       )}
 
-                      {/* Pricing Breakdown */}
                       <div className="mt-4 pt-4 border-t">
                         <h5 className="font-medium mb-3">Pricing Breakdown</h5>
                         <div className="grid grid-cols-2 gap-4 text-sm">
@@ -420,7 +403,6 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
 
         <Separator />
 
-        {/* Services */}
         <div>
           <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
             <Utensils className="h-5 w-5" />
@@ -458,7 +440,6 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
 
         <Separator />
 
-        {/* Expiration Settings */}
         <div>
           <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
             <Clock className="h-5 w-5" />
@@ -467,19 +448,21 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border rounded-lg bg-muted/30">
             <div className="space-y-2">
               <Label htmlFor="expiration-date">Expiration Date *</Label>
-              <SimpleDatePicker
-                value={expirationDate}
-                onChange={setExpirationDate}
-                placeholder="Select expiration date"
+              <SimpleDateTimePicker
+                date={expirationDate}
+                onDateChange={setExpirationDate}
+                showOnlyDate
+                placeholder="mm / dd / yyyy"
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="expiration-time">Expiration Time *</Label>
-              <Input
-                type="time"
-                value={expirationTime}
-                onChange={(e) => setExpirationTime(e.target.value)}
-                className="w-full"
+              <SimpleDateTimePicker
+                date={expirationTime}
+                onDateChange={setExpirationTime}
+                showOnlyTime
+                placeholder="--:-- --"
+                size="sm"
               />
             </div>
           </div>
@@ -496,7 +479,6 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
 
         <Separator />
 
-        {/* Totals */}
         <div className="text-right space-y-1">
           <p className="text-sm text-muted-foreground">Aircraft Options Total: {formatCurrency(totalOptions)}</p>
           <p className="text-sm text-muted-foreground">Additional Services Total: {formatCurrency(totalServices)}</p>
@@ -505,7 +487,6 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
 
         <Separator />
 
-        {/* Actions */}
         <div className="flex justify-between items-center pt-4">
           <Button variant="outline" onClick={onBack}>
             <ChevronRight className="mr-2 h-4 w-4 rotate-180" /> Back: Services
