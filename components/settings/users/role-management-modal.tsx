@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -13,17 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast"
 import { updateUser } from "@/lib/actions/admin-users"
 import { AVAILABLE_ROLES, type AdminUser } from "@/lib/types/admin"
-import {
-  Shield,
-  Users,
-  Check,
-  X,
-  Search,
-  UserCheck,
-  UserX,
-  AlertTriangle,
-  CheckCircle,
-} from "lucide-react"
+import { Shield, Check, X, Search, UserCheck, UserX, CheckCircle } from "lucide-react"
 
 interface RoleManagementModalProps {
   open: boolean
@@ -54,22 +44,25 @@ export function RoleManagementModal({ open, onOpenChange, users, onRoleUpdate }:
 
   // Filter users based on search and role filter
   const filteredUsers = users.filter((user) => {
-    const matchesSearch = 
+    const matchesSearch =
       user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.display_name?.toLowerCase().includes(searchTerm.toLowerCase())
-    
+
     const matchesRole = roleFilter === "all" || user.roles.includes(roleFilter)
-    
+
     return matchesSearch && matchesRole
   })
 
   // Get role statistics
   const getRoleStats = () => {
-    const stats = AVAILABLE_ROLES.reduce((acc, role) => {
-      acc[role] = users.filter(user => user.roles.includes(role)).length
-      return acc
-    }, {} as Record<string, number>)
-    
+    const stats = AVAILABLE_ROLES.reduce(
+      (acc, role) => {
+        acc[role] = users.filter((user) => user.roles.includes(role)).length
+        return acc
+      },
+      {} as Record<string, number>,
+    )
+
     return stats
   }
 
@@ -91,7 +84,7 @@ export function RoleManagementModal({ open, onOpenChange, users, onRoleUpdate }:
     if (selectedUsers.size === filteredUsers.length) {
       setSelectedUsers(new Set())
     } else {
-      setSelectedUsers(new Set(filteredUsers.map(user => user.id)))
+      setSelectedUsers(new Set(filteredUsers.map((user) => user.id)))
     }
   }
 
@@ -109,12 +102,10 @@ export function RoleManagementModal({ open, onOpenChange, users, onRoleUpdate }:
     setLoading(true)
     try {
       const promises = Array.from(selectedUsers).map(async (userId) => {
-        const user = users.find(u => u.id === userId)
+        const user = users.find((u) => u.id === userId)
         if (!user) return
 
-        const updatedRoles = user.roles.includes(bulkRole) 
-          ? user.roles 
-          : [...user.roles, bulkRole]
+        const updatedRoles = user.roles.includes(bulkRole) ? user.roles : [...user.roles, bulkRole]
 
         return updateUser(userId, {
           roles: updatedRoles,
@@ -125,7 +116,7 @@ export function RoleManagementModal({ open, onOpenChange, users, onRoleUpdate }:
       })
 
       const results = await Promise.all(promises)
-      const failed = results.filter(result => !result.success)
+      const failed = results.filter((result) => !result.success)
 
       if (failed.length === 0) {
         toast({
@@ -155,14 +146,12 @@ export function RoleManagementModal({ open, onOpenChange, users, onRoleUpdate }:
 
   // Handle individual role toggle
   const handleRoleToggle = async (userId: string, role: string) => {
-    const user = users.find(u => u.id === userId)
+    const user = users.find((u) => u.id === userId)
     if (!user) return
 
     setLoading(true)
     try {
-      const updatedRoles = user.roles.includes(role)
-        ? user.roles.filter(r => r !== role)
-        : [...user.roles, role]
+      const updatedRoles = user.roles.includes(role) ? user.roles.filter((r) => r !== role) : [...user.roles, role]
 
       const result = await updateUser(userId, {
         roles: updatedRoles,
@@ -174,7 +163,7 @@ export function RoleManagementModal({ open, onOpenChange, users, onRoleUpdate }:
       if (result.success) {
         toast({
           title: "Success",
-          description: `Role "${role}" ${user.roles.includes(role) ? 'removed from' : 'added to'} ${user.email}`,
+          description: `Role "${role}" ${user.roles.includes(role) ? "removed from" : "added to"} ${user.email}`,
         })
         onRoleUpdate()
       } else {
@@ -197,7 +186,7 @@ export function RoleManagementModal({ open, onOpenChange, users, onRoleUpdate }:
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-[calc(100%-2rem)] sm:max-w-[90vw] lg:max-w-7xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-xl">
             <Shield className="h-6 w-6 text-primary" />
@@ -277,10 +266,7 @@ export function RoleManagementModal({ open, onOpenChange, users, onRoleUpdate }:
                     ))}
                   </SelectContent>
                 </Select>
-                <Button 
-                  onClick={handleBulkRoleAssignment}
-                  disabled={loading || selectedUsers.size === 0 || !bulkRole}
-                >
+                <Button onClick={handleBulkRoleAssignment} disabled={loading || selectedUsers.size === 0 || !bulkRole}>
                   {loading ? (
                     <>
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
