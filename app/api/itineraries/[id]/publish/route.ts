@@ -101,6 +101,19 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       )
     }
 
+    // Get Supabase URL and anon key for edge function call
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+    if (!supabaseUrl || !anonKey) {
+      return NextResponse.json(
+        { error: "Missing Supabase configuration" },
+        { status: 500 }
+      )
+    }
+
+    const fnUrl = `${supabaseUrl}/functions/v1/create-action-link`
+
     // Call edge function for each recipient
     const results = []
     const errors = []
@@ -118,15 +131,30 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
           created_by: user.id,
         }
 
-        const { data: edgeData, error: edgeError } = await supabase.functions.invoke("create-action-link", {
-          body: payload,
+        const res = await fetch(fnUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: anonKey,
+            Authorization: `Bearer ${anonKey}`,
+          },
+          body: JSON.stringify(payload),
         })
 
-        if (edgeError) {
-          console.error(`Error creating link for ${recipient.email}:`, edgeError)
-          errors.push({ email: recipient.email, error: edgeError.message })
+        const json = await res.json().catch(() => ({}))
+
+        if (!res.ok || !json.ok) {
+          console.error(`Error creating link for ${recipient.email}:`, json)
+          errors.push({
+            email: recipient.email,
+            error: json.error || `Failed (${res.status})`,
+          })
         } else {
-          results.push({ email: recipient.email, link_id: edgeData?.id })
+          results.push({
+            email: recipient.email,
+            link_id: json.id,
+            link_url: json.link_url,
+          })
         }
       } catch (err: any) {
         console.error(`Exception creating link for ${recipient.email}:`, err)
