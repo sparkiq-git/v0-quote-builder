@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useMockStore } from "@/lib/mock/store"
 import {
   Dialog,
@@ -20,12 +20,14 @@ import { Textarea } from "@/components/ui/textarea"
 import type { Passenger } from "@/lib/types"
 
 interface PassengerCreateDialogProps {
-  children: React.ReactNode
+  children?: React.ReactNode
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
-export function PassengerCreateDialog({ children }: PassengerCreateDialogProps) {
+export function PassengerCreateDialog({ children, open: controlledOpen, onOpenChange }: PassengerCreateDialogProps) {
   const { dispatch } = useMockStore()
-  const [open, setOpen] = useState(false)
+  const [internalOpen, setInternalOpen] = useState(false)
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -35,6 +37,15 @@ export function PassengerCreateDialog({ children }: PassengerCreateDialogProps) 
     dietaryRestrictions: "",
     accessibilityNeeds: "",
   })
+
+  const isOpen = controlledOpen !== undefined ? controlledOpen : internalOpen
+  const setIsOpen = onOpenChange || setInternalOpen
+
+  useEffect(() => {
+    if (!isOpen) {
+      resetForm()
+    }
+  }, [isOpen])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -50,7 +61,7 @@ export function PassengerCreateDialog({ children }: PassengerCreateDialogProps) 
     }
 
     dispatch({ type: "ADD_PASSENGER", payload: newPassenger })
-    setOpen(false)
+    setIsOpen(false)
     resetForm()
   }
 
@@ -67,8 +78,8 @@ export function PassengerCreateDialog({ children }: PassengerCreateDialogProps) 
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>{children}</DialogTrigger>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      {children && <DialogTrigger asChild>{children}</DialogTrigger>}
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Add New Passenger</DialogTitle>
@@ -148,7 +159,7 @@ export function PassengerCreateDialog({ children }: PassengerCreateDialogProps) 
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+            <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>
               Cancel
             </Button>
             <Button type="submit">Add Passenger</Button>
