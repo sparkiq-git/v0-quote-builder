@@ -544,8 +544,8 @@ export default function ItineraryDetailPage() {
                                       {initials}
                                     </AvatarFallback>
                                   </Avatar>
-                                  <div className="absolute inset-0 flex items-end justify-center pb-1 bg-gradient-to-t from-black/60 to-transparent rounded-full opacity-100 transition-opacity">
-                                    <span className="text-[10px] font-semibold text-white px-2 truncate max-w-[60px]">
+                                  <div className="absolute inset-0 flex items-end justify-center pb-1.5 bg-gradient-to-t from-black/70 via-black/30 to-transparent rounded-full opacity-100 transition-opacity">
+                                    <span className="text-[10px] font-bold text-white px-2 truncate max-w-[60px] drop-shadow-sm">
                                       {passenger?.full_name?.split(" ")[0] || "Unknown"}
                                     </span>
                                   </div>
@@ -554,24 +554,27 @@ export default function ItineraryDetailPage() {
                             </TooltipTrigger>
                             <TooltipContent
                               side="bottom"
-                              className="backdrop-blur-2xl bg-background/80 border-border/30 shadow-2xl max-w-[300px] p-4 rounded-xl"
+                              className="backdrop-blur-2xl bg-white/75 dark:bg-gray-900/75 border border-white/20 dark:border-gray-700/30 shadow-2xl max-w-[300px] p-4 rounded-2xl"
                             >
                               <div className="space-y-3">
-                                <div className="font-semibold text-base">
+                                <div className="font-semibold text-base text-gray-900 dark:text-gray-100">
                                   {passenger?.full_name || "Unknown passenger"}
                                 </div>
-                                <Separator className="bg-border/50" />
+                                <Separator className="bg-gray-300/50 dark:bg-gray-600/50" />
                                 {passenger?.email && (
-                                  <div className="text-sm text-muted-foreground flex items-center gap-2">
+                                  <div className="text-sm text-gray-700 dark:text-gray-300 flex items-center gap-2">
                                     <Contact className="h-4 w-4 shrink-0" />
                                     <span className="break-all">{passenger.email}</span>
                                   </div>
                                 )}
                                 {passenger?.phone && (
-                                  <div className="text-sm text-muted-foreground">{passenger.phone}</div>
+                                  <div className="text-sm text-gray-700 dark:text-gray-300">{passenger.phone}</div>
                                 )}
                                 {passenger?.company && (
-                                  <Badge variant="outline" className="text-xs mt-2">
+                                  <Badge
+                                    variant="outline"
+                                    className="text-xs mt-2 border-gray-300 dark:border-gray-600"
+                                  >
                                     {passenger.company}
                                   </Badge>
                                 )}
@@ -712,14 +715,16 @@ export default function ItineraryDetailPage() {
                       {crew.map((member) => (
                         <div
                           key={member.id}
-                          className="rounded-xl backdrop-blur-2xl bg-background/60 border border-border/30 p-4 space-y-2 hover:bg-background/80 hover:shadow-lg transition-all"
+                          className="rounded-2xl backdrop-blur-2xl bg-white/60 dark:bg-gray-900/60 border border-white/20 dark:border-gray-700/30 p-4 space-y-2 hover:bg-white/80 dark:hover:bg-gray-900/80 hover:shadow-xl transition-all duration-300"
                         >
                           <div className="flex items-start justify-between gap-2">
-                            <div className="flex-1 min-w-0 space-y-1">
-                              <div className="font-semibold text-base truncate">
+                            <div className="flex-1 min-w-0 space-y-1.5">
+                              <div className="font-semibold text-base truncate text-gray-900 dark:text-gray-100">
                                 {member.full_name || "Crew member"}
                               </div>
-                              <div className="text-xs text-muted-foreground uppercase tracking-wide">{member.role}</div>
+                              <div className="text-xs text-gray-600 dark:text-gray-400 uppercase tracking-wider font-medium">
+                                {member.role}
+                              </div>
                             </div>
                             {member.confirmed && (
                               <Badge variant="default" className="text-xs shrink-0">
@@ -728,7 +733,7 @@ export default function ItineraryDetailPage() {
                             )}
                           </div>
                           {member.notes && (
-                            <p className="text-sm text-muted-foreground line-clamp-2 pt-2 border-t border-border/20">
+                            <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-2 pt-2 border-t border-gray-200/40 dark:border-gray-700/40">
                               {member.notes}
                             </p>
                           )}
