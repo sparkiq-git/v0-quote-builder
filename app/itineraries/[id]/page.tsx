@@ -283,28 +283,30 @@ export default function ItineraryDetailPage() {
 
   return (
     <div className="w-full flex justify-center px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-      <div className="w-full max-w-[1400px] space-y-6 sm:space-y-8">
-        <div className="flex flex-col gap-6">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" asChild className="shrink-0">
+      <div className="w-full max-w-[1400px] space-y-8">
+        <div className="space-y-6">
+          <div className="flex items-start gap-4">
+            <Button variant="ghost" size="icon" asChild className="shrink-0 mt-1">
               <Link href="/itineraries">
                 <ArrowLeft className="h-5 w-5" />
               </Link>
             </Button>
-            <div className="flex-1 min-w-0">
-              <h1 className="text-3xl font-bold tracking-tight">
+            <div className="flex-1 min-w-0 space-y-2">
+              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">
                 {itinerary.title || itinerary.trip_summary || "Itinerary"}
               </h1>
-              <p className="text-sm text-muted-foreground mt-2 flex items-center gap-2">
+              <p className="text-sm text-muted-foreground flex items-center gap-2">
                 <Calendar className="h-4 w-4" />
                 Created {formatDate(itinerary.created_at)}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center justify-between flex-wrap gap-3 border-b pb-4">
-            <ItineraryStatusBadge status={itinerary.status} />
+          <div className="flex items-center justify-between flex-wrap gap-4 pt-4 border-t">
             <div className="flex items-center gap-2">
+              <ItineraryStatusBadge status={itinerary.status} />
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
               {(itinerary.status === "draft" || itinerary.status === "trip_confirmed") && (
                 <Button variant="outline" size="default" onClick={() => setShowEditDialog(true)}>
                   <Edit className="h-4 w-4 mr-2" />
@@ -335,29 +337,29 @@ export default function ItineraryDetailPage() {
           </div>
         </div>
 
-        <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-          <Card className="shadow-sm border-border/50 hover:shadow-md transition-shadow">
+        <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+          <Card className="shadow-md border-border/60 hover:shadow-lg hover:border-primary/30 transition-all">
             <CardContent className="p-6">
               <div className="flex items-center gap-3 mb-4">
-                <div className="p-2 rounded-lg bg-primary/10">
+                <div className="p-2.5 rounded-xl bg-primary/10">
                   <FileText className="h-5 w-5 text-primary" />
                 </div>
-                <div className="text-sm font-medium text-muted-foreground">Trip Summary</div>
+                <div className="text-sm font-semibold text-muted-foreground">Trip Summary</div>
               </div>
               <div className="space-y-3">
                 {itinerary.trip_summary && (
-                  <p className="text-sm leading-relaxed line-clamp-3" title={itinerary.trip_summary}>
+                  <p className="text-sm leading-relaxed line-clamp-3 text-foreground" title={itinerary.trip_summary}>
                     {itinerary.trip_summary}
                   </p>
                 )}
                 <div className="flex flex-wrap gap-2">
                   {itinerary.trip_type && (
-                    <Badge variant="outline" className="text-xs">
+                    <Badge variant="outline" className="text-xs font-medium">
                       {itinerary.trip_type}
                     </Badge>
                   )}
                   {itinerary.asap && (
-                    <Badge variant="destructive" className="text-xs">
+                    <Badge variant="destructive" className="text-xs font-medium">
                       ASAP
                     </Badge>
                   )}
@@ -366,43 +368,45 @@ export default function ItineraryDetailPage() {
             </CardContent>
           </Card>
 
-          <Card className="shadow-sm border-border/50 hover:shadow-md transition-shadow">
+          <Card className="shadow-md border-border/60 hover:shadow-lg hover:border-primary/30 transition-all">
             <CardContent className="p-6">
               <div className="flex items-center gap-3 mb-4">
-                <div className="p-2 rounded-lg bg-primary/10">
+                <div className="p-2.5 rounded-xl bg-primary/10">
                   <MapPin className="h-5 w-5 text-primary" />
                 </div>
-                <div className="text-sm font-medium text-muted-foreground">Flight Legs</div>
+                <div className="text-sm font-semibold text-muted-foreground">Flight Legs</div>
               </div>
               <div className="font-bold text-3xl text-primary">{itinerary.leg_count}</div>
-              <div className="text-xs text-muted-foreground mt-2">
+              <div className="text-xs text-muted-foreground mt-2 font-medium">
                 {itinerary.domestic_trip ? "Domestic" : "International"}
               </div>
             </CardContent>
           </Card>
 
-          <Card className="shadow-sm border-border/50 hover:shadow-md transition-shadow">
+          <Card className="shadow-md border-border/60 hover:shadow-lg hover:border-primary/30 transition-all">
             <CardContent className="p-6">
               <div className="flex items-center gap-3 mb-4">
-                <div className="p-2 rounded-lg bg-primary/10">
+                <div className="p-2.5 rounded-xl bg-primary/10">
                   <Users className="h-5 w-5 text-primary" />
                 </div>
-                <div className="text-sm font-medium text-muted-foreground">Passengers</div>
+                <div className="text-sm font-semibold text-muted-foreground">Passengers</div>
               </div>
               <div className="font-bold text-3xl text-primary">{itinerary.total_pax}</div>
-              <div className="text-xs text-muted-foreground mt-2">Total PAX</div>
+              <div className="text-xs text-muted-foreground mt-2 font-medium">Total PAX</div>
             </CardContent>
           </Card>
 
-          <Card className="shadow-sm border-border/50 hover:shadow-md transition-shadow">
+          <Card className="shadow-md border-border/60 hover:shadow-lg hover:border-primary/30 transition-all">
             <CardContent className="p-6">
               <div className="flex items-center gap-3 mb-4">
-                <div className="p-2 rounded-lg bg-primary/10">
+                <div className="p-2.5 rounded-xl bg-primary/10">
                   <Plane className="h-5 w-5 text-primary" />
                 </div>
-                <div className="text-sm font-medium text-muted-foreground">Aircraft</div>
+                <div className="text-sm font-semibold text-muted-foreground">Aircraft</div>
               </div>
-              <div className="font-semibold text-xl truncate">{itinerary.aircraft_tail_no || "Not assigned"}</div>
+              <div className="font-semibold text-xl truncate text-foreground">
+                {itinerary.aircraft_tail_no || "Not assigned"}
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -411,9 +415,9 @@ export default function ItineraryDetailPage() {
           {/* Main Content Area */}
           <div className="lg:col-span-8 space-y-6">
             {/* Flight Details */}
-            <Card className="shadow-sm border-border/50">
-              <CardHeader>
-                <CardTitle className="text-lg sm:text-xl flex items-center gap-2">
+            <Card className="shadow-md border-border/60">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-xl flex items-center gap-2">
                   <Plane className="h-5 w-5 text-primary" />
                   Flight Details
                 </CardTitle>
@@ -501,9 +505,9 @@ export default function ItineraryDetailPage() {
               </CardContent>
             </Card>
 
-            <Card className="shadow-sm border-border/50">
-              <CardHeader>
-                <CardTitle className="text-lg sm:text-xl flex items-center gap-2">
+            <Card className="shadow-md border-border/60">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-xl flex items-center gap-2">
                   <Users className="h-5 w-5 text-primary" />
                   Passengers
                 </CardTitle>
@@ -524,7 +528,7 @@ export default function ItineraryDetailPage() {
                   </div>
                 ) : (
                   <TooltipProvider>
-                    <div className="flex flex-wrap items-center gap-4">
+                    <div className="flex flex-wrap gap-6">
                       {passengers.map((assignment) => {
                         const passenger = assignment.passenger
                         const initials =
@@ -533,47 +537,44 @@ export default function ItineraryDetailPage() {
                             .map((n) => n[0])
                             .join("")
                             .toUpperCase() || "?"
+                        const firstName = passenger?.full_name?.split(" ")[0] || "Unknown"
 
                         return (
                           <Tooltip key={assignment.id} delayDuration={200}>
                             <TooltipTrigger asChild>
-                              <div className="relative group cursor-pointer">
-                                <div className="relative">
-                                  <Avatar className="h-16 w-16 border-2 border-border group-hover:border-primary transition-all group-hover:scale-110">
-                                    <AvatarFallback className="bg-primary/10 text-primary font-semibold text-lg">
-                                      {initials}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                  <div className="absolute inset-0 flex items-end justify-center pb-1.5 bg-gradient-to-t from-black/70 via-black/30 to-transparent rounded-full opacity-100 transition-opacity">
-                                    <span className="text-[10px] font-bold text-white px-2 truncate max-w-[60px] drop-shadow-sm">
-                                      {passenger?.full_name?.split(" ")[0] || "Unknown"}
-                                    </span>
-                                  </div>
-                                </div>
+                              <div className="flex flex-col items-center gap-2 group cursor-pointer">
+                                <Avatar className="h-16 w-16 border-2 border-border group-hover:border-primary transition-all duration-300 group-hover:scale-110 shadow-sm group-hover:shadow-md">
+                                  <AvatarFallback className="bg-primary/10 text-primary font-semibold text-lg group-hover:bg-primary/20">
+                                    {initials}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <span className="text-xs font-medium text-muted-foreground group-hover:text-foreground transition-colors max-w-[70px] truncate text-center">
+                                  {firstName}
+                                </span>
                               </div>
                             </TooltipTrigger>
                             <TooltipContent
                               side="bottom"
-                              className="backdrop-blur-2xl bg-white/75 dark:bg-gray-900/75 border border-white/20 dark:border-gray-700/30 shadow-2xl max-w-[300px] p-4 rounded-2xl"
+                              className="backdrop-blur-2xl bg-white/80 dark:bg-gray-900/80 border border-white/30 dark:border-gray-700/40 shadow-2xl max-w-[300px] p-5 rounded-2xl"
                             >
                               <div className="space-y-3">
-                                <div className="font-semibold text-base text-gray-900 dark:text-gray-100">
+                                <div className="font-semibold text-base text-gray-900 dark:text-gray-50">
                                   {passenger?.full_name || "Unknown passenger"}
                                 </div>
-                                <Separator className="bg-gray-300/50 dark:bg-gray-600/50" />
+                                <Separator className="bg-gray-300/60 dark:bg-gray-600/60" />
                                 {passenger?.email && (
-                                  <div className="text-sm text-gray-700 dark:text-gray-300 flex items-center gap-2">
-                                    <Contact className="h-4 w-4 shrink-0" />
+                                  <div className="text-sm text-gray-700 dark:text-gray-200 flex items-center gap-2">
+                                    <Contact className="h-4 w-4 shrink-0 text-gray-500 dark:text-gray-400" />
                                     <span className="break-all">{passenger.email}</span>
                                   </div>
                                 )}
                                 {passenger?.phone && (
-                                  <div className="text-sm text-gray-700 dark:text-gray-300">{passenger.phone}</div>
+                                  <div className="text-sm text-gray-700 dark:text-gray-200">{passenger.phone}</div>
                                 )}
                                 {passenger?.company && (
                                   <Badge
                                     variant="outline"
-                                    className="text-xs mt-2 border-gray-300 dark:border-gray-600"
+                                    className="text-xs mt-2 border-gray-400/40 dark:border-gray-500/40"
                                   >
                                     {passenger.company}
                                   </Badge>
@@ -590,9 +591,9 @@ export default function ItineraryDetailPage() {
             </Card>
 
             {/* Important Dates */}
-            <Card className="shadow-sm border-border/50">
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
+            <Card className="shadow-md border-border/60">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-xl flex items-center gap-2">
                   <Calendar className="h-5 w-5 text-primary" />
                   Important Dates
                 </CardTitle>
@@ -620,9 +621,9 @@ export default function ItineraryDetailPage() {
 
             {/* Notes & Requirements */}
             {(itinerary.notes || itinerary.special_requirements) && (
-              <Card className="shadow-sm border-border/50">
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center gap-2">
+              <Card className="shadow-md border-border/60">
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-xl flex items-center gap-2">
                     <FileText className="h-5 w-5 text-primary" />
                     Notes & Requirements
                   </CardTitle>
@@ -649,11 +650,11 @@ export default function ItineraryDetailPage() {
             )}
           </div>
 
-          <div className="lg:col-span-4 space-y-6">
+          <div className="lg:col-span-4">
             <div className="lg:sticky lg:top-6 space-y-6">
               {/* Contact Information */}
-              <Card className="shadow-sm border-border/50">
-                <CardHeader>
+              <Card className="shadow-md border-border/60">
+                <CardHeader className="pb-4">
                   <CardTitle className="text-lg flex items-center gap-2">
                     <Contact className="h-5 w-5 text-primary" />
                     Contact
@@ -691,8 +692,8 @@ export default function ItineraryDetailPage() {
                 </CardContent>
               </Card>
 
-              <Card className="shadow-sm border-border/50 backdrop-blur-sm">
-                <CardHeader>
+              <Card className="shadow-md border-border/60 overflow-hidden">
+                <CardHeader className="pb-4">
                   <CardTitle className="text-lg flex items-center gap-2">
                     <UserCog className="h-5 w-5 text-primary" />
                     Crew
@@ -715,27 +716,30 @@ export default function ItineraryDetailPage() {
                       {crew.map((member) => (
                         <div
                           key={member.id}
-                          className="rounded-2xl backdrop-blur-2xl bg-white/60 dark:bg-gray-900/60 border border-white/20 dark:border-gray-700/30 p-4 space-y-2 hover:bg-white/80 dark:hover:bg-gray-900/80 hover:shadow-xl transition-all duration-300"
+                          className="relative group rounded-2xl backdrop-blur-2xl bg-gradient-to-br from-white/70 to-white/50 dark:from-gray-900/70 dark:to-gray-900/50 border border-white/40 dark:border-gray-700/40 p-5 hover:shadow-xl hover:border-primary/30 transition-all duration-300"
                         >
-                          <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-start justify-between gap-3 mb-3">
                             <div className="flex-1 min-w-0 space-y-1.5">
-                              <div className="font-semibold text-base truncate text-gray-900 dark:text-gray-100">
+                              <div className="font-semibold text-base text-gray-900 dark:text-gray-50 line-clamp-1">
                                 {member.full_name || "Crew member"}
                               </div>
-                              <div className="text-xs text-gray-600 dark:text-gray-400 uppercase tracking-wider font-medium">
+                              <div className="text-xs text-gray-600 dark:text-gray-400 uppercase tracking-widest font-semibold">
                                 {member.role}
                               </div>
                             </div>
                             {member.confirmed && (
-                              <Badge variant="default" className="text-xs shrink-0">
+                              <Badge variant="default" className="text-xs shrink-0 shadow-sm">
                                 Confirmed
                               </Badge>
                             )}
                           </div>
                           {member.notes && (
-                            <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-2 pt-2 border-t border-gray-200/40 dark:border-gray-700/40">
-                              {member.notes}
-                            </p>
+                            <>
+                              <Separator className="my-3 bg-gray-300/50 dark:bg-gray-600/50" />
+                              <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed line-clamp-2">
+                                {member.notes}
+                              </p>
+                            </>
                           )}
                         </div>
                       ))}
@@ -744,46 +748,44 @@ export default function ItineraryDetailPage() {
                 </CardContent>
               </Card>
 
-              <Card className="shadow-sm border-border/50 bg-gradient-to-br from-primary/5 to-primary/10">
-                <CardHeader>
+              <Card className="shadow-md border-border/60 bg-gradient-to-br from-primary/5 via-primary/3 to-primary/5">
+                <CardHeader className="pb-4">
                   <CardTitle className="text-lg flex items-center gap-2">
                     <Info className="h-5 w-5 text-primary" />
                     Trip Information
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between p-3 rounded-lg bg-background/60 backdrop-blur-sm">
-                      <span className="text-sm font-medium text-muted-foreground">Trip Type</span>
-                      <span className="text-sm font-semibold">
-                        {itinerary.domestic_trip ? "Domestic" : "International"}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between p-3 rounded-lg bg-background/60 backdrop-blur-sm">
-                      <span className="text-sm font-medium text-muted-foreground">Total Legs</span>
-                      <span className="text-sm font-semibold">{itinerary.leg_count}</span>
-                    </div>
-                    <div className="flex items-center justify-between p-3 rounded-lg bg-background/60 backdrop-blur-sm">
-                      <span className="text-sm font-medium text-muted-foreground">Currency</span>
-                      <span className="text-sm font-semibold">{itinerary.currency || "USD"}</span>
-                    </div>
-                    {itinerary.asap && (
-                      <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
-                        <div className="flex items-center gap-2">
-                          <Badge variant="destructive" className="text-xs">
-                            URGENT
-                          </Badge>
-                          <span className="text-sm font-medium">ASAP Trip</span>
-                        </div>
-                      </div>
-                    )}
+                <CardContent className="space-y-3">
+                  <div className="flex items-center justify-between p-3.5 rounded-xl bg-background/70 backdrop-blur-sm border border-border/40 hover:bg-background/90 transition-colors">
+                    <span className="text-sm font-semibold text-muted-foreground">Trip Type</span>
+                    <span className="text-sm font-bold text-foreground">
+                      {itinerary.domestic_trip ? "Domestic" : "International"}
+                    </span>
                   </div>
+                  <div className="flex items-center justify-between p-3.5 rounded-xl bg-background/70 backdrop-blur-sm border border-border/40 hover:bg-background/90 transition-colors">
+                    <span className="text-sm font-semibold text-muted-foreground">Total Legs</span>
+                    <span className="text-sm font-bold text-foreground">{itinerary.leg_count}</span>
+                  </div>
+                  <div className="flex items-center justify-between p-3.5 rounded-xl bg-background/70 backdrop-blur-sm border border-border/40 hover:bg-background/90 transition-colors">
+                    <span className="text-sm font-semibold text-muted-foreground">Currency</span>
+                    <span className="text-sm font-bold text-foreground">{itinerary.currency || "USD"}</span>
+                  </div>
+                  {itinerary.asap && (
+                    <div className="p-3.5 rounded-xl bg-destructive/10 border border-destructive/30 hover:bg-destructive/15 transition-colors">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="destructive" className="text-xs font-semibold">
+                          URGENT
+                        </Badge>
+                        <span className="text-sm font-semibold text-destructive">ASAP Trip</span>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
               {/* Related Information */}
-              <Card className="shadow-sm border-border/50">
-                <CardHeader>
+              <Card className="shadow-md border-border/60">
+                <CardHeader className="pb-4">
                   <CardTitle className="text-lg flex items-center gap-2">
                     <FileText className="h-5 w-5 text-primary" />
                     Related
