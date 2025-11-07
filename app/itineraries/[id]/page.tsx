@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState, useCallback } from "react"
-import { useParams } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
 import {
   Loader2,
@@ -19,12 +19,15 @@ import {
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { formatDate } from "@/lib/utils/format"
 import { ItineraryStatusBadge } from "@/components/itineraries/itinerary-status-badge"
 import { EditItineraryDialog } from "@/components/itineraries/edit-itinerary-dialog"
 import { useToast } from "@/hooks/use-toast"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Separator } from "@/components/ui/separator"
 
 interface ItineraryDetail {
   id: string
@@ -105,6 +108,7 @@ interface Itinerary {
 export default function ItineraryDetailPage() {
   const { id } = useParams()
   const { toast } = useToast()
+  const router = useRouter()
   const [itinerary, setItinerary] = useState<Itinerary | null>(null)
   const [loading, setLoading] = useState(true)
   const [updatingStatus, setUpdatingStatus] = useState(false)
@@ -244,7 +248,7 @@ export default function ItineraryDetailPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen">
+      <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     )
@@ -252,16 +256,23 @@ export default function ItineraryDetailPage() {
 
   if (!itinerary) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-center space-y-4">
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Itinerary Not Found</h1>
-          <p className="text-sm text-muted-foreground">The itinerary you're looking for doesn't exist.</p>
-          <Button asChild>
-            <Link href="/itineraries">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Itineraries
-            </Link>
-          </Button>
+      <div className="w-full flex justify-center px-4 sm:px-6 lg:px-8 py-8">
+        <div className="w-full max-w-[1400px]">
+          <Card className="shadow-lg max-w-2xl mx-auto">
+            <CardContent className="pt-6">
+              <div className="text-center py-12">
+                <FileText className="h-16 w-16 mx-auto mb-4 text-muted-foreground/50" />
+                <h3 className="text-lg font-semibold mb-2">Itinerary Not Found</h3>
+                <p className="text-sm text-muted-foreground mb-6">The itinerary you're looking for doesn't exist.</p>
+                <Button asChild>
+                  <Link href="/itineraries">
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Back to Itineraries
+                  </Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     )
@@ -270,18 +281,17 @@ export default function ItineraryDetailPage() {
   const canConfirmTrip = itinerary.status === "draft" && itinerary.invoice?.status === "paid"
 
   return (
-    <div className="w-full flex justify-center px-4 sm:px-6 lg:px-8 py-8">
-      <div className="w-full max-w-[1400px] space-y-8">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6 border-b">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm" asChild>
+    <div className="w-full flex justify-center px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+      <div className="w-full max-w-[1400px] space-y-6 sm:space-y-8">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 sm:gap-6 pb-6 border-b">
+          <div className="flex items-start gap-3 sm:gap-4">
+            <Button variant="outline" size="icon" asChild className="shrink-0 mt-1 bg-transparent">
               <Link href="/itineraries">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back
+                <ArrowLeft className="h-4 w-4" />
               </Link>
             </Button>
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
                 {itinerary.title || itinerary.trip_summary || "Itinerary"}
               </h1>
               <p className="text-sm text-muted-foreground mt-1.5 flex items-center gap-2">
@@ -290,10 +300,10 @@ export default function ItineraryDetailPage() {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
             <ItineraryStatusBadge status={itinerary.status} />
             {(itinerary.status === "draft" || itinerary.status === "trip_confirmed") && (
-              <Button variant="outline" onClick={() => setShowEditDialog(true)}>
+              <Button variant="outline" size="default" onClick={() => setShowEditDialog(true)}>
                 <Edit className="h-4 w-4 mr-2" />
                 Edit
               </Button>
@@ -321,10 +331,10 @@ export default function ItineraryDetailPage() {
           </div>
         </div>
 
-        <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-          {/* Trip Summary Card with Trip Type inside */}
+        <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+          {/* Trip Summary Card */}
           <Card className="shadow-sm border-border/50 hover:shadow-md transition-shadow">
-            <CardContent className="p-6">
+            <CardContent className="p-5">
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-2 rounded-lg bg-primary/10">
                   <FileText className="h-5 w-5 text-primary" />
@@ -345,7 +355,7 @@ export default function ItineraryDetailPage() {
                   )}
                   {itinerary.asap && (
                     <Badge variant="destructive" className="text-xs">
-                      ASAP - Urgent
+                      ASAP
                     </Badge>
                   )}
                 </div>
@@ -355,7 +365,7 @@ export default function ItineraryDetailPage() {
 
           {/* Legs Card */}
           <Card className="shadow-sm border-border/50 hover:shadow-md transition-shadow">
-            <CardContent className="p-6">
+            <CardContent className="p-5">
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-2 rounded-lg bg-primary/10">
                   <MapPin className="h-5 w-5 text-primary" />
@@ -371,7 +381,7 @@ export default function ItineraryDetailPage() {
 
           {/* Passengers Card */}
           <Card className="shadow-sm border-border/50 hover:shadow-md transition-shadow">
-            <CardContent className="p-6">
+            <CardContent className="p-5">
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-2 rounded-lg bg-primary/10">
                   <Users className="h-5 w-5 text-primary" />
@@ -385,7 +395,7 @@ export default function ItineraryDetailPage() {
 
           {/* Aircraft Card */}
           <Card className="shadow-sm border-border/50 hover:shadow-md transition-shadow">
-            <CardContent className="p-6">
+            <CardContent className="p-5">
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-2 rounded-lg bg-primary/10">
                   <Plane className="h-5 w-5 text-primary" />
@@ -398,12 +408,12 @@ export default function ItineraryDetailPage() {
         </div>
 
         <div className="grid gap-6 grid-cols-1 lg:grid-cols-3">
-          {/* Left Column - Flight Details + Passengers + Crew */}
+          {/* Left Column - Main Content (2/3 width) */}
           <div className="lg:col-span-2 space-y-6">
             {/* Flight Details */}
             <Card className="shadow-sm border-border/50">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-xl flex items-center gap-2">
+              <CardHeader>
+                <CardTitle className="text-lg sm:text-xl flex items-center gap-2">
                   <Plane className="h-5 w-5 text-primary" />
                   Flight Details
                 </CardTitle>
@@ -491,10 +501,9 @@ export default function ItineraryDetailPage() {
               </CardContent>
             </Card>
 
-            {/* Passengers */}
             <Card className="shadow-sm border-border/50">
-              <CardHeader className="pb-4">
-                <CardTitle className="flex items-center gap-2">
+              <CardHeader>
+                <CardTitle className="text-lg sm:text-xl flex items-center gap-2">
                   <Users className="h-5 w-5 text-primary" />
                   Passengers
                 </CardTitle>
@@ -504,43 +513,75 @@ export default function ItineraryDetailPage() {
               </CardHeader>
               <CardContent>
                 {loadingPassengers ? (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
                     <Loader2 className="h-4 w-4 animate-spin" />
                     Loading passengers...
                   </div>
                 ) : passengers.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No passengers assigned to this itinerary.</p>
-                ) : (
-                  <div className="space-y-3">
-                    {passengers.map((assignment) => {
-                      const passenger = assignment.passenger
-                      return (
-                        <div
-                          key={assignment.id}
-                          className="rounded-lg border border-border/40 bg-muted/20 p-4 space-y-2"
-                        >
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="font-medium text-base">{passenger?.full_name || "Unknown passenger"}</div>
-                            {passenger?.company && (
-                              <Badge variant="outline" className="text-xs">
-                                {passenger.company}
-                              </Badge>
-                            )}
-                          </div>
-                          {passenger?.email && <div className="text-sm text-muted-foreground">{passenger.email}</div>}
-                          {passenger?.phone && <div className="text-sm text-muted-foreground">{passenger.phone}</div>}
-                        </div>
-                      )
-                    })}
+                  <div className="text-center py-8">
+                    <Users className="h-12 w-12 mx-auto mb-3 text-muted-foreground/50" />
+                    <p className="text-sm text-muted-foreground">No passengers assigned to this itinerary.</p>
                   </div>
+                ) : (
+                  <TooltipProvider>
+                    <div className="flex flex-wrap items-center gap-3">
+                      {passengers.map((assignment) => {
+                        const passenger = assignment.passenger
+                        const initials =
+                          passenger?.full_name
+                            ?.split(" ")
+                            .map((n) => n[0])
+                            .join("")
+                            .toUpperCase() || "?"
+
+                        return (
+                          <Tooltip key={assignment.id}>
+                            <TooltipTrigger asChild>
+                              <div className="flex flex-col items-center gap-2 group cursor-pointer">
+                                <Avatar className="h-12 w-12 sm:h-14 sm:w-14 border-2 border-border hover:border-primary transition-all">
+                                  <AvatarFallback className="bg-primary/10 text-primary font-semibold group-hover:bg-primary/20 transition-colors">
+                                    {initials}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <span className="text-xs font-medium text-center max-w-[80px] truncate">
+                                  {passenger?.full_name?.split(" ")[0] || "Unknown"}
+                                </span>
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent side="bottom" className="max-w-[300px]">
+                              <div className="space-y-2 p-2">
+                                <div className="font-semibold text-base">
+                                  {passenger?.full_name || "Unknown passenger"}
+                                </div>
+                                {passenger?.email && (
+                                  <div className="text-sm text-muted-foreground flex items-center gap-2">
+                                    <Contact className="h-3.5 w-3.5" />
+                                    {passenger.email}
+                                  </div>
+                                )}
+                                {passenger?.phone && (
+                                  <div className="text-sm text-muted-foreground">{passenger.phone}</div>
+                                )}
+                                {passenger?.company && (
+                                  <Badge variant="outline" className="text-xs mt-2">
+                                    {passenger.company}
+                                  </Badge>
+                                )}
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        )
+                      })}
+                    </div>
+                  </TooltipProvider>
                 )}
               </CardContent>
             </Card>
 
             {/* Crew */}
             <Card className="shadow-sm border-border/50">
-              <CardHeader className="pb-4">
-                <CardTitle className="flex items-center gap-2">
+              <CardHeader>
+                <CardTitle className="text-lg sm:text-xl flex items-center gap-2">
                   <UserCog className="h-5 w-5 text-primary" />
                   Crew
                 </CardTitle>
@@ -550,14 +591,17 @@ export default function ItineraryDetailPage() {
               </CardHeader>
               <CardContent>
                 {loadingCrew ? (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
                     <Loader2 className="h-4 w-4 animate-spin" />
                     Loading crew...
                   </div>
                 ) : crew.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No crew members assigned to this itinerary.</p>
+                  <div className="text-center py-8">
+                    <UserCog className="h-12 w-12 mx-auto mb-3 text-muted-foreground/50" />
+                    <p className="text-sm text-muted-foreground">No crew members assigned to this itinerary.</p>
+                  </div>
                 ) : (
-                  <div className="space-y-3">
+                  <div className="grid gap-3 sm:grid-cols-2">
                     {crew.map((member) => (
                       <div key={member.id} className="rounded-lg border border-border/40 bg-muted/20 p-4 space-y-2">
                         <div className="flex items-center justify-between gap-2">
@@ -571,9 +615,7 @@ export default function ItineraryDetailPage() {
                           )}
                         </div>
                         <div className="font-medium text-base">{member.full_name || "Crew member"}</div>
-                        {member.notes && (
-                          <p className="text-sm text-muted-foreground whitespace-pre-line">{member.notes}</p>
-                        )}
+                        {member.notes && <p className="text-sm text-muted-foreground line-clamp-2">{member.notes}</p>}
                       </div>
                     ))}
                   </div>
@@ -582,11 +624,11 @@ export default function ItineraryDetailPage() {
             </Card>
           </div>
 
-          {/* Right Column - Contact, Notes, Related */}
-          <div className="space-y-6 flex flex-col">
+          {/* Right Column - Supporting Info (1/3 width) */}
+          <div className="space-y-6">
             {/* Contact Information */}
             <Card className="shadow-sm border-border/50">
-              <CardHeader className="pb-4">
+              <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
                   <Contact className="h-5 w-5 text-primary" />
                   Contact
@@ -594,18 +636,59 @@ export default function ItineraryDetailPage() {
               </CardHeader>
               <CardContent>
                 {itinerary.contact ? (
-                  <div className="p-4 rounded-lg bg-muted/30 border border-border/50">
-                    <div className="font-semibold text-base mb-2">{itinerary.contact.full_name}</div>
-                    <div className="text-sm text-muted-foreground break-all mb-1">{itinerary.contact.email}</div>
-                    {itinerary.contact.company && (
-                      <div className="text-sm text-muted-foreground mt-3 flex items-center gap-1.5">
-                        <Contact className="h-3.5 w-3.5" />
-                        {itinerary.contact.company}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-12 w-12">
+                        <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+                          {itinerary.contact.full_name
+                            .split(" ")
+                            .map((n) => n[0])
+                            .join("")}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-base truncate">{itinerary.contact.full_name}</div>
+                        {itinerary.contact.company && (
+                          <Badge variant="outline" className="text-xs mt-1">
+                            {itinerary.contact.company}
+                          </Badge>
+                        )}
                       </div>
-                    )}
+                    </div>
+                    <Separator />
+                    <div className="space-y-2 text-sm">
+                      <div className="text-muted-foreground break-all">{itinerary.contact.email}</div>
+                    </div>
                   </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground">No contact information</p>
+                  <p className="text-sm text-muted-foreground text-center py-6">No contact information</p>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Important Dates */}
+            <Card className="shadow-sm border-border/50">
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Calendar className="h-5 w-5 text-primary" />
+                  Important Dates
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {itinerary.earliest_departure && (
+                  <div className="p-3 rounded-lg bg-muted/30">
+                    <div className="text-xs font-medium text-muted-foreground mb-1">Earliest Departure</div>
+                    <div className="font-medium">{formatDate(itinerary.earliest_departure)}</div>
+                  </div>
+                )}
+                {itinerary.latest_return && (
+                  <div className="p-3 rounded-lg bg-muted/30">
+                    <div className="text-xs font-medium text-muted-foreground mb-1">Latest Return</div>
+                    <div className="font-medium">{formatDate(itinerary.latest_return)}</div>
+                  </div>
+                )}
+                {!itinerary.earliest_departure && !itinerary.latest_return && (
+                  <p className="text-sm text-muted-foreground text-center py-4">No dates specified</p>
                 )}
               </CardContent>
             </Card>
@@ -613,7 +696,7 @@ export default function ItineraryDetailPage() {
             {/* Notes & Requirements */}
             {(itinerary.notes || itinerary.special_requirements) && (
               <Card className="shadow-sm border-border/50">
-                <CardHeader className="pb-4">
+                <CardHeader>
                   <CardTitle className="text-lg flex items-center gap-2">
                     <FileText className="h-5 w-5 text-primary" />
                     Notes & Requirements
@@ -642,7 +725,7 @@ export default function ItineraryDetailPage() {
 
             {/* Related Information */}
             <Card className="shadow-sm border-border/50">
-              <CardHeader className="pb-4">
+              <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
                   <FileText className="h-5 w-5 text-primary" />
                   Related
@@ -688,7 +771,7 @@ export default function ItineraryDetailPage() {
                   </div>
                 )}
                 {!itinerary.quote && !itinerary.invoice && (
-                  <p className="text-sm text-muted-foreground">No related documents</p>
+                  <p className="text-sm text-muted-foreground text-center py-4">No related documents</p>
                 )}
               </CardContent>
             </Card>
