@@ -398,95 +398,191 @@ export default function ItineraryDetailPage() {
         </div>
 
         <div className="grid gap-6 grid-cols-1 lg:grid-cols-3">
-          {/* Flight Details - spans 2 columns */}
-          <Card className="lg:col-span-2 shadow-sm border-border/50">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-xl flex items-center gap-2">
-                <Plane className="h-5 w-5 text-primary" />
-                Flight Details
-              </CardTitle>
-              <CardDescription>{itinerary.details.length} flight leg(s)</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {itinerary.details.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-8">No flight details available</p>
-              ) : (
-                <div className="overflow-x-auto border rounded-lg">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="bg-muted/50">
-                        <TableHead className="w-[50px]">Leg</TableHead>
-                        <TableHead className="min-w-[120px]">Origin</TableHead>
-                        <TableHead className="min-w-[120px]">Destination</TableHead>
-                        <TableHead className="min-w-[140px]">Departure</TableHead>
-                        <TableHead className="min-w-[140px]">Arrival</TableHead>
-                        <TableHead className="text-center w-[60px]">PAX</TableHead>
-                        <TableHead className="min-w-[150px]">Notes</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {itinerary.details.map((detail) => (
-                        <TableRow key={detail.seq} className="hover:bg-muted/30 transition-colors">
-                          <TableCell className="font-mono text-xs text-muted-foreground">{detail.seq}</TableCell>
-                          <TableCell>
-                            <div>
-                              <div className="font-medium">{detail.origin_code || detail.origin || "—"}</div>
-                              {detail.origin && detail.origin_code && (
-                                <div className="text-xs text-muted-foreground truncate max-w-[100px]">
-                                  {detail.origin}
-                                </div>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div>
-                              <div className="font-medium">{detail.destination_code || detail.destination || "—"}</div>
-                              {detail.destination && detail.destination_code && (
-                                <div className="text-xs text-muted-foreground truncate max-w-[100px]">
-                                  {detail.destination}
-                                </div>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            {detail.depart_dt ? (
-                              <div>
-                                <div className="font-medium text-sm">{formatDate(detail.depart_dt)}</div>
-                                {detail.depart_time && (
-                                  <div className="text-xs text-muted-foreground">{detail.depart_time}</div>
-                                )}
-                              </div>
-                            ) : (
-                              "—"
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {detail.arrive_dt ? (
-                              <div>
-                                <div className="font-medium text-sm">{formatDate(detail.arrive_dt)}</div>
-                                {detail.arrive_time && (
-                                  <div className="text-xs text-muted-foreground">{detail.arrive_time}</div>
-                                )}
-                              </div>
-                            ) : (
-                              "—"
-                            )}
-                          </TableCell>
-                          <TableCell className="text-center font-medium">{detail.pax_count || "—"}</TableCell>
-                          <TableCell className="max-w-xs">
-                            <div className="text-sm truncate" title={detail.notes || ""}>
-                              {detail.notes || "—"}
-                            </div>
-                          </TableCell>
+          {/* Left Column - Flight Details + Passengers + Crew */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Flight Details */}
+            <Card className="shadow-sm border-border/50">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-xl flex items-center gap-2">
+                  <Plane className="h-5 w-5 text-primary" />
+                  Flight Details
+                </CardTitle>
+                <CardDescription>{itinerary.details.length} flight leg(s)</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {itinerary.details.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-8">No flight details available</p>
+                ) : (
+                  <div className="overflow-x-auto border rounded-lg">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-muted/50">
+                          <TableHead className="w-[50px]">Leg</TableHead>
+                          <TableHead className="min-w-[120px]">Origin</TableHead>
+                          <TableHead className="min-w-[120px]">Destination</TableHead>
+                          <TableHead className="min-w-[140px]">Departure</TableHead>
+                          <TableHead className="min-w-[140px]">Arrival</TableHead>
+                          <TableHead className="text-center w-[60px]">PAX</TableHead>
+                          <TableHead className="min-w-[150px]">Notes</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                      </TableHeader>
+                      <TableBody>
+                        {itinerary.details.map((detail) => (
+                          <TableRow key={detail.seq} className="hover:bg-muted/30 transition-colors">
+                            <TableCell className="font-mono text-xs text-muted-foreground">{detail.seq}</TableCell>
+                            <TableCell>
+                              <div>
+                                <div className="font-medium">{detail.origin_code || detail.origin || "—"}</div>
+                                {detail.origin && detail.origin_code && (
+                                  <div className="text-xs text-muted-foreground truncate max-w-[100px]">
+                                    {detail.origin}
+                                  </div>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div>
+                                <div className="font-medium">
+                                  {detail.destination_code || detail.destination || "—"}
+                                </div>
+                                {detail.destination && detail.destination_code && (
+                                  <div className="text-xs text-muted-foreground truncate max-w-[100px]">
+                                    {detail.destination}
+                                  </div>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {detail.depart_dt ? (
+                                <div>
+                                  <div className="font-medium text-sm">{formatDate(detail.depart_dt)}</div>
+                                  {detail.depart_time && (
+                                    <div className="text-xs text-muted-foreground">{detail.depart_time}</div>
+                                  )}
+                                </div>
+                              ) : (
+                                "—"
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {detail.arrive_dt ? (
+                                <div>
+                                  <div className="font-medium text-sm">{formatDate(detail.arrive_dt)}</div>
+                                  {detail.arrive_time && (
+                                    <div className="text-xs text-muted-foreground">{detail.arrive_time}</div>
+                                  )}
+                                </div>
+                              ) : (
+                                "—"
+                              )}
+                            </TableCell>
+                            <TableCell className="text-center font-medium">{detail.pax_count || "—"}</TableCell>
+                            <TableCell className="max-w-xs">
+                              <div className="text-sm truncate" title={detail.notes || ""}>
+                                {detail.notes || "—"}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
+            {/* Passengers */}
+            <Card className="shadow-sm border-border/50">
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5 text-primary" />
+                  Passengers
+                </CardTitle>
+                <CardDescription>
+                  {loadingPassengers ? "Loading passenger roster..." : `${passengers.length} assigned`}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {loadingPassengers ? (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Loading passengers...
+                  </div>
+                ) : passengers.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No passengers assigned to this itinerary.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {passengers.map((assignment) => {
+                      const passenger = assignment.passenger
+                      return (
+                        <div
+                          key={assignment.id}
+                          className="rounded-lg border border-border/40 bg-muted/20 p-4 space-y-2"
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="font-medium text-base">{passenger?.full_name || "Unknown passenger"}</div>
+                            {passenger?.company && (
+                              <Badge variant="outline" className="text-xs">
+                                {passenger.company}
+                              </Badge>
+                            )}
+                          </div>
+                          {passenger?.email && <div className="text-sm text-muted-foreground">{passenger.email}</div>}
+                          {passenger?.phone && <div className="text-sm text-muted-foreground">{passenger.phone}</div>}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Crew */}
+            <Card className="shadow-sm border-border/50">
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center gap-2">
+                  <UserCog className="h-5 w-5 text-primary" />
+                  Crew
+                </CardTitle>
+                <CardDescription>
+                  {loadingCrew ? "Loading crew assignments..." : `${crew.length} assigned`}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {loadingCrew ? (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Loading crew...
+                  </div>
+                ) : crew.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No crew members assigned to this itinerary.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {crew.map((member) => (
+                      <div key={member.id} className="rounded-lg border border-border/40 bg-muted/20 p-4 space-y-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <Badge variant="secondary" className="text-xs uppercase tracking-wide">
+                            {member.role}
+                          </Badge>
+                          {member.confirmed && (
+                            <Badge variant="default" className="text-xs">
+                              Confirmed
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="font-medium text-base">{member.full_name || "Crew member"}</div>
+                        {member.notes && (
+                          <p className="text-sm text-muted-foreground whitespace-pre-line">{member.notes}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Right Column - Contact, Notes, Related */}
           <div className="space-y-6 flex flex-col">
             {/* Contact Information */}
             <Card className="shadow-sm border-border/50">
@@ -599,107 +695,20 @@ export default function ItineraryDetailPage() {
           </div>
         </div>
 
-        <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
-          <Card className="shadow-sm border-border/50">
-            <CardHeader className="pb-4">
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5 text-primary" />
-                Passengers
-              </CardTitle>
-              <CardDescription>
-                {loadingPassengers ? "Loading passenger roster..." : `${passengers.length} assigned`}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {loadingPassengers ? (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Loading passengers...
-                </div>
-              ) : passengers.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No passengers assigned to this itinerary.</p>
-              ) : (
-                <div className="space-y-3">
-                  {passengers.map((assignment) => {
-                    const passenger = assignment.passenger
-                    return (
-                      <div key={assignment.id} className="rounded-lg border border-border/40 bg-muted/20 p-4 space-y-2">
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="font-medium text-base">{passenger?.full_name || "Unknown passenger"}</div>
-                          {passenger?.company && (
-                            <Badge variant="outline" className="text-xs">
-                              {passenger.company}
-                            </Badge>
-                          )}
-                        </div>
-                        {passenger?.email && <div className="text-sm text-muted-foreground">{passenger.email}</div>}
-                        {passenger?.phone && <div className="text-sm text-muted-foreground">{passenger.phone}</div>}
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-sm border-border/50">
-            <CardHeader className="pb-4">
-              <CardTitle className="flex items-center gap-2">
-                <UserCog className="h-5 w-5 text-primary" />
-                Crew
-              </CardTitle>
-              <CardDescription>
-                {loadingCrew ? "Loading crew assignments..." : `${crew.length} assigned`}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {loadingCrew ? (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Loading crew...
-                </div>
-              ) : crew.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No crew members assigned to this itinerary.</p>
-              ) : (
-                <div className="space-y-3">
-                  {crew.map((member) => (
-                    <div key={member.id} className="rounded-lg border border-border/40 bg-muted/20 p-4 space-y-2">
-                      <div className="flex items-center justify-between gap-2">
-                        <Badge variant="secondary" className="text-xs uppercase tracking-wide">
-                          {member.role}
-                        </Badge>
-                        {member.confirmed && (
-                          <Badge variant="default" className="text-xs">
-                            Confirmed
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="font-medium text-base">{member.full_name || "Crew member"}</div>
-                      {member.notes && (
-                        <p className="text-sm text-muted-foreground whitespace-pre-line">{member.notes}</p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+        {/* Edit Dialog */}
+        {itinerary && (
+          <EditItineraryDialog
+            open={showEditDialog}
+            onOpenChange={setShowEditDialog}
+            itinerary={itinerary}
+            onSuccess={() => {
+              fetchItinerary()
+              fetchPassengers()
+              fetchCrew()
+            }}
+          />
+        )}
       </div>
-
-      {/* Edit Dialog */}
-      {itinerary && (
-        <EditItineraryDialog
-          open={showEditDialog}
-          onOpenChange={setShowEditDialog}
-          itinerary={itinerary}
-          onSuccess={() => {
-            fetchItinerary()
-            fetchPassengers()
-            fetchCrew()
-          }}
-        />
-      )}
     </div>
   )
 }
