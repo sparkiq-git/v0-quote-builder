@@ -237,6 +237,11 @@ export function QuoteOptionsTab({ quote, onUpdate, onNext, onBack }: Props) {
       mtowKg: selectedAircraft.mtow_kg || null,
     }
 
+    setAircraftCache((prev) => ({
+      ...prev,
+      [selectedAircraft.aircraft_id]: selectedAircraft,
+    }))
+
     onUpdate({
       aircraft_id: selectedAircraft.aircraft_id,
       aircraft_tail_id: selectedAircraft.aircraft_id, // Assuming same for now
@@ -314,17 +319,6 @@ export function QuoteOptionsTab({ quote, onUpdate, onNext, onBack }: Props) {
                         aircraft={aircraftCache[quote.aircraft_id]}
                         onEdit={() => setEditOpenFor(quote.aircraft_id!)}
                       />
-                    )}
-
-                    {quote.aircraft_id && !aircraftCache[quote.aircraft_id] && (
-                      <div className="p-3 border border-yellow-200 bg-yellow-50 rounded-lg">
-                        <p className="text-sm text-yellow-800">
-                          ⚠️ Aircraft data not found. Please select a different aircraft.
-                        </p>
-                        <p className="text-xs text-yellow-700 mt-1">
-                          Debug: aircraft_id={quote.aircraft_id}, cache keys={Object.keys(aircraftCache).join(", ")}
-                        </p>
-                      </div>
                     )}
                   </div>
 

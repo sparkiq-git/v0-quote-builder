@@ -34,7 +34,7 @@ export function AircraftEditDrawer({ aircraftId, open, onOpenChange, onUpdated, 
   const [form, setForm] = useState({ ...initial })
   const set = (k: keyof typeof form, v: any) => setForm((f) => ({ ...f, [k]: v }))
 
-    // 🧠 Auto-load aircraft details when the drawer opens
+  // 🧠 Auto-load aircraft details when the drawer opens
   useEffect(() => {
     if (!open || !aircraftId) return
 
@@ -65,7 +65,6 @@ export function AircraftEditDrawer({ aircraftId, open, onOpenChange, onUpdated, 
     fetchAircraft()
   }, [open, aircraftId])
 
-
   const save = async () => {
     setSaving(true)
     try {
@@ -79,7 +78,7 @@ export function AircraftEditDrawer({ aircraftId, open, onOpenChange, onUpdated, 
       toast({ title: "Aircraft updated", description: `Tail ${json.data.tail_number} saved.` })
       onUpdated(json.data)
       onOpenChange(false)
-    } catch (e:any) {
+    } catch (e: any) {
       toast({ title: "Error updating aircraft", description: e.message, variant: "destructive" })
     } finally {
       setSaving(false)
@@ -95,72 +94,104 @@ export function AircraftEditDrawer({ aircraftId, open, onOpenChange, onUpdated, 
       toast({ title: "Aircraft deleted" })
       onDeleted?.()
       onOpenChange(false)
-    } catch (e:any) {
+    } catch (e: any) {
       toast({ title: "Error deleting aircraft", description: e.message, variant: "destructive" })
     }
   }
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="sm:max-w-xl">
-        <SheetHeader>
+      <SheetContent className="sm:max-w-2xl flex flex-col">
+        <SheetHeader className="px-6 flex-shrink-0">
           <SheetTitle>Edit Aircraft</SheetTitle>
         </SheetHeader>
 
-        <div className="grid gap-3 py-4">
-          <div className="grid gap-1.5">
-            <Label>Tail Number</Label>
-            <Input value={form.tail_number ?? ""} onChange={(e)=>set("tail_number", e.target.value)} />
-          </div>
+        <div className="flex-1 overflow-y-auto px-6 py-8">
+          <div className="grid gap-8">
+            <div className="grid gap-3">
+              <Label>Tail Number</Label>
+              <Input value={form.tail_number ?? ""} onChange={(e) => set("tail_number", e.target.value)} />
+            </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="grid gap-1.5">
-              <Label>Manufacturer ID</Label>
-              <Input value={form.manufacturer_id ?? ""} onChange={(e)=>set("manufacturer_id", e.target.value || null)} />
+            <div className="grid grid-cols-2 gap-6">
+              <div className="grid gap-3">
+                <Label>Manufacturer ID</Label>
+                <Input
+                  value={form.manufacturer_id ?? ""}
+                  onChange={(e) => set("manufacturer_id", e.target.value || null)}
+                />
+              </div>
+              <div className="grid gap-3">
+                <Label>Model ID</Label>
+                <Input value={form.model_id ?? ""} onChange={(e) => set("model_id", e.target.value || null)} />
+              </div>
             </div>
-            <div className="grid gap-1.5">
-              <Label>Model ID</Label>
-              <Input value={form.model_id ?? ""} onChange={(e)=>set("model_id", e.target.value || null)} />
-            </div>
-          </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="grid gap-1.5">
-              <Label>Operator ID</Label>
-              <Input value={form.operator_id ?? ""} onChange={(e)=>set("operator_id", e.target.value || null)} />
+            <div className="grid grid-cols-2 gap-6">
+              <div className="grid gap-3">
+                <Label>Operator ID</Label>
+                <Input value={form.operator_id ?? ""} onChange={(e) => set("operator_id", e.target.value || null)} />
+              </div>
+              <div className="grid gap-3">
+                <Label>Type Rating ID</Label>
+                <Input
+                  value={form.type_rating_id ?? ""}
+                  onChange={(e) => set("type_rating_id", e.target.value || null)}
+                />
+              </div>
             </div>
-            <div className="grid gap-1.5">
-              <Label>Type Rating ID</Label>
-              <Input value={form.type_rating_id ?? ""} onChange={(e)=>set("type_rating_id", e.target.value || null)} />
-            </div>
-          </div>
 
-          <div className="grid grid-cols-3 gap-3">
-            <div className="grid gap-1.5">
-              <Label>Capacity (pax)</Label>
-              <Input type="number" value={form.capacity_pax ?? ""} onChange={(e)=>set("capacity_pax", e.target.value ? (isNaN(Number(e.target.value)) ? null : Number(e.target.value)) : null)} />
+            <div className="grid grid-cols-3 gap-6">
+              <div className="grid gap-3">
+                <Label>Capacity (pax)</Label>
+                <Input
+                  type="number"
+                  value={form.capacity_pax ?? ""}
+                  onChange={(e) =>
+                    set(
+                      "capacity_pax",
+                      e.target.value ? (isNaN(Number(e.target.value)) ? null : Number(e.target.value)) : null,
+                    )
+                  }
+                />
+              </div>
+              <div className="grid gap-3">
+                <Label>Range (nm)</Label>
+                <Input
+                  type="number"
+                  value={form.range_nm ?? ""}
+                  onChange={(e) =>
+                    set(
+                      "range_nm",
+                      e.target.value ? (isNaN(Number(e.target.value)) ? null : Number(e.target.value)) : null,
+                    )
+                  }
+                />
+              </div>
+              <div className="grid gap-3">
+                <Label>Home Base</Label>
+                <Input value={form.home_base ?? ""} onChange={(e) => set("home_base", e.target.value || null)} />
+              </div>
             </div>
-            <div className="grid gap-1.5">
-              <Label>Range (nm)</Label>
-              <Input type="number" value={form.range_nm ?? ""} onChange={(e)=>set("range_nm", e.target.value ? (isNaN(Number(e.target.value)) ? null : Number(e.target.value)) : null)} />
-            </div>
-            <div className="grid gap-1.5">
-              <Label>Home Base</Label>
-              <Input value={form.home_base ?? ""} onChange={(e)=>set("home_base", e.target.value || null)} />
-            </div>
-          </div>
 
-          <div className="grid gap-1.5">
-            <Label>Notes</Label>
-            <Textarea value={form.notes ?? ""} onChange={(e)=>set("notes", e.target.value || null)} />
+            <div className="grid gap-3">
+              <Label>Notes</Label>
+              <Textarea value={form.notes ?? ""} onChange={(e) => set("notes", e.target.value || null)} />
+            </div>
           </div>
         </div>
 
-        <SheetFooter className="gap-2">
-          <Button variant="destructive" onClick={remove}>Delete</Button>
+        <SheetFooter className="gap-3 px-6 pb-6 flex-shrink-0 border-t pt-4">
+          <Button variant="destructive" onClick={remove}>
+            Delete
+          </Button>
           <div className="flex-1" />
-          <Button variant="ghost" onClick={()=>onOpenChange(false)}>Cancel</Button>
-          <Button onClick={save} disabled={saving}>{saving ? "Saving..." : "Save"}</Button>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button onClick={save} disabled={saving}>
+            {saving ? "Saving..." : "Save"}
+          </Button>
         </SheetFooter>
       </SheetContent>
     </Sheet>
