@@ -297,7 +297,7 @@ export function RouteMap() {
       })
     })
 
-    const color = activeFilter === "leads" ? "#2563eb" : "#16a34a"
+    const color = "rgba(55, 65, 81, 0.7)" // dark grey with 70% opacity
 
     originCounts.forEach((origin) => {
       const markerHtml = `
