@@ -1,9 +1,9 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { useParams, useRouter } from "next/navigation"
+import { useEffect, useState, useCallback } from "react"
+import { useParams } from "next/navigation"
 import Link from "next/link"
-import { Loader2, Calendar, Users, Plane, MapPin, Contact, FileText, ArrowLeft, Edit, CheckCircle2 } from "lucide-react"
+import { Loader2, Calendar, Users, Plane, MapPin, Contact, FileText, ArrowLeft, Edit, CheckCircle2, UserCog } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -27,6 +27,26 @@ interface ItineraryDetail {
   pax_count: number | null
   notes: string | null
   seq: number
+}
+
+interface ItineraryPassenger {
+  id: string
+  passenger_id: string
+  passenger?: {
+    id: string
+    full_name: string | null
+    email: string | null
+    phone: string | null
+    company: string | null
+  } | null
+}
+
+interface ItineraryCrewMember {
+  id: string
+  role: string
+  full_name: string | null
+  notes: string | null
+  confirmed: boolean
 }
 
 interface Itinerary {
@@ -72,40 +92,109 @@ interface Itinerary {
 
 export default function ItineraryDetailPage() {
   const { id } = useParams()
-  const router = useRouter()
   const { toast } = useToast()
   const [itinerary, setItinerary] = useState<Itinerary | null>(null)
   const [loading, setLoading] = useState(true)
   const [updatingStatus, setUpdatingStatus] = useState(false)
   const [showEditDialog, setShowEditDialog] = useState(false)
+  const [passengers, setPassengers] = useState<ItineraryPassenger[]>([])
+  const [crew, setCrew] = useState<ItineraryCrewMember[]>([])
+  const [loadingPassengers, setLoadingPassengers] = useState(false)
+  const [loadingCrew, setLoadingCrew] = useState(false)
 
-  useEffect(() => {
-    const fetchItinerary = async () => {
-      try {
-        const response = await fetch(`/api/itineraries/${id}`)
-        if (!response.ok) {
-          const errorData = await response.json()
-          throw new Error(errorData.error || `Failed to fetch itinerary: ${response.status}`)
-        }
+  const fetchItinerary = useCallback(async () => {
+    if (!id) return
+    setLoading(true)
 
-        const { data } = await response.json()
-        setItinerary(data)
-      } catch (error: any) {
-        console.error("Error fetching itinerary:", error)
-        toast({
-          title: "Error",
-          description: error.message || "Failed to load itinerary",
-          variant: "destructive",
-        })
-      } finally {
-        setLoading(false)
+    try {
+      const response = await fetch(`/api/itineraries/${id}`)
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || `Failed to fetch itinerary: ${response.status}`)
       }
-    }
 
-    if (id) {
-      fetchItinerary()
+      const { data } = await response.json()
+      setItinerary(data)
+    } catch (error: any) {
+      console.error("Error fetching itinerary:", error)
+      toast({
+        title: "Error",
+        description: error.message || "Failed to load itinerary",
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false)
     }
   }, [id, toast])
+
+  const fetchPassengers = useCallback(async () => {
+    if (!id) return
+    setLoadingPassengers(true)
+
+    try {
+      const response = await fetch(`/api/itineraries/${id}/passengers`)
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || `Failed to fetch passengers: ${response.status}`)
+      }
+
+      const { data } = await response.json()
+      const mapped = (data?.passengers || []).map((p: any) => ({
+        id: p.id,
+        passenger_id: p.passenger_id,
+        passenger: p.passenger ?? null,
+      }))
+      setPassengers(mapped)
+    } catch (error: any) {
+      console.error("Error fetching itinerary passengers:", error)
+      toast({
+        title: "Passenger data unavailable",
+        description: error.message || "Could not load passengers for this itinerary.",
+        variant: "destructive",
+      })
+    } finally {
+      setLoadingPassengers(false)
+    }
+  }, [id, toast])
+
+  const fetchCrew = useCallback(async () => {
+    if (!id) return
+    setLoadingCrew(true)
+
+    try {
+      const response = await fetch(`/api/itineraries/${id}/crew`)
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || `Failed to fetch crew: ${response.status}`)
+      }
+
+      const { data } = await response.json()
+      const mapped = (data?.crew || []).map((member: any) => ({
+        id: member.id,
+        role: member.role,
+        full_name: member.full_name ?? null,
+        notes: member.notes ?? null,
+        confirmed: Boolean(member.confirmed),
+      }))
+      setCrew(mapped)
+    } catch (error: any) {
+      console.error("Error fetching itinerary crew:", error)
+      toast({
+        title: "Crew data unavailable",
+        description: error.message || "Could not load crew for this itinerary.",
+        variant: "destructive",
+      })
+    } finally {
+      setLoadingCrew(false)
+    }
+  }, [id, toast])
+
+  useEffect(() => {
+    if (!id) return
+    fetchItinerary()
+    fetchPassengers()
+    fetchCrew()
+  }, [id, fetchItinerary, fetchPassengers, fetchCrew])
 
   const handleStatusChange = async (newStatus: string) => {
     if (!itinerary) return
@@ -499,6 +588,115 @@ export default function ItineraryDetailPage() {
             </Card>
           </div>
         </div>
+
+        <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-2">
+          <Card className="shadow-md border-border/50">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5 text-primary" />
+                Passengers
+              </CardTitle>
+              <CardDescription>
+                {loadingPassengers ? "Loading passenger roster..." : `${passengers.length} assigned`}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {loadingPassengers ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Loading passengers...
+                </div>
+              ) : passengers.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No passengers assigned to this itinerary.</p>
+              ) : (
+                <div className="space-y-3">
+                  {passengers.map((assignment) => {
+                    const passenger = assignment.passenger
+                    return (
+                      <div
+                        key={assignment.id}
+                        className="rounded-lg border border-border/40 bg-muted/20 p-3 space-y-1.5"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="font-medium text-sm sm:text-base">
+                            {passenger?.full_name || "Unknown passenger"}
+                          </div>
+                          {passenger?.company && (
+                            <Badge variant="outline" className="text-xs">
+                              {passenger.company}
+                            </Badge>
+                          )}
+                        </div>
+                        {passenger?.email && (
+                          <div className="text-xs text-muted-foreground">{passenger.email}</div>
+                        )}
+                        {passenger?.phone && (
+                          <div className="text-xs text-muted-foreground">{passenger.phone}</div>
+                        )}
+                        {!passenger?.email && !passenger?.phone && !passenger?.company && (
+                          <div className="text-xs text-muted-foreground/80">No additional contact details provided.</div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-md border-border/50">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <UserCog className="h-5 w-5 text-primary" />
+                Crew
+              </CardTitle>
+              <CardDescription>
+                {loadingCrew ? "Loading crew assignments..." : `${crew.length} assigned`}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {loadingCrew ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Loading crew...
+                </div>
+              ) : crew.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No crew members assigned to this itinerary.</p>
+              ) : (
+                <div className="space-y-3">
+                  {crew.map((member) => (
+                    <div
+                      key={member.id}
+                      className="rounded-lg border border-border/40 bg-muted/20 p-3 space-y-2"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <Badge variant="secondary" className="text-xs uppercase tracking-wide">
+                          {member.role}
+                        </Badge>
+                        {member.confirmed && (
+                          <Badge variant="default" className="text-xs">
+                            Confirmed
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="font-medium text-sm sm:text-base">
+                        {member.full_name || "Crew member"}
+                      </div>
+                      {member.notes && (
+                        <p className="text-xs text-muted-foreground whitespace-pre-line">
+                          {member.notes}
+                        </p>
+                      )}
+                      {!member.notes && (
+                        <p className="text-xs text-muted-foreground/80">No additional notes.</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       {/* Edit Dialog */}
@@ -508,19 +706,9 @@ export default function ItineraryDetailPage() {
           onOpenChange={setShowEditDialog}
           itinerary={itinerary}
           onSuccess={() => {
-            // Refresh itinerary data
-            const fetchItinerary = async () => {
-              try {
-                const response = await fetch(`/api/itineraries/${id}`)
-                if (response.ok) {
-                  const { data } = await response.json()
-                  setItinerary(data)
-                }
-              } catch (error) {
-                console.error("Error refreshing itinerary:", error)
-              }
-            }
             fetchItinerary()
+            fetchPassengers()
+            fetchCrew()
           }}
         />
       )}
