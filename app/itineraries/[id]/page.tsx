@@ -16,6 +16,7 @@ import {
   CheckCircle2,
   UserCog,
   Info,
+  Share2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -118,6 +119,7 @@ export default function ItineraryDetailPage() {
   const [crew, setCrew] = useState<ItineraryCrewMember[]>([])
   const [loadingPassengers, setLoadingPassengers] = useState(false)
   const [loadingCrew, setLoadingCrew] = useState(false)
+  const [publishing, setPublishing] = useState(false)
 
   const fetchItinerary = useCallback(async () => {
     if (!id) return
@@ -247,6 +249,38 @@ export default function ItineraryDetailPage() {
     }
   }
 
+  const handlePublish = async () => {
+    if (!itinerary) return
+
+    setPublishing(true)
+    try {
+      const response = await fetch(`/api/itineraries/${id}/publish`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || "Failed to publish itinerary")
+      }
+
+      const data = await response.json()
+
+      toast({
+        title: "Itinerary Published",
+        description: `Successfully sent itinerary links to ${data.published} recipient${data.published !== 1 ? "s" : ""}.${data.failed > 0 ? ` ${data.failed} failed.` : ""}`,
+      })
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to publish itinerary",
+        variant: "destructive",
+      })
+    } finally {
+      setPublishing(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
@@ -311,6 +345,21 @@ export default function ItineraryDetailPage() {
                 <Button variant="outline" size="default" onClick={() => setShowEditDialog(true)}>
                   <Edit className="h-4 w-4 mr-2" />
                   Edit
+                </Button>
+              )}
+              {(itinerary.status === "draft" || itinerary.status === "trip_confirmed") && (
+                <Button variant="outline" size="default" onClick={handlePublish} disabled={publishing}>
+                  {publishing ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Publishing...
+                    </>
+                  ) : (
+                    <>
+                      <Share2 className="h-4 w-4 mr-2" />
+                      Publish
+                    </>
+                  )}
                 </Button>
               )}
               {canConfirmTrip && (
