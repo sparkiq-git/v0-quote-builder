@@ -12,4 +12,3 @@ const PublicItineraryPage = dynamic(() => import("@/components/itineraries/publi
 export default function PublicItineraryRoute({ params }: { params: { token: string } }) {
   return <PublicItineraryPage token={params.token} />
 }
-
