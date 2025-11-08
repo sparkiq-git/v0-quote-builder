@@ -1,9 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Turnstile from "react-turnstile"
 import { v4 as uuid } from "uuid"
 import dynamic from "next/dynamic"
+import { useRouter } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -45,6 +46,7 @@ const PublicItineraryPage = dynamic(() => import("@/components/itineraries/publi
 
 export default function ActionPage({ params }: { params: { token: string } }) {
   const { toast } = useToast()
+  const router = useRouter()
   const [email, setEmail] = useState("")
   const [captcha, setCaptcha] = useState<string | null>(null)
   const [verifying, setVerifying] = useState(false)
@@ -60,6 +62,12 @@ export default function ActionPage({ params }: { params: { token: string } }) {
   if (!siteKey) {
     console.error("Missing NEXT_PUBLIC_TURNSTILE_SITE_KEY environment variable")
   }
+
+  useEffect(() => {
+    if (!verified || verified.action_type !== "view_itinerary") return
+    const target = `/public/itinerary/${params.token}${email ? `?email=${encodeURIComponent(email)}` : ""}`
+    router.replace(target)
+  }, [verified, email, params.token, router])
 
   // Helper function to get user-friendly error messages
   function getUserFriendlyError(errorMessage: string): { title: string; message: string } {

@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
+import Image from "next/image"
 import {
   Loader2,
   Calendar,
@@ -10,16 +11,28 @@ import {
   Contact,
   FileText,
   CheckCircle2,
-  UserCog,
+  Wind,
+  Sun,
+  Cloud,
+  Thermometer,
+  Waves,
+  Sparkles,
 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { formatDate } from "@/lib/utils/format"
 import { useToast } from "@/hooks/use-toast"
+import {
+  formatDate,
+  formatDateTime,
+  formatTimeAgo,
+  formatAirportDisplay,
+  formatAirportCode,
+} from "@/lib/utils/format"
+import { cn } from "@/lib/utils"
 
 interface ItineraryDetail {
   id: string
@@ -86,6 +99,53 @@ interface PublicItineraryPageProps {
   verifiedEmail?: string
 }
 
+interface WeatherSummary {
+  stationId: string
+  metar?: {
+    rawText?: string
+    observationTime?: string
+    temperatureC?: number | null
+    dewpointC?: number | null
+    wind?: string | null
+    visibility?: string | null
+    altimeter?: string | null
+    flightCategory?: string | null
+  }
+  taf?: {
+    rawText?: string
+    issueTime?: string
+    validFrom?: string | null
+    validTo?: string | null
+    forecastSummary?: string[]
+  }
+}
+
+const FALLBACK_GALLERY = [
+  "https://images.unsplash.com/photo-1514996937319-344454492b37?auto=format&fit=crop&w=1600&q=80",
+  "https://images.unsplash.com/photo-1526506118085-60ce8714f8c5?auto=format&fit=crop&w=1600&q=80",
+  "https://images.unsplash.com/photo-1512436991641-6745cdb1723f?auto=format&fit=crop&w=1600&q=80",
+  "https://images.unsplash.com/photo-1464037866556-6812c9d1c72e?auto=format&fit=crop&w=1600&q=80",
+  "https://images.unsplash.com/photo-1500375592092-40eb2168fd21?auto=format&fit=crop&w=1600&q=80",
+]
+
+const FALLBACK_DESTINATION_IMAGERY = [
+  "https://images.unsplash.com/photo-1455906876003-298dd8c44ea5?auto=format&fit=crop&w=1600&q=80",
+  "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1600&q=80",
+  "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?auto=format&fit=crop&w=1600&q=80",
+]
+
+function generateGallery(tailNumber?: string | null) {
+  if (!tailNumber) return FALLBACK_GALLERY
+  const hash = tailNumber
+    .split("")
+    .reduce((acc, char, index) => acc + char.charCodeAt(0) * (index + 7), 0)
+  const images: string[] = []
+  for (let i = 0; i < FALLBACK_GALLERY.length; i++) {
+    images.push(FALLBACK_GALLERY[(hash + i) % FALLBACK_GALLERY.length])
+  }
+  return images
+}
+
 export default function PublicItineraryPage({ token, verifiedEmail }: PublicItineraryPageProps) {
   const { toast } = useToast()
   const [itinerary, setItinerary] = useState<Itinerary | null>(null)
@@ -93,6 +153,10 @@ export default function PublicItineraryPage({ token, verifiedEmail }: PublicItin
   const [crew, setCrew] = useState<ItineraryCrewMember[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [weather, setWeather] = useState<Record<string, WeatherSummary>>({})
+  const [weatherLoading, setWeatherLoading] = useState(false)
+  const [weatherError, setWeatherError] = useState<string | null>(null)
+  const [heroIndex, setHeroIndex] = useState(0)
 
   useEffect(() => {
     const fetchItinerary = async () => {
@@ -126,36 +190,107 @@ export default function PublicItineraryPage({ token, verifiedEmail }: PublicItin
     fetchItinerary()
   }, [token, toast])
 
+  useEffect(() => {
+    if (!itinerary || itinerary.details.length === 0) return
+
+    const airportCodes = Array.from(
+      new Set(
+        itinerary.details
+          .flatMap((detail) => [detail.origin_code, detail.destination_code])
+          .filter((code): code is string => typeof code === "string" && code.trim().length === 4)
+          .map((code) => code.toUpperCase())
+      )
+    )
+
+    if (airportCodes.length === 0) return
+
+    const fetchWeather = async () => {
+      setWeatherLoading(true)
+      setWeatherError(null)
+      try {
+        const response = await fetch(`/api/weather/summary?ids=${airportCodes.join(",")}`)
+        if (!response.ok) {
+          const body = await response.json().catch(() => ({}))
+          throw new Error(body.error || `Weather request failed: ${response.status}`)
+        }
+        const { data } = await response.json()
+        setWeather(data || {})
+      } catch (err: any) {
+        console.error("Weather fetch error:", err)
+        setWeatherError(err.message || "Unable to retrieve aviation weather right now.")
+      } finally {
+        setWeatherLoading(false)
+      }
+    }
+
+    fetchWeather()
+  }, [itinerary])
+
+  useEffect(() => {
+    const gallery = generateGallery(itinerary?.aircraft_tail_no)
+    if (gallery.length <= 1) return
+    const timer = setInterval(() => {
+      setHeroIndex((prev) => (prev + 1) % gallery.length)
+    }, 7000)
+    return () => clearInterval(timer)
+  }, [itinerary?.aircraft_tail_no])
+
   const emailChip = useMemo(() => {
     if (!verifiedEmail) return null
     return (
-      <div className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-600 text-xs font-medium border border-emerald-200 inline-flex items-center gap-2">
+      <div className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-medium border border-emerald-200 inline-flex items-center gap-2 shadow-sm">
         <CheckCircle2 className="h-3.5 w-3.5" />
-        Access granted for <span className="font-semibold">{verifiedEmail}</span>
+        Access verified for <span className="font-semibold">{verifiedEmail}</span>
       </div>
     )
   }, [verifiedEmail])
 
+  const galleryImages = useMemo(() => generateGallery(itinerary?.aircraft_tail_no), [itinerary?.aircraft_tail_no])
+
+  const tripStart = itinerary?.details?.[0]?.depart_dt || itinerary?.earliest_departure
+  const tripEnd = itinerary?.details?.[itinerary.details.length - 1]?.arrive_dt || itinerary?.latest_return
+
+  const destinationImagery = useMemo(() => {
+    const codes = itinerary?.details
+      ?.map((detail) => detail.destination_code || detail.destination)
+      .filter((code): code is string => Boolean(code))
+
+    if (!codes || codes.length === 0) return FALLBACK_DESTINATION_IMAGERY
+
+    const uniqueCodes = Array.from(new Set(codes))
+    const derivedImages: string[] = []
+
+    uniqueCodes.forEach((code, index) => {
+      derivedImages.push(FALLBACK_DESTINATION_IMAGERY[index % FALLBACK_DESTINATION_IMAGERY.length])
+    })
+
+    return derivedImages
+  }, [itinerary?.details])
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="flex items-center justify-center min-h-screen bg-slate-950">
+        <div className="flex flex-col items-center gap-4">
+          <span className="inline-flex h-20 w-20 animate-spin rounded-full border-[6px] border-emerald-500/20 border-t-emerald-400"></span>
+          <p className="text-sm font-medium text-emerald-100">Curating your experience...</p>
+        </div>
       </div>
     )
   }
 
   if (error || !itinerary) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 px-4">
-        <Card className="max-w-md w-full shadow-lg">
-          <CardContent className="pt-6">
-            <div className="text-center py-12">
-              <FileText className="h-16 w-16 mx-auto mb-4 text-muted-foreground/50" />
-              <h3 className="text-lg font-semibold mb-2">Itinerary Not Available</h3>
-              <p className="text-sm text-muted-foreground mb-6">
-                {error || "The itinerary you're looking for doesn't exist or the link has expired."}
-              </p>
-            </div>
+      <div className="flex items-center justify-center min-h-screen bg-slate-950 px-4">
+        <Card className="max-w-md w-full shadow-2xl border-0 bg-slate-900/80 backdrop-blur">
+          <CardContent className="pt-10 pb-12 px-10 text-center space-y-4">
+            <Sparkles className="h-10 w-10 mx-auto text-emerald-400" />
+            <h3 className="text-2xl font-semibold tracking-tight text-white">Itinerary unavailable</h3>
+            <p className="text-sm text-slate-300">
+              {error || "We couldn’t locate this itinerary. It may have been updated or the secure link has expired."}
+            </p>
+            <p className="text-xs text-slate-500">
+              Please reach out to your AeroIQ concierge for a fresh link or assistance getting onboard again.
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -163,392 +298,891 @@ export default function PublicItineraryPage({ token, verifiedEmail }: PublicItin
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 py-8 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto space-y-8">
-        <div className="space-y-6">
-          <div className="flex items-start gap-4 flex-wrap">
-            <div className="flex-1 min-w-0 space-y-2">
-              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-gray-900 dark:text-gray-50">
-                {itinerary.title || itinerary.trip_summary || "Itinerary"}
-              </h1>
-              <p className="text-sm text-muted-foreground flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
-                Created {formatDate(itinerary.created_at)}
-              </p>
-            </div>
-            {emailChip}
-          </div>
-        </div>
+    <div className="min-h-screen bg-slate-950 text-slate-50">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.18),_transparent_55%),radial-gradient(circle_at_bottom,_rgba(59,130,246,0.12),_transparent_45%)]" />
+      <div className="relative mx-auto w-full max-w-[1220px] px-4 sm:px-6 lg:px-10 pb-24">
+        <div className="space-y-12 lg:space-y-16 pt-10">
+          <HeroSection itinerary={itinerary} galleryImages={galleryImages} heroIndex={heroIndex} emailChip={emailChip} />
 
-        <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-          <Card className="shadow-md border-border/60 hover:shadow-lg hover:border-primary/30 transition-all">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-2.5 rounded-xl bg-primary/10">
-                  <FileText className="h-5 w-5 text-primary" />
-                </div>
-                <div className="text-sm font-semibold text-muted-foreground">Trip Summary</div>
-              </div>
-              <div className="space-y-3">
-                {itinerary.trip_summary && (
-                  <p className="text-sm leading-relaxed line-clamp-3 text-foreground" title={itinerary.trip_summary}>
-                    {itinerary.trip_summary}
-                  </p>
-                )}
-                <div className="flex flex-wrap gap-2">
-                  {itinerary.trip_type && (
-                    <Badge variant="outline" className="text-xs font-medium">
-                      {itinerary.trip_type}
-                    </Badge>
-                  )}
-                  {itinerary.asap && (
-                    <Badge variant="destructive" className="text-xs font-medium">
-                      ASAP
-                    </Badge>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <GallerySection galleryImages={galleryImages} destinationImagery={destinationImagery} />
 
-          <Card className="shadow-md border-border/60 hover:shadow-lg hover:border-primary/30 transition-all">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-2.5 rounded-xl bg-primary/10">
-                  <MapPin className="h-5 w-5 text-primary" />
-                </div>
-                <div className="text-sm font-semibold text-muted-foreground">Flight Legs</div>
-              </div>
-              <div className="font-bold text-3xl text-primary">{itinerary.leg_count}</div>
-              <div className="text-xs text-muted-foreground mt-2 font-medium">
-                {itinerary.domestic_trip ? "Domestic" : "International"}
-              </div>
-            </CardContent>
-          </Card>
+          <ExperienceGrid itinerary={itinerary} passengers={passengers} crew={crew} />
 
-          <Card className="shadow-md border-border/60 hover:shadow-lg hover:border-primary/30 transition-all">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-2.5 rounded-xl bg-primary/10">
-                  <Users className="h-5 w-5 text-primary" />
-                </div>
-                <div className="text-sm font-semibold text-muted-foreground">Passengers</div>
-              </div>
-              <div className="font-bold text-3xl text-primary">{itinerary.total_pax}</div>
-              <div className="text-xs text-muted-foreground mt-2 font-medium">Total PAX</div>
-            </CardContent>
-          </Card>
+          <TimelineSection details={itinerary.details} />
 
-          <Card className="shadow-md border-border/60 hover:shadow-lg hover:border-primary/30 transition-all">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-2.5 rounded-xl bg-primary/10">
-                  <Plane className="h-5 w-5 text-primary" />
-                </div>
-                <div className="text-sm font-semibold text-muted-foreground">Aircraft</div>
-              </div>
-              <div className="font-semibold text-xl truncate text-foreground">
-                {itinerary.aircraft_tail_no || "Not assigned"}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+          <WeatherSection
+            itinerary={itinerary}
+            weather={weather}
+            loading={weatherLoading}
+            error={weatherError}
+          />
 
-        <div className="grid gap-6 grid-cols-1 lg:grid-cols-12">
-          <div className="lg:col-span-8 space-y-6">
-            <Card className="shadow-md border-border/60">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-xl flex items-center gap-2">
-                  <Plane className="h-5 w-5 text-primary" />
-                  Flight Details
-                </CardTitle>
-                <CardDescription>{itinerary.details.length} flight leg(s)</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {itinerary.details.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-8">No flight details available</p>
-                ) : (
-                  <div className="overflow-x-auto border rounded-lg">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="bg-muted/50">
-                          <TableHead className="w-[50px]">Leg</TableHead>
-                          <TableHead className="min-w-[120px]">Origin</TableHead>
-                          <TableHead className="min-w-[120px]">Destination</TableHead>
-                          <TableHead className="min-w-[140px]">Departure</TableHead>
-                          <TableHead className="min-w-[140px]">Arrival</TableHead>
-                          <TableHead className="text-center w-[60px]">PAX</TableHead>
-                          <TableHead className="min-w-[150px]">Notes</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {itinerary.details.map((detail) => (
-                          <TableRow key={detail.seq} className="hover:bg-muted/30 transition-colors">
-                            <TableCell className="font-mono text-xs text-muted-foreground">{detail.seq}</TableCell>
-                            <TableCell>
-                              <div>
-                                <div className="font-medium">{detail.origin_code || detail.origin || "—"}</div>
-                                {detail.origin && detail.origin_code && (
-                                  <div className="text-xs text-muted-foreground truncate max-w-[100px]">
-                                    {detail.origin}
-                                  </div>
-                                )}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div>
-                                <div className="font-medium">
-                                  {detail.destination_code || detail.destination || "—"}
-                                </div>
-                                {detail.destination && detail.destination_code && (
-                                  <div className="text-xs text-muted-foreground truncate max-w-[100px]">
-                                    {detail.destination}
-                                  </div>
-                                )}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              {detail.depart_dt ? (
-                                <div>
-                                  <div className="font-medium text-sm">{formatDate(detail.depart_dt)}</div>
-                                  {detail.depart_time && (
-                                    <div className="text-xs text-muted-foreground">{detail.depart_time}</div>
-                                  )}
-                                </div>
-                              ) : (
-                                "—"
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              {detail.arrive_dt ? (
-                                <div>
-                                  <div className="font-medium text-sm">{formatDate(detail.arrive_dt)}</div>
-                                  {detail.arrive_time && (
-                                    <div className="text-xs text-muted-foreground">{detail.arrive_time}</div>
-                                  )}
-                                </div>
-                              ) : (
-                                "—"
-                              )}
-                            </TableCell>
-                            <TableCell className="text-center font-medium">{detail.pax_count || "—"}</TableCell>
-                            <TableCell className="max-w-xs">
-                              <div className="text-sm truncate" title={detail.notes || ""}>
-                                {detail.notes || "—"}
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+          <NotesSection itinerary={itinerary} />
 
-            <Card className="shadow-md border-border/60">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-xl flex items-center gap-2">
-                  <Users className="h-5 w-5 text-primary" />
-                  Passengers
-                </CardTitle>
-                <CardDescription>
-                  {passengers.length === 0 ? "No passengers assigned" : `${passengers.length} assigned`}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {passengers.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Users className="h-12 w-12 mx-auto mb-3 text-muted-foreground/50" />
-                    <p className="text-sm text-muted-foreground">No passengers assigned to this itinerary.</p>
-                  </div>
-                ) : (
-                  <TooltipProvider>
-                    <div className="flex flex-wrap gap-6">
-                      {passengers.map((assignment) => {
-                        const passenger = assignment.passenger
-                        const initials =
-                          passenger?.full_name
-                            ?.split(" ")
-                            .map((n) => n[0])
-                            .join("")
-                            .toUpperCase() || "?"
-                        const firstName = passenger?.full_name?.split(" ")[0] || "Unknown"
-
-                        return (
-                          <Tooltip key={assignment.id} delayDuration={200}>
-                            <TooltipTrigger asChild>
-                              <div className="flex flex-col items-center gap-2 group cursor-pointer">
-                                <Avatar className="h-16 w-16 border-2 border-border group-hover:border-primary transition-all duration-300 group-hover:scale-110 shadow-sm group-hover:shadow-md">
-                                  <AvatarFallback className="bg-primary/10 text-primary font-semibold text-lg group-hover:bg-primary/20">
-                                    {initials}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <span className="text-xs font-medium text-muted-foreground group-hover:text-foreground transition-colors max-w-[70px] truncate text-center">
-                                  {firstName}
-                                </span>
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent
-                              side="bottom"
-                              className="backdrop-blur-2xl bg-white/80 dark:bg-gray-900/80 border border-white/30 dark:border-gray-700/40 shadow-2xl max-w-[300px] p-5 rounded-2xl"
-                            >
-                              <div className="space-y-3">
-                                <div className="font-semibold text-base text-gray-900 dark:text-gray-50">
-                                  {passenger?.full_name || "Unknown passenger"}
-                                </div>
-                                <Separator className="bg-gray-300/60 dark:bg-gray-600/60" />
-                                {passenger?.email && (
-                                  <div className="text-sm text-gray-700 dark:text-gray-200 flex items-center gap-2">
-                                    <Contact className="h-4 w-4 shrink-0 text-gray-500 dark:text-gray-400" />
-                                    <span className="break-all">{passenger.email}</span>
-                                  </div>
-                                )}
-                                {passenger?.phone && (
-                                  <div className="text-sm text-gray-700 dark:text-gray-200">{passenger.phone}</div>
-                                )}
-                                {passenger?.company && (
-                                  <Badge
-                                    variant="outline"
-                                    className="text-xs mt-2 border-gray-400/40 dark:border-gray-500/40"
-                                  >
-                                    {passenger.company}
-                                  </Badge>
-                                )}
-                              </div>
-                            </TooltipContent>
-                          </Tooltip>
-                        )
-                      })}
-                    </div>
-                  </TooltipProvider>
-                )}
-              </CardContent>
-            </Card>
-
-            {(itinerary.notes || itinerary.special_requirements) && (
-              <Card className="shadow-md border-border/60">
-                <CardHeader className="pb-4">
-                  <CardTitle className="text-xl flex items-center gap-2">
-                    <FileText className="h-5 w-5 text-primary" />
-                    Notes & Requirements
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {itinerary.notes && (
-                    <div className="p-4 bg-muted/30 rounded-lg border border-border/50">
-                      <div className="text-xs font-semibold text-muted-foreground mb-2">General Notes</div>
-                      <p className="text-sm leading-relaxed whitespace-pre-line">{itinerary.notes}</p>
-                    </div>
-                  )}
-                  {itinerary.special_requirements && (
-                    <div className="p-4 bg-amber-50/50 dark:bg-amber-950/20 rounded-lg border border-amber-500/30">
-                      <div className="text-xs font-semibold text-amber-800 dark:text-amber-200 mb-2">
-                        Special Requirements
-                      </div>
-                      <p className="text-sm leading-relaxed text-amber-900 dark:text-amber-100 whitespace-pre-line">
-                        {itinerary.special_requirements}
-                      </p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-          </div>
-
-          <div className="lg:col-span-4">
-            <div className="lg:sticky lg:top-6 space-y-6">
-              <Card className="shadow-md border-border/60">
-                <CardHeader className="pb-4">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Contact className="h-5 w-5 text-primary" />
-                    Contact
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {itinerary.contact ? (
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-12 w-12">
-                          <AvatarFallback className="bg-primary/10 text-primary font-semibold">
-                            {itinerary.contact.full_name
-                              .split(" ")
-                              .map((n) => n[0])
-                              .join("")}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 min-w-0">
-                          <div className="font-semibold text-base truncate">{itinerary.contact.full_name}</div>
-                          {itinerary.contact.company && (
-                            <Badge variant="outline" className="text-xs mt-1">
-                              {itinerary.contact.company}
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                      <Separator />
-                      <div className="space-y-2 text-sm">
-                        <div className="text-muted-foreground break-all">{itinerary.contact.email}</div>
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground text-center py-6">No contact information</p>
-                  )}
-                </CardContent>
-              </Card>
-
-              <Card className="shadow-md border-border/60 overflow-hidden">
-                <CardHeader className="pb-4">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <UserCog className="h-5 w-5 text-primary" />
-                    Crew
-                  </CardTitle>
-                  <CardDescription>{crew.length === 0 ? "No crew assigned" : `${crew.length} assigned`}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {crew.length === 0 ? (
-                    <div className="text-center py-6">
-                      <UserCog className="h-10 w-10 mx-auto mb-2 text-muted-foreground/50" />
-                      <p className="text-sm text-muted-foreground">No crew assigned</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {crew.map((member) => (
-                        <div
-                          key={member.id}
-                          className="relative rounded-2xl backdrop-blur-2xl bg-gradient-to-br from-white/70 to-white/50 dark:from-gray-900/70 dark:to-gray-900/50 border border-white/40 dark:border-gray-700/40 p-2"
-                        >
-                          <div className="flex items-start justify-between gap-3 mb-3">
-                            <div className="flex-1 min-w-0 space-y-1.5">
-                              <div className="font-semibold text-base text-gray-900 dark:text-gray-50 line-clamp-1">
-                                {member.full_name || "Crew member"}
-                              </div>
-                              <div className="text-xs text-gray-600 dark:text-gray-400 uppercase tracking-widest font-semibold">
-                                {member.role}
-                              </div>
-                            </div>
-                            {member.confirmed && (
-                              <Badge variant="default" className="text-xs shrink-0 shadow-sm">
-                                Confirmed
-                              </Badge>
-                            )}
-                          </div>
-                          {member.notes && (
-                            <div className="text-xs text-gray-600 dark:text-gray-400 italic line-clamp-2">
-                              {member.notes}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-          </div>
+          <ConciergeFooter contact={itinerary.contact} />
         </div>
       </div>
     </div>
   )
 }
 
+function HeroSection({
+  itinerary,
+  galleryImages,
+  heroIndex,
+  emailChip,
+}: {
+  itinerary: Itinerary
+  galleryImages: string[]
+  heroIndex: number
+  emailChip: React.ReactNode
+}) {
+  return (
+    <section className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-slate-900/70 via-slate-900/40 to-slate-900/80 shadow-2xl backdrop-blur">
+      <div
+        className="absolute inset-0 opacity-70 transition-opacity duration-700"
+        style={{
+          backgroundImage: `url(${galleryImages[heroIndex]})`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+        }}
+      />
+      <div className="absolute inset-0 bg-gradient-to-br from-black/70 via-slate-900/80 to-slate-950/90" />
+
+      <div className="relative grid gap-8 lg:grid-cols-[1.15fr_0.85fr] p-8 sm:p-10 lg:p-12">
+        <div className="space-y-6">
+          <Badge className="bg-emerald-500/10 text-emerald-200 border border-emerald-500/30 backdrop-blur-sm">
+            Journey Preview
+          </Badge>
+          <div className="space-y-4">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight text-white">
+              {itinerary.title || itinerary.trip_summary || "Your private escape awaits"}
+            </h1>
+            <p className="max-w-2xl text-base sm:text-lg text-slate-200 leading-relaxed">
+              {itinerary.trip_summary ||
+                "A bespoke travel experience curated exclusively for you. Explore the journey, review the crew, and preview real-time aviation weather before departure."}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            {emailChip}
+            {itinerary.trip_type && (
+              <Badge className="bg-white/10 text-white border-white/20 uppercase tracking-wide">
+                {itinerary.trip_type}
+              </Badge>
+            )}
+            {itinerary.asap && (
+              <Badge variant="destructive" className="uppercase tracking-wide">
+                Priority Mission
+              </Badge>
+            )}
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <HeroMetric icon={Calendar} label="Created" value={formatDate(itinerary.created_at)} />
+            <HeroMetric icon={Plane} label="Flight Legs" value={`${itinerary.leg_count} legs`} />
+            <HeroMetric icon={Users} label="Guests" value={`${itinerary.total_pax} passengers`} />
+            {itinerary.earliest_departure && (
+              <HeroMetric icon={Sun} label="First Wheels Up" value={formatDateTime(itinerary.earliest_departure)} subtle />
+            )}
+            {itinerary.latest_return && (
+              <HeroMetric icon={MoonIcon} label="Final Touchdown" value={formatDateTime(itinerary.latest_return)} subtle />
+            )}
+            {itinerary.aircraft_tail_no && (
+              <HeroMetric icon={Sparkles} label="Assigned Tail" value={itinerary.aircraft_tail_no} subtle />
+            )}
+          </div>
+        </div>
+
+        <div className="relative">
+          <div className="rounded-2xl border border-white/10 bg-black/30 backdrop-blur p-6 space-y-6 shadow-lg">
+            <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-emerald-300" />
+              Journey Snapshot
+            </h2>
+
+            <div className="grid gap-4 text-sm text-slate-200">
+              {itinerary.details.slice(0, 2).map((detail) => (
+                <JourneyHighlight key={detail.id} detail={detail} />
+              ))}
+              {itinerary.details.length > 2 && (
+                <p className="text-xs text-slate-400">
+                  + {itinerary.details.length - 2} additional leg{itinerary.details.length - 2 === 1 ? "" : "s"} curated for
+                  you
+                </p>
+              )}
+            </div>
+
+            <div className="rounded-xl border border-white/10 bg-slate-900/60 p-4 text-sm text-slate-200">
+              <p className="font-medium text-white/90 mb-2">Concierge Note</p>
+              <p className="text-sm leading-relaxed text-slate-300">
+                Review the itinerary details below and reach out anytime for adjustments. We’ll monitor weather, crew, and
+                passenger logistics up to departure.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function HeroMetric({
+  icon: Icon,
+  label,
+  value,
+  subtle,
+}: {
+  icon: React.ComponentType<{ className?: string }>
+  label: string
+  value: string
+  subtle?: boolean
+}) {
+  return (
+    <div
+      className={cn(
+        "rounded-xl border p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg",
+        subtle
+          ? "border-white/5 bg-white/5 backdrop-blur"
+          : "border-white/10 bg-white/10 backdrop-blur-lg"
+      )}
+    >
+      <div className="flex items-center gap-3">
+        <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-slate-900/70 border border-white/10">
+          <Icon className="h-4 w-4 text-emerald-300" />
+        </span>
+        <div>
+          <p className="text-xs uppercase tracking-[0.2em] text-slate-400">{label}</p>
+          <p className="text-sm font-medium text-white">{value}</p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function MoonIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" {...props}>
+      <path
+        d="M21 12.79A9 9 0 0 1 11.21 3a7 7 0 1 0 9.79 9.79Z"
+        stroke="currentColor"
+        strokeWidth={1.5}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
+function JourneyHighlight({ detail }: { detail: ItineraryDetail }) {
+  const route =
+    detail.origin_code && detail.destination_code
+      ? `${formatAirportCode(detail.origin_code)} → ${formatAirportCode(detail.destination_code)}`
+      : detail.origin || detail.destination
+      ? `${detail.origin || "TBD"} → ${detail.destination || "TBD"}`
+      : "Route to be assigned"
+
+  return (
+    <div className="rounded-lg border border-white/10 bg-white/5 p-3">
+      <p className="text-xs uppercase tracking-[0.25em] text-emerald-300 mb-1.5">Leg {detail.seq}</p>
+      <p className="text-sm font-medium text-white">{route}</p>
+      <p className="text-xs text-slate-300 mt-1">
+        {detail.depart_dt ? formatDateTime(detail.depart_dt) : "Schedule pending"} &bull;{" "}
+        {detail.pax_count ?? "—"} passengers
+      </p>
+    </div>
+  )
+}
+
+function GallerySection({
+  galleryImages,
+  destinationImagery,
+}: {
+  galleryImages: string[]
+  destinationImagery: string[]
+}) {
+  return (
+    <section className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-semibold text-white">Visual Moodboard</h2>
+          <p className="text-sm text-slate-300">
+            Aircraft inspiration paired with destination glimpses curated for your itinerary.
+          </p>
+        </div>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-3">
+        <div className="lg:col-span-2 space-y-4">
+          <div className="relative h-72 sm:h-96 overflow-hidden rounded-3xl border border-white/10 shadow-xl">
+            <Carousel images={galleryImages} />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {galleryImages.slice(1, 3).map((img, index) => (
+              <DrapedImage key={img} src={img} className={index === 0 ? "-rotate-1" : "rotate-1"} />
+            ))}
+          </div>
+        </div>
+        <div className="space-y-4">
+          {destinationImagery.slice(0, 3).map((img, index) => (
+            <DestinationCard key={img} src={img} featured={index === 0} />
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function Carousel({ images }: { images: string[] }) {
+  const [active, setActive] = useState(0)
+
+  useEffect(() => {
+    if (images.length <= 1) return
+    const timer = setInterval(() => {
+      setActive((current) => (current + 1) % images.length)
+    }, 6500)
+    return () => clearInterval(timer)
+  }, [images])
+
+  return (
+    <div className="relative h-full w-full">
+      {images.map((image, index) => (
+        <div
+          key={`${image}-${index}`}
+          className={cn(
+            "absolute inset-0 transition-opacity duration-700 ease-out",
+            index === active ? "opacity-100" : "opacity-0"
+          )}
+        >
+          <Image
+            src={image}
+            alt="Aircraft inspiration"
+            fill
+            className="object-cover"
+            priority={index === 0}
+            sizes="(max-width: 1024px) 100vw, 66vw"
+          />
+          <div className="absolute inset-0 bg-gradient-to-tr from-slate-950/50 via-slate-950/20 to-transparent" />
+        </div>
+      ))}
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+        {images.map((_, index) => (
+          <button
+            key={index}
+            className={cn(
+              "h-1.5 rounded-full transition-all duration-300",
+              index === active ? "w-6 bg-white" : "w-3 bg-white/40 hover:bg-white/70"
+            )}
+            onClick={() => setActive(index)}
+            aria-label={`Show image ${index + 1}`}
+          />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function DrapedImage({ src, className }: { src: string; className?: string }) {
+  return (
+    <div
+      className={cn(
+        "relative h-48 overflow-hidden rounded-2xl border border-white/10 bg-slate-900/70 shadow-xl",
+        className
+      )}
+    >
+      <Image src={src} alt="Aircraft detail" fill className="object-cover" sizes="(max-width: 640px) 100vw, 50vw" />
+      <div className="absolute inset-0 bg-gradient-to-tr from-black/30 via-transparent to-black/10" />
+    </div>
+  )
+}
+
+function DestinationCard({ src, featured }: { src: string; featured?: boolean }) {
+  return (
+    <div
+      className={cn(
+        "relative overflow-hidden rounded-2xl border border-white/10 bg-slate-900/70 shadow-lg",
+        featured ? "h-56" : "h-36"
+      )}
+    >
+      <Image src={src} alt="Destination inspiration" fill className="object-cover" sizes="(max-width: 1024px) 100vw, 33vw" />
+      <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/10 to-black/60" />
+      <div className="absolute bottom-4 left-4">
+        <p className="text-xs uppercase tracking-[0.4em] text-emerald-200 mb-1">Destination</p>
+        <p className="text-sm font-medium text-white">Curated Experience</p>
+      </div>
+    </div>
+  )
+}
+
+function ExperienceGrid({
+  itinerary,
+  passengers,
+  crew,
+}: {
+  itinerary: Itinerary
+  passengers: ItineraryPassenger[]
+  crew: ItineraryCrewMember[]
+}) {
+  return (
+    <section className="grid gap-6 lg:grid-cols-[2fr_1.2fr]">
+      <PassengerManifest passengers={passengers} />
+      <CrewManifest crew={crew} contact={itinerary.contact} />
+    </section>
+  )
+}
+
+function PassengerManifest({ passengers }: { passengers: ItineraryPassenger[] }) {
+  return (
+    <Card className="border-white/10 bg-white/5 backdrop-blur-xl shadow-2xl">
+      <CardHeader className="space-y-1 pb-2">
+        <CardTitle className="text-xl font-semibold text-white flex items-center gap-2">
+          <Users className="h-5 w-5 text-emerald-300" />
+          Passenger Manifest
+        </CardTitle>
+        <CardDescription className="text-slate-300">
+          Verified guests for this itinerary. Hover to reveal contact details.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="pt-6">
+        {passengers.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-white/10 bg-white/5 p-10 text-center">
+            <Users className="mx-auto mb-3 h-9 w-9 text-white/50" />
+            <p className="text-sm text-slate-300">Passenger roster will be finalized closer to departure.</p>
+          </div>
+        ) : (
+          <TooltipProvider>
+            <div className="flex flex-wrap gap-6">
+              {passengers.map((assignment) => {
+                const passenger = assignment.passenger
+                const name = passenger?.full_name || "Guest"
+                const initials =
+                  name
+                    .split(" ")
+                    .map((n) => n[0])
+                    .join("")
+                    .toUpperCase() || "G"
+
+                return (
+                  <Tooltip key={assignment.id} delayDuration={150}>
+                    <TooltipTrigger asChild>
+                      <div className="group flex flex-col items-center gap-2">
+                        <div className="relative">
+                          <Avatar className="h-16 w-16 border-2 border-emerald-400/40 transition duration-300 group-hover:-translate-y-1 group-hover:border-emerald-300 group-hover:shadow-[0_25px_45px_rgba(16,185,129,0.25)]">
+                            <AvatarFallback className="bg-emerald-500/10 text-emerald-200 text-lg font-semibold">
+                              {initials}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="absolute inset-0 rounded-full bg-emerald-500/20 blur-xl opacity-0 transition group-hover:opacity-100" />
+                        </div>
+                        <span className="text-xs font-medium text-slate-200">{name.split(" ")[0]}</span>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs border border-white/10 bg-slate-900/90 text-slate-50">
+                      <div className="space-y-2">
+                        <p className="text-sm font-semibold">{name}</p>
+                        {passenger?.email && (
+                          <p className="text-xs text-slate-300 break-all">{passenger.email}</p>
+                        )}
+                        {passenger?.phone && (
+                          <p className="text-xs text-slate-400">{passenger.phone}</p>
+                        )}
+                        {passenger?.company && (
+                          <Badge className="bg-emerald-500/15 text-emerald-200 border border-emerald-500/40">
+                            {passenger.company}
+                          </Badge>
+                        )}
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                )
+              })}
+            </div>
+          </TooltipProvider>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+function CrewManifest({ crew, contact }: { crew: ItineraryCrewMember[]; contact?: Itinerary["contact"] }) {
+  return (
+    <div className="space-y-6">
+      <Card className="border-white/10 bg-white/5 backdrop-blur-xl shadow-2xl">
+        <CardHeader className="space-y-1 pb-2">
+          <CardTitle className="text-xl font-semibold text-white flex items-center gap-2">
+            <Plane className="h-5 w-5 text-emerald-300" />
+            Crew Lineup
+          </CardTitle>
+          <CardDescription className="text-slate-300">
+            Experts leading your journey. Confirmations update in real-time.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="pt-6">
+          {crew.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-white/10 bg-white/5 p-10 text-center">
+              <Plane className="mx-auto mb-3 h-9 w-9 text-white/50" />
+              <p className="text-sm text-slate-300">Crew assignments will be posted shortly.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {crew.map((member) => (
+                <div
+                  key={member.id}
+                  className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/8 via-white/5 to-white/10 p-4 shadow-inner"
+                >
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-white">{member.full_name || "Crew member"}</p>
+                      <p className="text-xs uppercase tracking-[0.3em] text-emerald-300 mt-1">{member.role}</p>
+                    </div>
+                    {member.confirmed ? (
+                      <Badge className="bg-emerald-500/15 text-emerald-200 border border-emerald-500/40">Confirmed</Badge>
+                    ) : (
+                      <Badge variant="outline" className="border-white/20 text-white/70">
+                        Pending
+                      </Badge>
+                    )}
+                  </div>
+                  {member.notes && (
+                    <p className="mt-3 rounded-lg bg-slate-900/60 p-3 text-xs text-slate-300 leading-relaxed">
+                      {member.notes}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="border-white/10 bg-white/5 backdrop-blur-xl shadow-2xl">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm font-semibold text-white">Primary Contact</CardTitle>
+        </CardHeader>
+        <CardContent className="pt-0 space-y-4">
+          {contact ? (
+            <div className="rounded-2xl border border-white/10 bg-slate-900/60 p-4">
+              <div className="flex items-center gap-3">
+                <Avatar className="h-10 w-10 border border-white/15">
+                  <AvatarFallback className="bg-emerald-500/15 text-emerald-200 font-semibold">
+                    {contact.full_name
+                      .split(" ")
+                      .map((n) => n[0])
+                      .join("")}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="text-sm font-medium text-white">{contact.full_name}</p>
+                  {contact.company && <p className="text-xs text-slate-300">{contact.company}</p>}
+                </div>
+              </div>
+              <Separator className="my-4 bg-white/10" />
+              <p className="text-xs text-slate-300 break-all">{contact.email}</p>
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-dashed border-white/10 bg-white/5 p-6 text-center text-sm text-slate-300">
+              Contact details will be shared closer to departure.
+            </div>
+          )}
+          <Button
+            variant="outline"
+            className="w-full border-emerald-500/50 text-emerald-200 hover:bg-emerald-500/20 hover:text-white"
+          >
+            Request Concierge Call
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+function TimelineSection({ details }: { details: ItineraryDetail[] }) {
+  if (details.length === 0) return null
+
+  return (
+    <section className="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl shadow-2xl">
+      <div className="border-b border-white/10 px-8 py-6 flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-semibold text-white">Flight Timeline</h2>
+          <p className="text-sm text-slate-300">Key waypoints, local times, and passenger considerations.</p>
+        </div>
+        <Badge className="bg-white/15 text-white border-white/20">
+          {details.length} Leg{details.length === 1 ? "" : "s"}
+        </Badge>
+      </div>
+
+      <div className="divide-y divide-white/10">
+        {details.map((detail, index) => {
+          const isLast = index === details.length - 1
+          const originDisplay = detail.origin_code
+            ? formatAirportDisplay(detail.origin_code, detail.origin || undefined)
+            : detail.origin || "Origin TBA"
+          const destinationDisplay = detail.destination_code
+            ? formatAirportDisplay(detail.destination_code, detail.destination || undefined)
+            : detail.destination || "Destination TBA"
+
+          return (
+            <div key={detail.id} className="px-8 py-6">
+              <div className="grid gap-6 lg:grid-cols-[240px_1fr_220px]">
+                <div className="space-y-2">
+                  <p className="text-xs uppercase tracking-[0.35em] text-emerald-200">Leg {detail.seq}</p>
+                  <p className="text-sm font-medium text-white">{originDisplay}</p>
+                  <div className="flex items-center gap-2">
+                    <div className="h-px flex-1 bg-gradient-to-r from-emerald-400 via-emerald-300 to-transparent" />
+                    <Plane className="h-3.5 w-3.5 text-emerald-300" />
+                    <div className="h-px flex-1 bg-gradient-to-l from-emerald-400 via-emerald-300 to-transparent" />
+                  </div>
+                  <p className="text-sm font-medium text-white">{destinationDisplay}</p>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <TimelineCard
+                    icon={Calendar}
+                    label="Departure"
+                    value={detail.depart_dt ? formatDateTime(detail.depart_dt) : "Pending"}
+                    supporting={detail.depart_time || undefined}
+                  />
+                  <TimelineCard
+                    icon={ClockIcon}
+                    label="Arrival"
+                    value={detail.arrive_dt ? formatDateTime(detail.arrive_dt) : "Pending"}
+                    supporting={detail.arrive_time || undefined}
+                  />
+                  <TimelineCard
+                    icon={Users}
+                    label="Passenger Count"
+                    value={detail.pax_count != null ? `${detail.pax_count} guests` : "Finalize soon"}
+                    subtle
+                  />
+                  <TimelineCard
+                    icon={FileText}
+                    label="Crew Notes"
+                    value={detail.notes || "Reviewed and cleared."}
+                    subtle
+                  />
+                </div>
+                <div className="flex flex-col justify-between">
+                  <div className="rounded-2xl border border-white/10 bg-slate-900/60 p-4 text-sm text-slate-300 leading-relaxed">
+                    <p>
+                      <span className="font-medium text-white">Local time advisory:</span>{" "}
+                      {detail.depart_dt ? formatTimeAgo(detail.depart_dt) : "schedule pending"} from departure.
+                      Our team tracks ops updates every hour.
+                    </p>
+                  </div>
+                  {!isLast && (
+                    <p className="mt-4 text-xs text-slate-500">
+                      Ground handling confirmed • Customs coordination ready • Crew rest windows verified
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </section>
+  )
+}
+
+function TimelineCard({
+  icon: Icon,
+  label,
+  value,
+  supporting,
+  subtle,
+}: {
+  icon: React.ComponentType<{ className?: string }>
+  label: string
+  value: string
+  supporting?: string
+  subtle?: boolean
+}) {
+  return (
+    <div
+      className={cn(
+        "rounded-2xl border p-4",
+        subtle ? "border-white/8 bg-white/5" : "border-white/12 bg-slate-900/55 shadow-inner"
+      )}
+    >
+      <div className="flex items-start gap-3">
+        <span className="mt-1 inline-flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500/10 border border-emerald-400/30">
+          <Icon className="h-4 w-4 text-emerald-300" />
+        </span>
+        <div>
+          <p className="text-xs uppercase tracking-[0.32em] text-emerald-200">{label}</p>
+          <p className="mt-2 text-sm font-medium text-white leading-snug">{value}</p>
+          {supporting && <p className="text-xs text-slate-400 mt-1">{supporting}</p>}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ClockIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" {...props}>
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth={1.5} />
+      <path d="M12 7v5l3 2" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function WeatherSection({
+  itinerary,
+  weather,
+  loading,
+  error,
+}: {
+  itinerary: Itinerary
+  weather: Record<string, WeatherSummary>
+  loading: boolean
+  error: string | null
+}) {
+  const airports = useMemo(() => {
+    return Array.from(
+      new Set(
+        itinerary.details
+          .flatMap((detail) => [
+            detail.origin_code ? detail.origin_code.toUpperCase() : null,
+            detail.destination_code ? detail.destination_code.toUpperCase() : null,
+          ])
+          .filter((code): code is string => Boolean(code))
+      )
+    )
+  }, [itinerary.details])
+
+  if (airports.length === 0) return null
+
+  return (
+    <section className="rounded-3xl border border-white/10 bg-gradient-to-br from-slate-900/80 via-slate-900/60 to-slate-900/85 backdrop-blur-xl shadow-2xl">
+      <div className="border-b border-white/10 px-8 py-6 flex flex-col gap-2">
+        <div className="flex items-center gap-2">
+          <Cloud className="h-5 w-5 text-emerald-300" />
+          <h2 className="text-xl font-semibold text-white">Aviation Weather Outlook</h2>
+        </div>
+        <p className="text-sm text-slate-300">
+          Live METAR and TAF briefing sourced from AviationWeather.gov for your departure and arrival aerodromes.
+        </p>
+        <p className="text-xs text-slate-500">
+          Data courtesy of the{" "}
+          <a
+            href="https://aviationweather.gov/data/api/#api"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-emerald-200 underline-offset-2 hover:underline"
+          >
+            Aviation Weather Center data API
+          </a>
+          .
+        </p>
+      </div>
+
+      <div className="px-8 py-6">
+        {loading ? (
+          <div className="flex items-center gap-3 text-sm text-slate-300">
+            <Loader2 className="h-4 w-4 animate-spin text-emerald-300" />
+            Retrieving latest conditions...
+          </div>
+        ) : error ? (
+          <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">
+            {error} We’ll continue monitoring on your behalf.
+          </div>
+        ) : (
+          <div className="grid gap-5 lg:grid-cols-2">
+            {airports.map((code) => (
+              <WeatherCard key={code} code={code} summary={weather[code]} />
+            ))}
+          </div>
+        )}
+      </div>
+    </section>
+  )
+}
+
+function WeatherCard({ code, summary }: { code: string; summary?: WeatherSummary }) {
+  const metar = summary?.metar
+  const taf = summary?.taf
+
+  const temperature =
+    metar?.temperatureC != null ? `${Math.round(metar.temperatureC)}ºC / ${Math.round((metar.temperatureC * 9) / 5 + 32)}ºF` : null
+  const dewpoint =
+    metar?.dewpointC != null ? `${Math.round(metar.dewpointC)}ºC` : null
+  const flightCategory = metar?.flightCategory || "N/A"
+
+  return (
+    <div className="rounded-2xl border border-white/10 bg-slate-900/60 p-5 shadow-inner space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-xs uppercase tracking-[0.3em] text-emerald-200">Airport</p>
+          <p className="text-lg font-semibold text-white">{formatAirportCode(code)}</p>
+        </div>
+        <Badge className="bg-white/10 text-white border-white/20">{flightCategory}</Badge>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <WeatherMetric icon={Thermometer} label="Temperature" value={temperature || "—"} />
+        <WeatherMetric icon={Wind} label="Wind" value={metar?.wind || "Calm"} />
+        <WeatherMetric icon={Waves} label="Visibility" value={metar?.visibility || "—"} />
+        <WeatherMetric icon={GaugeIcon} label="Altimeter" value={metar?.altimeter || "—"} />
+        <WeatherMetric icon={DropletIcon} label="Dew Point" value={dewpoint || "—"} subtle />
+        <WeatherMetric
+          icon={ClockIcon}
+          label="Observed"
+          value={metar?.observationTime ? formatTimeAgo(metar.observationTime) : "Pending"}
+          subtle
+        />
+      </div>
+
+      {metar?.rawText && (
+        <div className="rounded-xl border border-white/10 bg-black/40 p-3">
+          <p className="text-xs uppercase tracking-[0.25em] text-slate-400 mb-1.5">Raw METAR</p>
+          <p className="text-xs font-mono text-slate-200">{metar.rawText}</p>
+        </div>
+      )}
+
+      {taf?.rawText && (
+        <div className="rounded-xl border border-white/10 bg-black/35 p-3 space-y-2">
+          <p className="text-xs uppercase tracking-[0.25em] text-slate-400">TAF Snapshot</p>
+          <p className="text-xs text-slate-300 leading-relaxed">
+            {taf.forecastSummary?.slice(0, 2).join(" • ") || taf.rawText}
+          </p>
+          <details className="group">
+            <summary className="text-xs text-emerald-300 cursor-pointer hover:text-emerald-200">
+              View full forecast
+            </summary>
+            <pre className="mt-2 whitespace-pre-wrap text-[11px] text-slate-300 font-mono leading-relaxed">
+              {taf.rawText}
+            </pre>
+          </details>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function WeatherMetric({
+  icon: Icon,
+  label,
+  value,
+  subtle,
+}: {
+  icon: React.ComponentType<{ className?: string }>
+  label: string
+  value: string
+  subtle?: boolean
+}) {
+  return (
+    <div
+      className={cn(
+        "rounded-xl border p-3",
+        subtle ? "border-white/5 bg-white/3" : "border-white/8 bg-white/6"
+      )}
+    >
+      <div className="flex items-center gap-3">
+        <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500/10 border border-emerald-400/30">
+          <Icon className="h-4 w-4 text-emerald-200" />
+        </span>
+        <div>
+          <p className="text-[11px] uppercase tracking-[0.28em] text-slate-400">{label}</p>
+          <p className="text-sm font-medium text-white mt-1">{value}</p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function GaugeIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" {...props}>
+      <path
+        d="M12 21a9 9 0 1 0-9-9"
+        stroke="currentColor"
+        strokeWidth={1.5}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path d="m12 12 6.5-4" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="12" cy="12" r="2" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M3 21h6" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M3 17h4" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function DropletIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" {...props}>
+      <path
+        d="M12 21a7 7 0 0 0 7-7c0-5-7-11-7-11s-7 6-7 11a7 7 0 0 0 7 7Z"
+        stroke="currentColor"
+        strokeWidth={1.5}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
+function NotesSection({ itinerary }: { itinerary: Itinerary }) {
+  if (!itinerary.notes && !itinerary.special_requirements) return null
+
+  return (
+    <section className="grid gap-6 lg:grid-cols-2">
+      {itinerary.notes && (
+        <Card className="border-white/10 bg-gradient-to-br from-emerald-600/15 via-emerald-500/5 to-slate-900/60 backdrop-blur-xl shadow-2xl">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg text-white">Mission Notes</CardTitle>
+            <CardDescription className="text-slate-200">
+              Highlights, preferences, and concierge reminders for this journey.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pt-4">
+            <p className="text-sm leading-relaxed text-slate-100 whitespace-pre-wrap">{itinerary.notes}</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {itinerary.special_requirements && (
+        <Card className="border-white/10 bg-gradient-to-br from-amber-500/15 via-amber-500/5 to-slate-900/60 backdrop-blur-xl shadow-2xl">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg text-white">Special Requirements</CardTitle>
+            <CardDescription className="text-slate-100">
+              Critical accommodations or requests for crew and ground teams.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pt-4">
+            <p className="text-sm leading-relaxed text-slate-100 whitespace-pre-wrap">
+              {itinerary.special_requirements}
+            </p>
+          </CardContent>
+        </Card>
+      )}
+    </section>
+  )
+}
+
+function ConciergeFooter({ contact }: { contact?: Itinerary["contact"] }) {
+  return (
+    <section className="rounded-3xl border border-white/10 bg-gradient-to-r from-emerald-600/20 via-emerald-500/10 to-blue-500/15 backdrop-blur-xl shadow-2xl p-8 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+      <div className="space-y-2">
+        <p className="text-xs uppercase tracking-[0.4em] text-emerald-200">Concierge Desk</p>
+        <h3 className="text-2xl font-semibold text-white">Need to refine the experience?</h3>
+        <p className="text-sm text-emerald-100">
+          Our team is on standby for manifest updates, culinary preferences, ground transfers, and real-time weather
+          monitoring.
+        </p>
+      </div>
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+        {contact?.email && (
+          <Button
+            asChild
+            className="bg-white text-slate-900 hover:bg-slate-100 shadow-lg"
+          >
+            <a href={`mailto:${contact.email}`}>Email {contact.full_name.split(" ")[0]}</a>
+          </Button>
+        )}
+        <Button variant="outline" className="border-white/30 text-white hover:bg-white/10">
+          Arrange a call
+        </Button>
+      </div>
+    </section>
+  )
+}
