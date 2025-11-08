@@ -268,7 +268,7 @@ Deno.serve(async (req)=>{
     const linkId = insertRes?.id;
 
     // Audit
-    await supabase.from("audit_log").insert({
+    await supabase.from("action_link_audit_log").insert({
       tenant_id,
       actor_user_id: created_by || null,
       action: "action_link.create",
@@ -357,7 +357,7 @@ Deno.serve(async (req)=>{
     if (!emailRes.ok) throw new Error(`Resend ${emailRes.status}: ${emailText}`);
 
     // Audit: email sent
-    await supabase.from("audit_log").insert({
+    await supabase.from("action_link_audit_log").insert({
       tenant_id,
       actor_user_id: created_by || null,
       action: "email.send",
@@ -391,7 +391,7 @@ Deno.serve(async (req)=>{
     // Best-effort audit on error
     try {
       const body = await req.clone().text();
-      await supabase.from("audit_log").insert({
+      await supabase.from("action_link_audit_log").insert({
         tenant_id: null,
         actor_user_id: null,
         action: "action_link.create.error",

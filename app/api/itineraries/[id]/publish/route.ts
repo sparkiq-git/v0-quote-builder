@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 
 export const dynamic = "force-dynamic"
 
@@ -190,7 +191,8 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 
     // Audit log
     try {
-      await supabase.from("action_link_audit_log").insert({
+      const adminClient = createAdminClient()
+      await adminClient.from("action_link_audit_log").insert({
         tenant_id: tenantId,
         actor_user_id: user.id,
         action: "itinerary.publish",
