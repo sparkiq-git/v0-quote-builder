@@ -234,8 +234,8 @@ export function SimpleSelect({
                     console.log("[v0] Option button mousedown:", option.value)
                   }}
                   className={cn(
-                    "relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors",
-                    "hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground",
+                    "relative flex w-full cursor-pointer select-none items-center rounded-md px-2 py-1.5 text-sm outline-none transition-colors",
+                    "hover:bg-neutral-900 hover:text-white focus:bg-neutral-900 focus:text-white",
                     value === option.value && "bg-accent/50",
                   )}
                 >

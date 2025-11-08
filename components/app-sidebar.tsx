@@ -26,6 +26,7 @@ import {
   UserCircle,
   ChevronDown,
   Users2,
+  MapPin,
 } from "lucide-react"
 import { useMockStore } from "@/lib/mock/store"
 import { cn } from "@/lib/utils"
@@ -51,6 +52,11 @@ const mainNavigation = [
     title: "Invoices",
     href: "/invoices",
     icon: FileText,
+  },
+  {
+    title: "Itineraries",
+    href: "/itineraries",
+    icon: MapPin,
   },
 ]
 
