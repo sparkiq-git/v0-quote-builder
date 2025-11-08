@@ -81,7 +81,6 @@ export default function ItinerariesPage() {
 
     const fetchItineraries = async () => {
       try {
-        console.log("[v0] Fetching itineraries with filters:", { searchQuery, statusFilter })
         const params = new URLSearchParams()
         if (searchQuery) params.append("search", searchQuery)
         if (statusFilter !== "all") params.append("status", statusFilter)
@@ -93,7 +92,6 @@ export default function ItinerariesPage() {
         }
 
         const { data } = await response.json()
-        console.log("[v0] Fetched itineraries:", data)
         setItineraries(data || [])
       } catch (err: any) {
         console.error("❌ Error loading itineraries:", err)
@@ -266,8 +264,6 @@ export default function ItinerariesPage() {
                                 const rect = button.getBoundingClientRect()
                                 const spaceBelow = window.innerHeight - rect.bottom
                                 const spaceAbove = rect.top
-
-                                console.log("[v0] Three-dot menu clicked, spaces:", { spaceBelow, spaceAbove })
 
                                 // Calculate position
                                 const position = spaceBelow < 120 && spaceAbove > spaceBelow ? "top" : "bottom"
