@@ -25,12 +25,22 @@ const API_ENDPOINTS = {
   QUOTES: "/api/quotes"
 } as const
 
-const PublicQuotePage = dynamic(() => import("@/components/quotes/public-quote-page"), { 
+interface VerifiedLinkPayload {
+  id: string
+  action_type: string
+  tenant_id: string
+  expires_at: string
+  metadata: Record<string, any>
+}
+
+const PublicQuotePage = dynamic(() => import("@/components/quotes/public-quote-page"), {
   ssr: false,
   loading: () => <div className="text-center py-8">Loading quote...</div>,
-  onError: (error) => {
-    console.error("Failed to load PublicQuotePage:", error)
-  }
+})
+
+const PublicItineraryPage = dynamic(() => import("@/components/itineraries/public-itinerary-page"), {
+  ssr: false,
+  loading: () => <div className="text-center py-8">Loading itinerary...</div>,
 })
 
 export default function ActionPage({ params }: { params: { token: string } }) {
@@ -38,7 +48,7 @@ export default function ActionPage({ params }: { params: { token: string } }) {
   const [email, setEmail] = useState("")
   const [captcha, setCaptcha] = useState<string | null>(null)
   const [verifying, setVerifying] = useState(false)
-  const [verified, setVerified] = useState<any | null>(null)
+  const [verified, setVerified] = useState<VerifiedLinkPayload | null>(null)
   const [quote, setQuote] = useState<any | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [errorDialog, setErrorDialog] = useState<{ open: boolean; title: string; message: string }>({
@@ -57,15 +67,15 @@ export default function ActionPage({ params }: { params: { token: string } }) {
     
     if (lowerError.includes("link expired") || lowerError.includes("expired")) {
       return {
-        title: "Quote Expired",
-        message: "This quote link has expired. Please contact us for a new quote or updated pricing."
+        title: "Secure Link Expired",
+        message: "This secure link has expired. Please contact us for an updated itinerary or quote."
       }
     }
     
     if (lowerError.includes("email mismatch") || lowerError.includes("email")) {
       return {
         title: "Email Mismatch",
-        message: "The email address you entered doesn't match the one this quote was sent to. Please check and try again."
+        message: "The email address you entered doesn't match the one this link was sent to. Please check and try again."
       }
     }
     
@@ -129,6 +139,7 @@ export default function ActionPage({ params }: { params: { token: string } }) {
 
   async function handleVerify() {
     setError(null)
+    setQuote(null)
     setVerifying(true)
     
     // Client-side validation
@@ -155,16 +166,25 @@ export default function ActionPage({ params }: { params: { token: string } }) {
         }),
       })
 
-      setVerified(json.data)
-      
-      // Fetch the actual quote data
-      if (json.data?.metadata?.quote_id) {
+      const linkData = json.data as VerifiedLinkPayload | undefined
+
+      if (!linkData?.action_type) {
+        throw new Error("Unsupported link type")
+      }
+
+      if (!["quote", "view_itinerary"].includes(linkData.action_type)) {
+        throw new Error(`Unsupported action type: ${linkData.action_type}`)
+      }
+
+      setVerified(linkData)
+
+      if (linkData.action_type === "quote" && linkData.metadata?.quote_id) {
         try {
-          const quoteRes = await safeFetchJSON(`${API_ENDPOINTS.QUOTES}/${json.data.metadata.quote_id}`, {
+          const quoteRes = await safeFetchJSON(`${API_ENDPOINTS.QUOTES}/${linkData.metadata.quote_id}`, {
             method: "GET",
-            headers: { 
+            headers: {
               "content-type": "application/json",
-              "x-public-quote": "true"
+              "x-public-quote": "true",
             },
           })
           setQuote(quoteRes)
@@ -172,7 +192,7 @@ export default function ActionPage({ params }: { params: { token: string } }) {
           console.error("Failed to fetch quote:", quoteErr)
         }
       }
-      
+
     } catch (e: any) {
       console.error("Verification error:", e)
       setError(e.message)
@@ -265,7 +285,7 @@ export default function ActionPage({ params }: { params: { token: string } }) {
               <div className="text-center">
                 <h1 className="text-lg font-semibold">Verify Your Email</h1>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Enter the email this quote was sent to and complete the CAPTCHA to continue.
+                  Enter the email this secure link was sent to and complete the CAPTCHA to continue.
                 </p>
               </div>
 
@@ -294,7 +314,7 @@ export default function ActionPage({ params }: { params: { token: string } }) {
                 onClick={handleVerify}
                 className="w-full font-semibold"
               >
-                {verifying ? "Verifying..." : "View Your Quote"}
+                {verifying ? "Verifying..." : "Continue"}
               </Button>
 
               <p className="text-[11px] text-center text-muted-foreground">
@@ -304,6 +324,37 @@ export default function ActionPage({ params }: { params: { token: string } }) {
           </Card>
         </div>
       </>
+    )
+  }
+
+  const actionType = verified.action_type
+  let secureContent: JSX.Element
+
+  if (actionType === "quote") {
+    secureContent = (
+      <PublicQuotePage
+        params={{ token: params.token }}
+        verifiedEmail={email}
+        quote={quote}
+        onAccept={undefined}
+        onDecline={undefined}
+      />
+    )
+  } else if (actionType === "view_itinerary") {
+    secureContent = <PublicItineraryPage token={params.token} verifiedEmail={email} />
+  } else {
+    secureContent = (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
+        <Card className="max-w-sm w-full p-6 shadow-lg">
+          <CardContent className="space-y-4 text-center">
+            <h2 className="text-lg font-semibold">Unsupported Link</h2>
+            <p className="text-sm text-muted-foreground">
+              This secure link type is not yet supported in the public portal. Please contact your AeroIQ representative
+              for assistance.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
     )
   }
 
@@ -324,13 +375,7 @@ export default function ActionPage({ params }: { params: { token: string } }) {
         </AlertDialogContent>
       </AlertDialog>
 
-      <PublicQuotePage
-        params={{ token: params.token }}
-        verifiedEmail={email}
-        quote={quote}
-        onAccept={undefined}
-        onDecline={undefined}
-      />
+      {secureContent}
     </>
   )
 }

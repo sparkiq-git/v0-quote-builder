@@ -296,12 +296,7 @@ Deno.serve(async (req)=>{
       : null;
 
     // ***** UPDATED: Determine link URL based on action_type *****
-    let linkUrl;
-    if (action_type === "view_itinerary") {
-      linkUrl = `${PUBLIC_APP_URL}/itineraries/public/${token}`;
-    } else {
-      linkUrl = `${PUBLIC_APP_URL}/action/${token}`;
-    }
+    const linkUrl = `${PUBLIC_APP_URL}/action/${token}`;
 
     const expirationDate = new Date(expiresAt);
     const expirationText = `This link will expire on ${expirationDate.toLocaleDateString()} at ${expirationDate.toLocaleTimeString()}.`;
