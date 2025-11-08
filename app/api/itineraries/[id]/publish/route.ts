@@ -121,8 +121,9 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     const fnUrl = `${supabaseUrl}/functions/v1/create-action-link`
 
     // Call edge function for each recipient (exactly like QuoteSummaryTab)
-    const results = []
-    const errors = []
+    const results: Array<{ email: string; link_id?: string; link_url?: string; deduped?: boolean }> = []
+    const errors: Array<{ email: string; error: string }> = []
+    const deduped: Array<{ email: string }> = []
 
     for (const recipient of recipients) {
       try {
@@ -149,10 +150,21 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 
         const json = await res.json().catch(() => ({}))
         if (!res.ok || !json.ok) {
+          const errorMessage = json.error || `Failed (${res.status})`
+
+          if (/similar link was just created/i.test(errorMessage)) {
+            deduped.push({ email: recipient.email })
+            results.push({
+              email: recipient.email,
+              deduped: true,
+            })
+            continue
+          }
+
           console.error(`Error creating link for ${recipient.email}:`, json)
           errors.push({
             email: recipient.email,
-            error: json.error || `Failed (${res.status})`,
+            error: errorMessage,
           })
         } else {
           results.push({
@@ -163,7 +175,16 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
         }
       } catch (err: any) {
         console.error(`Exception creating link for ${recipient.email}:`, err)
-        errors.push({ email: recipient.email, error: err.message })
+        const errMessage = err?.message || "Unknown error"
+        if (/similar link was just created/i.test(errMessage)) {
+          deduped.push({ email: recipient.email })
+          results.push({
+            email: recipient.email,
+            deduped: true,
+          })
+        } else {
+          errors.push({ email: recipient.email, error: errMessage })
+        }
       }
     }
 
@@ -178,12 +199,16 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
           recipients_count: recipients.length,
           successful: results.length,
           failed: errors.length,
+          deduped: deduped.length,
         },
         ip: request.headers.get("x-forwarded-for") || "unknown",
         user_agent: request.headers.get("user-agent") || "unknown",
       })
     } catch (auditErr) {
-      console.error("Audit log error:", auditErr)
+      const message = (auditErr as any)?.message || ""
+      if (!/could not find the table/i.test(message)) {
+        console.error("Audit log error:", auditErr)
+      }
       // Non-critical, continue
     }
 
@@ -199,10 +224,12 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 
     return NextResponse.json({
       success: true,
-      published: results.length,
+      published: results.filter((r) => !r.deduped).length,
       failed: errors.length,
+      deduped: deduped.length,
       results,
       errors: errors.length > 0 ? errors : undefined,
+      already_notified: deduped.length > 0 ? deduped : undefined,
     })
   } catch (error: any) {
     console.error("Publish itinerary error:", error)

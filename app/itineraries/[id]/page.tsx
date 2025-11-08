@@ -266,9 +266,27 @@ export default function ItineraryDetailPage() {
 
       const data = await response.json()
 
+      const fragments: string[] = []
+      if (typeof data.published === "number") {
+        fragments.push(
+          `Sent itinerary links to ${data.published} recipient${data.published === 1 ? "" : "s"}.`
+        )
+      }
+      if (typeof data.deduped === "number" && data.deduped > 0) {
+        fragments.push(
+          `${data.deduped} recipient${data.deduped === 1 ? " was" : "s were"} already notified recently.`
+        )
+      }
+      if (typeof data.failed === "number" && data.failed > 0) {
+        fragments.push(
+          `${data.failed} recipient${data.failed === 1 ? "" : "s"} failed; check the console for details.`
+        )
+      }
+
       toast({
-        title: "Itinerary Published",
-        description: `Successfully sent itinerary links to ${data.published} recipient${data.published !== 1 ? "s" : ""}.${data.failed > 0 ? ` ${data.failed} failed.` : ""}`,
+        title: data.failed > 0 && data.published === 0 ? "Publish Completed with Errors" : "Itinerary Published",
+        description: fragments.join(" "),
+        variant: data.failed > 0 && data.published === 0 ? "destructive" : "default",
       })
     } catch (error: any) {
       toast({
