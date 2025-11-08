@@ -190,7 +190,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 
     // Audit log
     try {
-      await supabase.from("audit_log").insert({
+      await supabase.from("action_link_audit_log").insert({
         tenant_id: tenantId,
         actor_user_id: user.id,
         action: "itinerary.publish",
@@ -205,10 +205,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
         user_agent: request.headers.get("user-agent") || "unknown",
       })
     } catch (auditErr) {
-      const message = (auditErr as any)?.message || ""
-      if (!/could not find the table/i.test(message)) {
-        console.error("Audit log error:", auditErr)
-      }
+      console.error("Audit log error:", auditErr)
       // Non-critical, continue
     }
 
