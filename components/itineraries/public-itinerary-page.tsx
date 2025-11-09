@@ -27,6 +27,14 @@ import {
   Hotel,
   ExternalLink,
 } from "lucide-react"
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+  type CarouselApi,
+} from "@/components/ui/carousel"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -80,6 +88,7 @@ interface ItineraryPassenger {
     email: string | null
     phone: string | null
     company: string | null
+    avatar_path?: string | null
     avatar_url?: string | null
   } | null
 }
@@ -119,11 +128,11 @@ interface Itinerary {
 }
 
 interface AircraftGalleryImage {
-  id: string
+  id?: string
   url: string
-  caption: string | null
-  is_primary: boolean
-  display_order: number
+  caption?: string | null
+  is_primary?: boolean
+  display_order?: number
 }
 
 interface ItineraryAircraft {
@@ -175,19 +184,25 @@ const FALLBACK_GALLERY = [
   "https://images.unsplash.com/photo-1500375592092-40eb2168fd21?auto=format&fit=crop&w=1600&q=80",
 ]
 
-const FALLBACK_DESTINATION_IMAGERY = [
-  "https://images.unsplash.com/photo-1455906876003-298dd8c44ea5?auto=format&fit=crop&w=1600&q=80",
-  "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1600&q=80",
-  "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?auto=format&fit=crop&w=1600&q=80",
-]
-
 const BOOKING_AID = process.env.NEXT_PUBLIC_BOOKING_REFERRAL_AID
 const BOOKING_URL = BOOKING_AID
   ? `https://www.booking.com/index.html?aid=${BOOKING_AID}`
   : "https://www.booking.com/"
 
+const createFallbackGallery = (): AircraftGalleryImage[] =>
+  FALLBACK_GALLERY.map((url, index) => ({
+    id: `fallback-${index}`,
+    url,
+    caption: null,
+    is_primary: index === 0,
+    display_order: index,
+  }))
+
 function getPassengerAvatarUrl(passenger?: ItineraryPassenger["passenger"] | null): string | null {
   if (!passenger) return null
+  if (passenger.avatar_path && passenger.id) {
+    return `/api/avatar/passenger/${passenger.id}`
+  }
   if (passenger.avatar_url) return passenger.avatar_url
   if (passenger.full_name) {
     return `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(passenger.full_name)}`
@@ -196,18 +211,6 @@ function getPassengerAvatarUrl(passenger?: ItineraryPassenger["passenger"] | nul
     return `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(passenger.email)}`
   }
   return null
-}
-
-function generateGallery(tailNumber?: string | null): GalleryImage[] {
-  if (!tailNumber) {
-    return FALLBACK_GALLERY.map((url) => ({ url }))
-  }
-  const hash = tailNumber.split("").reduce((acc, char, index) => acc + char.charCodeAt(0) * (index + 7), 0)
-  const images: GalleryImage[] = []
-  for (let i = 0; i < FALLBACK_GALLERY.length; i++) {
-    images.push({ url: FALLBACK_GALLERY[(hash + i) % FALLBACK_GALLERY.length] })
-  }
-  return images
 }
 
 function ElegantConnector() {
@@ -717,7 +720,7 @@ export default function PublicItineraryPage({ token, verifiedEmail }: PublicItin
     )
   }, [effectiveVerifiedEmail])
 
-  const galleryImages = useMemo<GalleryImage[]>(() => {
+  const galleryImages = useMemo<AircraftGalleryImage[]>(() => {
     if (aircraft?.images?.length) {
       const seen = new Set<string>()
       const mapped = aircraft.images
@@ -725,18 +728,20 @@ export default function PublicItineraryPage({ token, verifiedEmail }: PublicItin
           if (!img.url || seen.has(img.url)) return null
           seen.add(img.url)
           return {
+            id: img.id,
             url: img.url,
             caption: img.caption ?? null,
-            isPrimary: img.is_primary,
-          }
+            is_primary: img.is_primary,
+            display_order: img.display_order,
+          } as AircraftGalleryImage
         })
-        .filter(Boolean) as GalleryImage[]
+        .filter(Boolean) as AircraftGalleryImage[]
       if (mapped.length) {
         return mapped
       }
     }
-    return generateGallery(itinerary?.aircraft_tail_no)
-  }, [aircraft, itinerary?.aircraft_tail_no])
+    return createFallbackGallery()
+  }, [aircraft])
 
   useEffect(() => {
     setHeroIndex((prev) => (galleryImages.length && prev < galleryImages.length ? prev : 0))
@@ -749,23 +754,6 @@ export default function PublicItineraryPage({ token, verifiedEmail }: PublicItin
 
   const tripStart = itinerary?.details?.[0]?.depart_dt || itinerary?.earliest_departure
   const tripEnd = itinerary?.details?.[itinerary.details.length - 1]?.arrive_dt || itinerary?.latest_return
-
-  const destinationImagery = useMemo(() => {
-    const codes = itinerary?.details
-      ?.map((detail) => detail.destination_code || detail.destination)
-      .filter((code): code is string => Boolean(code))
-
-    if (!codes || codes.length === 0) return FALLBACK_DESTINATION_IMAGERY
-
-    const uniqueCodes = Array.from(new Set(codes))
-    const derivedImages: string[] = []
-
-    uniqueCodes.forEach((code, index) => {
-      derivedImages.push(FALLBACK_DESTINATION_IMAGERY[index % FALLBACK_DESTINATION_IMAGERY.length])
-    })
-
-    return derivedImages
-  }, [itinerary?.details])
 
   if (loading) {
     return (
@@ -898,7 +886,10 @@ export default function PublicItineraryPage({ token, verifiedEmail }: PublicItin
               </CardContent>
             </Card>
 
-            <GallerySection galleryImages={galleryImages} destinationImagery={destinationImagery} />
+            <AircraftGallery
+              images={galleryImages}
+              fallbackLabel={aircraft?.model || itinerary.aircraft_tail_no || itinerary.title || "aircraft"}
+            />
             <AircraftProfile aircraft={aircraft} />
 
             {/* Flight Timeline */}
@@ -1209,7 +1200,10 @@ export default function PublicItineraryPage({ token, verifiedEmail }: PublicItin
                 </CardContent>
               </Card>
 
-              <GallerySection galleryImages={galleryImages} destinationImagery={destinationImagery} />
+              <AircraftGallery
+                images={galleryImages}
+                fallbackLabel={aircraft?.model || itinerary.aircraft_tail_no || itinerary.title || "aircraft"}
+              />
               <AircraftProfile aircraft={aircraft} />
 
               {/* Flight Timeline */}
@@ -1477,11 +1471,13 @@ function HeroSection({
   galleryImages,
   heroIndex,
   emailChip,
+  aircraft,
 }: {
   itinerary: Itinerary
-  galleryImages: GalleryImage[]
+  galleryImages: AircraftGalleryImage[]
   heroIndex: number
   emailChip: React.ReactNode
+  aircraft?: ItineraryAircraft | null
 }) {
   return (
     <section className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-slate-900/70 via-slate-900/40 to-slate-900/80 shadow-2xl backdrop-blur">
@@ -1586,7 +1582,7 @@ function HeroSection({
             <div className="rounded-xl border border-white/10 bg-slate-900/60 p-4 text-sm text-slate-200">
               <p className="font-medium text-white/90 mb-2">Concierge Note</p>
               <p className="text-sm leading-relaxed text-slate-300">
-                Review the itinerary details below and reach out anytime for adjustments. We’ll monitor weather, crew,
+                Review the itinerary details below and reach out anytime for adjustments. We'll monitor weather, crew,
                 and passenger logistics up to departure.
               </p>
             </div>
@@ -1662,147 +1658,118 @@ function JourneyHighlight({ detail }: { detail: ItineraryDetail }) {
   )
 }
 
-function GallerySection({
-  galleryImages,
-  destinationImagery,
-}: {
-  galleryImages: GalleryImage[]
-  destinationImagery: string[]
-}) {
-  if (!galleryImages.length) return null
+function AircraftGallery({ images, fallbackLabel }: { images: AircraftGalleryImage[]; fallbackLabel: string }) {
+  const validImages = images.filter((img) => !!img?.url)
+  const [api, setApi] = useState<CarouselApi | null>(null)
+  const [current, setCurrent] = useState(0)
+  const [count, setCount] = useState(0)
+  const [failedImages, setFailedImages] = useState<string[]>([])
+
+  useEffect(() => {
+    if (!api) return
+    setCount(api.scrollSnapList().length)
+    setCurrent(api.selectedScrollSnap())
+    const onSelect = () => setCurrent(api.selectedScrollSnap())
+    api.on("select", onSelect)
+    return () => api.off("select", onSelect)
+  }, [api])
+
+  const scrollTo = useCallback((index: number) => api?.scrollTo(index), [api])
+
+  if (!validImages.length) return null
+
+  const placeholder = `/placeholder.svg?height=600&width=1000&query=${encodeURIComponent(fallbackLabel || "aircraft")}`
+
+  const resolveSrc = (img: AircraftGalleryImage) => {
+    if (!img.url || failedImages.includes(img.url)) return placeholder
+    return img.url
+  }
 
   return (
-    <section className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-semibold text-white">Visual Moodboard</h2>
-          <p className="text-sm text-slate-300">
-            Aircraft inspiration paired with destination glimpses curated for your itinerary.
-          </p>
-        </div>
-      </div>
+    <section className="rounded-3xl border border-white/10 bg-white/80 backdrop-blur-md shadow-2xl">
+      <style>{`
+        .aircraft-gallery-carousel .carousel-previous,
+        .aircraft-gallery-carousel .carousel-next,
+        .aircraft-gallery-carousel [aria-label='Previous image'],
+        .aircraft-gallery-carousel [aria-label='Next image'] {
+          opacity: 0;
+          transition: opacity .3s ease;
+        }
+        .aircraft-gallery-carousel:hover .carousel-previous,
+        .aircraft-gallery-carousel:hover .carousel-next,
+        .aircraft-gallery-carousel:hover [aria-label='Previous image'],
+        .aircraft-gallery-carousel:hover [aria-label='Next image'] {
+          opacity: 1;
+        }
+        @media (max-width: 1024px) {
+          .aircraft-gallery-carousel .carousel-previous,
+          .aircraft-gallery-carousel .carousel-next {
+            opacity: 0.75;
+          }
+        }
+      `}</style>
+      <div className="w-full overflow-hidden">
+        <div className="aircraft-gallery-carousel relative w-full">
+          <Carousel className="w-full" setApi={setApi}>
+            <CarouselContent>
+              {validImages.map((img, index) => (
+                <CarouselItem key={`${img.url}-${index}`} className="basis-full">
+                  <div className="relative h-72 sm:h-96 md:h-[28rem] lg:h-[32rem] overflow-hidden">
+                    <Image
+                      src={resolveSrc(img)}
+                      alt={img.caption || "Aircraft gallery image"}
+                      fill
+                      className="object-cover"
+                      loading={index === 0 ? "eager" : "lazy"}
+                      onError={() => {
+                        if (img.url && !failedImages.includes(img.url)) {
+                          setFailedImages((prev) => [...prev, img.url])
+                        }
+                      }}
+                      onLoad={() => {
+                        if (img.url) {
+                          setFailedImages((prev) => prev.filter((url) => url !== img.url))
+                        }
+                      }}
+                      sizes="(max-width: 1024px) 100vw, 1000px"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-transparent" />
+                    {img.caption && (
+                      <div className="absolute bottom-4 left-4 right-4 rounded-xl bg-black/50 px-4 py-3 text-xs text-white backdrop-blur-sm shadow-lg">
+                        {img.caption}
+                      </div>
+                    )}
+                  </div>
+                </CarouselItem>
+              ))}
+            </CarouselContent>
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <div className="lg:col-span-2 space-y-4">
-          <div className="relative h-72 sm:h-96 overflow-hidden rounded-3xl border border-white/10 shadow-xl">
-            <Carousel images={galleryImages} />
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            {galleryImages.slice(1, 3).map((image, index) => (
-              <DrapedImage key={`${image.url}-${index}`} image={image} className={index === 0 ? "-rotate-1" : "rotate-1"} />
-            ))}
-          </div>
-        </div>
-        <div className="space-y-4">
-          {destinationImagery.slice(0, 3).map((img, index) => (
-            <DestinationCard key={img} src={img} featured={index === 0} />
-          ))}
+            {validImages.length > 1 && (
+              <>
+                <CarouselPrevious
+                  className="absolute left-3 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-white/90 text-gray-700 shadow-md hover:bg-white hover:shadow-lg hover:scale-110 transition-all"
+                  aria-label="Previous image"
+                />
+                <CarouselNext
+                  className="absolute right-3 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-white/90 text-gray-700 shadow-md hover:bg-white hover:shadow-lg hover:scale-110 transition-all"
+                  aria-label="Next image"
+                />
+                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
+                  {Array.from({ length: count }).map((_, index) => (
+                    <button
+                      key={index}
+                      className={`h-1 rounded-full transition-all ${index === current ? "w-6 bg-white shadow-sm" : "w-2 bg-white/60 hover:bg-white/80"}`}
+                      onClick={() => scrollTo(index)}
+                      aria-label={`Go to slide ${index + 1}`}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+          </Carousel>
         </div>
       </div>
     </section>
-  )
-}
-
-function Carousel({ images }: { images: GalleryImage[] }) {
-  const [active, setActive] = useState(0)
-
-  useEffect(() => {
-    if (images.length <= 1) return
-    const timer = setInterval(() => {
-      setActive((current) => (current + 1) % images.length)
-    }, 6500)
-    return () => clearInterval(timer)
-  }, [images])
-
-  return (
-    <div className="relative h-full w-full">
-      {images.map((image, index) => (
-        <div
-          key={`${image.url}-${index}`}
-          className={cn(
-            "absolute inset-0 transition-opacity duration-700 ease-out",
-            index === active ? "opacity-100" : "opacity-0",
-          )}
-        >
-          <Image
-            src={image.url || "/placeholder.svg"}
-            alt={image.caption || "Aircraft inspiration"}
-            fill
-            className="object-cover"
-            priority={index === 0}
-            sizes="(max-width: 1024px) 100vw, 66vw"
-          />
-          <div className="absolute inset-0 bg-gradient-to-tr from-slate-950/50 via-slate-950/20 to-transparent" />
-          {image.caption && (
-            <div className="absolute bottom-6 left-6 right-6 rounded-xl bg-black/45 px-4 py-3 text-sm text-white backdrop-blur-sm shadow-lg">
-              {image.caption}
-            </div>
-          )}
-        </div>
-      ))}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
-        {images.map((_, index) => (
-          <button
-            key={index}
-            className={cn(
-              "h-1.5 rounded-full transition-all duration-300",
-              index === active ? "w-6 bg-white" : "w-3 bg-white/40 hover:bg-white/70",
-            )}
-            onClick={() => setActive(index)}
-            aria-label={`Show image ${index + 1}`}
-          />
-        ))}
-      </div>
-    </div>
-  )
-}
-
-function DrapedImage({ image, className }: { image: GalleryImage; className?: string }) {
-  return (
-    <div
-      className={cn(
-        "relative h-48 overflow-hidden rounded-2xl border border-white/10 bg-slate-900/70 shadow-xl",
-        className,
-      )}
-    >
-      <Image
-        src={image.url || "/placeholder.svg"}
-        alt={image.caption || "Aircraft detail"}
-        fill
-        className="object-cover"
-        sizes="(max-width: 640px) 100vw, 50vw"
-      />
-      <div className="absolute inset-0 bg-gradient-to-tr from-black/30 via-transparent to-black/10" />
-      {image.caption && (
-        <div className="absolute bottom-3 left-3 right-3 rounded-lg bg-black/50 px-3 py-2 text-xs text-white backdrop-blur-sm">
-          {image.caption}
-        </div>
-      )}
-    </div>
-  )
-}
-
-function DestinationCard({ src, featured }: { src: string; featured?: boolean }) {
-  return (
-    <div
-      className={cn(
-        "relative overflow-hidden rounded-2xl border border-white/10 bg-slate-900/70 shadow-lg",
-        featured ? "h-56" : "h-36",
-      )}
-    >
-      <Image
-        src={src || "/placeholder.svg"}
-        alt="Destination inspiration"
-        fill
-        className="object-cover"
-        sizes="(max-width: 1024px) 100vw, 33vw"
-      />
-      <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/10 to-black/60" />
-      <div className="absolute bottom-4 left-4">
-        <p className="text-xs uppercase tracking-[0.4em] text-emerald-200 mb-1">Destination</p>
-        <p className="text-sm font-medium text-white">Curated Experience</p>
-      </div>
-    </div>
   )
 }
 
@@ -2005,8 +1972,12 @@ function CrewManifest({ crew, contact }: { crew: ItineraryCrewMember[]; contact?
                   {contact.company && <p className="text-xs text-slate-300">{contact.company}</p>}
                 </div>
               </div>
-              <Separator className="my-4 bg-white/10" />
-              <p className="text-xs text-slate-300 break-all">{contact.email}</p>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Mail className="h-4 w-4 text-gray-500" />
+                  <span className="text-xs text-gray-600">{itinerary.contact.email}</span>
+                </div>
+              </div>
             </div>
           ) : (
             <div className="rounded-2xl border border-dashed border-white/10 bg-white/5 p-6 text-center text-sm text-slate-300">
@@ -2213,7 +2184,7 @@ function WeatherSection({
           </div>
         ) : error ? (
           <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">
-            {error} We’ll continue monitoring on your behalf.
+            {error} We'll continue monitoring on your behalf.
           </div>
         ) : (
           <div className="grid gap-5 lg:grid-cols-2">
