@@ -154,7 +154,7 @@ export default function ItinerariesPage() {
                 { value: "completed", label: "Completed" },
                 { value: "cancelled", label: "Cancelled" },
               ]}
-              triggerClassName="w-[180px]"
+              triggerClassName="w-[260px]"
             />
           </div>
 
@@ -277,7 +277,7 @@ export default function ItinerariesPage() {
 
                                 setOpenDropdown(openDropdown === itin.id ? null : itin.id)
                               }}
-                              className="inline-flex items-center justify-center h-8 w-8 rounded-md bg-white border border-neutral-200 text-black hover:bg-neutral-900 hover:text-white hover:border-neutral-900 transition-colors"
+                              className="inline-flex items-center justify-center h-8 w-8 rounded-md bg-transparent text-black hover:bg-neutral-900 hover:text-white transition-colors"
                             >
                               <MoreHorizontal className="h-4 w-4" />
                             </button>

@@ -27,7 +27,7 @@ import { formatDate } from "@/lib/utils/format"
 import { ItineraryStatusBadge } from "@/components/itineraries/itinerary-status-badge"
 import { EditItineraryDialog } from "@/components/itineraries/edit-itinerary-dialog"
 import { useToast } from "@/hooks/use-toast"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { SimpleSelect } from "@/components/ui/simple-select"
 import { Separator } from "@/components/ui/separator"
 
 interface ItineraryDetail {
@@ -379,18 +379,20 @@ export default function ItineraryDetailPage({ id }: { id: string }) {
                 </Button>
               )}
               {itinerary.status === "draft" && (
-                <Select value={itinerary.status} onValueChange={handleStatusChange} disabled={updatingStatus}>
-                  <SelectTrigger className="w-[160px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="draft">Draft</SelectItem>
-                    {itinerary.invoice?.status === "paid" && (
-                      <SelectItem value="trip_confirmed">Trip Confirmed</SelectItem>
-                    )}
-                    <SelectItem value="cancelled">Cancelled</SelectItem>
-                  </SelectContent>
-                </Select>
+                <SimpleSelect
+                  value={itinerary.status}
+                  onValueChange={handleStatusChange}
+                  disabled={updatingStatus}
+                  options={[
+                    { value: "draft", label: "Draft" },
+                    ...(itinerary.invoice?.status === "paid"
+                      ? [{ value: "trip_confirmed", label: "Trip Confirmed" }]
+                      : []),
+                    { value: "cancelled", label: "Cancelled" },
+                  ]}
+                  placeholder="Select status"
+                  className="w-[240px]"
+                />
               )}
             </div>
           </div>

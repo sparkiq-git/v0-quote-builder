@@ -56,24 +56,12 @@ export function SimpleSelect({
 
     const spaceBelow = viewportHeight - rect.bottom
     const spaceAbove = rect.top
-    const spaceRight = viewportWidth - rect.left
-
-    console.log("[v0] SimpleSelect positioning:", {
-      rect: { top: rect.top, bottom: rect.bottom, left: rect.left, width: rect.width },
-      viewport: { width: viewportWidth, height: viewportHeight },
-      spaces: { below: spaceBelow, above: spaceAbove, right: spaceRight },
-      dropdownHeight,
-      dropdownWidth,
-    })
 
     let top = rect.bottom + 4
     let left = rect.left
 
     if (spaceBelow < dropdownHeight + 20 && spaceAbove > spaceBelow) {
       top = rect.top - dropdownHeight - 4
-      console.log("[v0] Positioning above trigger")
-    } else {
-      console.log("[v0] Positioning below trigger")
     }
 
     const minTop = 20
@@ -81,34 +69,27 @@ export function SimpleSelect({
 
     if (top < minTop) {
       top = minTop
-      console.log("[v0] Adjusted top to minTop:", minTop)
     } else if (top > maxTop) {
       top = maxTop
-      console.log("[v0] Adjusted top to maxTop:", maxTop)
     }
 
     const maxLeft = viewportWidth - dropdownWidth - 20
 
     if (left > maxLeft) {
       left = maxLeft
-      console.log("[v0] Adjusted left to maxLeft:", maxLeft)
     }
 
     if (left < 20) {
       left = 20
-      console.log("[v0] Adjusted left to min:", 20)
     }
 
-    console.log("[v0] Final position:", { top, left, width: dropdownWidth })
     setPosition({ top, left, width: dropdownWidth })
   }, [options.length])
 
   React.useEffect(() => {
     if (isOpen) {
-      console.log("[v0] Dropdown opened, calculating position")
       calculatePosition()
       const timeoutId = setTimeout(() => {
-        console.log("[v0] Recalculating position after render")
         calculatePosition()
       }, 10)
 
@@ -130,12 +111,10 @@ export function SimpleSelect({
     let timeoutId: NodeJS.Timeout | null = null
 
     const handleClickOutside = (e: MouseEvent) => {
-      console.log("[v0] Click outside detected")
       const target = e.target as HTMLElement
       const isOptionButton = target.closest("[data-simple-select-option]")
 
       if (isOptionButton) {
-        console.log("[v0] Click on option button, allowing it to handle")
         return
       }
 
@@ -145,18 +124,13 @@ export function SimpleSelect({
         dropdownRef.current &&
         !dropdownRef.current.contains(e.target as Node)
       ) {
-        console.log("[v0] Closing dropdown due to outside click")
         setIsOpen(false)
-      } else {
-        console.log("[v0] Click was inside trigger or dropdown, not closing")
       }
     }
 
     timeoutId = setTimeout(() => {
-      console.log("[v0] Attaching click-outside handler")
       document.addEventListener("mousedown", handleClickOutside)
       cleanupFn = () => {
-        console.log("[v0] Removing click-outside handler")
         document.removeEventListener("mousedown", handleClickOutside)
       }
     }, 100)
@@ -168,19 +142,15 @@ export function SimpleSelect({
   }, [isOpen])
 
   const handleSelect = (optionValue: string, e: React.MouseEvent) => {
-    console.log("[v0] handleSelect called with value:", optionValue)
-    console.log("[v0] Event details:", { type: e.type, target: e.target })
     e.stopPropagation()
     e.preventDefault()
     onValueChange(optionValue)
     setIsOpen(false)
-    console.log("[v0] Dropdown closed after selection")
   }
 
   const handleToggle = (e: React.MouseEvent) => {
     e.stopPropagation()
     e.preventDefault()
-    console.log("[v0] SimpleSelect toggle clicked, isOpen:", !isOpen)
     setIsOpen(!isOpen)
   }
 
@@ -226,13 +196,7 @@ export function SimpleSelect({
                   key={option.value}
                   type="button"
                   data-simple-select-option="true"
-                  onClick={(e) => {
-                    console.log("[v0] Option button clicked:", option.value)
-                    handleSelect(option.value, e)
-                  }}
-                  onMouseDown={(e) => {
-                    console.log("[v0] Option button mousedown:", option.value)
-                  }}
+                  onClick={(e) => handleSelect(option.value, e)}
                   className={cn(
                     "relative flex w-full cursor-pointer select-none items-center rounded-md px-2 py-1.5 text-sm outline-none transition-colors",
                     "hover:bg-neutral-900 hover:text-white focus:bg-neutral-900 focus:text-white",
