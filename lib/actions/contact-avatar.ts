@@ -9,7 +9,7 @@ export async function uploadContactAvatar(contactId: string, file: File, tenantI
 
     // Check if contact exists and belongs to tenant
     const { data: contact, error: fetchError } = await supabase
-      .from("contacts")
+      .from("contact")
       .select("id, avatar_path")
       .eq("id", contactId)
       .eq("tenant_id", tenantId)
@@ -36,7 +36,7 @@ export async function uploadContactAvatar(contactId: string, file: File, tenantI
 
     // Update contact with new avatar path
     const { error: updateError } = await supabase
-      .from("contacts")
+      .from("contact")
       .update({ avatar_path: blob.url })
       .eq("id", contactId)
       .eq("tenant_id", tenantId)
@@ -58,7 +58,7 @@ export async function deleteContactAvatar(contactId: string) {
 
     // Get contact with avatar
     const { data: contact, error: fetchError } = await supabase
-      .from("contacts")
+      .from("contact")
       .select("id, avatar_path, tenant_id")
       .eq("id", contactId)
       .single()
@@ -78,7 +78,7 @@ export async function deleteContactAvatar(contactId: string) {
 
     // Update contact to remove avatar path
     const { error: updateError } = await supabase
-      .from("contacts")
+      .from("contact")
       .update({ avatar_path: null })
       .eq("id", contactId)
       .eq("tenant_id", contact.tenant_id)
@@ -98,7 +98,7 @@ export async function getContactAvatarUrl(contactId: string) {
   try {
     const supabase = await createClient()
 
-    const { data: contact, error } = await supabase.from("contacts").select("avatar_path").eq("id", contactId).single()
+    const { data: contact, error } = await supabase.from("contact").select("avatar_path").eq("id", contactId).single()
 
     if (error || !contact) {
       return { success: false, error: "Contact not found" }

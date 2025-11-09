@@ -280,7 +280,9 @@ export function EditContactDialog({ open, onOpenChange, contact, onSuccess }: Ed
             <Label htmlFor="status_edit">Status</Label>
             <SimpleSelect
               value={form.watch("status")}
-              onValueChange={(value) => form.setValue("status", value as "active" | "archived")}
+              onValueChange={(value) => {
+                form.setValue("status", value as "active" | "archived")
+              }}
               options={statusOptions}
             />
           </div>

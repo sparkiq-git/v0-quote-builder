@@ -181,7 +181,7 @@ export function SimpleSelect({
           <div
             ref={dropdownRef}
             className={cn(
-              "fixed z-[100] rounded-md border bg-popover text-popover-foreground shadow-md outline-none animate-in fade-in-0 zoom-in-95",
+              "fixed z-[300] rounded-md border bg-popover text-popover-foreground shadow-md outline-none animate-in fade-in-0 zoom-in-95",
               className,
             )}
             style={{
