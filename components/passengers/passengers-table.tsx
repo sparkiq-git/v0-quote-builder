@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Mail, Phone, UserCircle, Building2 } from "lucide-react"
+import { Mail, Phone, UserCircle, Building2, MoreHorizontal, Pencil, Trash2 } from "lucide-react"
 import { SimpleDropdown } from "@/components/ui/simple-dropdown"
 import { EditPassengerDialog } from "./edit-passenger-dialog"
 import { PassengerHistoryDialog } from "./passenger-history-dialog"
@@ -99,7 +99,7 @@ export function PassengersTable({ passengers, onUpdate }: PassengersTableProps) 
               <TableHead>Contact Info</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Created</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead className="text-center">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -169,29 +169,25 @@ export function PassengersTable({ passengers, onUpdate }: PassengersTableProps) 
                       {new Date(passenger.created_at).toLocaleDateString()}
                     </span>
                   </TableCell>
-                  <TableCell className="text-right">
-                    <SimpleDropdown
-                      trigger="Actions"
-                      items={[
-                        {
-                          label: "View History",
-                          onClick: () => setViewingPassenger(passenger),
-                        },
-                        {
-                          label: "Edit",
-                          onClick: () => setEditingPassenger(passenger),
-                        },
-                        {
-                          label: passenger.status === "active" ? "Archive" : "Unarchive",
-                          onClick: () => handleArchive(passenger.id, passenger.status),
-                        },
-                        {
-                          label: "Delete",
-                          onClick: () => handleDelete(passenger.id),
-                          variant: "destructive",
-                        },
-                      ]}
-                    />
+                  <TableCell className="text-center">
+                    <div className="inline-flex justify-center">
+                      <SimpleDropdown
+                        trigger={<MoreHorizontal className="h-4 w-4" />}
+                        items={[
+                          {
+                            label: "Edit",
+                            icon: <Pencil className="h-4 w-4" />,
+                            onClick: () => setEditingPassenger(passenger),
+                          },
+                          {
+                            label: "Delete",
+                            icon: <Trash2 className="h-4 w-4" />,
+                            onClick: () => handleDelete(passenger.id),
+                            variant: "destructive",
+                          },
+                        ]}
+                      />
+                    </div>
                   </TableCell>
                 </TableRow>
               ))
