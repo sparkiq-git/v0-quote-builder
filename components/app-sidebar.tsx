@@ -27,6 +27,7 @@ import {
   ChevronDown,
   Users2,
   MapPin,
+  Contact,
 } from "lucide-react"
 import { useMockStore } from "@/lib/mock/store"
 import { cn } from "@/lib/utils"
@@ -70,6 +71,11 @@ const operationsNavigation = [
     title: "FBOs",
     href: "/operations/fbos",
     icon: Building2,
+  },
+  {
+    title: "Contacts",
+    href: "/operations/contacts",
+    icon: Contact,
   },
   {
     title: "Passengers",
