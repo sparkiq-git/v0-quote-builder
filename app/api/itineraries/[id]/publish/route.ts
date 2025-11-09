@@ -31,6 +31,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
         title,
         trip_summary,
         tenant_id,
+        latest_return,
         contact:contact_id (
           id,
           full_name,
@@ -135,6 +136,8 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
           metadata: {
             itinerary_id: id,
             title: itinerary.title || itinerary.trip_summary || "Itinerary",
+            expiration_date: itinerary.latest_return || null,
+            max_uses: 100,
           },
           created_by: user.id,
         }

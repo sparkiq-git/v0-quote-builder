@@ -208,10 +208,24 @@ Deno.serve(async (req)=>{
     const token = randomToken(32);
     const tokenHashB64 = await sha256b64url(token);
 
-    // Expiration (default 24h unless metadata.expiration_date is provided)
-    const expiresAt = metadata?.expiration_date 
-      ? new Date(metadata.expiration_date).toISOString() 
-      : new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString();
+    const isItineraryLink = action_type === "view_itinerary";
+    const defaultExpiryMs = isItineraryLink ? 1000 * 60 * 60 * 24 * 30 : 1000 * 60 * 60 * 24;
+    let expiresAt: string | null = null;
+
+    if (metadata?.expiration_date) {
+      const parsed = new Date(metadata.expiration_date);
+      if (!Number.isNaN(parsed.getTime()) && parsed.getTime() > Date.now()) {
+        expiresAt = parsed.toISOString();
+      }
+    }
+
+    if (!expiresAt) {
+      expiresAt = new Date(Date.now() + defaultExpiryMs).toISOString();
+    }
+
+    const maxUses = isItineraryLink
+      ? Math.max(Number(metadata?.max_uses) || 100, 2)
+      : 1;
 
     // ***** UPDATED: Fetch trip_summary from quote OR itinerary *****
     let tripSummary = null;
@@ -256,7 +270,7 @@ Deno.serve(async (req)=>{
         metadata,
         expires_at: expiresAt,
         status: "active",
-        max_uses: 1,
+        max_uses: maxUses,
         use_count: 0,
         created_by: created_by || "00000000-0000-0000-0000-000000000000"
       })

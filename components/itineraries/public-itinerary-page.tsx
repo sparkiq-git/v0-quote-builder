@@ -6,8 +6,9 @@ import type React from "react"
 
 import { TooltipContent } from "@/components/ui/tooltip"
 
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Image from "next/image"
+import { useSearchParams } from "next/navigation"
 import {
   Loader2,
   Calendar,
@@ -43,6 +44,12 @@ import { useDeviceDetection } from "@/hooks/use-device-detection"
 import { formatDate, formatDateTime, formatTimeAgo, formatAirportDisplay, formatAirportCode } from "@/lib/utils/format"
 import { cn } from "@/lib/utils"
 
+declare global {
+  interface Window {
+    L: any
+  }
+}
+
 interface ItineraryDetail {
   id: string
   origin: string | null
@@ -56,6 +63,10 @@ interface ItineraryDetail {
   pax_count: number | null
   notes: string | null
   seq: number
+  origin_lat?: number | null
+  origin_long?: number | null
+  destination_lat?: number | null
+  destination_long?: number | null
 }
 
 interface ItineraryPassenger {
@@ -311,6 +322,211 @@ function LegRow({ leg, index }: { leg: any; index: number }) {
   )
 }
 
+type RouteLegCoordinate = {
+  seq: number
+  origin: { lat: number; lng: number; label: string }
+  destination: { lat: number; lng: number; label: string }
+}
+
+function RoutePreviewMap({ details }: { details: ItineraryDetail[] }) {
+  const mapContainerRef = useRef<HTMLDivElement | null>(null)
+  const mapRef = useRef<any>(null)
+  const routeLayersRef = useRef<any[]>([])
+  const markerLayersRef = useRef<any[]>([])
+  const [mapReady, setMapReady] = useState(false)
+  const [mapError, setMapError] = useState<string | null>(null)
+
+  const legsWithCoords = useMemo<RouteLegCoordinate[]>(() => {
+    return details
+      .filter(
+        (leg) =>
+          typeof leg.origin_lat === "number" &&
+          typeof leg.origin_long === "number" &&
+          typeof leg.destination_lat === "number" &&
+          typeof leg.destination_long === "number",
+      )
+      .map((leg) => ({
+        seq: leg.seq,
+        origin: {
+          lat: leg.origin_lat as number,
+          lng: leg.origin_long as number,
+          label: leg.origin_code || leg.origin || "Origin",
+        },
+        destination: {
+          lat: leg.destination_lat as number,
+          lng: leg.destination_long as number,
+          label: leg.destination_code || leg.destination || "Destination",
+        },
+      }))
+  }, [details])
+
+  const ensureLeaflet = useCallback(() => {
+    if (typeof window === "undefined") {
+      return Promise.reject(new Error("Window is not available"))
+    }
+
+    if (window.L) {
+      return Promise.resolve()
+    }
+
+    return new Promise<void>((resolve, reject) => {
+      const existingScript = document.getElementById("leaflet-script")
+      if (existingScript) {
+        existingScript.addEventListener("load", () => resolve(), { once: true })
+        existingScript.addEventListener(
+          "error",
+          () => reject(new Error("Failed to load map library")),
+          { once: true },
+        )
+      } else {
+        const link = document.createElement("link")
+        link.id = "leaflet-css"
+        link.rel = "stylesheet"
+        link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        if (!document.getElementById("leaflet-css")) {
+          document.head.appendChild(link)
+        }
+
+        const script = document.createElement("script")
+        script.id = "leaflet-script"
+        script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        script.onload = () => resolve()
+        script.onerror = () => reject(new Error("Failed to load map library"))
+        document.body.appendChild(script)
+      }
+    })
+  }, [])
+
+  const initialiseMap = useCallback(() => {
+    if (!mapContainerRef.current || typeof window === "undefined") return
+
+    if (mapRef.current) {
+      mapRef.current.off()
+      mapRef.current.remove()
+      mapRef.current = null
+    }
+
+    mapRef.current = window.L.map(mapContainerRef.current, {
+      center: [legsWithCoords[0].origin.lat, legsWithCoords[0].origin.lng],
+      zoom: 4,
+      zoomControl: false,
+      attributionControl: false,
+    })
+
+    window.L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+      attribution: "© OpenStreetMap contributors © CARTO",
+      maxZoom: 18,
+      subdomains: "abcd",
+    }).addTo(mapRef.current)
+
+    setMapReady(true)
+  }, [legsWithCoords])
+
+  useEffect(() => {
+    if (legsWithCoords.length === 0) return
+
+    let cancelled = false
+
+    ensureLeaflet()
+      .then(() => {
+        if (cancelled) return
+        initialiseMap()
+      })
+      .catch((err) => {
+        console.error("Leaflet load error:", err)
+        if (!cancelled) setMapError("Unable to load the interactive route map right now.")
+      })
+
+    return () => {
+      cancelled = true
+      if (mapRef.current) {
+        mapRef.current.off()
+        mapRef.current.remove()
+        mapRef.current = null
+      }
+    }
+  }, [ensureLeaflet, initialiseMap, legsWithCoords])
+
+  useEffect(() => {
+    if (!mapRef.current || !mapReady) return
+
+    routeLayersRef.current.forEach((layer) => mapRef.current.removeLayer(layer))
+    markerLayersRef.current.forEach((marker) => mapRef.current.removeLayer(marker))
+    routeLayersRef.current = []
+    markerLayersRef.current = []
+
+    if (legsWithCoords.length === 0) return
+
+    const boundsPoints: [number, number][] = []
+
+    legsWithCoords.forEach((leg) => {
+      const originLatLng: [number, number] = [leg.origin.lat, leg.origin.lng]
+      const destLatLng: [number, number] = [leg.destination.lat, leg.destination.lng]
+      boundsPoints.push(originLatLng, destLatLng)
+
+      const routeLine = window.L.polyline([originLatLng, destLatLng], {
+        color: "#0f172a",
+        weight: 2,
+        opacity: 0.75,
+        dashArray: "6, 4",
+      }).addTo(mapRef.current)
+      routeLayersRef.current.push(routeLine)
+
+      const originMarker = window.L.circleMarker(originLatLng, {
+        radius: 4.5,
+        color: "#10b981",
+        fillColor: "#10b981",
+        fillOpacity: 1,
+        weight: 0,
+      })
+        .bindTooltip(`${leg.origin.label}`, { direction: "top" })
+        .addTo(mapRef.current)
+
+      const destMarker = window.L.circleMarker(destLatLng, {
+        radius: 4.5,
+        color: "#3b82f6",
+        fillColor: "#3b82f6",
+        fillOpacity: 1,
+        weight: 0,
+      })
+        .bindTooltip(`${leg.destination.label}`, { direction: "top" })
+        .addTo(mapRef.current)
+
+      markerLayersRef.current.push(originMarker, destMarker)
+    })
+
+    if (boundsPoints.length) {
+      const bounds = window.L.latLngBounds(boundsPoints)
+      mapRef.current.fitBounds(bounds, { padding: [24, 24], maxZoom: 7 })
+    }
+  }, [legsWithCoords, mapReady])
+
+  if (legsWithCoords.length === 0) {
+    return (
+      <div className="rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-6 text-center text-sm text-gray-600">
+        Flight path coordinates are not yet available. Map visualisation will appear once routing data is enriched.
+      </div>
+    )
+  }
+
+  return (
+    <div className="relative h-64 w-full overflow-hidden rounded-2xl border border-gray-200 bg-gray-100">
+      <div ref={mapContainerRef} className="absolute inset-0" />
+      {!mapReady && !mapError && (
+        <div className="absolute inset-0 flex items-center justify-center bg-white/70 backdrop-blur-sm text-sm text-gray-600">
+          Rendering route…
+        </div>
+      )}
+      {mapError && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-white/85 text-sm text-gray-700">
+          <p>{mapError}</p>
+          <p className="text-xs text-gray-500">Please refresh the page to try again.</p>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function PublicItineraryPage({ token, verifiedEmail }: PublicItineraryPageProps) {
   const { toast } = useToast()
   const deviceInfo = useDeviceDetection()
@@ -324,6 +540,9 @@ export default function PublicItineraryPage({ token, verifiedEmail }: PublicItin
   const [weatherError, setWeatherError] = useState<string | null>(null)
   const [tenantLogoUrl, setTenantLogoUrl] = useState<string | null>(null)
   const [heroIndex, setHeroIndex] = useState(0) // Added setHeroIndex
+  const searchParams = useSearchParams()
+  const verifiedEmailFromQuery = searchParams?.get("email") ?? undefined
+  const effectiveVerifiedEmail = verifiedEmail ?? verifiedEmailFromQuery ?? undefined
 
   useEffect(() => {
     const fetchItinerary = async () => {
@@ -420,14 +639,14 @@ export default function PublicItineraryPage({ token, verifiedEmail }: PublicItin
   }, [itinerary])
 
   const emailChip = useMemo(() => {
-    if (!verifiedEmail) return null
+    if (!effectiveVerifiedEmail) return null
     return (
       <div className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-medium border border-emerald-200 inline-flex items-center gap-2 shadow-sm">
         <CheckCircle2 className="h-3.5 w-3.5" />
-        Access verified for <span className="font-semibold">{verifiedEmail}</span>
+        Access verified for <span className="font-semibold">{effectiveVerifiedEmail}</span>
       </div>
     )
-  }, [verifiedEmail])
+  }, [effectiveVerifiedEmail])
 
   const galleryImages = useMemo(() => generateGallery(itinerary?.aircraft_tail_no), [itinerary?.aircraft_tail_no])
 
@@ -523,10 +742,10 @@ export default function PublicItineraryPage({ token, verifiedEmail }: PublicItin
 
                 {/* Title and Status */}
                 <div className="space-y-2">
-                  {verifiedEmail && (
+                  {effectiveVerifiedEmail && (
                     <div className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-medium border border-emerald-200 inline-flex items-center gap-2 shadow-sm mb-2">
                       <CheckCircle2 className="h-3.5 w-3.5" />
-                      {verifiedEmail}
+                      {effectiveVerifiedEmail}
                     </div>
                   )}
                   <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-gray-900">
@@ -590,6 +809,22 @@ export default function PublicItineraryPage({ token, verifiedEmail }: PublicItin
                     <LegRow key={leg.id} leg={leg} index={index} />
                   ))}
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Flight Path Map */}
+            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                  <Plane className="h-5 w-5 text-gray-600" />
+                  Flight Path
+                </CardTitle>
+                <CardDescription className="text-gray-600">
+                  Visualise the legs of your journey on an interactive map.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <RoutePreviewMap details={itinerary.details} />
               </CardContent>
             </Card>
 
@@ -833,10 +1068,10 @@ export default function PublicItineraryPage({ token, verifiedEmail }: PublicItin
                   </div>
 
                   <div className="space-y-4">
-                    {verifiedEmail && (
+                    {effectiveVerifiedEmail && (
                       <div className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-medium border border-emerald-200 inline-flex items-center gap-2 shadow-sm">
                         <CheckCircle2 className="h-3.5 w-3.5" />
-                        {verifiedEmail}
+                        {effectiveVerifiedEmail}
                       </div>
                     )}
                     <h1 className="text-4xl font-semibold tracking-tight text-gray-900">
@@ -886,6 +1121,19 @@ export default function PublicItineraryPage({ token, verifiedEmail }: PublicItin
                       <LegRow key={leg.id} leg={leg} index={index} />
                     ))}
                   </div>
+                </CardContent>
+              </Card>
+
+              {/* Flight Path Map */}
+              <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+                <CardHeader className="border-b border-gray-200 bg-gray-50">
+                  <CardTitle className="text-lg font-semibold text-gray-900">Flight Path</CardTitle>
+                  <CardDescription className="text-gray-600">
+                    Visualise each leg of the itinerary on an interactive world map.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pt-6">
+                  <RoutePreviewMap details={itinerary.details} />
                 </CardContent>
               </Card>
 
