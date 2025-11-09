@@ -223,9 +223,13 @@ Deno.serve(async (req)=>{
       expiresAt = new Date(Date.now() + defaultExpiryMs).toISOString();
     }
 
-    const maxUses = isItineraryLink
-      ? Math.max(Number(metadata?.max_uses) || 100, 2)
-      : 1;
+    const requestedMaxUses = Number(metadata?.max_uses);
+    let maxUses = isItineraryLink ? (Number.isFinite(requestedMaxUses) && requestedMaxUses > 0 ? requestedMaxUses : 10) : 1;
+    if (isItineraryLink) {
+      maxUses = Math.max(2, Math.min(maxUses, 10));
+    } else {
+      maxUses = 1;
+    }
 
     // ***** UPDATED: Fetch trip_summary from quote OR itinerary *****
     let tripSummary = null;

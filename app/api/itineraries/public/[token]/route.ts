@@ -59,6 +59,7 @@ export async function GET(request: NextRequest, { params }: { params: { token: s
       .select(
         `
         id,
+        tenant_id,
         title,
         trip_summary,
         trip_type,
@@ -111,7 +112,8 @@ export async function GET(request: NextRequest, { params }: { params: { token: s
           full_name,
           email,
           phone,
-          company
+          company,
+          avatar_url
         )
       `
       )
@@ -130,6 +132,81 @@ export async function GET(request: NextRequest, { params }: { params: { token: s
 
     if (crewError) {
       console.error("Error fetching crew:", crewError)
+    }
+
+    let aircraft: any = null
+    if (itinerary.aircraft_tail_no) {
+      const { data: aircraftRow, error: aircraftError } = await supabase
+        .from("aircraft")
+        .select(
+          `
+          id,
+          tail_number,
+          aircraft_model:aircraft_model!model_id (
+            id,
+            name,
+            aircraft_manufacturer:aircraft_manufacturer!manufacturer_id (
+              id,
+              name
+            )
+          ),
+          operator:operator!operator_id (
+            id,
+            name
+          )
+        `
+        )
+        .eq("tenant_id", itinerary.tenant_id)
+        .eq("tail_number", itinerary.aircraft_tail_no)
+        .maybeSingle()
+
+      if (aircraftError) {
+        console.error("Error fetching aircraft:", aircraftError)
+      }
+
+      if (aircraftRow) {
+        aircraft = {
+          id: aircraftRow.id,
+          tail_number: aircraftRow.tail_number,
+          manufacturer: aircraftRow.aircraft_model?.aircraft_manufacturer?.name ?? null,
+          model: aircraftRow.aircraft_model?.name ?? null,
+          operator: aircraftRow.operator?.name ?? null,
+          images: [] as any[],
+        }
+
+        const { data: images, error: imagesError } = await supabase
+          .from("aircraft_image")
+          .select("id, public_url, storage_path, caption, is_primary, display_order, created_at")
+          .eq("tenant_id", itinerary.tenant_id)
+          .eq("aircraft_id", aircraftRow.id)
+          .order("is_primary", { ascending: false })
+          .order("display_order", { ascending: true })
+          .order("created_at", { ascending: false })
+
+        if (imagesError) {
+          console.error("Error fetching aircraft images:", imagesError)
+        } else if (images) {
+          const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ""
+          aircraft.images = images
+            .map((img) => {
+              const url =
+                img.public_url ||
+                (supabaseUrl
+                  ? `${supabaseUrl}/storage/v1/object/public/aircraft-media/${img.storage_path}`
+                  : null)
+              return url
+                ? {
+                    id: img.id,
+                    url,
+                    caption: img.caption,
+                    is_primary: !!img.is_primary,
+                    display_order: img.display_order ?? 0,
+                  }
+                : null
+            })
+            .filter(Boolean)
+        }
+      }
     }
 
     // Update link use count (track views)
@@ -161,6 +238,7 @@ export async function GET(request: NextRequest, { params }: { params: { token: s
             notes: member.notes,
             confirmed: member.confirmed,
           })) || [],
+        aircraft,
       },
     })
   } catch (error: any) {

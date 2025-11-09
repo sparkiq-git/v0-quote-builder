@@ -24,6 +24,8 @@ import {
   FileText,
   Sun,
   Sparkles,
+  Hotel,
+  ExternalLink,
 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -78,6 +80,7 @@ interface ItineraryPassenger {
     email: string | null
     phone: string | null
     company: string | null
+    avatar_url?: string | null
   } | null
 }
 
@@ -91,6 +94,7 @@ interface ItineraryCrewMember {
 
 interface Itinerary {
   id: string
+  tenant_id?: string
   title: string | null
   trip_summary: string | null
   trip_type: string | null
@@ -112,6 +116,23 @@ interface Itinerary {
     email: string
     company: string | null
   }
+}
+
+interface AircraftGalleryImage {
+  id: string
+  url: string
+  caption: string | null
+  is_primary: boolean
+  display_order: number
+}
+
+interface ItineraryAircraft {
+  id: string
+  tail_number: string | null
+  manufacturer: string | null
+  model: string | null
+  operator: string | null
+  images: AircraftGalleryImage[]
 }
 
 interface PublicItineraryPageProps {
@@ -140,26 +161,51 @@ interface WeatherSummary {
   }
 }
 
+type GalleryImage = {
+  url: string
+  caption?: string | null
+  isPrimary?: boolean
+}
+
 const FALLBACK_GALLERY = [
   "https://images.unsplash.com/photo-1514996937319-344454492b37?auto=format&fit=crop&w=1600&q=80",
   "https://images.unsplash.com/photo-1526506118085-60ce8714f8c5?auto=format&fit=crop&w=1600&q=80",
   "https://images.unsplash.com/photo-1512436991641-6745cdb1723f?auto=format&fit=crop&w=1600&q=80",
-  "https://images.unsplash.com/photo-1464037866556-68121c9d1c72e?auto=format&fit=crop&w=1600&q=80",
+  "https://images.unsplash.com/photo-1464037866556-6812c9d1c72e?auto=format&fit=crop&w=1600&q=80",
   "https://images.unsplash.com/photo-1500375592092-40eb2168fd21?auto=format&fit=crop&w=1600&q=80",
 ]
 
 const FALLBACK_DESTINATION_IMAGERY = [
-  "https://images.unsplash.com/photo-1455906876003-298dd855662d?auto=format&fit=crop&w=1600&q=80",
+  "https://images.unsplash.com/photo-1455906876003-298dd8c44ea5?auto=format&fit=crop&w=1600&q=80",
   "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1600&q=80",
   "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?auto=format&fit=crop&w=1600&q=80",
 ]
 
-function generateGallery(tailNumber?: string | null) {
-  if (!tailNumber) return FALLBACK_GALLERY
+const BOOKING_AID = process.env.NEXT_PUBLIC_BOOKING_REFERRAL_AID
+const BOOKING_URL = BOOKING_AID
+  ? `https://www.booking.com/index.html?aid=${BOOKING_AID}`
+  : "https://www.booking.com/"
+
+function getPassengerAvatarUrl(passenger?: ItineraryPassenger["passenger"] | null): string | null {
+  if (!passenger) return null
+  if (passenger.avatar_url) return passenger.avatar_url
+  if (passenger.full_name) {
+    return `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(passenger.full_name)}`
+  }
+  if (passenger.email) {
+    return `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(passenger.email)}`
+  }
+  return null
+}
+
+function generateGallery(tailNumber?: string | null): GalleryImage[] {
+  if (!tailNumber) {
+    return FALLBACK_GALLERY.map((url) => ({ url }))
+  }
   const hash = tailNumber.split("").reduce((acc, char, index) => acc + char.charCodeAt(0) * (index + 7), 0)
-  const images: string[] = []
+  const images: GalleryImage[] = []
   for (let i = 0; i < FALLBACK_GALLERY.length; i++) {
-    images.push(FALLBACK_GALLERY[(hash + i) % FALLBACK_GALLERY.length])
+    images.push({ url: FALLBACK_GALLERY[(hash + i) % FALLBACK_GALLERY.length] })
   }
   return images
 }
@@ -527,12 +573,42 @@ function RoutePreviewMap({ details }: { details: ItineraryDetail[] }) {
   )
 }
 
+function BookingReferralCard({ className }: { className?: string }) {
+  return (
+    <Card className={cn("border border-emerald-200/60 bg-emerald-50/70 backdrop-blur-md shadow-xl", className)}>
+      <CardContent className="flex flex-col gap-4 p-5">
+        <div className="flex items-center gap-3 text-emerald-900">
+          <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100">
+            <Hotel className="h-5 w-5" />
+          </span>
+          <div>
+            <p className="text-sm font-semibold">Need a hotel?</p>
+            <p className="text-xs text-emerald-800/80">
+              Discover curated stays, late check-ins, and loyalty perks via our Booking.com partner link.
+            </p>
+          </div>
+        </div>
+        <Button
+          asChild
+          className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
+        >
+          <a href={BOOKING_URL} target="_blank" rel="noopener noreferrer">
+            Plan stay with Booking.com
+            <ExternalLink className="ml-2 h-4 w-4" />
+          </a>
+        </Button>
+      </CardContent>
+    </Card>
+  )
+}
+
 export default function PublicItineraryPage({ token, verifiedEmail }: PublicItineraryPageProps) {
   const { toast } = useToast()
   const deviceInfo = useDeviceDetection()
   const [itinerary, setItinerary] = useState<Itinerary | null>(null)
   const [passengers, setPassengers] = useState<ItineraryPassenger[]>([])
   const [crew, setCrew] = useState<ItineraryCrewMember[]>([])
+  const [aircraft, setAircraft] = useState<ItineraryAircraft | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [weather, setWeather] = useState<Record<string, WeatherSummary>>({})
@@ -549,6 +625,7 @@ export default function PublicItineraryPage({ token, verifiedEmail }: PublicItin
       if (!token) return
 
       setLoading(true)
+      setAircraft(null)
       try {
         const response = await fetch(`/api/itineraries/public/${token}`)
         if (!response.ok) {
@@ -560,6 +637,7 @@ export default function PublicItineraryPage({ token, verifiedEmail }: PublicItin
         setItinerary(data.itinerary)
         setPassengers(data.passengers || [])
         setCrew(data.crew || [])
+        setAircraft(data.aircraft || null)
       } catch (err: any) {
         console.error("Error fetching public itinerary:", err)
         setError(err.message || "Failed to load itinerary")
@@ -613,15 +691,6 @@ export default function PublicItineraryPage({ token, verifiedEmail }: PublicItin
   }, [itinerary])
 
   useEffect(() => {
-    const gallery = generateGallery(itinerary?.aircraft_tail_no)
-    if (gallery.length <= 1) return
-    const timer = setInterval(() => {
-      setHeroIndex((prev) => (prev + 1) % gallery.length)
-    }, 7000)
-    return () => clearInterval(timer)
-  }, [itinerary?.aircraft_tail_no])
-
-  useEffect(() => {
     const loadLogo = async () => {
       try {
         if (!itinerary?.id) return
@@ -648,7 +717,35 @@ export default function PublicItineraryPage({ token, verifiedEmail }: PublicItin
     )
   }, [effectiveVerifiedEmail])
 
-  const galleryImages = useMemo(() => generateGallery(itinerary?.aircraft_tail_no), [itinerary?.aircraft_tail_no])
+  const galleryImages = useMemo<GalleryImage[]>(() => {
+    if (aircraft?.images?.length) {
+      const seen = new Set<string>()
+      const mapped = aircraft.images
+        .map((img) => {
+          if (!img.url || seen.has(img.url)) return null
+          seen.add(img.url)
+          return {
+            url: img.url,
+            caption: img.caption ?? null,
+            isPrimary: img.is_primary,
+          }
+        })
+        .filter(Boolean) as GalleryImage[]
+      if (mapped.length) {
+        return mapped
+      }
+    }
+    return generateGallery(itinerary?.aircraft_tail_no)
+  }, [aircraft, itinerary?.aircraft_tail_no])
+
+  useEffect(() => {
+    setHeroIndex((prev) => (galleryImages.length && prev < galleryImages.length ? prev : 0))
+    if (galleryImages.length <= 1) return
+    const timer = setInterval(() => {
+      setHeroIndex((prev) => (prev + 1) % galleryImages.length)
+    }, 7000)
+    return () => clearInterval(timer)
+  }, [galleryImages])
 
   const tripStart = itinerary?.details?.[0]?.depart_dt || itinerary?.earliest_departure
   const tripEnd = itinerary?.details?.[itinerary.details.length - 1]?.arrive_dt || itinerary?.latest_return
@@ -732,6 +829,7 @@ export default function PublicItineraryPage({ token, verifiedEmail }: PublicItin
         {/* MOBILE & TABLET VIEW */}
         <div className={deviceInfo.type === "mobile" || deviceInfo.type === "tablet" ? "block" : "hidden"}>
           <div className="space-y-3 sm:space-y-4">
+            <BookingReferralCard />
             {/* Header Card */}
             <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
               <CardContent className="pt-6">
@@ -800,6 +898,9 @@ export default function PublicItineraryPage({ token, verifiedEmail }: PublicItin
               </CardContent>
             </Card>
 
+            <GallerySection galleryImages={galleryImages} destinationImagery={destinationImagery} />
+            <AircraftProfile aircraft={aircraft} />
+
             {/* Flight Timeline */}
             <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
               <CardContent className="pt-6">
@@ -809,22 +910,6 @@ export default function PublicItineraryPage({ token, verifiedEmail }: PublicItin
                     <LegRow key={leg.id} leg={leg} index={index} />
                   ))}
                 </div>
-              </CardContent>
-            </Card>
-
-            {/* Flight Path Map */}
-            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                  <Plane className="h-5 w-5 text-gray-600" />
-                  Flight Path
-                </CardTitle>
-                <CardDescription className="text-gray-600">
-                  Visualise the legs of your journey on an interactive map.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <RoutePreviewMap details={itinerary.details} />
               </CardContent>
             </Card>
 
@@ -855,6 +940,7 @@ export default function PublicItineraryPage({ token, verifiedEmail }: PublicItin
                             .map((n) => n[0])
                             .join("")
                             .toUpperCase() || "G"
+                        const avatarSrc = getPassengerAvatarUrl(passenger)
 
                         return (
                           <Tooltip key={assignment.id} delayDuration={150}>
@@ -862,10 +948,7 @@ export default function PublicItineraryPage({ token, verifiedEmail }: PublicItin
                               <div className="group flex flex-col items-center gap-2">
                                 <div className="relative">
                                   <Avatar className="h-16 w-16 border-2 border-gray-300 transition duration-300 group-hover:-translate-y-1 group-hover:border-gray-600 group-hover:shadow-xl">
-                                    <AvatarImage
-                                      src={`/.jpg?key=zwd9b&key=rpfta&key=07jpd&height=64&width=64&query=${encodeURIComponent(name)}`}
-                                      alt={name}
-                                    />
+                                    {avatarSrc && <AvatarImage src={avatarSrc} alt={name} />}
                                     <AvatarFallback className="bg-gray-100 text-gray-700 text-lg font-semibold">
                                       {initials}
                                     </AvatarFallback>
@@ -877,9 +960,7 @@ export default function PublicItineraryPage({ token, verifiedEmail }: PublicItin
                             <TooltipContent className="max-w-xs border border-gray-200 bg-white/95 backdrop-blur-xl text-gray-900 shadow-xl">
                               <div className="space-y-2">
                                 <p className="text-sm font-semibold">{name}</p>
-                                {passenger?.email && (
-                                  <p className="text-xs text-gray-600 break-all">{passenger.email}</p>
-                                )}
+                                {passenger?.email && <p className="text-xs text-gray-600 break-all">{passenger.email}</p>}
                                 {passenger?.phone && <p className="text-xs text-gray-500">{passenger.phone}</p>}
                                 {passenger?.company && (
                                   <Badge className="bg-gray-100 text-gray-700 border border-gray-300">
@@ -894,6 +975,22 @@ export default function PublicItineraryPage({ token, verifiedEmail }: PublicItin
                     </div>
                   </TooltipProvider>
                 )}
+              </CardContent>
+            </Card>
+
+            {/* Flight Path Map */}
+            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                  <Plane className="h-5 w-5 text-gray-600" />
+                  Flight Path
+                </CardTitle>
+                <CardDescription className="text-gray-600">
+                  Visualise the legs of your journey on an interactive map.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <RoutePreviewMap details={itinerary.details} />
               </CardContent>
             </Card>
 
@@ -1060,6 +1157,9 @@ export default function PublicItineraryPage({ token, verifiedEmail }: PublicItin
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Left Column - Main Info */}
             <div className="lg:col-span-2 space-y-6">
+              <div className="sticky top-6 z-30">
+                <BookingReferralCard />
+              </div>
               {/* Header */}
               <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
                 <CardContent className="pt-8">
@@ -1109,6 +1209,9 @@ export default function PublicItineraryPage({ token, verifiedEmail }: PublicItin
                 </CardContent>
               </Card>
 
+              <GallerySection galleryImages={galleryImages} destinationImagery={destinationImagery} />
+              <AircraftProfile aircraft={aircraft} />
+
               {/* Flight Timeline */}
               <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
                 <CardHeader className="border-b border-gray-200 bg-gray-50">
@@ -1121,19 +1224,6 @@ export default function PublicItineraryPage({ token, verifiedEmail }: PublicItin
                       <LegRow key={leg.id} leg={leg} index={index} />
                     ))}
                   </div>
-                </CardContent>
-              </Card>
-
-              {/* Flight Path Map */}
-              <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-                <CardHeader className="border-b border-gray-200 bg-gray-50">
-                  <CardTitle className="text-lg font-semibold text-gray-900">Flight Path</CardTitle>
-                  <CardDescription className="text-gray-600">
-                    Visualise each leg of the itinerary on an interactive world map.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="pt-6">
-                  <RoutePreviewMap details={itinerary.details} />
                 </CardContent>
               </Card>
 
@@ -1158,12 +1248,13 @@ export default function PublicItineraryPage({ token, verifiedEmail }: PublicItin
                         {passengers.map((assignment) => {
                           const passenger = assignment.passenger
                           const name = passenger?.full_name || "Guest"
-                          const initials =
-                            name
-                              .split(" ")
-                              .map((n) => n[0])
-                              .join("")
-                              .toUpperCase() || "G"
+                        const initials =
+                          name
+                            .split(" ")
+                            .map((n) => n[0])
+                            .join("")
+                            .toUpperCase() || "G"
+                        const avatarSrc = getPassengerAvatarUrl(passenger)
 
                           return (
                             <Tooltip key={assignment.id} delayDuration={150}>
@@ -1171,13 +1262,10 @@ export default function PublicItineraryPage({ token, verifiedEmail }: PublicItin
                                 <div className="group flex flex-col items-center gap-2">
                                   <div className="relative">
                                     <Avatar className="h-20 w-20 border-2 border-gray-300 transition duration-300 group-hover:-translate-y-1 group-hover:border-gray-600 group-hover:shadow-xl">
-                                      <AvatarImage
-                                        src={`/.jpg?key=go3q0&key=0y51d&key=9b2na&height=80&width=80&query=${encodeURIComponent(name)}`}
-                                        alt={name}
-                                      />
-                                      <AvatarFallback className="bg-gray-100 text-gray-700 text-xl font-semibold">
-                                        {initials}
-                                      </AvatarFallback>
+                                    {avatarSrc && <AvatarImage src={avatarSrc} alt={name} />}
+                                    <AvatarFallback className="bg-gray-100 text-gray-700 text-xl font-semibold">
+                                      {initials}
+                                    </AvatarFallback>
                                     </Avatar>
                                   </div>
                                   <span className="text-sm font-medium text-gray-700">{name.split(" ")[0]}</span>
@@ -1203,6 +1291,19 @@ export default function PublicItineraryPage({ token, verifiedEmail }: PublicItin
                       </div>
                     </TooltipProvider>
                   )}
+                </CardContent>
+              </Card>
+
+              {/* Flight Path Map */}
+              <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+                <CardHeader className="border-b border-gray-200 bg-gray-50">
+                  <CardTitle className="text-lg font-semibold text-gray-900">Flight Path</CardTitle>
+                  <CardDescription className="text-gray-600">
+                    Visualise each leg of the itinerary on an interactive world map.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pt-6">
+                  <RoutePreviewMap details={itinerary.details} />
                 </CardContent>
               </Card>
 
@@ -1378,7 +1479,7 @@ function HeroSection({
   emailChip,
 }: {
   itinerary: Itinerary
-  galleryImages: string[]
+  galleryImages: GalleryImage[]
   heroIndex: number
   emailChip: React.ReactNode
 }) {
@@ -1387,7 +1488,7 @@ function HeroSection({
       <div
         className="absolute inset-0 opacity-70 transition-opacity duration-700"
         style={{
-          backgroundImage: `url(${galleryImages[heroIndex]})`,
+          backgroundImage: `url(${galleryImages[heroIndex]?.url || ""})`,
           backgroundSize: "cover",
           backgroundPosition: "center",
         }}
@@ -1444,6 +1545,21 @@ function HeroSection({
             )}
             {itinerary.aircraft_tail_no && (
               <HeroMetric icon={Sparkles} label="Assigned Tail" value={itinerary.aircraft_tail_no} subtle />
+            )}
+            {aircraft?.model && (
+              <HeroMetric
+                icon={Info}
+                label="Aircraft"
+                value={
+                  aircraft.manufacturer
+                    ? `${aircraft.manufacturer} ${aircraft.model}`
+                    : aircraft.model ?? ""
+                }
+                subtle
+              />
+            )}
+            {aircraft?.operator && (
+              <HeroMetric icon={Hotel} label="Operator" value={aircraft.operator} subtle />
             )}
           </div>
         </div>
@@ -1550,9 +1666,11 @@ function GallerySection({
   galleryImages,
   destinationImagery,
 }: {
-  galleryImages: string[]
+  galleryImages: GalleryImage[]
   destinationImagery: string[]
 }) {
+  if (!galleryImages.length) return null
+
   return (
     <section className="space-y-6">
       <div className="flex items-center justify-between">
@@ -1570,8 +1688,8 @@ function GallerySection({
             <Carousel images={galleryImages} />
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
-            {galleryImages.slice(1, 3).map((img, index) => (
-              <DrapedImage key={img} src={img} className={index === 0 ? "-rotate-1" : "rotate-1"} />
+            {galleryImages.slice(1, 3).map((image, index) => (
+              <DrapedImage key={`${image.url}-${index}`} image={image} className={index === 0 ? "-rotate-1" : "rotate-1"} />
             ))}
           </div>
         </div>
@@ -1585,7 +1703,7 @@ function GallerySection({
   )
 }
 
-function Carousel({ images }: { images: string[] }) {
+function Carousel({ images }: { images: GalleryImage[] }) {
   const [active, setActive] = useState(0)
 
   useEffect(() => {
@@ -1600,21 +1718,26 @@ function Carousel({ images }: { images: string[] }) {
     <div className="relative h-full w-full">
       {images.map((image, index) => (
         <div
-          key={`${image}-${index}`}
+          key={`${image.url}-${index}`}
           className={cn(
             "absolute inset-0 transition-opacity duration-700 ease-out",
             index === active ? "opacity-100" : "opacity-0",
           )}
         >
           <Image
-            src={image || "/placeholder.svg"}
-            alt="Aircraft inspiration"
+            src={image.url || "/placeholder.svg"}
+            alt={image.caption || "Aircraft inspiration"}
             fill
             className="object-cover"
             priority={index === 0}
             sizes="(max-width: 1024px) 100vw, 66vw"
           />
           <div className="absolute inset-0 bg-gradient-to-tr from-slate-950/50 via-slate-950/20 to-transparent" />
+          {image.caption && (
+            <div className="absolute bottom-6 left-6 right-6 rounded-xl bg-black/45 px-4 py-3 text-sm text-white backdrop-blur-sm shadow-lg">
+              {image.caption}
+            </div>
+          )}
         </div>
       ))}
       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
@@ -1634,7 +1757,7 @@ function Carousel({ images }: { images: string[] }) {
   )
 }
 
-function DrapedImage({ src, className }: { src: string; className?: string }) {
+function DrapedImage({ image, className }: { image: GalleryImage; className?: string }) {
   return (
     <div
       className={cn(
@@ -1643,13 +1766,18 @@ function DrapedImage({ src, className }: { src: string; className?: string }) {
       )}
     >
       <Image
-        src={src || "/placeholder.svg"}
-        alt="Aircraft detail"
+        src={image.url || "/placeholder.svg"}
+        alt={image.caption || "Aircraft detail"}
         fill
         className="object-cover"
         sizes="(max-width: 640px) 100vw, 50vw"
       />
       <div className="absolute inset-0 bg-gradient-to-tr from-black/30 via-transparent to-black/10" />
+      {image.caption && (
+        <div className="absolute bottom-3 left-3 right-3 rounded-lg bg-black/50 px-3 py-2 text-xs text-white backdrop-blur-sm">
+          {image.caption}
+        </div>
+      )}
     </div>
   )
 }
@@ -1675,6 +1803,43 @@ function DestinationCard({ src, featured }: { src: string; featured?: boolean })
         <p className="text-sm font-medium text-white">Curated Experience</p>
       </div>
     </div>
+  )
+}
+
+function AircraftProfile({ aircraft }: { aircraft: ItineraryAircraft | null }) {
+  if (!aircraft) return null
+  if (!aircraft.model && !aircraft.manufacturer && !aircraft.operator && !aircraft.tail_number) return null
+
+  const infoRows = [
+    aircraft.manufacturer && { label: "Manufacturer", value: aircraft.manufacturer },
+    aircraft.model && { label: "Model", value: aircraft.model },
+    aircraft.operator && { label: "Operator", value: aircraft.operator },
+    aircraft.tail_number && { label: "Tail Number", value: aircraft.tail_number },
+  ].filter(Boolean) as { label: string; value: string }[]
+
+  return (
+    <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+          <Plane className="h-5 w-5 text-gray-600" />
+          Aircraft Profile
+        </CardTitle>
+        <CardDescription className="text-gray-600">
+          A snapshot of the aircraft curated for this journey.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {infoRows.map(({ label, value }) => (
+          <div
+            key={label}
+            className="flex items-center justify-between rounded-xl border border-gray-200 bg-gray-50 px-4 py-3"
+          >
+            <span className="text-xs uppercase tracking-[0.35em] text-gray-500">{label}</span>
+            <span className="text-sm font-medium text-gray-900">{value}</span>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
   )
 }
 
@@ -1725,6 +1890,7 @@ function PassengerManifest({ passengers }: { passengers: ItineraryPassenger[] })
                     .map((n) => n[0])
                     .join("")
                     .toUpperCase() || "G"
+                const avatarSrc = getPassengerAvatarUrl(passenger)
 
                 return (
                   <Tooltip key={assignment.id} delayDuration={150}>
@@ -1732,6 +1898,7 @@ function PassengerManifest({ passengers }: { passengers: ItineraryPassenger[] })
                       <div className="group flex flex-col items-center gap-2">
                         <div className="relative">
                           <Avatar className="h-16 w-16 border-2 border-emerald-400/40 transition duration-300 group-hover:-translate-y-1 group-hover:border-emerald-300 group-hover:shadow-[0_25px_45px_rgba(16,185,129,0.25)]">
+                            {avatarSrc && <AvatarImage src={avatarSrc} alt={name} />}
                             <AvatarFallback className="bg-emerald-500/10 text-emerald-200 text-lg font-semibold">
                               {initials}
                             </AvatarFallback>
