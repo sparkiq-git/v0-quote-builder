@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Mail, Phone, UserCircle, Building2 } from "lucide-react"
 import { SimpleDropdown } from "@/components/ui/simple-dropdown"
 import { EditPassengerDialog } from "./edit-passenger-dialog"
@@ -113,17 +114,15 @@ export function PassengersTable({ passengers, onUpdate }: PassengersTableProps) 
                 <TableRow key={passenger.id}>
                   <TableCell>
                     <div className="flex items-center gap-3">
-                      {passenger.avatar_path ? (
-                        <img
-                          src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/avatars/${passenger.avatar_path}`}
+                      <Avatar className="w-8 h-8">
+                        <AvatarImage
+                          src={passenger.avatar_path ? `/api/avatar/passenger/${passenger.id}` : undefined}
                           alt={passenger.full_name}
-                          className="w-8 h-8 rounded-full object-cover"
                         />
-                      ) : (
-                        <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
+                        <AvatarFallback>
                           <UserCircle className="h-5 w-5 text-muted-foreground" />
-                        </div>
-                      )}
+                        </AvatarFallback>
+                      </Avatar>
                       <div>
                         <div className="font-medium">{passenger.full_name}</div>
                         <div className="text-sm text-muted-foreground">{passenger.email}</div>

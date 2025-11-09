@@ -94,6 +94,25 @@ export async function deleteContactAvatar(contactId: string) {
   }
 }
 
+function getAbsoluteAvatarUrl(avatarPath: string): string {
+  console.log("[v0] Converting avatar path to absolute URL:", avatarPath)
+
+  // If already an absolute URL (Vercel Blob or full HTTP URL), return as-is
+  if (avatarPath.startsWith("http://") || avatarPath.startsWith("https://")) {
+    console.log("[v0] Already absolute URL, returning as-is")
+    return avatarPath
+  }
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  if (!supabaseUrl) {
+    throw new Error("NEXT_PUBLIC_SUPABASE_URL is not defined")
+  }
+
+  const fullUrl = `${supabaseUrl}/storage/v1/object/public/avatar/${avatarPath}`
+  console.log("[v0] Constructed Supabase Storage URL:", fullUrl)
+  return fullUrl
+}
+
 export async function getContactAvatarUrl(contactId: string) {
   try {
     const supabase = await createClient()
@@ -108,7 +127,9 @@ export async function getContactAvatarUrl(contactId: string) {
       return { success: false, error: "No avatar found" }
     }
 
-    return { success: true, url: contact.avatar_path }
+    const absoluteUrl = getAbsoluteAvatarUrl(contact.avatar_path)
+
+    return { success: true, url: absoluteUrl }
   } catch (error: any) {
     console.error("Error fetching contact avatar URL:", error)
     return { success: false, error: error.message }
@@ -117,13 +138,16 @@ export async function getContactAvatarUrl(contactId: string) {
 
 export async function getPassengerAvatarUrl(passengerId: string) {
   try {
+    console.log("[v0] Fetching passenger avatar for ID:", passengerId)
     const supabase = await createClient()
 
     const { data: passenger, error } = await supabase
-      .from("passengers")
+      .from("contact_passenger")
       .select("avatar_path")
       .eq("id", passengerId)
       .single()
+
+    console.log("[v0] Passenger avatar query result:", { passenger, error })
 
     if (error || !passenger) {
       return { success: false, error: "Passenger not found" }
@@ -133,9 +157,11 @@ export async function getPassengerAvatarUrl(passengerId: string) {
       return { success: false, error: "No avatar found" }
     }
 
-    return { success: true, url: passenger.avatar_path }
+    const absoluteUrl = getAbsoluteAvatarUrl(passenger.avatar_path)
+
+    return { success: true, url: absoluteUrl }
   } catch (error: any) {
-    console.error("Error fetching passenger avatar URL:", error)
+    console.error("[v0] Error fetching passenger avatar URL:", error)
     return { success: false, error: error.message }
   }
 }
