@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { SimpleSelect } from "@/components/ui/simple-select"
+import { SimpleDateTimePicker } from "@/components/ui/simple-date-time-picker"
 import { Camera, X } from "lucide-react"
 import { uploadPassengerAvatar, deletePassengerAvatar } from "@/lib/actions/passenger-avatar"
 
@@ -155,13 +156,13 @@ export function EditPassengerDialog({ passenger, open, onOpenChange, onSuccess }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto px-8">
         <DialogHeader>
           <DialogTitle>Edit Passenger</DialogTitle>
           <DialogDescription>Update passenger information</DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-8">
           {/* Avatar Upload */}
           <div className="flex items-center gap-4">
             <div className="relative">
@@ -243,11 +244,13 @@ export function EditPassengerDialog({ passenger, open, onOpenChange, onSuccess }
               </div>
               <div className="space-y-2">
                 <Label htmlFor="edit-date_of_birth">Date of Birth</Label>
-                <Input
-                  id="edit-date_of_birth"
-                  type="date"
-                  value={formData.date_of_birth}
-                  onChange={(e) => setFormData({ ...formData, date_of_birth: e.target.value })}
+                <SimpleDateTimePicker
+                  date={formData.date_of_birth ? new Date(formData.date_of_birth) : undefined}
+                  onDateChange={(d) => {
+                    setFormData({ ...formData, date_of_birth: d ? d.toISOString().split("T")[0] : "" })
+                  }}
+                  showOnlyDate
+                  placeholder="mm / dd / yyyy"
                 />
               </div>
               <div className="space-y-2">
@@ -276,11 +279,13 @@ export function EditPassengerDialog({ passenger, open, onOpenChange, onSuccess }
               </div>
               <div className="space-y-2">
                 <Label htmlFor="edit-passport_expiry">Passport Expiry</Label>
-                <Input
-                  id="edit-passport_expiry"
-                  type="date"
-                  value={formData.passport_expiry}
-                  onChange={(e) => setFormData({ ...formData, passport_expiry: e.target.value })}
+                <SimpleDateTimePicker
+                  date={formData.passport_expiry ? new Date(formData.passport_expiry) : undefined}
+                  onDateChange={(d) => {
+                    setFormData({ ...formData, passport_expiry: d ? d.toISOString().split("T")[0] : "" })
+                  }}
+                  showOnlyDate
+                  placeholder="mm / dd / yyyy"
                 />
               </div>
               <div className="space-y-2">

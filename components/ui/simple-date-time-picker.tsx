@@ -27,9 +27,9 @@ export function SimpleDateTimePicker({
   size = "default",
 }: SimpleDateTimePickerProps) {
   const [isOpen, setIsOpen] = React.useState(false)
-  const [position, setPosition] = React.useState({ top: 0, left: 0, width: 0 })
   const buttonRef = React.useRef<HTMLButtonElement>(null)
   const dropdownRef = React.useRef<HTMLDivElement>(null)
+  const containerRef = React.useRef<HTMLDivElement>(null)
 
   const [selectedHour, setSelectedHour] = React.useState<number>(date?.getHours() || 12)
   const [selectedMinute, setSelectedMinute] = React.useState<number>(date?.getMinutes() || 0)
@@ -44,79 +44,11 @@ export function SimpleDateTimePicker({
     }
   }, [date])
 
-  const calculatePosition = React.useCallback(() => {
-    if (!buttonRef.current) return
-
-    requestAnimationFrame(() => {
-      const rect = buttonRef.current?.getBoundingClientRect()
-      if (!rect) return
-
-      const viewportHeight = window.innerHeight
-      const viewportWidth = window.innerWidth
-
-      const dropdownWidth = showOnlyTime ? (size === "sm" ? 280 : 320) : 350
-      const actualDropdownHeight = dropdownRef.current?.offsetHeight
-      const dropdownHeight = actualDropdownHeight || (showOnlyTime ? 420 : 450)
-
-      let top = rect.bottom + 4
-      let left = rect.left
-
-      const spaceBelow = viewportHeight - rect.bottom - 40 // Reserve 40px padding at bottom
-      const spaceAbove = rect.top - 40 // Reserve 40px padding at top
-
-      // If not enough space below, try positioning above
-      if (spaceBelow < dropdownHeight && spaceAbove > spaceBelow && spaceAbove >= dropdownHeight) {
-        top = rect.top - dropdownHeight - 4
-      } else if (spaceBelow < dropdownHeight) {
-        // Not enough space above or below, position to fit within viewport
-        const maxTop = viewportHeight - dropdownHeight - 40
-        top = Math.max(40, Math.min(rect.bottom + 4, maxTop))
-      }
-
-      const spaceRight = viewportWidth - rect.left
-      if (spaceRight < dropdownWidth + 40) {
-        // Not enough space on the right, align to right edge with padding
-        left = Math.max(40, viewportWidth - dropdownWidth - 40)
-      } else {
-        // Enough space, use button's left position with minimum padding
-        left = Math.max(40, rect.left)
-      }
-
-      setPosition({
-        top,
-        left,
-        width: rect.width,
-      })
-    })
-  }, [showOnlyTime, size])
-
-  React.useEffect(() => {
-    if (isOpen) {
-      calculatePosition()
-
-      const handleScroll = () => calculatePosition()
-      const handleResize = () => calculatePosition()
-
-      window.addEventListener("scroll", handleScroll, true)
-      window.addEventListener("resize", handleResize)
-
-      return () => {
-        window.removeEventListener("scroll", handleScroll, true)
-        window.removeEventListener("resize", handleResize)
-      }
-    }
-  }, [isOpen, calculatePosition])
-
   React.useEffect(() => {
     if (!isOpen) return
 
     const handleClickOutside = (event: MouseEvent) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node) &&
-        buttonRef.current &&
-        !buttonRef.current.contains(event.target as Node)
-      ) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
         setIsOpen(false)
       }
     }
@@ -175,7 +107,6 @@ export function SimpleDateTimePicker({
     }
 
     if (date) {
-      // Preserve time when selecting a new date
       selectedDate.setHours(date.getHours(), date.getMinutes(), 0, 0)
     }
 
@@ -190,7 +121,7 @@ export function SimpleDateTimePicker({
   const minutes = Array.from({ length: 60 }, (_, i) => i)
 
   return (
-    <div className="relative">
+    <div ref={containerRef} className="relative">
       <button
         ref={buttonRef}
         type="button"
@@ -215,15 +146,7 @@ export function SimpleDateTimePicker({
       {isOpen && (
         <div
           ref={dropdownRef}
-          style={{
-            position: "fixed",
-            top: `${position.top}px`,
-            left: `${position.left}px`,
-            width: showOnlyTime ? `${Math.max(position.width, size === "sm" ? 280 : 320)}px` : "auto",
-            zIndex: 2147483647,
-            pointerEvents: "auto",
-          }}
-          className="rounded-md border bg-popover text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95"
+          className="absolute left-0 top-full mt-2 z-50 rounded-md border bg-popover text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95"
         >
           {!showOnlyTime && <Calendar mode="single" selected={date} onSelect={handleDateSelect} initialFocus />}
 

@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { SimpleSelect } from "@/components/ui/simple-select"
+import { SimpleDateTimePicker } from "@/components/ui/simple-date-time-picker"
 import { Camera, X } from "lucide-react"
 import { uploadPassengerAvatar } from "@/lib/actions/passenger-avatar"
 
@@ -231,11 +232,13 @@ export function CreatePassengerDialog({ open, onOpenChange, onSuccess }: CreateP
               </div>
               <div className="space-y-2">
                 <Label htmlFor="date_of_birth">Date of Birth</Label>
-                <Input
-                  id="date_of_birth"
-                  type="date"
-                  value={formData.date_of_birth}
-                  onChange={(e) => setFormData({ ...formData, date_of_birth: e.target.value })}
+                <SimpleDateTimePicker
+                  date={formData.date_of_birth ? new Date(formData.date_of_birth) : undefined}
+                  onDateChange={(d) => {
+                    setFormData({ ...formData, date_of_birth: d ? d.toISOString().split("T")[0] : "" })
+                  }}
+                  showOnlyDate
+                  placeholder="mm / dd / yyyy"
                 />
               </div>
               <div className="space-y-2">
@@ -264,11 +267,13 @@ export function CreatePassengerDialog({ open, onOpenChange, onSuccess }: CreateP
               </div>
               <div className="space-y-2">
                 <Label htmlFor="passport_expiry">Passport Expiry</Label>
-                <Input
-                  id="passport_expiry"
-                  type="date"
-                  value={formData.passport_expiry}
-                  onChange={(e) => setFormData({ ...formData, passport_expiry: e.target.value })}
+                <SimpleDateTimePicker
+                  date={formData.passport_expiry ? new Date(formData.passport_expiry) : undefined}
+                  onDateChange={(d) => {
+                    setFormData({ ...formData, passport_expiry: d ? d.toISOString().split("T")[0] : "" })
+                  }}
+                  showOnlyDate
+                  placeholder="mm / dd / yyyy"
                 />
               </div>
               <div className="space-y-2">
