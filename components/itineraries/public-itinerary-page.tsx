@@ -198,7 +198,7 @@ function BookingReferralCard({ className }: { className?: string }) {
   return (
     <Card className={cn("border border-blue-200/60 bg-blue-50/70 backdrop-blur-md shadow-xl", className)}>
       <CardContent className="flex flex-col gap-4 p-5">
-        <div className="flex items-center gap-3 text-blue-900">
+        <div className="flex items-center gap-3 text-blue-950">
           <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-blue-100">
             <Hotel className="h-5 w-5" />
           </span>
