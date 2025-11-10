@@ -59,10 +59,7 @@ export default function ActionPage({ params }: { params: { token: string } }) {
     title: "",
     message: "",
   })
-  const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY
-  if (!siteKey) {
-    console.error("Missing NEXT_PUBLIC_TURNSTILE_SITE_KEY environment variable")
-  }
+  const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? ""
 
   useEffect(() => {
     if (!verified || verified.action_type !== "view_itinerary") return
