@@ -196,20 +196,20 @@ const createFallbackGallery = (): AircraftGalleryImage[] =>
 
 function BookingReferralCard({ className }: { className?: string }) {
   return (
-    <Card className={cn("border border-oklch-200/60 bg-oklch-50/70 backdrop-blur-md shadow-xl", className)}>
+    <Card className={cn("border border-blue-200/60 bg-blue-50/70 backdrop-blur-md shadow-xl", className)}>
       <CardContent className="flex flex-col gap-4 p-5">
-        <div className="flex items-center gap-3 text-oklch-900">
-          <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-oklch-100">
+        <div className="flex items-center gap-3 text-blue-900">
+          <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-blue-100">
             <Hotel className="h-5 w-5" />
           </span>
           <div>
             <p className="text-sm font-semibold">Need a hotel?</p>
-            <p className="text-xs text-oklch-800/80">
+            <p className="text-xs text-blue-800/80">
               Discover curated stays, late check-ins, and loyalty perks via our Booking.com partner link.
             </p>
           </div>
         </div>
-        <Button asChild className="bg-oklch-600 hover:bg-oklch-700 text-white shadow-sm">
+        <Button asChild className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm">
           <a href={BOOKING_URL} target="_blank" rel="noopener noreferrer">
             Plan stay with Booking.com
             <ExternalLink className="ml-2 h-4 w-4" />
