@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef, useEffect } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,7 +9,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
 import { updateUser } from "@/lib/actions/admin-users"
 import { AVAILABLE_ROLES, type AdminUser } from "@/lib/types/admin"
@@ -41,6 +40,26 @@ export function RoleManagementModal({ open, onOpenChange, users, onRoleUpdate }:
   const [roleFilter, setRoleFilter] = useState("all")
   const [loading, setLoading] = useState(false)
   const { toast } = useToast()
+
+  const [isRoleFilterOpen, setIsRoleFilterOpen] = useState(false)
+  const [isBulkRoleOpen, setIsBulkRoleOpen] = useState(false)
+  const roleFilterRef = useRef<HTMLDivElement>(null)
+  const bulkRoleRef = useRef<HTMLDivElement>(null)
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (roleFilterRef.current && !roleFilterRef.current.contains(event.target as Node)) {
+        setIsRoleFilterOpen(false)
+      }
+      if (bulkRoleRef.current && !bulkRoleRef.current.contains(event.target as Node)) {
+        setIsBulkRoleOpen(false)
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
 
   // Filter users based on search and role filter
   const filteredUsers = users.filter((user) => {
@@ -228,19 +247,68 @@ export function RoleManagementModal({ open, onOpenChange, users, onRoleUpdate }:
                     />
                   </div>
                 </div>
-                <Select value={roleFilter} onValueChange={setRoleFilter}>
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Filter by role" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All roles</SelectItem>
-                    {AVAILABLE_ROLES.map((role) => (
-                      <SelectItem key={role} value={role}>
-                        {role.charAt(0).toUpperCase() + role.slice(1)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+
+                <div className="relative w-[180px]" ref={roleFilterRef}>
+                  <button
+                    type="button"
+                    onClick={() => setIsRoleFilterOpen(!isRoleFilterOpen)}
+                    className="flex items-center justify-between w-full h-9 px-3 py-2 text-sm border border-input bg-transparent rounded-md shadow-xs transition-colors hover:bg-accent hover:text-accent-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  >
+                    <span className="capitalize">{roleFilter === "all" ? "All roles" : roleFilter}</span>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="opacity-50"
+                    >
+                      <path d="m6 9 6 6 6-6" />
+                    </svg>
+                  </button>
+
+                  {isRoleFilterOpen && (
+                    <div className="absolute z-50 mt-1 w-full bg-popover border border-border rounded-md shadow-lg">
+                      <div className="p-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setRoleFilter("all")
+                            setIsRoleFilterOpen(false)
+                          }}
+                          className={`w-full text-left px-2 py-1.5 text-sm rounded-sm transition-colors ${
+                            roleFilter === "all"
+                              ? "bg-primary text-primary-foreground"
+                              : "hover:bg-primary hover:text-primary-foreground"
+                          }`}
+                        >
+                          All roles
+                        </button>
+                        {AVAILABLE_ROLES.map((role) => (
+                          <button
+                            key={role}
+                            type="button"
+                            onClick={() => {
+                              setRoleFilter(role)
+                              setIsRoleFilterOpen(false)
+                            }}
+                            className={`w-full text-left px-2 py-1.5 text-sm rounded-sm capitalize transition-colors ${
+                              roleFilter === role
+                                ? "bg-primary text-primary-foreground"
+                                : "hover:bg-primary hover:text-primary-foreground"
+                            }`}
+                          >
+                            {role.charAt(0).toUpperCase() + role.slice(1)}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="flex gap-4 items-center">
@@ -254,18 +322,57 @@ export function RoleManagementModal({ open, onOpenChange, users, onRoleUpdate }:
                     Select All ({selectedUsers.size} selected)
                   </label>
                 </div>
-                <Select value={bulkRole} onValueChange={setBulkRole}>
-                  <SelectTrigger className="w-[200px]">
-                    <SelectValue placeholder="Select role to assign" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {AVAILABLE_ROLES.map((role) => (
-                      <SelectItem key={role} value={role}>
-                        {role.charAt(0).toUpperCase() + role.slice(1)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+
+                <div className="relative w-[200px]" ref={bulkRoleRef}>
+                  <button
+                    type="button"
+                    onClick={() => setIsBulkRoleOpen(!isBulkRoleOpen)}
+                    className="flex items-center justify-between w-full h-9 px-3 py-2 text-sm border border-input bg-transparent rounded-md shadow-xs transition-colors hover:bg-accent hover:text-accent-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  >
+                    <span className={bulkRole ? "capitalize" : "text-muted-foreground"}>
+                      {bulkRole ? bulkRole.charAt(0).toUpperCase() + bulkRole.slice(1) : "Select role to assign"}
+                    </span>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="opacity-50"
+                    >
+                      <path d="m6 9 6 6 6-6" />
+                    </svg>
+                  </button>
+
+                  {isBulkRoleOpen && (
+                    <div className="absolute z-50 mt-1 w-full bg-popover border border-border rounded-md shadow-lg">
+                      <div className="p-1">
+                        {AVAILABLE_ROLES.map((role) => (
+                          <button
+                            key={role}
+                            type="button"
+                            onClick={() => {
+                              setBulkRole(role)
+                              setIsBulkRoleOpen(false)
+                            }}
+                            className={`w-full text-left px-2 py-1.5 text-sm rounded-sm capitalize transition-colors ${
+                              bulkRole === role
+                                ? "bg-primary text-primary-foreground"
+                                : "hover:bg-primary hover:text-primary-foreground"
+                            }`}
+                          >
+                            {role.charAt(0).toUpperCase() + role.slice(1)}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 <Button onClick={handleBulkRoleAssignment} disabled={loading || selectedUsers.size === 0 || !bulkRole}>
                   {loading ? (
                     <>
