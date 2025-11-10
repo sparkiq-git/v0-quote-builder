@@ -359,7 +359,7 @@ export function UsersListClient() {
                     <TableCell>
                       <SimpleDropdownComposable
                         trigger={
-                          <Button variant="ghost" size="sm">
+                          <Button variant="ghost" size="sm" className="hover:bg-primary hover:text-primary-foreground">
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         }

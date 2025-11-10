@@ -345,7 +345,10 @@ export default function QuotesPage() {
                       <TableCell>
                         <SimpleDropdown
                           trigger={
-                            <Button variant="ghost" className="h-8 w-8 p-0">
+                            <Button
+                              variant="ghost"
+                              className="h-8 w-8 p-0 hover:bg-primary hover:text-primary-foreground"
+                            >
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           }

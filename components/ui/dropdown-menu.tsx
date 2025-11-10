@@ -27,7 +27,7 @@ const DropdownMenuSubTrigger = React.forwardRef<
     ref={ref}
     data-slot="dropdown-menu-sub-trigger"
     className={cn(
-      "focus:bg-accent data-[state=open]:bg-accent flex cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none [&_svg:not([class*='text-'])]:text-muted-foreground",
+      "hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground data-[state=open]:bg-primary data-[state=open]:text-primary-foreground flex cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none [&_svg:not([class*='text-'])]:text-muted-foreground",
       inset && "pl-8",
       className,
     )}
@@ -98,7 +98,15 @@ const DropdownMenuItem = React.forwardRef<
     data-slot="dropdown-menu-item"
     data-variant={variant}
     className={cn(
-      "focus:bg-accent focus:text-accent-foreground data-[variant=destructive]:text-destructive data-[variant=destructive]:focus:bg-destructive/10 dark:data-[variant=destructive]:focus:bg-destructive/20 data-[variant=destructive]:focus:text-destructive data-[variant=destructive]:*:[svg]:!text-destructive [&_svg:not([class*='text-'])]:text-muted-foreground relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden transition-colors data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+      "relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden transition-colors",
+      "data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+      "[&_svg:not([class*='text-'])]:text-muted-foreground",
+      "hover:bg-primary hover:text-primary-foreground hover:[&_svg]:!text-primary-foreground",
+      "focus:bg-primary focus:text-primary-foreground focus:[&_svg]:!text-primary-foreground",
+      "data-[variant=destructive]:text-destructive",
+      "data-[variant=destructive]:[&_svg]:!text-destructive",
+      "data-[variant=destructive]:hover:bg-primary data-[variant=destructive]:hover:text-primary-foreground data-[variant=destructive]:hover:[&_svg]:!text-primary-foreground",
+      "data-[variant=destructive]:focus:bg-primary data-[variant=destructive]:focus:text-primary-foreground data-[variant=destructive]:focus:[&_svg]:!text-primary-foreground",
       inset && "pl-8",
       className,
     )}
@@ -115,7 +123,7 @@ const DropdownMenuCheckboxItem = React.forwardRef<
     ref={ref}
     data-slot="dropdown-menu-checkbox-item"
     className={cn(
-      "focus:bg-accent focus:text-accent-foreground relative flex cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-hidden transition-colors data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+      "hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground relative flex cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-hidden transition-colors data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
       className,
     )}
     checked={checked}
@@ -139,7 +147,7 @@ const DropdownMenuRadioItem = React.forwardRef<
     ref={ref}
     data-slot="dropdown-menu-radio-item"
     className={cn(
-      "focus:bg-accent focus:text-accent-foreground relative flex cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-hidden transition-colors data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+      "hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground relative flex cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-hidden transition-colors data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
       className,
     )}
     {...props}

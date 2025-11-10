@@ -1,27 +1,30 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Eye, Trash2 } from "lucide-react"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { Eye, Trash2, Ellipsis } from "lucide-react"
 
 export function InvoiceActions({ invoice }: { invoice: any }) {
   return (
-    <div className="flex justify-end gap-2">
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => (window.location.href = `/invoices/${invoice.id}`)}
-      >
-        <Eye className="h-4 w-4 mr-1" /> View
-      </Button>
-
-      <Button
-        variant="ghost"
-        size="sm"
-        className="text-destructive hover:bg-destructive/10"
-        onClick={() => alert(`Delete ${invoice.number}`)}
-      >
-        <Trash2 className="h-4 w-4 mr-1" />
-      </Button>
-    </div>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-primary hover:text-primary-foreground">
+          <Ellipsis className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onClick={() => (window.location.href = `/invoices/${invoice.id}`)}>
+          <Eye className="mr-2 h-4 w-4" />
+          View / Edit
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          className="text-destructive focus:text-destructive"
+          onClick={() => alert(`Delete ${invoice.number}`)}
+        >
+          <Trash2 className="mr-2 h-4 w-4" />
+          Delete
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }

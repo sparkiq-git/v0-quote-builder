@@ -302,7 +302,11 @@ export function LeadTable({ data, setLeads, onOpenNewCountChange }: LeadTablePro
           return (
             <SimpleDropdown
               trigger={
-                <Button variant="ghost" className="h-8 w-8 p-0" data-no-row-click>
+                <Button
+                  variant="ghost"
+                  className="h-8 w-8 p-0 hover:bg-primary hover:text-primary-foreground"
+                  data-no-row-click
+                >
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
               }

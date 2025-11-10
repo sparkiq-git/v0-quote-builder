@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast"
 import { useAutoSave } from "@/hooks/use-auto-save"
 import { Button } from "@/components/ui/button"
 import { Loader2, Trash2, Save } from "lucide-react"
-import { Pencil , Check} from "lucide-react"
+import { Pencil } from "lucide-react"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -67,7 +67,7 @@ export function QuoteEditor({
         // Error handling is done in the hook
       },
       enabled: !!quote?.id && pendingChanges,
-    }
+    },
   )
 
   /* -------------------- SYNC INITIAL PROPS -------------------- */
@@ -75,7 +75,7 @@ export function QuoteEditor({
     if (!pendingChanges && initialQuote?.id && initialQuote.id !== quote?.id) {
       setQuote(initialQuote)
     }
-  }, [initialQuote?.id])
+  }, [initialQuote])
 
   useEffect(() => {
     if (!pendingChanges && Array.isArray(initialQuoteDetails)) {
@@ -115,40 +115,23 @@ export function QuoteEditor({
     }
   }, [localLegUpdates, onQuoteDetailsChange])
 
-/* -------------------- NORMALIZE LEGS -------------------- */
-const normalizeLegs = useCallback((legs: any[]) => {
-  return (legs || []).map((l) => ({
-    origin: l.origin?.airport || l.origin || null,
-    origin_code: l.origin?.airport_code || l.origin_code || null,
-    destination: l.destination?.airport || l.destination || null,
-    destination_code: l.destination?.airport_code || l.destination_code || null,
-    departureDate: l.departureDate || l.depart_dt || null,
-    departureTime: l.departureTime || l.depart_time || null,
-    passengers: l.passengers || l.pax_count || 0,
-      origin_lat:
-      l.origin_lat ??
-      l.origin?.latitude ??
-      l.origin?.lat ??
-      null,
-    origin_long:
-      l.origin_long ??
-      l.origin?.longitude ??
-      l.origin?.lon ??
-      null,
-    destination_lat:
-      l.destination_lat ??
-      l.destination?.latitude ??
-      l.destination?.lat ??
-      null,
-    destination_long:
-      l.destination_long ??
-      l.destination?.longitude ??
-      l.destination?.lon ??
-      null,
-    distance_nm: l.distance_nm ?? null,
-  }))
-}, [])
-
+  /* -------------------- NORMALIZE LEGS -------------------- */
+  const normalizeLegs = useCallback((legs: any[]) => {
+    return (legs || []).map((l) => ({
+      origin: l.origin?.airport || l.origin || null,
+      origin_code: l.origin?.airport_code || l.origin_code || null,
+      destination: l.destination?.airport || l.destination || null,
+      destination_code: l.destination?.airport_code || l.destination_code || null,
+      departureDate: l.departureDate || l.depart_dt || null,
+      departureTime: l.departureTime || l.depart_time || null,
+      passengers: l.passengers || l.pax_count || 0,
+      origin_lat: l.origin_lat ?? l.origin?.latitude ?? l.origin?.lat ?? null,
+      origin_long: l.origin_long ?? l.origin?.longitude ?? l.origin?.lon ?? null,
+      destination_lat: l.destination_lat ?? l.destination?.latitude ?? l.destination?.lat ?? null,
+      destination_long: l.destination_long ?? l.destination?.longitude ?? l.destination?.lon ?? null,
+      distance_nm: l.distance_nm ?? null,
+    }))
+  }, [])
 
   /* -------------------- WARN BEFORE EXIT -------------------- */
   useEffect(() => {
@@ -192,67 +175,76 @@ const normalizeLegs = useCallback((legs: any[]) => {
 
   return (
     <div className="space-y-6">
-{/* Header */}
-<div className="flex items-center justify-between">
-  <div className="flex flex-col">
-    {/* Title + Pencil */}
-    <div className="flex items-center gap-2 group">
-      {editingTitle ? (
-        <input
-          type="text"
-          value={tempTitle}
-          onChange={(e) => setTempTitle(e.target.value)}
-          onBlur={() => {
-            setEditingTitle(false)
-            handleUpdate({ title: tempTitle.trim() || "New Quote" })
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.currentTarget.blur()
-            } else if (e.key === "Escape") {
-              setTempTitle(quote.title || "New Quote")
-              setEditingTitle(false)
-            }
-          }}
-          className="text-2xl font-semibold tracking-tight bg-transparent border-b border-primary focus:outline-none focus:ring-0 w-full max-w-md"
-          autoFocus
-        />
-      ) : (
-        <button
-          onClick={() => setEditingTitle(true)}
-          className="flex items-center gap-2 text-2xl font-semibold tracking-tight hover:text-primary transition-colors"
-        >
-          {quote.title || "New Quote"}
-          <Pencil className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-        </button>
-      )}
-    </div>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex flex-col">
+          {/* Title + Pencil */}
+          <div className="flex items-center gap-2 group">
+            {editingTitle ? (
+              <input
+                type="text"
+                value={tempTitle}
+                onChange={(e) => setTempTitle(e.target.value)}
+                onBlur={() => {
+                  setEditingTitle(false)
+                  handleUpdate({ title: tempTitle.trim() || "New Quote" })
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.currentTarget.blur()
+                  } else if (e.key === "Escape") {
+                    setTempTitle(quote.title || "New Quote")
+                    setEditingTitle(false)
+                  }
+                }}
+                className="text-2xl font-semibold tracking-tight bg-transparent border-b border-primary focus:outline-none focus:ring-0 w-full max-w-md"
+                autoFocus
+              />
+            ) : (
+              <button
+                onClick={() => setEditingTitle(true)}
+                className="flex items-center gap-2 text-2xl font-semibold tracking-tight hover:text-primary transition-colors"
+              >
+                {quote.title || "New Quote"}
+                <Pencil className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+              </button>
+            )}
+          </div>
 
-    <p className="text-sm text-muted-foreground mt-1">
-      {isSaving
-        ? "Auto-saving..."
-        : saving
-        ? "Saving..."
-        : pendingChanges
-        ? "Unsaved changes"
-        : lastSaved
-        ? `Last saved at ${lastSaved.toLocaleTimeString()}`
-        : "All changes saved"}
-    </p>
-  </div>
+          <p className="text-sm text-muted-foreground mt-1">
+            {isSaving
+              ? "Auto-saving..."
+              : saving
+                ? "Saving..."
+                : pendingChanges
+                  ? "Unsaved changes"
+                  : lastSaved
+                    ? `Last saved at ${lastSaved.toLocaleTimeString()}`
+                    : "All changes saved"}
+          </p>
+        </div>
 
-  <div className="flex items-center gap-2">
-    {hasUnsavedChanges && (
-      <Button variant="outline" onClick={saveNow} disabled={isSaving}>
-        <Save className="h-4 w-4 mr-2" />
-        {isSaving ? "Saving..." : "Save Now"}
-      </Button>
-    )}
-    <Button variant="outline" onClick={() => setShowDeleteModal(true)}>
-      <Trash2 className="h-4 w-4 mr-2" /> Delete
-    </Button>
-  </div>
-</div>
+        <div className="flex items-center gap-2">
+          {hasUnsavedChanges && (
+            <Button
+              variant="outline"
+              onClick={saveNow}
+              disabled={isSaving}
+              className="hover:bg-primary hover:text-primary-foreground hover:border-primary bg-transparent"
+            >
+              <Save className="h-4 w-4 mr-2" />
+              {isSaving ? "Saving..." : "Save Now"}
+            </Button>
+          )}
+          <Button
+            variant="outline"
+            onClick={() => setShowDeleteModal(true)}
+            className="hover:bg-primary hover:text-primary-foreground hover:border-primary"
+          >
+            <Trash2 className="h-4 w-4 mr-2" /> Delete
+          </Button>
+        </div>
+      </div>
 
       {/* Tabs */}
       <ErrorBoundary fallback={QuoteErrorFallback}>

@@ -111,9 +111,10 @@ export function SimpleDropdown({ trigger, items, align = "end" }: SimpleDropdown
                   handleItemClick(item)
                 }}
                 className={cn(
-                  "relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors",
-                  "hover:bg-accent hover:text-accent-foreground",
-                  "focus:bg-accent focus:text-accent-foreground",
+                  "relative flex w-full cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors",
+                  "hover:bg-black hover:text-white",
+                  "focus:bg-black focus:text-white",
+                  "[&_svg]:transition-colors hover:[&_svg]:text-white",
                   item.variant === "destructive" && "text-destructive focus:text-destructive",
                 )}
               >

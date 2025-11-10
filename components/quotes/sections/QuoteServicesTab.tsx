@@ -75,7 +75,11 @@ export function QuoteServicesTab({ quote, onUpdate, onNext, onBack }: Props) {
         {/* If no services, show Add Service button */}
         {services.length === 0 ? (
           <div className="flex justify-center py-16">
-            <Button variant="outline" onClick={handleAddService}>
+            <Button
+              variant="outline"
+              onClick={handleAddService}
+              className="hover:bg-primary hover:text-primary-foreground hover:[&_svg]:text-primary-foreground bg-transparent"
+            >
               <Plus className="h-4 w-4 mr-2" /> Add Service
             </Button>
           </div>
@@ -89,7 +93,7 @@ export function QuoteServicesTab({ quote, onUpdate, onNext, onBack }: Props) {
                     variant="ghost"
                     size="icon"
                     onClick={() => handleRemoveService(s.id)}
-                    className="text-muted-foreground hover:text-foreground"
+                    className="text-muted-foreground hover:bg-primary hover:text-primary-foreground hover:[&_svg]:text-primary-foreground"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -149,7 +153,11 @@ export function QuoteServicesTab({ quote, onUpdate, onNext, onBack }: Props) {
 
             {/* Add Service Button */}
             <div className="flex justify-center">
-              <Button variant="outline" onClick={handleAddService}>
+              <Button
+                variant="outline"
+                onClick={handleAddService}
+                className="hover:bg-primary hover:text-primary-foreground hover:[&_svg]:text-primary-foreground bg-transparent"
+              >
                 <Plus className="h-4 w-4 mr-2" /> Add Service
               </Button>
             </div>

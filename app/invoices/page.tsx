@@ -310,7 +310,7 @@ export default function InvoicesPage() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="h-8 w-8 p-0"
+                                className="h-8 w-8 p-0 hover:bg-primary hover:text-primary-foreground"
                                 disabled={processing === inv.id}
                               >
                                 <MoreHorizontal className="h-4 w-4" />
@@ -339,9 +339,9 @@ export default function InvoicesPage() {
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
+                                variant="destructive"
                                 onClick={() => handleDelete(inv.id)}
                                 disabled={processing === inv.id}
-                                className="text-red-600 focus:text-red-600"
                               >
                                 <Trash2 className="mr-2 h-4 w-4" />
                                 Delete
