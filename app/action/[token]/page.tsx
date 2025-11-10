@@ -23,7 +23,7 @@ import {
 const API_ENDPOINTS = {
   VERIFY: "/api/action-links/verify",
   CONSUME: "/api/action-links/consume",
-  QUOTES: "/api/quotes"
+  QUOTES: "/api/quotes",
 } as const
 
 interface VerifiedLinkPayload {
@@ -58,7 +58,14 @@ export default function ActionPage({ params }: { params: { token: string } }) {
     title: "",
     message: "",
   })
-  const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? ""
+  const [siteKey, setSiteKey] = useState<string>("")
+
+  useEffect(() => {
+    fetch("/api/turnstile-site-key")
+      .then((res) => res.json())
+      .then((data) => setSiteKey(data.siteKey || ""))
+      .catch((err) => console.error("Failed to fetch Turnstile site key:", err))
+  }, [])
 
   useEffect(() => {
     if (!verified || verified.action_type !== "view_itinerary") return
@@ -69,60 +76,61 @@ export default function ActionPage({ params }: { params: { token: string } }) {
   // Helper function to get user-friendly error messages
   function getUserFriendlyError(errorMessage: string): { title: string; message: string } {
     const lowerError = errorMessage.toLowerCase()
-    
+
     if (lowerError.includes("link expired") || lowerError.includes("expired")) {
       return {
         title: "Secure Link Expired",
-        message: "This secure link has expired. Please contact us for an updated itinerary or quote."
+        message: "This secure link has expired. Please contact us for an updated itinerary or quote.",
       }
     }
-    
+
     if (lowerError.includes("email mismatch") || lowerError.includes("email")) {
       return {
         title: "Email Mismatch",
-        message: "The email address you entered doesn't match the one this link was sent to. Please check and try again."
+        message:
+          "The email address you entered doesn't match the one this link was sent to. Please check and try again.",
       }
     }
-    
+
     if (lowerError.includes("max uses exceeded") || lowerError.includes("already used")) {
       return {
         title: "Link Already Used",
-        message: "This link has already been used. For security reasons, each link can only be used once."
+        message: "This link has already been used. For security reasons, each link can only be used once.",
       }
     }
-    
+
     if (lowerError.includes("link not active") || lowerError.includes("not active")) {
       return {
         title: "Link Not Active",
-        message: "This link is no longer active. Please contact us for assistance."
+        message: "This link is no longer active. Please contact us for assistance.",
       }
     }
-    
+
     if (lowerError.includes("rate limit") || lowerError.includes("too many requests")) {
       return {
         title: "Too Many Attempts",
-        message: "You've made too many requests. Please wait a moment and try again."
+        message: "You've made too many requests. Please wait a moment and try again.",
       }
     }
-    
+
     if (lowerError.includes("captcha") || lowerError.includes("turnstile")) {
       return {
         title: "Verification Failed",
-        message: "CAPTCHA verification failed. Please try again."
+        message: "CAPTCHA verification failed. Please try again.",
       }
     }
-    
+
     // Generic error
     return {
       title: "Verification Error",
-      message: errorMessage || "An unexpected error occurred. Please try again."
+      message: errorMessage || "An unexpected error occurred. Please try again.",
     }
   }
 
   // --- Safe fetch with proper response handling ---
   async function safeFetchJSON(url: string, options: RequestInit) {
     const res = await fetch(url, options)
-    
+
     let json
     try {
       json = await res.json()
@@ -132,13 +140,13 @@ export default function ActionPage({ params }: { params: { token: string } }) {
       console.error(`Non-JSON response from ${url}:`, text)
       throw new Error(text.slice(0, 200))
     }
-    
+
     if (!res.ok || json?.ok === false) {
       console.error(`Request to ${url} failed:`, json)
       const errorMsg = json?.error || `Request failed (${res.status})`
       throw new Error(errorMsg)
     }
-    
+
     return json
   }
 
@@ -146,20 +154,20 @@ export default function ActionPage({ params }: { params: { token: string } }) {
     setError(null)
     setQuote(null)
     setVerifying(true)
-    
+
     // Client-side validation
-    if (!email || !email.includes('@')) {
+    if (!email || !email.includes("@")) {
       setError("Please enter a valid email address")
       setVerifying(false)
       return
     }
-    
+
     if (!captcha) {
       setError("Please complete the CAPTCHA")
       setVerifying(false)
       return
     }
-    
+
     try {
       const json = await safeFetchJSON(API_ENDPOINTS.VERIFY, {
         method: "POST",
@@ -197,11 +205,10 @@ export default function ActionPage({ params }: { params: { token: string } }) {
           console.error("Failed to fetch quote:", quoteErr)
         }
       }
-
     } catch (e: any) {
       console.error("Verification error:", e)
       setError(e.message)
-      
+
       // Show error dialog with user-friendly message
       const friendlyError = getUserFriendlyError(e.message)
       setErrorDialog({
@@ -223,16 +230,16 @@ export default function ActionPage({ params }: { params: { token: string } }) {
           "content-type": "application/json",
           "idempotency-key": uuid(),
         },
-        body: JSON.stringify({ 
-          token: params.token, 
-          email, 
-          payload: { result } // Enhanced payload structure
+        body: JSON.stringify({
+          token: params.token,
+          email,
+          payload: { result }, // Enhanced payload structure
         }),
       })
 
       // Read response once
       const text = await res.text()
-      
+
       // Try to parse JSON, handle errors gracefully
       let json
       try {
@@ -254,7 +261,7 @@ export default function ActionPage({ params }: { params: { token: string } }) {
       })
     } catch (e: any) {
       console.error("Consume error:", e)
-      
+
       // Show error dialog
       const friendlyError = getUserFriendlyError(e.message)
       setErrorDialog({
@@ -306,9 +313,7 @@ export default function ActionPage({ params }: { params: { token: string } }) {
                 {siteKey ? (
                   <Turnstile sitekey={siteKey} onVerify={(t) => setCaptcha(t)} />
                 ) : (
-                  <div className="text-sm text-red-500">
-                    CAPTCHA not configured. Please contact support.
-                  </div>
+                  <div className="text-sm text-red-500">CAPTCHA not configured. Please contact support.</div>
                 )}
               </div>
 
@@ -373,9 +378,7 @@ export default function ActionPage({ params }: { params: { token: string } }) {
             <AlertDialogDescription>{errorDialog.message}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogAction onClick={() => setErrorDialog({ ...errorDialog, open: false })}>
-              Close
-            </AlertDialogAction>
+            <AlertDialogAction onClick={() => setErrorDialog({ ...errorDialog, open: false })}>Close</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
