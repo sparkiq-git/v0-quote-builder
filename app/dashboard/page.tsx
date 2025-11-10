@@ -264,83 +264,85 @@ export default function DashboardPage() {
 
       {/* === Chart + Recent Activities === */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        {/* Chart Area (3/5 width) */}
-        <Card className="border border-border shadow-sm rounded-xl bg-card hover:shadow-md transition-shadow lg:col-span-3 h-[400px]">
-          <CardHeader className="pb-2 pt-4 px-5">
-            <CardTitle className="mt-2 text-base font-semibold text-foreground">
-              Cost & Commission
-            </CardTitle>
-          </CardHeader>
+{/* Chart Area (3/5 width) */}
+<Card className="border border-gray-200 shadow-sm rounded-xl bg-white hover:shadow-md transition-shadow lg:col-span-3 h-[400px]">
+  <CardHeader className="pb-2 pt-4 px-5">
+    <CardTitle className="mt-2 text-base font-semibold text-gray-800">
+      Cost & Commission
+    </CardTitle>
+  </CardHeader>
 
-          <CardContent className="h-[280px] px-4 pb-2">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData} margin={{ top: 10, right: 16, left: 0, bottom: 0 }}>
-                <CartesianGrid vertical={false} strokeDasharray="3 3" />
-                <XAxis
-                  dataKey="month"
-                  tickLine={false}
-                  axisLine={false}
-                  tickMargin={6}
-                  style={{ fontSize: "12px" }}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "hsl(var(--card))",
-                    borderColor: "hsl(var(--border))",
-                    borderRadius: "0.5rem",
-                    fontSize: "12px",
-                  }}
-                />
-                <defs>
-                  <linearGradient id="fillCost" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="var(--chart-1)" stopOpacity={0.8} />
-                    <stop offset="95%" stopColor="var(--chart-1)" stopOpacity={0.05} />
-                  </linearGradient>
-                  <linearGradient id="fillCommission" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="var(--chart-2)" stopOpacity={0.8} />
-                    <stop offset="95%" stopColor="var(--chart-2)" stopOpacity={0.05} />
-                  </linearGradient>
-                </defs>
-                <Area
-                  type="natural"
-                  dataKey="price_commission"
-                  stroke="var(--chart-2)"
-                  fill="url(#fillCommission)"
-                  fillOpacity={0.4}
-                  strokeWidth={1.6}
-                  name="Price Commission"
-                />
-                <Area
-                  type="natural"
-                  dataKey="cost_operator"
-                  stroke="var(--chart-1)"
-                  fill="url(#fillCost)"
-                  fillOpacity={0.4}
-                  strokeWidth={1.6}
-                  name="Cost Operator"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </CardContent>
+  <CardContent className="h-[280px] px-4 pb-2">
+    <ResponsiveContainer width="100%" height="100%" >
+      <AreaChart data={chartData} margin={{ top: 15, right: 16, left: 0, bottom: 10 }}>
+        <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#E5E7EB" />
+        <XAxis
+          dataKey="month"
+          tickLine={false}
+          axisLine={false}
+          tickMargin={6}
+          style={{ fontSize: "12px", fill: "#374151" }}
+        />
+    
+        <Tooltip
+          contentStyle={{
+            backgroundColor: "#F9FAFB", // Fondo claro
+            borderColor: "#E5E7EB",     // Borde gris claro
+            borderRadius: "0.5rem",
+            fontSize: "12px",
+          }}
+          labelStyle={{ color: "#1E3A8A" }} // Azul oscuro para el label
+        />
+        <defs>
+          <linearGradient id="fillCost" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor="#1E3A8A" stopOpacity={0.8} /> {/* Azul oscuro */}
+            <stop offset="95%" stopColor="#1E3A8A" stopOpacity={0.05} />
+          </linearGradient>
+          <linearGradient id="fillCommission" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.8} /> {/* Azul claro */}
+            <stop offset="95%" stopColor="#3B82F6" stopOpacity={0.05} />
+          </linearGradient>
+        </defs>
+        <Area
+          type="natural"
+          dataKey="price_commission"
+          stroke="#3B82F6" // Azul claro
+          fill="url(#fillCommission)"
+          fillOpacity={0.4}
+          strokeWidth={1.6}
+          name="Price Commission"
+        />
+        <Area
+          type="natural"
+          dataKey="cost_operator"
+          stroke="#1E3A8A" // Azul oscuro
+          fill="url(#fillCost)"
+          fillOpacity={0.4}
+          strokeWidth={1.6}
+          name="Cost Operator"
+        />
+      </AreaChart>
+    </ResponsiveContainer>
+  </CardContent>
 
-          {/* === Chart Footer: Show Best Month === */}
-          {bestMonth.month && (
-            <div className="px-5 pb-4 text-sm text-muted-foreground flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-green-500 shrink-0" />
-              <span className="font-medium text-foreground">
-                Best month: {bestMonth.month}
-              </span>
-              <span className="text-muted-foreground">
-                — $
-                {bestMonth.total.toLocaleString(undefined, {
-                  minimumFractionDigits: 0,
-                  maximumFractionDigits: 0,
-                })}{" "}
-                total
-              </span>
-            </div>
-          )}
-        </Card>
+  {/* === Chart Footer: Show Best Month === */}
+  {bestMonth.month && (
+    <div className="px-5 pb-4 text-sm text-gray-600 flex items-center gap-2">
+      <TrendingUp className="h-4 w-4 text-blue-500 shrink-0" />
+      <span className="font-medium text-gray-800">
+        Best month: {bestMonth.month}
+      </span>
+      <span className="text-gray-500">
+        — $
+        {bestMonth.total.toLocaleString(undefined, {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0,
+        })}{" "}
+        total
+      </span>
+    </div>
+  )}
+</Card>
 
         {/* Recent Activities (2/5 width, no scroll on parent) */}
         <div className="lg:col-span-2 h-[400px] flex flex-col">
