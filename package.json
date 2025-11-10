@@ -69,6 +69,7 @@
     "react-resizable-panels": "^2.1.7",
     "react-turnstile": "latest",
     "recharts": "latest",
+    "@floating-ui/dom": "^1.6.1",
     "resize-observer-polyfill": "^1.5.1",
     "sonner": "latest",
     "tailwind-merge": "^2.5.5",

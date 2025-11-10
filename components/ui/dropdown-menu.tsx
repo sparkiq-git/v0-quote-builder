@@ -4,6 +4,7 @@ import * as React from "react";
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
 import { CheckIcon, ChevronRightIcon, CircleIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { autoUpdate, computePosition, flip, offset, shift } from "@floating-ui/dom";
 
 /**
  * Fix for Radix UI Dropdown positioning in Next.js App Router (production/SSR)
@@ -89,6 +90,7 @@ function DropdownMenuContent({
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Content>) {
   const [mounted, setMounted] = React.useState(false);
+  const contentRef = React.useRef<HTMLDivElement | null>(null);
 
   // Ensure we only render after hydration
   React.useEffect(() => {
@@ -152,9 +154,53 @@ function DropdownMenuContent({
     }
   }, [mounted]);
 
+  React.useEffect(() => {
+    if (!mounted) return;
+    const contentElement = contentRef.current;
+    if (!contentElement) return;
+    if (contentElement.dataset.state !== "open") return;
+
+    const triggerElement = document.querySelector<HTMLElement>(
+      `[aria-controls="${contentElement.id}"]`
+    );
+    if (!triggerElement) return;
+
+    const wrapper = contentElement.parentElement as HTMLElement | null;
+    if (!wrapper) return;
+
+    const placement =
+      align && align !== "center"
+        ? `${side}-${align}` as const
+        : (side as const);
+
+    const middleware = [
+      offset(sideOffset),
+      flip(),
+      shift({ padding: collisionPadding }),
+    ];
+
+    const updatePosition = () => {
+      computePosition(triggerElement, contentElement, {
+        placement,
+        middleware,
+      }).then(({ x, y }) => {
+        wrapper.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+      });
+    };
+
+    updatePosition();
+
+    const cleanup = autoUpdate(triggerElement, contentElement, updatePosition);
+
+    return () => {
+      cleanup();
+    };
+  }, [mounted, side, align, sideOffset, collisionPadding]);
+
   return (
     <DropdownMenuPrimitive.Portal>
       <DropdownMenuPrimitive.Content
+        ref={contentRef}
         data-slot="dropdown-menu-content"
         side={side}
         align={align}
