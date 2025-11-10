@@ -204,12 +204,12 @@ function BookingReferralCard({ className }: { className?: string }) {
           </span>
           <div>
             <p className="text-sm font-semibold">Need a hotel?</p>
-            <p className="text-xs text-blue-800/80">
+            <p className="text-xs text-blue-950/90">
               Discover curated stays, late check-ins, and loyalty perks via our Booking.com partner link.
             </p>
           </div>
         </div>
-        <Button asChild className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm">
+        <Button asChild className="bg-blue-900 hover:bg-blue-950 text-white shadow-sm">
           <a href={BOOKING_URL} target="_blank" rel="noopener noreferrer">
             Plan stay with Booking.com
             <ExternalLink className="ml-2 h-4 w-4" />
