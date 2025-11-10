@@ -303,8 +303,9 @@ export function SimpleDropdownItem({
     <div
       className={cn(
         "relative flex cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none",
-        "transition-colors hover:bg-accent hover:text-accent-foreground",
-        "focus:bg-accent focus:text-accent-foreground",
+        "transition-colors hover:bg-primary hover:text-primary-foreground",
+        "focus:bg-primary focus:text-primary-foreground",
+        "[&_svg]:transition-colors hover:[&_svg]:text-primary-foreground",
         className,
       )}
       onClick={handleClick}
