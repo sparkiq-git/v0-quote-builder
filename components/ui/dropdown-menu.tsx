@@ -6,6 +6,13 @@ import { CheckIcon, ChevronRightIcon, CircleIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { autoUpdate, computePosition, flip, offset, shift } from "@floating-ui/dom";
 
+type DropdownMenuContextValue = {
+  trigger: HTMLElement | null;
+  setTrigger: (node: HTMLElement | null) => void;
+};
+
+const DropdownMenuContext = React.createContext<DropdownMenuContextValue | null>(null);
+
 /**
  * Fix for Radix UI Dropdown positioning in Next.js App Router (production/SSR)
  * 
@@ -25,6 +32,7 @@ function DropdownMenuRoot({
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Root>) {
   const [mounted, setMounted] = React.useState(false);
+  const [trigger, setTrigger] = React.useState<HTMLElement | null>(null);
   
   React.useEffect(() => {
     setMounted(true);
@@ -49,13 +57,23 @@ function DropdownMenuRoot({
     }
   }, [onOpenChange, mounted]);
 
+  const contextValue = React.useMemo(
+    () => ({
+      trigger,
+      setTrigger,
+    }),
+    [trigger],
+  );
+
   return (
-    <DropdownMenuPrimitive.Root
-      data-slot="dropdown-menu"
-      modal={modal}
-      onOpenChange={handleOpenChange}
-      {...props}
-    />
+    <DropdownMenuContext.Provider value={contextValue}>
+      <DropdownMenuPrimitive.Root
+        data-slot="dropdown-menu"
+        modal={modal}
+        onOpenChange={handleOpenChange}
+        {...props}
+      />
+    </DropdownMenuContext.Provider>
   );
 }
 
@@ -67,16 +85,34 @@ function DropdownMenuPortal({
   );
 }
 
-function DropdownMenuTrigger({
-  ...props
-}: React.ComponentProps<typeof DropdownMenuPrimitive.Trigger>) {
+const DropdownMenuTrigger = React.forwardRef<
+  React.ElementRef<typeof DropdownMenuPrimitive.Trigger>,
+  React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Trigger>
+>(({ ...props }, forwardedRef) => {
+  const context = React.useContext(DropdownMenuContext);
+
+  const setRefs = React.useCallback(
+    (node: HTMLElement | null) => {
+      if (typeof forwardedRef === "function") {
+        forwardedRef(node);
+      } else if (forwardedRef) {
+        (forwardedRef as React.MutableRefObject<HTMLElement | null>).current = node;
+      }
+      context?.setTrigger(node);
+    },
+    [forwardedRef, context],
+  );
+
   return (
     <DropdownMenuPrimitive.Trigger
+      ref={setRefs}
       data-slot="dropdown-menu-trigger"
       {...props}
     />
   );
-}
+});
+
+DropdownMenuTrigger.displayName = DropdownMenuPrimitive.Trigger.displayName;
 
 function DropdownMenuContent({
   className,
@@ -91,6 +127,8 @@ function DropdownMenuContent({
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Content>) {
   const [mounted, setMounted] = React.useState(false);
   const contentRef = React.useRef<HTMLDivElement | null>(null);
+  const cleanupAutoUpdateRef = React.useRef<(() => void) | null>(null);
+  const context = React.useContext(DropdownMenuContext);
 
   // Ensure we only render after hydration
   React.useEffect(() => {
@@ -158,19 +196,13 @@ function DropdownMenuContent({
     if (!mounted) return;
     const contentElement = contentRef.current;
     if (!contentElement) return;
-    if (contentElement.dataset.state !== "open") return;
-
-    const triggerElement = document.querySelector<HTMLElement>(
-      `[aria-controls="${contentElement.id}"]`
-    );
-    if (!triggerElement) return;
 
     const wrapper = contentElement.parentElement as HTMLElement | null;
     if (!wrapper) return;
 
     const placement =
       align && align !== "center"
-        ? `${side}-${align}` as const
+        ? (`${side}-${align}` as const)
         : (side as const);
 
     const middleware = [
@@ -180,6 +212,9 @@ function DropdownMenuContent({
     ];
 
     const updatePosition = () => {
+      const triggerElement = context?.trigger;
+      if (!triggerElement) return;
+
       computePosition(triggerElement, contentElement, {
         placement,
         middleware,
@@ -188,14 +223,47 @@ function DropdownMenuContent({
       });
     };
 
-    updatePosition();
+    const startAutoUpdate = () => {
+      const triggerElement = context?.trigger;
+      if (!triggerElement) return;
 
-    const cleanup = autoUpdate(triggerElement, contentElement, updatePosition);
+      cleanupAutoUpdateRef.current?.();
+      cleanupAutoUpdateRef.current = autoUpdate(
+        triggerElement,
+        contentElement,
+        updatePosition
+      );
+
+      updatePosition();
+    };
+
+    const stopAutoUpdate = () => {
+      cleanupAutoUpdateRef.current?.();
+      cleanupAutoUpdateRef.current = null;
+    };
+
+    const handleStateChange = () => {
+      if (contentElement.dataset.state === "open") {
+        startAutoUpdate();
+      } else {
+        stopAutoUpdate();
+      }
+    };
+
+    const observer = new MutationObserver(handleStateChange);
+    observer.observe(contentElement, {
+      attributes: true,
+      attributeFilter: ["data-state"],
+    });
+
+    // run once in case it's already open
+    handleStateChange();
 
     return () => {
-      cleanup();
+      observer.disconnect();
+      stopAutoUpdate();
     };
-  }, [mounted, side, align, sideOffset, collisionPadding]);
+  }, [mounted, side, align, sideOffset, collisionPadding, context?.trigger]);
 
   return (
     <DropdownMenuPrimitive.Portal>
