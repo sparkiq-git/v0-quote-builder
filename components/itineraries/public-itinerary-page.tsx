@@ -578,22 +578,22 @@ function RoutePreviewMap({ details }: { details: ItineraryDetail[] }) {
 
 function BookingReferralCard({ className }: { className?: string }) {
   return (
-    <Card className={cn("border border-emerald-200/60 bg-emerald-50/70 backdrop-blur-md shadow-xl", className)}>
+    <Card className={cn("border border-oklch-200/60 bg-oklch-50/70 backdrop-blur-md shadow-xl", className)}>
       <CardContent className="flex flex-col gap-4 p-5">
-        <div className="flex items-center gap-3 text-emerald-900">
-          <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100">
+        <div className="flex items-center gap-3 text-oklch-900">
+          <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-oklch-100">
             <Hotel className="h-5 w-5" />
           </span>
           <div>
             <p className="text-sm font-semibold">Need a hotel?</p>
-            <p className="text-xs text-emerald-800/80">
+            <p className="text-xs text-oklch-800/80">
               Discover curated stays, late check-ins, and loyalty perks via our Booking.com partner link.
             </p>
           </div>
         </div>
         <Button
           asChild
-          className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
+          className="bg-oklch-600 hover:bg-oklch-700 text-white shadow-sm"
         >
           <a href={BOOKING_URL} target="_blank" rel="noopener noreferrer">
             Plan stay with Booking.com
@@ -1331,6 +1331,7 @@ export default function PublicItineraryPage({ token, verifiedEmail }: PublicItin
             </div>
 
             {/* Right Column - Sidebar */}
+            
             <div className="space-y-6">
               {/* Crew */}
               <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
