@@ -18,7 +18,7 @@ const getAdminClient = () => {
   })
 }
 
-export async function uploadAvatar(userId: string, file: File | Blob) {
+export async function uploadAvatar(userId: string, file: Blob) {
   try {
     const adminClient = getAdminClient()
 
