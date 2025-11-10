@@ -113,8 +113,7 @@ export async function GET(request: NextRequest, { params }: { params: { token: s
           email,
           phone,
           company,
-          avatar_path,
-          avatar_url
+          avatar_path
         )
       `
       )
