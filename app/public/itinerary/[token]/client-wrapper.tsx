@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 "use client"
 
 import dynamic from "next/dynamic"
@@ -11,10 +10,7 @@ const PublicItineraryPage = dynamic(() => import("@/components/itineraries/publi
     </div>
   ),
 })
-=======
-import { PublicItineraryClientWrapper } from "./client-wrapper"
->>>>>>> 102c7fed726a35282e6975c0436b2fbaad15beec
 
-export default function PublicItineraryRoute({ params }: { params: { token: string } }) {
-  return <PublicItineraryClientWrapper token={params.token} />
+export function PublicItineraryClientWrapper({ token }: { token: string }) {
+  return <PublicItineraryPage token={token} />
 }

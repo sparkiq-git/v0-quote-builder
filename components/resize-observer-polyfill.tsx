@@ -24,4 +24,3 @@ if (typeof window !== "undefined" && typeof window.ResizeObserver === "undefined
 export function EnsureResizeObserver() {
   return null;
 }
-

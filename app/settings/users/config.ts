@@ -9,4 +9,3 @@ export async function ensureSettingsConfig() {
     serviceRoleKey,
   }
 }
-
