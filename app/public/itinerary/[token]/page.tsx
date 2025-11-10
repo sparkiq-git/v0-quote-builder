@@ -1,3 +1,5 @@
+"use client"
+
 import dynamic from "next/dynamic"
 
 const PublicItineraryPage = dynamic(() => import("@/components/itineraries/public-itinerary-page"), {

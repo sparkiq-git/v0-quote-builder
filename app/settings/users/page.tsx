@@ -10,7 +10,7 @@ import { UsersPageLayout } from "@/components/settings/users/users-page-layout"
 import { ensureSettingsConfig } from "./config"
 
 export default async function UsersManagementPage() {
-  const { supabaseUrl, serviceRoleKey } = ensureSettingsConfig()
+  const { supabaseUrl, serviceRoleKey } = await ensureSettingsConfig()
 
   if (!supabaseUrl || !serviceRoleKey) {
     return (
