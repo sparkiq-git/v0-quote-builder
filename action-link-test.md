@@ -33,9 +33,8 @@ SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 KV_REST_API_URL=your_upstash_url
 KV_REST_API_TOKEN=your_upstash_token
 
-# Turnstile
-NEXT_PUBLIC_TURNSTILE_SITE_KEY=your_site_key
-TURNSTILE_SECRET_KEY=your_secret_key
+# Turnstile (Cloudflare CAPTCHA)
+# Configure site key and secret key in Vercel dashboard
 
 # Email
 RESEND_API_KEY=your_resend_key
