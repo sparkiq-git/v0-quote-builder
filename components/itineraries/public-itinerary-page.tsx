@@ -99,6 +99,15 @@ interface ItineraryCrewMember {
   confirmed: boolean
 }
 
+interface ItineraryAircraft {
+  id?: string
+  manufacturer?: string | null
+  model?: string | null
+  operator?: string | null
+  tail_number?: string | null
+  images?: AircraftGalleryImage[]
+}
+
 interface Itinerary {
   id: string
   tenant_id?: string
@@ -131,15 +140,6 @@ interface AircraftGalleryImage {
   caption?: string | null
   is_primary?: boolean
   display_order?: number
-}
-
-interface ItineraryAircraft {
-  id: string
-  tail_number: string | null
-  manufacturer: string | null
-  model: string | null
-  operator: string | null
-  images: AircraftGalleryImage[]
 }
 
 interface PublicItineraryPageProps {
@@ -976,134 +976,6 @@ export default function PublicItineraryPage({ token, verifiedEmail }: PublicItin
               </CardContent>
             </Card>
 
-            {/* Crew */}
-            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                  <Plane className="h-5 w-5 text-gray-600" />
-                  Crew
-                </CardTitle>
-                <CardDescription className="text-gray-600">Your flight team</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {crew.length === 0 ? (
-                  <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-8 text-center">
-                    <Plane className="mx-auto mb-3 h-8 w-8 text-gray-400" />
-                    <p className="text-sm text-gray-600">Crew assignments will be posted shortly.</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {crew.map((member) => (
-                      <div key={member.id} className="rounded-xl border border-gray-200 bg-gray-50 p-4">
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-gray-900">{member.full_name || "Crew member"}</p>
-                            <p className="text-xs uppercase tracking-wider text-gray-500 mt-1">{member.role}</p>
-                          </div>
-                          {member.confirmed ? (
-                            <Badge className="bg-emerald-100 text-emerald-700 border border-emerald-300">
-                              Confirmed
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="border-gray-300 text-gray-600">
-                              Pending
-                            </Badge>
-                          )}
-                        </div>
-                        {member.notes && (
-                          <p className="mt-3 rounded-lg bg-white p-3 text-xs text-gray-600 leading-relaxed border border-gray-200">
-                            {member.notes}
-                          </p>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Contact */}
-            {itinerary.contact && (
-              <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-semibold text-gray-900">Primary Contact</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
-                    <div className="flex items-center gap-3 mb-3">
-                      <Avatar className="h-10 w-10 border border-gray-300">
-                        <AvatarFallback className="bg-gray-200 text-gray-700 font-semibold">
-                          {itinerary.contact.full_name
-                            .split(" ")
-                            .map((n) => n[0])
-                            .join("")}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">{itinerary.contact.full_name}</p>
-                        {itinerary.contact.company && (
-                          <p className="text-xs text-gray-600">{itinerary.contact.company}</p>
-                        )}
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Mail className="h-4 w-4 text-gray-500" />
-                        <span className="text-xs text-gray-600">{itinerary.contact.email}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <Button
-                    variant="outline"
-                    className="w-full border-gray-300 text-gray-700 hover:bg-gray-100 bg-transparent"
-                  >
-                    Contact Concierge
-                  </Button>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Weather */}
-            {Object.keys(weather).length > 0 && (
-              <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                    <Cloud className="h-5 w-5 text-gray-600" />
-                    Weather
-                  </CardTitle>
-                  <CardDescription className="text-gray-600">Current conditions at your airports</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {Object.entries(weather).map(([code, summary]) => (
-                      <div key={code} className="rounded-xl border border-gray-200 bg-gray-50 p-4">
-                        <div className="flex items-center justify-between mb-3">
-                          <p className="text-sm font-semibold text-gray-900">{formatAirportCode(code)}</p>
-                          <Badge className="bg-gray-200 text-gray-700 border border-gray-300">
-                            {summary.metar?.flightCategory || "N/A"}
-                          </Badge>
-                        </div>
-                        <div className="grid grid-cols-2 gap-2 text-xs">
-                          <div className="flex items-center gap-2">
-                            <Thermometer className="h-3.5 w-3.5 text-gray-500" />
-                            <span className="text-gray-600">
-                              {summary.metar?.temperatureC != null
-                                ? `${Math.round(summary.metar.temperatureC)}°C`
-                                : "—"}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Wind className="h-3.5 w-3.5 text-gray-500" />
-                            <span className="text-gray-600">{summary.metar?.wind || "Calm"}</span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
             {/* Notes */}
             {(itinerary.notes || itinerary.special_requirements) && (
               <div className="space-y-3">
@@ -1139,9 +1011,6 @@ export default function PublicItineraryPage({ token, verifiedEmail }: PublicItin
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Left Column - Main Info */}
             <div className="lg:col-span-2 space-y-6">
-              <div className="sticky top-6 z-30">
-                <BookingReferralCard />
-              </div>
               {/* Header */}
               <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
                 <CardContent className="pt-8">
@@ -1190,12 +1059,6 @@ export default function PublicItineraryPage({ token, verifiedEmail }: PublicItin
                   </div>
                 </CardContent>
               </Card>
-
-              <AircraftGallery
-                images={galleryImages}
-                fallbackLabel={aircraft?.model || itinerary.aircraft_tail_no || itinerary.title || "aircraft"}
-              />
-              <AircraftProfile aircraft={aircraft} />
 
               {/* Flight Timeline */}
               <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
@@ -1279,6 +1142,11 @@ export default function PublicItineraryPage({ token, verifiedEmail }: PublicItin
                 </CardContent>
               </Card>
 
+              <AircraftGallery
+                images={galleryImages}
+                fallbackLabel={aircraft?.model || itinerary.aircraft_tail_no || itinerary.title || "aircraft"}
+              />
+
               {/* Flight Path Map */}
               <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
                 <CardHeader className="border-b border-gray-200 bg-gray-50">
@@ -1323,6 +1191,8 @@ export default function PublicItineraryPage({ token, verifiedEmail }: PublicItin
 
             {/* Right Column - Sidebar */}
             <div className="space-y-6">
+              <BookingReferralCard />
+
               {/* Crew */}
               <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
                 <CardHeader className="pb-3">
@@ -1409,6 +1279,8 @@ export default function PublicItineraryPage({ token, verifiedEmail }: PublicItin
                   </CardContent>
                 </Card>
               )}
+
+              <AircraftProfile aircraft={aircraft} />
 
               {/* Weather */}
               {Object.keys(weather).length > 0 && (
