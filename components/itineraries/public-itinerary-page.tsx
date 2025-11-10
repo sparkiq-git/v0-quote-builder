@@ -1,7 +1,5 @@
 "use client"
 
-import { Separator } from "@/components/ui/separator"
-
 import type React from "react"
 
 import { TooltipContent } from "@/components/ui/tooltip"
@@ -180,14 +178,12 @@ const FALLBACK_GALLERY = [
   "https://images.unsplash.com/photo-1514996937319-344454492b37?auto=format&fit=crop&w=1600&q=80",
   "https://images.unsplash.com/photo-1526506118085-60ce8714f8c5?auto=format&fit=crop&w=1600&q=80",
   "https://images.unsplash.com/photo-1512436991641-6745cdb1723f?auto=format&fit=crop&w=1600&q=80",
-  "https://images.unsplash.com/photo-1464037866556-6812c9d1c72e?auto=format&fit=crop&w=1600&q=80",
+  "https://images.unsplash.com/photo-1464037866556-68121c9d1c72e?auto=format&fit=crop&w=1600&q=80",
   "https://images.unsplash.com/photo-1500375592092-40eb2168fd21?auto=format&fit=crop&w=1600&q=80",
 ]
 
-const BOOKING_AID = process.env.NEXT_PUBLIC_BOOKING_REFERRAL_AID
-const BOOKING_URL = BOOKING_AID
-  ? `https://www.booking.com/index.html?aid=${BOOKING_AID}`
-  : "https://www.booking.com/"
+const BOOKING_AID = process.env.NEXT_PUBLIC_BOOKING_AID
+const BOOKING_URL = BOOKING_AID ? `https://www.booking.com/index.html?aid=${BOOKING_AID}` : "https://www.booking.com/"
 
 const createFallbackGallery = (): AircraftGalleryImage[] =>
   FALLBACK_GALLERY.map((url, index) => ({
@@ -197,6 +193,32 @@ const createFallbackGallery = (): AircraftGalleryImage[] =>
     is_primary: index === 0,
     display_order: index,
   }))
+
+function BookingReferralCard({ className }: { className?: string }) {
+  return (
+    <Card className={cn("border border-oklch-200/60 bg-oklch-50/70 backdrop-blur-md shadow-xl", className)}>
+      <CardContent className="flex flex-col gap-4 p-5">
+        <div className="flex items-center gap-3 text-oklch-900">
+          <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-oklch-100">
+            <Hotel className="h-5 w-5" />
+          </span>
+          <div>
+            <p className="text-sm font-semibold">Need a hotel?</p>
+            <p className="text-xs text-oklch-800/80">
+              Discover curated stays, late check-ins, and loyalty perks via our Booking.com partner link.
+            </p>
+          </div>
+        </div>
+        <Button asChild className="bg-oklch-600 hover:bg-oklch-700 text-white shadow-sm">
+          <a href={BOOKING_URL} target="_blank" rel="noopener noreferrer">
+            Plan stay with Booking.com
+            <ExternalLink className="ml-2 h-4 w-4" />
+          </a>
+        </Button>
+      </CardContent>
+    </Card>
+  )
+}
 
 function getPassengerAvatarUrl(passenger?: ItineraryPassenger["passenger"] | null): string | null {
   if (!passenger) return null
@@ -422,11 +444,7 @@ function RoutePreviewMap({ details }: { details: ItineraryDetail[] }) {
       const existingScript = document.getElementById("leaflet-script")
       if (existingScript) {
         existingScript.addEventListener("load", () => resolve(), { once: true })
-        existingScript.addEventListener(
-          "error",
-          () => reject(new Error("Failed to load map library")),
-          { once: true },
-        )
+        existingScript.addEventListener("error", () => reject(new Error("Failed to load map library")), { once: true })
       } else {
         const link = document.createElement("link")
         link.id = "leaflet-css"
@@ -575,8 +593,6 @@ function RoutePreviewMap({ details }: { details: ItineraryDetail[] }) {
     </div>
   )
 }
-
-
 
 export default function PublicItineraryPage({ token, verifiedEmail }: PublicItineraryPageProps) {
   const { toast } = useToast()
@@ -912,7 +928,7 @@ export default function PublicItineraryPage({ token, verifiedEmail }: PublicItin
                               <div className="group flex flex-col items-center gap-2">
                                 <div className="relative">
                                   <Avatar className="h-16 w-16 border-2 border-gray-300 transition duration-300 group-hover:-translate-y-1 group-hover:border-gray-600 group-hover:shadow-xl">
-                                    {avatarSrc && <AvatarImage src={avatarSrc} alt={name} />}
+                                    {avatarSrc && <AvatarImage src={avatarSrc || "/placeholder.svg"} alt={name} />}
                                     <AvatarFallback className="bg-gray-100 text-gray-700 text-lg font-semibold">
                                       {initials}
                                     </AvatarFallback>
@@ -924,7 +940,9 @@ export default function PublicItineraryPage({ token, verifiedEmail }: PublicItin
                             <TooltipContent className="max-w-xs border border-gray-200 bg-white/95 backdrop-blur-xl text-gray-900 shadow-xl">
                               <div className="space-y-2">
                                 <p className="text-sm font-semibold">{name}</p>
-                                {passenger?.email && <p className="text-xs text-gray-600 break-all">{passenger.email}</p>}
+                                {passenger?.email && (
+                                  <p className="text-xs text-gray-600 break-all">{passenger.email}</p>
+                                )}
                                 {passenger?.phone && <p className="text-xs text-gray-500">{passenger.phone}</p>}
                                 {passenger?.company && (
                                   <Badge className="bg-gray-100 text-gray-700 border border-gray-300">
@@ -1215,13 +1233,13 @@ export default function PublicItineraryPage({ token, verifiedEmail }: PublicItin
                         {passengers.map((assignment) => {
                           const passenger = assignment.passenger
                           const name = passenger?.full_name || "Guest"
-                        const initials =
-                          name
-                            .split(" ")
-                            .map((n) => n[0])
-                            .join("")
-                            .toUpperCase() || "G"
-                        const avatarSrc = getPassengerAvatarUrl(passenger)
+                          const initials =
+                            name
+                              .split(" ")
+                              .map((n) => n[0])
+                              .join("")
+                              .toUpperCase() || "G"
+                          const avatarSrc = getPassengerAvatarUrl(passenger)
 
                           return (
                             <Tooltip key={assignment.id} delayDuration={150}>
@@ -1229,10 +1247,10 @@ export default function PublicItineraryPage({ token, verifiedEmail }: PublicItin
                                 <div className="group flex flex-col items-center gap-2">
                                   <div className="relative">
                                     <Avatar className="h-20 w-20 border-2 border-gray-300 transition duration-300 group-hover:-translate-y-1 group-hover:border-gray-600 group-hover:shadow-xl">
-                                    {avatarSrc && <AvatarImage src={avatarSrc} alt={name} />}
-                                    <AvatarFallback className="bg-gray-100 text-gray-700 text-xl font-semibold">
-                                      {initials}
-                                    </AvatarFallback>
+                                      {avatarSrc && <AvatarImage src={avatarSrc || "/placeholder.svg"} alt={name} />}
+                                      <AvatarFallback className="bg-gray-100 text-gray-700 text-xl font-semibold">
+                                        {initials}
+                                      </AvatarFallback>
                                     </Avatar>
                                   </div>
                                   <span className="text-sm font-medium text-gray-700">{name.split(" ")[0]}</span>
@@ -1304,38 +1322,8 @@ export default function PublicItineraryPage({ token, verifiedEmail }: PublicItin
             </div>
 
             {/* Right Column - Sidebar */}
-
-            
             <div className="space-y-6">
               {/* Crew */}
-              function BookingReferralCard({ className }: { className?: string }) {
-  return (
-    <Card className={cn("border border-oklch-200/60 bg-oklch-50/70 backdrop-blur-md shadow-xl", className)}>
-      <CardContent className="flex flex-col gap-4 p-5">
-        <div className="flex items-center gap-3 text-oklch-900">
-          <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-oklch-100">
-            <Hotel className="h-5 w-5" />
-          </span>
-          <div>
-            <p className="text-sm font-semibold">Need a hotel?</p>
-            <p className="text-xs text-oklch-800/80">
-              Discover curated stays, late check-ins, and loyalty perks via our Booking.com partner link.
-            </p>
-          </div>
-        </div>
-        <Button
-          asChild
-          className="bg-oklch-600 hover:bg-oklch-700 text-white shadow-sm"
-        >
-          <a href={BOOKING_URL} target="_blank" rel="noopener noreferrer">
-            Plan stay with Booking.com
-            <ExternalLink className="ml-2 h-4 w-4" />
-          </a>
-        </Button>
-      </CardContent>
-    </Card>
-  )
-}
               <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-lg font-semibold text-gray-900 flex items-center gap-2">
@@ -1549,17 +1537,11 @@ function HeroSection({
               <HeroMetric
                 icon={Info}
                 label="Aircraft"
-                value={
-                  aircraft.manufacturer
-                    ? `${aircraft.manufacturer} ${aircraft.model}`
-                    : aircraft.model ?? ""
-                }
+                value={aircraft.manufacturer ? `${aircraft.manufacturer} ${aircraft.model}` : (aircraft.model ?? "")}
                 subtle
               />
             )}
-            {aircraft?.operator && (
-              <HeroMetric icon={Hotel} label="Operator" value={aircraft.operator} subtle />
-            )}
+            {aircraft?.operator && <HeroMetric icon={Hotel} label="Operator" value={aircraft.operator} subtle />}
           </div>
         </div>
 
@@ -1719,7 +1701,7 @@ function AircraftGallery({ images, fallbackLabel }: { images: AircraftGalleryIma
                 <CarouselItem key={`${img.url}-${index}`} className="basis-full">
                   <div className="relative h-72 sm:h-96 md:h-[28rem] lg:h-[32rem] overflow-hidden">
                     <Image
-                      src={resolveSrc(img)}
+                      src={resolveSrc(img) || "/placeholder.svg"}
                       alt={img.caption || "Aircraft gallery image"}
                       fill
                       className="object-cover"
@@ -1868,7 +1850,7 @@ function PassengerManifest({ passengers }: { passengers: ItineraryPassenger[] })
                       <div className="group flex flex-col items-center gap-2">
                         <div className="relative">
                           <Avatar className="h-16 w-16 border-2 border-emerald-400/40 transition duration-300 group-hover:-translate-y-1 group-hover:border-emerald-300 group-hover:shadow-[0_25px_45px_rgba(16,185,129,0.25)]">
-                            {avatarSrc && <AvatarImage src={avatarSrc} alt={name} />}
+                            {avatarSrc && <AvatarImage src={avatarSrc || "/placeholder.svg"} alt={name} />}
                             <AvatarFallback className="bg-emerald-500/10 text-emerald-200 text-lg font-semibold">
                               {initials}
                             </AvatarFallback>
@@ -1977,8 +1959,8 @@ function CrewManifest({ crew, contact }: { crew: ItineraryCrewMember[]; contact?
               </div>
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <Mail className="h-4 w-4 text-gray-500" />
-                  <span className="text-xs text-gray-600">{itinerary.contact.email}</span>
+                  <Mail className="h-4 w-4 text-slate-400" />
+                  <span className="text-xs text-slate-300">{contact.email}</span>
                 </div>
               </div>
             </div>
