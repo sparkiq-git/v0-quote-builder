@@ -90,12 +90,7 @@ export function RouteMap() {
 
         const formatted: Route[] = (data ?? [])
           .filter(
-            (r) =>
-              r.lead?.status === "new" &&
-              r.origin_lat &&
-              r.origin_long &&
-              r.destination_lat &&
-              r.destination_long
+            (r) => r.lead?.status === "new" && r.origin_lat && r.origin_long && r.destination_lat && r.destination_long,
           )
           .map((r) => ({
             id: String(r.lead_id),
@@ -165,9 +160,7 @@ export function RouteMap() {
         }
 
         const formatted: Route[] = (data ?? [])
-          .filter(
-            (r) => r.origin_lat && r.origin_long && r.destination_lat && r.destination_long
-          )
+          .filter((r) => r.origin_lat && r.origin_long && r.destination_lat && r.destination_long)
           .map((r) => ({
             id: String(r.quote_id),
             customerName: r.quote?.contact_name ?? "Unknown",
@@ -245,14 +238,11 @@ export function RouteMap() {
           attributionControl: false,
         })
 
-        window.L.tileLayer(
-          "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-          {
-            attribution: "© OpenStreetMap contributors © CARTO",
-            maxZoom: 18,
-            subdomains: "abcd",
-          }
-        ).addTo(map.current)
+        window.L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+          attribution: "© OpenStreetMap contributors © CARTO",
+          maxZoom: 18,
+          subdomains: "abcd",
+        }).addTo(map.current)
 
         setMapLoaded(true)
       } catch (err) {
@@ -285,48 +275,72 @@ export function RouteMap() {
 
     const allCoords: [number, number][] = []
 
+    const originCounts = new Map<string, { coords: [number, number]; name: string; count: number }>()
+
     routes.forEach((route) => {
       route.legs.forEach((leg) => {
         const originLatLng: [number, number] = [leg.originCoords.lat, leg.originCoords.lng]
-        const destLatLng: [number, number] = [leg.destCoords.lat, leg.destCoords.lng]
-        allCoords.push(originLatLng, destLatLng)
+        const key = `${originLatLng[0]},${originLatLng[1]}`
 
-        const color = activeFilter === "leads" ? "#2563eb" : "#16a34a"
+        if (originCounts.has(key)) {
+          const existing = originCounts.get(key)!
+          originCounts.set(key, { ...existing, count: existing.count + 1 })
+        } else {
+          originCounts.set(key, {
+            coords: originLatLng,
+            name: leg.originCoords.name,
+            count: 1,
+          })
+        }
 
-        // Draw route line
-        const routeLine = window.L.polyline([originLatLng, destLatLng], {
-          color,
-          weight: 1.5,
-          opacity: 0.9,
-          dashArray: "3, 2",
-        }).addTo(map.current)
-
-        routeLayers.current.push(routeLine)
-
-        // --- Minimalist start/end circle markers ---
-        const originCircle = window.L.circleMarker(originLatLng, {
-          radius: 4,
-          color,
-          fillColor: color,
-          fillOpacity: 1,
-          weight: 0,
-        }).addTo(map.current)
-
-        const destCircle = window.L.circleMarker(destLatLng, {
-          radius: 4,
-          color,
-          fillColor: color,
-          fillOpacity: 1,
-          weight: 0,
-        }).addTo(map.current)
-
-        airportMarkers.current.push(originCircle, destCircle)
+        allCoords.push(originLatLng)
       })
     })
 
+    const color = "rgba(55, 65, 81, 0.7)" // dark grey with 70% opacity
+
+    originCounts.forEach((origin) => {
+      const markerHtml = `
+        <div style="
+          background: ${color};
+          color: white;
+          border-radius: 50%;
+          width: ${Math.max(24, origin.count * 4)}px;
+          height: ${Math.max(24, origin.count * 4)}px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: bold;
+          font-size: ${origin.count > 9 ? "11px" : "13px"};
+          border: 2px solid white;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        ">
+          ${origin.count}
+        </div>
+      `
+
+      const marker = window.L.marker(origin.coords, {
+        icon: window.L.divIcon({
+          className: "custom-origin-marker",
+          html: markerHtml,
+          iconSize: [Math.max(24, origin.count * 4), Math.max(24, origin.count * 4)],
+          iconAnchor: [Math.max(12, origin.count * 2), Math.max(12, origin.count * 2)],
+        }),
+      }).addTo(map.current)
+
+      marker.bindPopup(`
+        <div style="font-size: 12px; padding: 4px;">
+          <strong>${origin.name}</strong><br/>
+          ${origin.count} ${activeFilter === "leads" ? "lead(s)" : "trip(s)"}
+        </div>
+      `)
+
+      airportMarkers.current.push(marker)
+    })
+
     if (allCoords.length) {
-      const group = window.L.featureGroup(routeLayers.current)
-      map.current.fitBounds(group.getBounds(), { padding: [20, 20], maxZoom: 6 })
+      const group = window.L.featureGroup(airportMarkers.current)
+      map.current.fitBounds(group.getBounds(), { padding: [50, 50], maxZoom: 6 })
     }
   }, [routes, mapLoaded, activeFilter])
 
@@ -335,10 +349,9 @@ export function RouteMap() {
   const handleRefresh = () => setRefreshKey((k) => k + 1)
 
   return (
-    <Card className="relative flex-1 h-full overflow-hidden border border-gray-200 rounded-2xl shadow-sm">
+    <Card className="relative flex-1 h-full overflow-hidden border border-gray-200 rounded-2xl shadow-sm z-10">
       <div className="relative w-full h-full bg-slate-50 rounded-2xl overflow-hidden">
-        {/* Filters */}
-        <div className="absolute top-4 left-4 z-[1000] flex items-center gap-2 bg-white/10 rounded-lg p-2 shadow-lg border border-white/10">
+        <div className="absolute top-4 left-4 z-[1000] flex flex-col sm:flex-row items-start sm:items-center gap-2 bg-white/95 backdrop-blur-sm rounded-lg p-2 shadow-lg border border-white/20">
           {(["leads", "upcoming"] as FilterType[]).map((filter) => {
             const isActive = activeFilter === filter
             const cnt = filter === "leads" ? leadRoutes.length : upcomingRoutes.length
@@ -348,14 +361,11 @@ export function RouteMap() {
                 key={filter}
                 variant={isActive ? "default" : "ghost"}
                 size="sm"
-                className={`h-8 px-3 text-xs ${isActive ? "shadow-sm" : "hover:bg-slate-300"}`}
+                className={`h-8 px-3 text-xs w-full sm:w-auto ${isActive ? "shadow-sm" : "hover:bg-slate-300"}`}
                 onClick={() => setActiveFilter(filter)}
               >
                 {label}
-                <Badge
-                  variant={isActive ? "secondary" : "outline"}
-                  className="ml-2 h-4 px-1 text-[10px]"
-                >
+                <Badge variant={isActive ? "secondary" : "outline"} className="ml-2 h-4 px-1 text-[10px]">
                   {cnt}
                 </Badge>
               </Button>
@@ -363,8 +373,7 @@ export function RouteMap() {
           })}
         </div>
 
-        {/* Zoom / Refresh */}
-        <div className="absolute top-20 right-4 z-[1000] flex flex-col gap-1 bg-white/80 rounded-lg p-1 shadow-lg border border-gray-200">
+        <div className="absolute top-4 right-4 z-[1000] flex flex-col gap-1 bg-white/95 backdrop-blur-sm rounded-lg p-1 shadow-lg border border-gray-200">
           <Button variant="ghost" size="sm" onClick={handleZoomIn}>
             <Plus className="h-4 w-4" />
           </Button>
