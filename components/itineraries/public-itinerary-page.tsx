@@ -960,6 +960,105 @@ export default function PublicItineraryPage({ token, verifiedEmail }: PublicItin
               </CardContent>
             </Card>
 
+            {/* Crew */}
+            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                  <Plane className="h-5 w-5 text-gray-600" />
+                  Crew
+                </CardTitle>
+                <CardDescription className="text-gray-600">Your flight team</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {crew.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-8 text-center">
+                    <Plane className="mx-auto mb-3 h-8 w-8 text-gray-400" />
+                    <p className="text-sm text-gray-600">Crew assignments will be posted shortly.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {crew.map((member) => (
+                      <div key={member.id} className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">{member.full_name || "Crew member"}</p>
+                            <p className="text-xs uppercase tracking-wider text-gray-500 mt-1">{member.role}</p>
+                          </div>
+                          {member.confirmed ? (
+                            <Badge className="bg-emerald-100 text-emerald-700 border border-emerald-300">Confirmed</Badge>
+                          ) : (
+                            <Badge variant="outline" className="border-gray-300 text-gray-600">
+                              Pending
+                            </Badge>
+                          )}
+                        </div>
+                        {member.notes && (
+                          <p className="mt-3 rounded-lg bg-white p-3 text-xs text-gray-600 leading-relaxed border border-gray-200">
+                            {member.notes}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Weather */}
+            {Object.keys(weather).length > 0 && (
+              <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                    <Cloud className="h-5 w-5 text-gray-600" />
+                    Weather
+                  </CardTitle>
+                  <CardDescription className="text-gray-600">
+                    Live conditions for your key departure and arrival aerodromes.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {Object.entries(weather).map(([code, summary]) => (
+                      <div key={code} className="rounded-xl border border-gray-200 bg-gray-50 p-3 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-semibold text-gray-900">{formatAirportCode(code)}</p>
+                          <Badge className="bg-gray-200 text-gray-700 border border-gray-300 text-xs">
+                            {summary.metar?.flightCategory || "N/A"}
+                          </Badge>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-xs text-gray-600">
+                          <div className="flex items-center gap-1.5">
+                            <Thermometer className="h-3 w-3 text-gray-500" />
+                            <span>
+                              {summary.metar?.temperatureC != null
+                                ? `${Math.round(summary.metar.temperatureC)}°C`
+                                : "—"}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <Wind className="h-3 w-3 text-gray-500" />
+                            <span>{summary.metar?.wind || "Calm"}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <Waves className="h-3 w-3 text-gray-500" />
+                            <span>{summary.metar?.visibility || "—"}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <DropletIcon className="h-3 w-3 text-gray-500" />
+                            <span>
+                              {summary.metar?.dewpointC != null
+                                ? `${Math.round(summary.metar.dewpointC)}°C`
+                                : "—"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Flight Path Map */}
             <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
               <CardHeader className="pb-3">
@@ -1528,7 +1627,9 @@ function AircraftGallery({ images, fallbackLabel }: { images: AircraftGalleryIma
     setCurrent(api.selectedScrollSnap())
     const onSelect = () => setCurrent(api.selectedScrollSnap())
     api.on("select", onSelect)
-    return () => api.off("select", onSelect)
+    return () => {
+      api.off("select", onSelect)
+    }
   }, [api])
 
   const scrollTo = useCallback((index: number) => api?.scrollTo(index), [api])
@@ -1637,7 +1738,6 @@ function AircraftProfile({ aircraft }: { aircraft: ItineraryAircraft | null }) {
   const infoRows = [
     aircraft.manufacturer && { label: "Manufacturer", value: aircraft.manufacturer },
     aircraft.model && { label: "Model", value: aircraft.model },
-    aircraft.operator && { label: "Operator", value: aircraft.operator },
     aircraft.tail_number && { label: "Tail Number", value: aircraft.tail_number },
   ].filter(Boolean) as { label: string; value: string }[]
 
