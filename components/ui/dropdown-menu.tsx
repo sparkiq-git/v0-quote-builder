@@ -213,7 +213,12 @@ function DropdownMenuContent({
 
     const updatePosition = () => {
       const triggerElement = context?.trigger;
-      if (!triggerElement) return;
+      if (!triggerElement) {
+        if (process.env.NODE_ENV !== "production") {
+          console.warn("[DropdownMenu] Unable to position content; trigger ref missing.");
+        }
+        return;
+      }
 
       computePosition(triggerElement, contentElement, {
         placement,

@@ -7,10 +7,10 @@ import { Suspense } from "react"
 import { getServerUser } from "@/lib/supabase/server"
 import { UsersListClient } from "@/components/settings/users/users-list-client"
 import { UsersPageLayout } from "@/components/settings/users/users-page-layout"
+import { ensureSettingsConfig } from "./config"
 
 export default async function UsersManagementPage() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  const { supabaseUrl, serviceRoleKey } = ensureSettingsConfig()
 
   if (!supabaseUrl || !serviceRoleKey) {
     return (
