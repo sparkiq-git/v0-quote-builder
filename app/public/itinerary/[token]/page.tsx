@@ -1,19 +1,4 @@
-<<<<<<< HEAD
-"use client"
-
-import dynamic from "next/dynamic"
-
-const PublicItineraryPage = dynamic(() => import("@/components/itineraries/public-itinerary-page"), {
-  ssr: false,
-  loading: () => (
-    <div className="flex min-h-screen items-center justify-center bg-slate-950 text-slate-200">
-      Preparing itinerary experience...
-    </div>
-  ),
-})
-=======
 import { PublicItineraryClientWrapper } from "./client-wrapper"
->>>>>>> 102c7fed726a35282e6975c0436b2fbaad15beec
 
 export default function PublicItineraryRoute({ params }: { params: { token: string } }) {
   return <PublicItineraryClientWrapper token={params.token} />
