@@ -114,8 +114,8 @@ export async function createUser(formData: FormData) {
           console.log("User exists but has avatar file - attempting to find user and update avatar")
           // Try to find the existing user and update their avatar
           const { data: existingUsers } = await supabase.auth.admin.listUsers()
-          const existingUser = existingUsers.users.find(u => u.email === email)
-          
+          const existingUser = existingUsers.users.find((u) => u.email === email)
+
           if (existingUser) {
             const uploadResult = await uploadAvatar(existingUser.id, avatarFile)
             if (uploadResult.success) {
@@ -133,11 +133,11 @@ export async function createUser(formData: FormData) {
     // Handle avatar upload if provided - using clean upload function
     const avatarFile = formData.get("avatar_file") as File
     if (avatarFile && authData.user) {
-      console.log("Processing avatar upload for new user:", { 
-        userId: authData.user.id, 
-        email: authData.user.email 
+      console.log("Processing avatar upload for new user:", {
+        userId: authData.user.id,
+        email: authData.user.email,
       })
-      
+
       const uploadResult = await uploadAvatar(authData.user.id, avatarFile)
       if (!uploadResult.success) {
         console.error("Avatar upload failed:", uploadResult.error)
@@ -250,6 +250,22 @@ export async function deleteUser(userId: string) {
 export async function resendInvite(email: string) {
   try {
     const supabase = getAdminClient()
+
+    const { data: users } = await supabase.auth.admin.listUsers()
+    const user = users.users.find((u) => u.email === email)
+
+    if (!user) {
+      return { success: false, error: "User not found" }
+    }
+
+    // Only allow resending invite if email is not confirmed
+    if (user.email_confirmed_at) {
+      return {
+        success: false,
+        error: "User has already confirmed their email. Use 'Reset Password' instead.",
+      }
+    }
+
     const { error } = await supabase.auth.admin.inviteUserByEmail(email)
     if (error) throw error
 
@@ -263,7 +279,12 @@ export async function resendInvite(email: string) {
 export async function resetPassword(email: string) {
   try {
     const supabase = getAdminClient()
-    const { error } = await supabase.auth.resetPasswordForEmail(email)
+
+    // This sends a recovery email to the user's email address
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/verify?type=recovery&redirect_to=${process.env.NEXT_PUBLIC_SUPABASE_URL}/reset-password`,
+    })
+
     if (error) throw error
 
     return { success: true }
@@ -296,7 +317,7 @@ export async function bulkUpdateUserRoles(userIds: string[], role: string, actio
       if (action === "add") {
         updatedRoles = currentRoles.includes(role) ? currentRoles : [...currentRoles, role]
       } else {
-        updatedRoles = currentRoles.filter(r => r !== role)
+        updatedRoles = currentRoles.filter((r) => r !== role)
       }
 
       // Update user roles
@@ -315,8 +336,8 @@ export async function bulkUpdateUserRoles(userIds: string[], role: string, actio
       }
     }
 
-    const successCount = results.filter(r => r.success).length
-    const failureCount = results.filter(r => !r.success).length
+    const successCount = results.filter((r) => r.success).length
+    const failureCount = results.filter((r) => !r.success).length
 
     return {
       success: failureCount === 0,

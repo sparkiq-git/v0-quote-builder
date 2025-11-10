@@ -125,7 +125,7 @@ export function UsersListClient() {
       } else {
         toast({
           title: "Error",
-          description: result.error,
+          description: result.error || "Failed to resend invite",
           variant: "destructive",
         })
       }
@@ -144,12 +144,12 @@ export function UsersListClient() {
       if (result.success) {
         toast({
           title: "Success",
-          description: `Password reset link generated for ${email}`,
+          description: `Password reset email sent to ${email}`,
         })
       } else {
         toast({
           title: "Error",
-          description: result.error,
+          description: result.error || "Failed to reset password",
           variant: "destructive",
         })
       }

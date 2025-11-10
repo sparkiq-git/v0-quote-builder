@@ -35,6 +35,13 @@ export function SimpleContactCombobox({ tenantId, value, selectedName, onSelect 
   const dropdownRef = useRef<HTMLDivElement>(null)
   const { toast } = useToast()
 
+  const [newContactForm, setNewContactForm] = useState({
+    full_name: "",
+    email: "",
+    phone: "",
+    company: "",
+  })
+
   useEffect(() => {
     setMounted(true)
     const root = document.getElementById("portal-root") || document.body
@@ -136,6 +143,13 @@ export function SimpleContactCombobox({ tenantId, value, selectedName, onSelect 
       ) {
         setOpen(false)
         setCreating(false)
+        // Reset form when closing
+        setNewContactForm({
+          full_name: "",
+          email: "",
+          phone: "",
+          company: "",
+        })
       }
     }
 
@@ -143,6 +157,13 @@ export function SimpleContactCombobox({ tenantId, value, selectedName, onSelect 
       if (e.key === "Escape") {
         setOpen(false)
         setCreating(false)
+        // Reset form when escaping
+        setNewContactForm({
+          full_name: "",
+          email: "",
+          phone: "",
+          company: "",
+        })
       }
     }
 
@@ -208,6 +229,12 @@ export function SimpleContactCombobox({ tenantId, value, selectedName, onSelect 
       onSelect(data)
       setOpen(false)
       setCreating(false)
+      setNewContactForm({
+        full_name: "",
+        email: "",
+        phone: "",
+        company: "",
+      })
     }
   }
 
@@ -312,24 +339,52 @@ export function SimpleContactCombobox({ tenantId, value, selectedName, onSelect 
               >
                 <div className="grid gap-1.5">
                   <Label>Full Name *</Label>
-                  <Input name="full_name" required />
+                  <Input
+                    name="full_name"
+                    value={newContactForm.full_name}
+                    onChange={(e) => setNewContactForm({ ...newContactForm, full_name: e.target.value })}
+                    required
+                  />
                 </div>
                 <div className="grid gap-1.5">
                   <Label>Email *</Label>
-                  <Input name="email" type="email" required />
+                  <Input
+                    name="email"
+                    type="email"
+                    value={newContactForm.email}
+                    onChange={(e) => setNewContactForm({ ...newContactForm, email: e.target.value })}
+                    required
+                  />
                 </div>
                 <div className="grid gap-1.5">
                   <Label>Phone *</Label>
-                  <Input name="phone" required />
+                  <Input
+                    name="phone"
+                    value={newContactForm.phone}
+                    onChange={(e) => setNewContactForm({ ...newContactForm, phone: e.target.value })}
+                    required
+                  />
                 </div>
                 <div className="grid gap-1.5">
                   <Label>Company</Label>
-                  <Input name="company" />
+                  <Input
+                    name="company"
+                    value={newContactForm.company}
+                    onChange={(e) => setNewContactForm({ ...newContactForm, company: e.target.value })}
+                  />
                 </div>
                 <div className="flex justify-between pt-2">
                   <button
                     type="button"
-                    onClick={() => setCreating(false)}
+                    onClick={() => {
+                      setCreating(false)
+                      setNewContactForm({
+                        full_name: "",
+                        email: "",
+                        phone: "",
+                        company: "",
+                      })
+                    }}
                     className="inline-flex items-center gap-2 rounded-md text-sm px-4 py-2 hover:bg-accent hover:text-accent-foreground transition-colors"
                   >
                     Cancel

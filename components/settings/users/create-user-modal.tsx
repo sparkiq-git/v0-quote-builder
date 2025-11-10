@@ -17,7 +17,20 @@ import { useToast } from "@/hooks/use-toast"
 import { createUser, getShiftRotations } from "@/lib/actions/admin-users"
 import { userFormSchema } from "@/lib/validations/admin"
 import { AVAILABLE_ROLES, type UserFormData, type ShiftRotation } from "@/lib/types/admin"
-import { Upload, X, Users, UserPlus, User, Phone, MapPin, Globe, Clock, Copy, ArrowRight } from "lucide-react"
+import {
+  Upload,
+  X,
+  Users,
+  UserPlus,
+  User,
+  Phone,
+  MapPin,
+  Globe,
+  Clock,
+  Copy,
+  ArrowRight,
+  UserCheck,
+} from "lucide-react"
 
 interface CreateUserModalProps {
   open: boolean
@@ -248,11 +261,11 @@ export function CreateUserModal({ open, onOpenChange, onSuccess }: CreateUserMod
                         <FormItem>
                           <FormLabel className="text-base">Email Address *</FormLabel>
                           <FormControl>
-                            <Input 
-                              placeholder="john.doe@company.com" 
-                              {...field} 
+                            <Input
+                              placeholder="john.doe@company.com"
+                              {...field}
                               value={field.value || ""}
-                              className="h-11 text-base" 
+                              className="h-11 text-base"
                             />
                           </FormControl>
                           <FormDescription>Used for login and notifications</FormDescription>
@@ -268,8 +281,8 @@ export function CreateUserModal({ open, onOpenChange, onSuccess }: CreateUserMod
                         <FormItem>
                           <FormLabel className="text-base">Display Name {!isCrew ? "*" : ""}</FormLabel>
                           <FormControl>
-                            <Input 
-                              placeholder="John Doe" 
+                            <Input
+                              placeholder="John Doe"
                               {...field}
                               value={field.value || ""}
                               className="h-11 text-base"
@@ -277,10 +290,9 @@ export function CreateUserModal({ open, onOpenChange, onSuccess }: CreateUserMod
                             />
                           </FormControl>
                           <FormDescription>
-                            {isCrew 
-                              ? "Display name will be auto-generated from crew information" 
-                              : "Name shown throughout the application"
-                            }
+                            {isCrew
+                              ? "Display name will be auto-generated from crew information"
+                              : "Name shown throughout the application"}
                           </FormDescription>
                           <FormMessage />
                         </FormItem>
@@ -297,7 +309,12 @@ export function CreateUserModal({ open, onOpenChange, onSuccess }: CreateUserMod
                             Phone Number
                           </FormLabel>
                           <FormControl>
-                            <Input placeholder="+1 (555) 123-4567" {...field} value={field.value || ""} className="h-11 text-base" />
+                            <Input
+                              placeholder="+1 (555) 123-4567"
+                              {...field}
+                              value={field.value || ""}
+                              className="h-11 text-base"
+                            />
                           </FormControl>
                           <FormDescription>Optional contact number for emergency notifications</FormDescription>
                           <FormMessage />
@@ -443,7 +460,12 @@ export function CreateUserModal({ open, onOpenChange, onSuccess }: CreateUserMod
                             <FormItem>
                               <FormLabel className="text-base">First Name *</FormLabel>
                               <FormControl>
-                                <Input placeholder="John" {...field} value={field.value || ""} className="h-11 text-base" />
+                                <Input
+                                  placeholder="John"
+                                  {...field}
+                                  value={field.value || ""}
+                                  className="h-11 text-base"
+                                />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -456,7 +478,12 @@ export function CreateUserModal({ open, onOpenChange, onSuccess }: CreateUserMod
                             <FormItem>
                               <FormLabel className="text-base">Last Name *</FormLabel>
                               <FormControl>
-                                <Input placeholder="Doe" {...field} value={field.value || ""} className="h-11 text-base" />
+                                <Input
+                                  placeholder="Doe"
+                                  {...field}
+                                  value={field.value || ""}
+                                  className="h-11 text-base"
+                                />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -471,7 +498,12 @@ export function CreateUserModal({ open, onOpenChange, onSuccess }: CreateUserMod
                           <FormItem>
                             <FormLabel className="text-base">Display Name *</FormLabel>
                             <FormControl>
-                              <Input placeholder="John D." {...field} value={field.value || ""} className="h-11 text-base" />
+                              <Input
+                                placeholder="John D."
+                                {...field}
+                                value={field.value || ""}
+                                className="h-11 text-base"
+                              />
                             </FormControl>
                             <FormDescription>Name shown in schedules and assignments</FormDescription>
                             <FormMessage />
@@ -489,7 +521,12 @@ export function CreateUserModal({ open, onOpenChange, onSuccess }: CreateUserMod
                               Crew Phone
                             </FormLabel>
                             <FormControl>
-                              <Input placeholder="+1 (555) 123-4567" {...field} value={field.value || ""} className="h-11 text-base" />
+                              <Input
+                                placeholder="+1 (555) 123-4567"
+                                {...field}
+                                value={field.value || ""}
+                                className="h-11 text-base"
+                              />
                             </FormControl>
                             <FormDescription>Separate contact for crew operations</FormDescription>
                             <FormMessage />
@@ -507,7 +544,12 @@ export function CreateUserModal({ open, onOpenChange, onSuccess }: CreateUserMod
                               Home Base
                             </FormLabel>
                             <FormControl>
-                              <Input placeholder="Los Angeles, CA" {...field} value={field.value || ""} className="h-11 text-base" />
+                              <Input
+                                placeholder="Los Angeles, CA"
+                                {...field}
+                                value={field.value || ""}
+                                className="h-11 text-base"
+                              />
                             </FormControl>
                             <FormDescription>Primary operating location</FormDescription>
                             <FormMessage />
@@ -579,9 +621,7 @@ export function CreateUserModal({ open, onOpenChange, onSuccess }: CreateUserMod
                                 <FormLabel className="text-base flex items-center gap-2">
                                   <UserCheck className="h-4 w-4" /> Active Crew
                                 </FormLabel>
-                                <FormDescription className="text-sm">
-                                  Available for scheduling
-                                </FormDescription>
+                                <FormDescription className="text-sm">Available for scheduling</FormDescription>
                               </div>
                               <FormControl>
                                 <Switch

@@ -1,8 +1,8 @@
 "use client"
 
-import type React from "react"
+import React from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -13,14 +13,14 @@ import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useToast } from "@/hooks/use-toast"
 import { updateUser, getShiftRotations } from "@/lib/actions/admin-users"
 import { userFormSchema } from "@/lib/validations/admin"
 import { AVAILABLE_ROLES, type UserFormData, type AdminUser, type ShiftRotation } from "@/lib/types/admin"
-import { Check, ChevronsUpDown, Upload, X, Users, Edit } from "lucide-react"
+import { Check, ChevronsUpDown, Upload, X, Users, Edit, UserCircle, SearchIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface EditUserModalProps {
@@ -30,13 +30,13 @@ interface EditUserModalProps {
   user: AdminUser | null
 }
 
-export function EditUserModal({ open, onOpenChange, onSuccess, user }: EditUserModalProps) {
+function EditUserModal({ open, onOpenChange, user, onSuccess }: EditUserModalProps) {
   const [loading, setLoading] = useState(false)
   const [rolesOpen, setRolesOpen] = useState(false)
   const [shiftRotations, setShiftRotations] = useState<ShiftRotation[]>([])
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
   const { toast } = useToast()
-
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const form = useForm<UserFormData>({
     resolver: zodResolver(userFormSchema),
     defaultValues: {
@@ -59,7 +59,6 @@ export function EditUserModal({ open, onOpenChange, onSuccess, user }: EditUserM
   const isCrew = form.watch("is_crew")
   const selectedRoles = form.watch("roles")
 
-  // Load data when modal opens or user changes
   useEffect(() => {
     if (open && user) {
       loadShiftRotations()
@@ -108,7 +107,6 @@ export function EditUserModal({ open, onOpenChange, onSuccess, user }: EditUserM
           },
     })
 
-    // Set avatar preview if user has one
     if (user.avatar_path) {
       setAvatarPreview(`/api/avatar/${user.id}`)
     } else {
@@ -119,7 +117,6 @@ export function EditUserModal({ open, onOpenChange, onSuccess, user }: EditUserM
   const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file) {
-      // Validate file
       if (file.size > 2 * 1024 * 1024) {
         toast({
           title: "Error",
@@ -138,14 +135,12 @@ export function EditUserModal({ open, onOpenChange, onSuccess, user }: EditUserM
         return
       }
 
-      // Create preview
       const reader = new FileReader()
       reader.onload = (e) => {
         setAvatarPreview(e.target?.result as string)
       }
       reader.readAsDataURL(file)
 
-      // Set form value
       form.setValue("avatar", file)
     }
   }
@@ -190,6 +185,10 @@ export function EditUserModal({ open, onOpenChange, onSuccess, user }: EditUserM
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click()
   }
 
   if (!user) return null
@@ -247,7 +246,13 @@ export function EditUserModal({ open, onOpenChange, onSuccess, user }: EditUserM
                       </PopoverTrigger>
                       <PopoverContent className="w-full p-0">
                         <Command>
-                          <CommandInput placeholder="Search roles..." />
+                          <div className="flex h-9 items-center gap-2 border-b px-3">
+                            <SearchIcon className="size-4 shrink-0 opacity-50" />
+                            <Input
+                              placeholder="Search roles..."
+                              className="h-10 border-0 shadow-none focus-visible:ring-0 px-0"
+                            />
+                          </div>
                           <CommandList>
                             <CommandEmpty>No roles found.</CommandEmpty>
                             <CommandGroup>
@@ -304,49 +309,41 @@ export function EditUserModal({ open, onOpenChange, onSuccess, user }: EditUserM
 
               {/* Avatar Upload */}
               <div className="space-y-2">
-                <FormLabel>Avatar</FormLabel>
+                <label className="text-sm font-medium">Profile Picture</label>
                 <div className="flex items-center gap-4">
-                  <Avatar className="h-16 w-16">
-                    <AvatarImage src={avatarPreview || undefined} />
-                    <AvatarFallback>
-                      {user.display_name
-                        ? user.display_name
-                            .split(" ")
-                            .map((n) => n[0])
-                            .join("")
-                            .toUpperCase()
-                            .slice(0, 2)
-                        : user.email.slice(0, 2).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex gap-2">
+                  {avatarPreview ? (
+                    <Avatar className="h-20 w-20">
+                      <AvatarImage src={avatarPreview || "/placeholder.svg"} alt="Avatar preview" />
+                      <AvatarFallback>{user.display_name?.charAt(0)?.toUpperCase() || "U"}</AvatarFallback>
+                    </Avatar>
+                  ) : (
+                    <div className="h-20 w-20 rounded-full bg-muted flex items-center justify-center">
+                      <UserCircle className="h-10 w-10 text-muted-foreground" />
+                    </div>
+                  )}
+                  <div className="flex-1 space-y-2">
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => document.getElementById("avatar-upload-edit")?.click()}
+                      onClick={handleAvatarClick}
+                      className="h-10 bg-transparent"
                     >
-                      <Upload className="h-4 w-4 mr-2" />
-                      {avatarPreview ? "Change Image" : "Upload Image"}
+                      <Upload className="h-4 w-4 mr-2" /> Upload Image
                     </Button>
-                    {avatarPreview && (
-                      <Button type="button" variant="outline" size="sm" onClick={removeAvatar}>
-                        <X className="h-4 w-4 mr-2" />
-                        Remove
-                      </Button>
-                    )}
+                    <p className="text-sm text-muted-foreground">
+                      Upload an image (max 2MB). Supported formats: JPG, PNG, GIF.
+                    </p>
+                    {React.createElement("input", {
+                      ref: fileInputRef,
+                      id: "avatar-upload-edit",
+                      type: "file",
+                      accept: "image/*",
+                      className: "hidden",
+                      onChange: handleAvatarChange,
+                    })}
                   </div>
-                  <input
-                    id="avatar-upload-edit"
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleAvatarChange}
-                  />
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  Upload an image (max 2MB). Supported formats: JPG, PNG, GIF.
-                </p>
               </div>
 
               {/* Is Crew Toggle */}
@@ -539,3 +536,5 @@ export function EditUserModal({ open, onOpenChange, onSuccess, user }: EditUserM
     </Dialog>
   )
 }
+
+export { EditUserModal }
