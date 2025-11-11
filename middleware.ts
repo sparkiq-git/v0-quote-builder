@@ -9,7 +9,11 @@ const PUBLIC_PATHS = [
 ]
 
 <<<<<<< Current (Your changes)
+<<<<<<< Current (Your changes)
 const PUBLIC_FILE_EXTENSIONS = /\.(?:png|jpg|jpeg|svg|webp|gif|ico|txt|xml|json|map|css|js|woff2?|ttf|otf)$/i
+=======
+const PUBLIC_FILE_EXTENSIONS = /\.(?:png|jpg|jpeg|svg|webp|gif|ico|txt|xml|json|map|css|js|woff2?|ttf|otf|mp3|wav|ogg|webm)$/i
+>>>>>>> Incoming (Background Agent changes)
 =======
 const PUBLIC_FILE_EXTENSIONS = /\.(?:png|jpg|jpeg|svg|webp|gif|ico|txt|xml|json|map|css|js|woff2?|ttf|otf|mp3|wav|ogg|webm)$/i
 >>>>>>> Incoming (Background Agent changes)
