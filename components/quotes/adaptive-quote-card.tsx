@@ -17,6 +17,93 @@ import { formatCurrency } from "@/lib/utils/format"
 import { useDeviceDetection, deviceLayouts } from "@/hooks/use-device-detection"
 import { Wifi, Coffee, Tv, Utensils, Bed, Headphones, Zap, Shield, Star, CheckCircle } from "lucide-react"
 
+const MAX_OPTION_IMAGES = 6
+
+const placeholderImage = (label: string) =>
+  `/placeholder.svg?height=600&width=1000&query=${encodeURIComponent(`${label || "Aircraft"} aircraft`)}`
+
+const isLikelyValidImageUrl = (src: string) => {
+  if (!src) return false
+  const trimmed = src.trim()
+  if (!trimmed || trimmed.includes("undefined") || trimmed.includes("[object")) return false
+  if (/^https?:\/\//i.test(trimmed)) return true
+  if (/^\/\//.test(trimmed)) return true
+  if (trimmed.startsWith("/")) return true
+  if (trimmed.startsWith("data:") || trimmed.startsWith("blob:")) return true
+  if (trimmed.startsWith("storage/") || trimmed.startsWith("aircraft-media/")) return true
+  return false
+}
+
+const normalizeImageSource = (value: unknown): string | null => {
+  if (!value) return null
+  if (typeof value === "string") return value.trim()
+  if (typeof value === "object") {
+    const candidate =
+      (value as Record<string, unknown>).public_url ??
+      (value as Record<string, unknown>).publicUrl ??
+      (value as Record<string, unknown>).url ??
+      (value as Record<string, unknown>).src
+    if (typeof candidate === "string") {
+      return candidate.trim()
+    }
+  }
+  return null
+}
+
+const absolutizeImageUrl = (src: string) => {
+  const trimmed = src.trim()
+  if (!trimmed) return trimmed
+
+  if (
+    /^https?:\/\//i.test(trimmed) ||
+    trimmed.startsWith("/") ||
+    trimmed.startsWith("data:") ||
+    trimmed.startsWith("blob:")
+  ) {
+    return trimmed
+  }
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/+$/, "")
+  if (!supabaseUrl) {
+    return trimmed
+  }
+
+  if (trimmed.startsWith("storage/v1/object/public/")) {
+    return `${supabaseUrl}/${trimmed}`
+  }
+
+  if (trimmed.startsWith("aircraft-media/")) {
+    return `${supabaseUrl}/storage/v1/object/public/${trimmed}`
+  }
+
+  if (trimmed.startsWith("avatar/") || trimmed.startsWith("tenant/")) {
+    return `${supabaseUrl}/storage/v1/object/public/${trimmed}`
+  }
+
+  return trimmed
+}
+
+const collectOptionImages = (option: QuoteOption, fallbackLabel: string) => {
+  const rawImages: unknown[] = [
+    ...(Array.isArray((option as any)?.overrideImages) ? (option as any).overrideImages : []),
+    ...(Array.isArray(option.aircraftTail?.images) ? option.aircraftTail!.images : []),
+    ...(Array.isArray(option.aircraftModel?.images) ? option.aircraftModel!.images : []),
+  ]
+
+  const normalized = rawImages
+    .map(normalizeImageSource)
+    .filter((value): value is string => typeof value === "string" && isLikelyValidImageUrl(value))
+    .map(absolutizeImageUrl)
+
+  const unique = Array.from(new Set(normalized)).filter(isLikelyValidImageUrl)
+
+  if (unique.length === 0) {
+    return [placeholderImage(fallbackLabel)]
+  }
+
+  return unique.slice(0, MAX_OPTION_IMAGES)
+}
+
 interface AdaptiveQuoteCardProps {
   option: QuoteOption
   isSelected: boolean
@@ -59,33 +146,23 @@ export function AdaptiveQuoteCard({
   // Use aircraft data from the option (should be provided by the API)
   const aircraftModel = option.aircraftModel
   const aircraftTail = option.aircraftTail
+  const fallbackLabel = aircraftModel?.name || option.label || "Aircraft"
 
   const total = (option.cost_operator || 0) + (option.price_commission || 0) + (option.price_base || 0)
 
-  const images = option.overrideImages?.length
-    ? option.overrideImages
-    : aircraftTail?.images?.length
-      ? aircraftTail.images
-      : aircraftModel?.images?.length
-        ? aircraftModel.images
-        : [
-            `/placeholder.svg?height=600&width=1000&query=${encodeURIComponent(`${aircraftModel?.name || "Aircraft"} aircraft`)}`,
-          ]
+  const images = collectOptionImages(option, fallbackLabel)
 
   const getImageSrc = (image: string) => {
-    if (failedImages.includes(image)) {
-      return `/placeholder.svg?height=600&width=1000&query=${encodeURIComponent(
-        `${aircraftModel?.name || "Aircraft"} aircraft placeholder`,
-      )}`
+    const absolute = absolutizeImageUrl(image)
+    if (failedImages.includes(absolute)) {
+      return placeholderImage(fallbackLabel)
     }
 
-    if (!image || !image.includes("/aircraft/") || image.includes("undefined")) {
-      return `/placeholder.svg?height=600&width=1000&query=${encodeURIComponent(
-        `${aircraftModel?.name || "Aircraft"} aircraft placeholder`,
-      )}`
+    if (!isLikelyValidImageUrl(absolute)) {
+      return placeholderImage(fallbackLabel)
     }
 
-    return image
+    return absolute
   }
 
   useEffect(() => {
@@ -103,21 +180,12 @@ export function AdaptiveQuoteCard({
   const capacity = aircraftTail?.capacityOverride || aircraftModel?.defaultCapacity || 8
 
   const hasSpecifications =
-    aircraftTail?.year || capacity || 
-    aircraftTail?.speedKnotsOverride || aircraftModel?.defaultSpeedKnots ||
-    aircraftTail?.rangeNmOverride || aircraftModel?.defaultRangeNm
-
-  // Debug logging
-  console.log("🔍 Aircraft specifications debug:", {
-    year: aircraftTail?.year,
-    capacity,
-    speedKnotsOverride: aircraftTail?.speedKnotsOverride,
-    rangeNmOverride: aircraftTail?.rangeNmOverride,
-    defaultSpeedKnots: aircraftModel?.defaultSpeedKnots,
-    defaultRangeNm: aircraftModel?.defaultRangeNm,
-    hasSpecifications,
-    deviceType: deviceInfo.type
-  })
+    aircraftTail?.year ||
+    capacity ||
+    aircraftTail?.speedKnotsOverride ||
+    aircraftModel?.defaultSpeedKnots ||
+    aircraftTail?.rangeNmOverride ||
+    aircraftModel?.defaultRangeNm
 
   const getCardClasses = () => {
     const baseClasses =
@@ -196,16 +264,20 @@ export function AdaptiveQuoteCard({
                 <CarouselItem key={i} className="basis-full">
                   <div className={`relative overflow-hidden ${getImageClasses()}`}>
                     <img
-                      src={getImageSrc(img) || "/placeholder.svg"}
+                      src={getImageSrc(img) || placeholderImage(fallbackLabel)}
                       alt={`${aircraftModel?.name || "Aircraft"} - View ${i + 1} of ${images.length}`}
                       className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                       loading={i === 0 ? "eager" : "lazy"}
                       decoding="async"
                       onError={(e) => {
                         console.warn(`Failed to load image: ${img}`, e)
-                        setFailedImages((p) => (p.includes(img) ? p : [...p, img]))
+                        const key = getImageSrc(img)
+                        setFailedImages((p) => (key && !p.includes(key) ? [...p, key] : p))
                       }}
-                      onLoad={() => setFailedImages((p) => p.filter((f) => f !== img))}
+                      onLoad={() => {
+                        const key = getImageSrc(img)
+                        setFailedImages((p) => (key ? p.filter((f) => f !== key) : p))
+                      }}
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent z-10" />
                   </div>
