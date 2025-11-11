@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import {
   Card,
@@ -29,6 +29,110 @@ import { useToast } from "@/hooks/use-toast"
 import type { Quote } from "@/lib/types"
 import Image from "next/image"
 
+const MAX_OPTION_IMAGES = 6
+
+const placeholderImage = (label: string) =>
+  `/placeholder.svg?height=80&width=100&query=${encodeURIComponent(`${label || "Aircraft"} aircraft`)}`
+
+const isLikelyValidImageUrl = (src: string) => {
+  if (!src) return false
+  const trimmed = src.trim()
+  if (!trimmed || trimmed.includes("undefined") || trimmed.includes("[object")) return false
+  if (/^https?:\/\//i.test(trimmed)) return true
+  if (/^\/\//.test(trimmed)) return true
+  if (trimmed.startsWith("/")) return true
+  if (trimmed.startsWith("data:") || trimmed.startsWith("blob:")) return true
+  return false
+}
+
+const normalizeImageSource = (value: unknown): string | null => {
+  if (!value) return null
+  if (typeof value === "string") return value.trim()
+  if (typeof value === "object") {
+    const candidate =
+      (value as Record<string, unknown>).public_url ??
+      (value as Record<string, unknown>).publicUrl ??
+      (value as Record<string, unknown>).url ??
+      (value as Record<string, unknown>).src
+    if (typeof candidate === "string") {
+      return candidate.trim()
+    }
+  }
+  return null
+}
+
+const collectOptionImages = (option: any, fallbackLabel: string) => {
+  const rawImages: unknown[] = [
+    ...(Array.isArray(option?.overrideImages) ? option.overrideImages : []),
+    ...(Array.isArray(option?.aircraftTail?.images) ? option.aircraftTail.images : []),
+    ...(Array.isArray(option?.aircraftModel?.images) ? option.aircraftModel.images : []),
+  ]
+
+  const normalized = rawImages
+    .map(normalizeImageSource)
+    .filter((value): value is string => typeof value === "string" && isLikelyValidImageUrl(value))
+
+  const uniqueImages = Array.from(new Set(normalized))
+
+  if (uniqueImages.length === 0) {
+    return [placeholderImage(fallbackLabel)]
+  }
+
+  return uniqueImages.slice(0, MAX_OPTION_IMAGES)
+}
+
+const addHours = (date: Date, hours: number) => new Date(date.getTime() + hours * 60 * 60 * 1000)
+
+const toDateInputValue = (date: Date) => {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, "0")
+  const day = String(date.getDate()).padStart(2, "0")
+  return `${year}-${month}-${day}`
+}
+
+const toTimeInputValue = (date: Date) => {
+  const hours = String(date.getHours()).padStart(2, "0")
+  const minutes = String(date.getMinutes()).padStart(2, "0")
+  return `${hours}:${minutes}`
+}
+
+const parseIsoDate = (value?: string | null) => {
+  if (!value) return null
+  const parsed = new Date(value)
+  return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+
+function OptionImageThumbnail({
+  src,
+  alt,
+  fallbackLabel,
+}: {
+  src: string
+  alt: string
+  fallbackLabel: string
+}) {
+  const fallbackSrc = useMemo(() => placeholderImage(fallbackLabel), [fallbackLabel])
+  const [currentSrc, setCurrentSrc] = useState(() =>
+    isLikelyValidImageUrl(src) ? src : fallbackSrc
+  )
+
+  useEffect(() => {
+    setCurrentSrc(isLikelyValidImageUrl(src) ? src : fallbackSrc)
+  }, [src, fallbackSrc])
+
+  return (
+    <Image
+      src={currentSrc}
+      alt={alt}
+      fill
+      sizes="80px"
+      className="object-cover"
+      onError={() => setCurrentSrc(fallbackSrc)}
+      unoptimized
+    />
+  )
+}
+
 interface Props {
   quote: Quote
   onBack: () => void
@@ -41,7 +145,7 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
   const [publishedUrl, setPublishedUrl] = useState<string | null>(null)
   const [expirationDate, setExpirationDate] = useState<string>("")
   const [expirationTime, setExpirationTime] = useState<string>("")
-
+  const hasInitializedExpiration = useRef(false)
 
   // ✅ Fallback URL
   const quoteUrl =
@@ -70,8 +174,28 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
   const grandTotal = totalOptions + totalServices
 
   // ✅ Validate expiration date/time
-  const isExpirationValid = expirationDate && expirationTime
-  const expirationDateTime = isExpirationValid ? `${expirationDate}T${expirationTime}:00.000Z` : null
+  const isExpirationValid = Boolean(expirationDate && expirationTime)
+  const expirationDateTime = useMemo(() => {
+    if (!expirationDate || !expirationTime) return null
+    const [year, month, day] = expirationDate.split("-").map(Number)
+    const [hours, minutes] = expirationTime.split(":").map(Number)
+
+    if (
+      [year, month, day, hours, minutes].some((value) => Number.isNaN(value)) ||
+      !Number.isFinite(year) ||
+      !Number.isFinite(month) ||
+      !Number.isFinite(day) ||
+      !Number.isFinite(hours) ||
+      !Number.isFinite(minutes)
+    ) {
+      return null
+    }
+
+    const localDate = new Date()
+    localDate.setFullYear(year, month - 1, day)
+    localDate.setHours(hours, minutes, 0, 0)
+    return localDate.toISOString()
+  }, [expirationDate, expirationTime])
 
   /* ---------------- 🚀 Publish quote ---------------- */
   const handlePublish = async () => {
@@ -177,15 +301,35 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
     }
   }
 
-useEffect(() => {
-  if (!quote?.options?.length) return
-// Note: Aircraft data is already in quote options
-// No need to fetch separately
-}, [quote?.options])
+  useEffect(() => {
+    hasInitializedExpiration.current = false
+  }, [quote?.id])
 
+  useEffect(() => {
+    if (hasInitializedExpiration.current) return
 
+    const existingExpiration =
+      (quote as any)?.valid_until ??
+      (quote as any)?.validUntil ??
+      quote?.expiresAt ??
+      (quote as any)?.validUntilUtc ??
+      (quote as any)?.valid_until_utc ??
+      null
 
+    const parsedExisting = parseIsoDate(existingExpiration)
+    const baseline = parsedExisting ?? addHours(new Date(), 24)
 
+    setExpirationDate(toDateInputValue(baseline))
+    setExpirationTime(toTimeInputValue(baseline))
+
+    hasInitializedExpiration.current = true
+  }, [quote])
+
+  useEffect(() => {
+    if (!quote?.options?.length) return
+    // Note: Aircraft data is already in quote options
+    // No need to fetch separately
+  }, [quote?.options])
 
   /* ---------------- 🧾 Render ---------------- */
   return (
@@ -404,26 +548,22 @@ useEffect(() => {
                       </div>
 
                       {/* Image Gallery */}
-                      {(aircraftModel?.images?.length > 0 || aircraftTail?.images?.length > 0) && (
+                      {optionImages.length > 0 && (
                         <div className="mt-4">
                           <h5 className="font-medium mb-3">Aircraft Images</h5>
                           <div className="flex gap-2 overflow-x-auto pb-2">
-                            {[...(aircraftModel?.images || []), ...(aircraftTail?.images || [])]
-                              .slice(0, 6) // Limit to 6 images
-                              .map((image: string, idx: number) => (
-                                <div
-                                  key={idx}
-                                  className="flex-shrink-0 w-20 h-20 relative rounded-lg overflow-hidden border"
-                                >
-                                  <Image
-                                    src={image}
-                                    alt={`Aircraft image ${idx + 1}`}
-                                    fill
-                                    className="object-cover"
-                                    sizes="80px"
-                                  />
-                                </div>
-                              ))}
+                            {optionImages.map((imageSrc, idx: number) => (
+                              <div
+                                key={`${option.id ?? i}-${idx}`}
+                                className="flex-shrink-0 w-20 h-20 relative rounded-lg overflow-hidden border"
+                              >
+                                <OptionImageThumbnail
+                                  src={imageSrc}
+                                  alt={`${fallbackLabel} image ${idx + 1}`}
+                                  fallbackLabel={fallbackLabel}
+                                />
+                              </div>
+                            ))}
                           </div>
                         </div>
                       )}
