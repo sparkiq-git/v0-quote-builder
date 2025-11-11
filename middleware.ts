@@ -15,10 +15,23 @@ function isPublicPath(pathname: string) {
 }
 
 export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl
   const method = request.method.toUpperCase()
+  const pathname = request.nextUrl.pathname
 
   if (method === "OPTIONS" || method === "HEAD") {
+    return NextResponse.next()
+  }
+
+  const pathname = request.nextUrl.pathname
+
+  const isNextInternal =
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/__next") ||
+    pathname.startsWith("/favicon.ico") ||
+    pathname.startsWith("/robots.txt") ||
+    pathname.startsWith("/sitemap.xml")
+
+  if (isNextInternal || pathname.startsWith("/api/")) {
     return NextResponse.next()
   }
 
