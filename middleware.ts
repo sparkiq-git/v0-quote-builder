@@ -6,6 +6,7 @@ const PUBLIC_PATHS = [
   "/auth/callback",
   "/q",
   "/public/itinerary",
+  "/action",
 ]
 
 const PUBLIC_FILE_EXTENSIONS = /\.(?:png|jpg|jpeg|svg|webp|gif|ico|txt|xml|json|map|css|js|woff2?|ttf|otf|mp3|wav|ogg|webm)$/i
