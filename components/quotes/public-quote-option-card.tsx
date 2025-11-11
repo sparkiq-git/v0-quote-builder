@@ -84,19 +84,25 @@ export function PublicQuoteOptionCard({
             `/placeholder.svg?height=600&width=1000&query=${encodeURIComponent(`${aircraftModel?.name || "Aircraft"} aircraft`)}`,
           ]
 
+  const isValidImageUrl = (image?: string | null) => {
+    if (!image) return false
+    const trimmed = image.trim()
+    if (!trimmed || trimmed.includes("undefined")) return false
+    if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) return true
+    if (trimmed.startsWith("/") || trimmed.startsWith("data:") || trimmed.startsWith("blob:")) return true
+    return false
+  }
+
+  const placeholderFor = (query: string) =>
+    `/placeholder.svg?height=600&width=1000&query=${encodeURIComponent(`${query} aircraft placeholder`)}`
+
   const getImageSrc = (image: string) => {
-    // If image has already failed, use placeholder
     if (failedImages.includes(image)) {
-      return `/placeholder.svg?height=600&width=1000&query=${encodeURIComponent(
-        `${aircraftModel?.name || "Aircraft"} aircraft placeholder`,
-      )}`
+      return placeholderFor(aircraftModel?.name || "Aircraft")
     }
 
-    // If image URL looks invalid or is missing required path components, use placeholder
-    if (!image || !image.includes("/aircraft/") || image.includes("undefined")) {
-      return `/placeholder.svg?height=600&width=1000&query=${encodeURIComponent(
-        `${aircraftModel?.name || "Aircraft"} aircraft placeholder`,
-      )}`
+    if (!isValidImageUrl(image)) {
+      return placeholderFor(aircraftModel?.name || "Aircraft")
     }
 
     return image
@@ -151,10 +157,14 @@ export function PublicQuoteOptionCard({
                               loading={i === 0 ? "eager" : "lazy"}
                               decoding="async"
                               onError={(e) => {
+                                const key = img?.trim() ?? img
                                 console.warn(`Failed to load image: ${img}`, e)
-                                setFailedImages((p) => (p.includes(img) ? p : [...p, img]))
+                                setFailedImages((p) => (p.includes(key) ? p : [...p, key]))
                               }}
-                              onLoad={() => setFailedImages((p) => p.filter((f) => f !== img))}
+                              onLoad={() => {
+                                const key = img?.trim() ?? img
+                                setFailedImages((p) => p.filter((f) => f !== key))
+                              }}
                             />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/5 via-transparent to-transparent" />
                           </div>

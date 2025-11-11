@@ -8,6 +8,8 @@ const PUBLIC_PATHS = [
   "/public/itinerary",
 ]
 
+const PUBLIC_FILE_EXTENSIONS = /\.(?:png|jpg|jpeg|svg|webp|gif|ico|txt|xml|json|map|css|js|woff2?|ttf|otf)$/i
+
 function isPublicPath(pathname: string) {
   return PUBLIC_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`))
 }
@@ -17,6 +19,11 @@ export async function middleware(request: NextRequest) {
   const method = request.method.toUpperCase()
 
   if (method === "OPTIONS" || method === "HEAD") {
+    return NextResponse.next()
+  }
+
+  // Allow requests for public/static assets through
+  if (PUBLIC_FILE_EXTENSIONS.test(pathname)) {
     return NextResponse.next()
   }
 
