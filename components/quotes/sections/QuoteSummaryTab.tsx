@@ -361,15 +361,15 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
     const parsedExisting = parseIsoDate(existingExpiration)
     const earliestDeparture = getEarliestLegDeparture(quote?.legs)
 
-    const isSameAsDeparture =
-      parsedExisting && earliestDeparture
-        ? Math.abs(parsedExisting.getTime() - earliestDeparture.getTime()) <= 5 * 60 * 1000
-        : false
-
     let baseline = fallbackExpiration
 
-    if (parsedExisting && !isSameAsDeparture) {
+    if (parsedExisting) {
       baseline = parsedExisting
+    } else if (earliestDeparture) {
+      const isFutureDeparture = earliestDeparture.getTime() > now.getTime()
+      if (isFutureDeparture && earliestDeparture.getTime() < fallbackExpiration.getTime()) {
+        baseline = earliestDeparture
+      }
     }
 
     if (baseline.getTime() <= now.getTime()) {
