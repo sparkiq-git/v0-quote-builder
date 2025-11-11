@@ -8,7 +8,11 @@ const PUBLIC_PATHS = [
   "/public/itinerary",
 ]
 
+<<<<<<< Current (Your changes)
 const PUBLIC_FILE_EXTENSIONS = /\.(?:png|jpg|jpeg|svg|webp|gif|ico|txt|xml|json|map|css|js|woff2?|ttf|otf)$/i
+=======
+const PUBLIC_FILE_EXTENSIONS = /\.(?:png|jpg|jpeg|svg|webp|gif|ico|txt|xml|json|map|css|js|woff2?|ttf|otf|mp3|wav|ogg|webm)$/i
+>>>>>>> Incoming (Background Agent changes)
 
 function isPublicPath(pathname: string) {
   return PUBLIC_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`))

@@ -1,9 +1,10 @@
 "use client"
 
 import { useEffect, useRef } from "react"
-import { toast } from "sonner"
 import { useRouter } from "next/navigation"
+import { toast } from "sonner"
 import type { Lead } from "@/lib/types"
+import type { Session } from "@supabase/supabase-js"
 
 // Optional helper: small delay to debounce grouped inserts
 const debounce = (fn: Function, delay: number) => {
@@ -20,143 +21,172 @@ export function LeadListener() {
   const pendingLeads = useRef<Lead[]>([])
 
   useEffect(() => {
-    // Only run on client side
-    if (typeof window === 'undefined') return;
-    
-    console.log("🔔 LeadListener mounted, setting up real-time notifications...")
-    
-    // Preload the sound
-    soundRef.current = new Audio("/notify.mp3")
+    if (typeof window === "undefined") return
 
-    let cleanup: (() => void) | undefined
+    let active = true
+    let cleanupChannels: (() => void) | null = null
+    let authSubscription: { unsubscribe: () => void } | null = null
+    let supabaseClientPromise: Promise<typeof import("@/lib/supabase/client") | null> | null = null
 
-    const subscribeRealtime = async () => {
-      const { createClient } = await import("@/lib/supabase/client");
-      const supabase = createClient();
-      
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) return
-      
+    const ensureSupabaseClient = async () => {
+      if (!supabaseClientPromise) {
+        supabaseClientPromise = import("@/lib/supabase/client").catch((error) => {
+          console.error("[LeadListener] Failed to load Supabase client", error)
+          return null
+        })
+      }
+      return supabaseClientPromise
+    }
+
+    const preloadSound = () => {
+      if (!soundRef.current) {
+        soundRef.current = new Audio("/notify.mp3")
+        soundRef.current.load?.()
+      }
+    }
+
+    const playSound = () => {
+      soundRef.current?.play().catch(() => {
+        // Ignore autoplay errors
+      })
+    }
+
+    const flushLeads = debounce(() => {
+      if (!pendingLeads.current.length) return
+
+      const count = pendingLeads.current.length
+      const firstLead = pendingLeads.current[0]
+      const label = count === 1 ? `New Lead: ${firstLead.customer_name || "Unnamed"}` : `${count} New Leads`
+      const description =
+        count === 1 ? firstLead.trip_summary || "No trip summary provided." : "Multiple new leads received."
+
+      toast(label, {
+        description,
+        action: {
+          label: "View",
+          onClick: () => router.push("/leads"),
+        },
+      })
+
+      playSound()
+      pendingLeads.current = []
+    }, 1000)
+
+    const teardownChannels = () => {
+      if (cleanupChannels) {
+        cleanupChannels()
+        cleanupChannels = null
+      }
+    }
+
+    const setupRealtime = async (session: Session) => {
+      const module = await ensureSupabaseClient()
+      if (!module || !active) return
+
+      const supabase = module.createClient()
       supabase.realtime.setAuth(session.access_token)
-      
-      // Get tenantId from user metadata
-      const tenantId = session.user?.app_metadata?.tenant_id
 
-      // Create separate channels for each table to avoid conflicts
+      const tenantId =
+        session.user?.app_metadata?.tenant_id ??
+        session.user?.user_metadata?.tenant_id ??
+        session.user?.app_metadata?.tenant ??
+        null
+
       const leadsChannel = supabase.channel("leads-listener")
       const quotesChannel = supabase.channel("quotes-listener")
       const invoicesChannel = supabase.channel("invoices-listener")
 
-      const flushLeads = debounce(() => {
-        if (pendingLeads.current.length === 0) return
-        const count = pendingLeads.current.length
+      leadsChannel.on("postgres_changes", { event: "INSERT", schema: "public", table: "lead" }, (payload) => {
+        const newLead = payload.new as Lead
+        if (tenantId && newLead.tenant_id !== tenantId) return
+        pendingLeads.current.push(newLead)
+        flushLeads()
+      })
 
-        const firstLead = pendingLeads.current[0]
-        const label = count === 1
-          ? `New Lead: ${firstLead.customer_name || "Unnamed"}`
-          : `${count} New Leads`
+      quotesChannel.on("postgres_changes", { event: "UPDATE", schema: "public", table: "quote" }, (payload) => {
+        const oldQuote = payload.old
+        const newQuote = payload.new
+        if (oldQuote.status === newQuote.status) return
 
-        toast(label, {
-          description: count === 1
-            ? firstLead.trip_summary || "No trip summary"
-            : "Multiple new leads received",
+        if (newQuote.status === "accepted") {
+          toast("Quote Approved! 🎉", {
+            description: `Quote "${newQuote.title || "Untitled"}" has been approved by the customer.`,
+            action: {
+              label: "View Quote",
+              onClick: () => router.push(`/quotes/${newQuote.id}`),
+            },
+          })
+          playSound()
+        } else if (newQuote.status === "declined") {
+          toast("Quote Declined", {
+            description: `Quote "${newQuote.title || "Untitled"}" was declined by the customer.`,
+            action: {
+              label: "View Quote",
+              onClick: () => router.push(`/quotes/${newQuote.id}`),
+            },
+          })
+        }
+      })
+
+      invoicesChannel.on("postgres_changes", { event: "UPDATE", schema: "public", table: "invoice" }, (payload) => {
+        const oldInvoice = payload.old
+        const newInvoice = payload.new
+        if (oldInvoice.status === newInvoice.status || newInvoice.status !== "paid") return
+
+        toast("Invoice Paid! 💰", {
+          description: `Invoice ${newInvoice.number} has been paid ($${newInvoice.amount}).`,
           action: {
-            label: "View",
-            onClick: () => router.push("/leads"),
+            label: "View Invoice",
+            onClick: () => router.push(`/invoices`),
           },
         })
+        playSound()
+      })
 
-        soundRef.current?.play().catch(() => {}) // silent fail if autoplay blocked
-        pendingLeads.current = []
-      }, 1000) // group leads arriving within 1s
+      await Promise.all([leadsChannel.subscribe(), quotesChannel.subscribe(), invoicesChannel.subscribe()])
 
-      // 🔔 Listen for new leads
-      leadsChannel.on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "lead" },
-        (payload) => {
-          const newLead = payload.new as Lead
-
-          // ✅ Only show for same tenant
-          if (tenantId && newLead.tenant_id !== tenantId) return
-
-          pendingLeads.current.push(newLead)
-          flushLeads()
-        }
-      )
-
-      // 🔔 Listen for quote status changes (approved/declined)
-      quotesChannel.on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "quote" },
-        (payload) => {
-          const oldQuote = payload.old
-          const newQuote = payload.new
-
-          // Only show notifications for specific status changes
-          if (oldQuote.status !== newQuote.status) {
-            if (newQuote.status === "accepted") {
-              toast("Quote Approved! 🎉", {
-                description: `Quote "${newQuote.title || 'Untitled'}" has been approved by the customer.`,
-                action: {
-                  label: "View Quote",
-                  onClick: () => router.push(`/quotes/${newQuote.id}`),
-                },
-              })
-            } else if (newQuote.status === "declined") {
-              toast("Quote Declined", {
-                description: `Quote "${newQuote.title || 'Untitled'}" was declined by the customer.`,
-                action: {
-                  label: "View Quote",
-                  onClick: () => router.push(`/quotes/${newQuote.id}`),
-                },
-              })
-            }
-          }
-        }
-      )
-
-      // 🔔 Listen for invoice status changes (paid)
-      invoicesChannel.on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "invoice" },
-        (payload) => {
-          const oldInvoice = payload.old
-          const newInvoice = payload.new
-
-          // Only show notifications for payment status changes
-          if (oldInvoice.status !== newInvoice.status && newInvoice.status === "paid") {
-            toast("Invoice Paid! 💰", {
-              description: `Invoice ${newInvoice.number} has been paid ($${newInvoice.amount}).`,
-              action: {
-                label: "View Invoice",
-                onClick: () => router.push(`/invoices`),
-              },
-            })
-          }
-        }
-      )
-
-      // Subscribe to all channels
-      leadsChannel.subscribe()
-      quotesChannel.subscribe()
-      invoicesChannel.subscribe()
-
-      return () => {
-        leadsChannel.unsubscribe()
-        quotesChannel.unsubscribe()
-        invoicesChannel.unsubscribe()
+      cleanupChannels = () => {
+        supabase.removeChannel(leadsChannel)
+        supabase.removeChannel(quotesChannel)
+        supabase.removeChannel(invoicesChannel)
       }
     }
 
-    subscribeRealtime().then((cleanupFn) => {
-      cleanup = cleanupFn
-    })
+    const initialise = async () => {
+      const module = await ensureSupabaseClient()
+      if (!module || !active) return
+      const supabase = module.createClient()
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+
+      if (session) {
+        preloadSound()
+        await setupRealtime(session)
+      }
+
+      const {
+        data: { subscription },
+      } = supabase.auth.onAuthStateChange(async (_event, nextSession) => {
+        teardownChannels()
+        if (!nextSession) {
+          pendingLeads.current = []
+          return
+        }
+        preloadSound()
+        await setupRealtime(nextSession)
+      })
+      authSubscription = subscription
+    }
+
+    initialise()
 
     return () => {
-      if (cleanup) {
-        cleanup()
-      }
+      active = false
+      teardownChannels()
+      authSubscription?.unsubscribe()
+      soundRef.current?.pause?.()
+      soundRef.current = null
     }
   }, [router])
 
