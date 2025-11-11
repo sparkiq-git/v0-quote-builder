@@ -1,20 +1,27 @@
 import { createServerClient } from "@supabase/ssr"
 import { NextResponse, type NextRequest } from "next/server"
 
-const PROTECTED_PREFIXES = ["/dashboard", "/admin", "/management", "/schedule", "/operations"]
-const PUBLIC_PATHS = ["/sign-in", "/auth/callback"]
+const PUBLIC_PATHS = [
+  "/sign-in",
+  "/auth/callback",
+  "/q",
+  "/public/itinerary",
+]
+
+function isPublicPath(pathname: string) {
+  return PUBLIC_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`))
+}
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
+  const method = request.method.toUpperCase()
 
-  // Short-circuit public paths explicitly
-  if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
+  if (method === "OPTIONS" || method === "HEAD") {
     return NextResponse.next()
   }
 
-  // Only run middleware for our protected prefixes (matcher also helps, but this is an extra guard)
-  const isProtected = PROTECTED_PREFIXES.some((p) => pathname.startsWith(p))
-  if (!isProtected) {
+  // Allow explicitly public routes through (sign-in, callbacks, public quote/itinerary)
+  if (isPublicPath(pathname)) {
     return NextResponse.next()
   }
 
@@ -65,10 +72,6 @@ export async function middleware(request: NextRequest) {
 export const config = {
   // Don't run on static assets or Next internals
   matcher: [
-    "/dashboard/:path*",
-    "/admin/:path*",
-    "/management/:path*",
-    "/schedule/:path*",
-    "/operations/:path*",
+    "/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml).*)",
   ],
 }
