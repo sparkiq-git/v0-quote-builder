@@ -437,6 +437,8 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
                 const aircraftModel = option?.aircraftModel
                 const aircraftTail = option?.aircraftTail
                 const amenities = option?.selectedAmenities || []
+              const fallbackLabel = aircraftModel?.name || option.label || `Option ${i + 1}`
+              const optionImages = collectOptionImages(option, fallbackLabel)
 
                 return (
                   <div
