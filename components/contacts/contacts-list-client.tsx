@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useToast } from "@/hooks/use-toast"
+import { getPublicStorageUrl } from "@/lib/utils/storage"
 import { CreateContactDialog } from "./create-contact-dialog"
 import { EditContactDialog } from "./edit-contact-dialog"
 import {
@@ -45,7 +46,6 @@ export function ContactsListClient() {
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [editingContact, setEditingContact] = useState<Contact | null>(null)
-  const [avatarUrls, setAvatarUrls] = useState<Record<string, string>>({})
   const { toast } = useToast()
 
   const fetchContacts = async () => {
@@ -75,61 +75,6 @@ export function ContactsListClient() {
   useEffect(() => {
     fetchContacts()
   }, [searchQuery, statusFilter])
-
-  useEffect(() => {
-    let cancelled = false
-
-    const loadAvatarUrls = async () => {
-      const idsWithAvatar = contacts.filter((contact) => contact.avatar_path).map((contact) => contact.id)
-      if (idsWithAvatar.length === 0) {
-        if (!cancelled) {
-          setAvatarUrls({})
-        }
-        return
-      }
-
-      const missingIds = idsWithAvatar.filter((id) => !avatarUrls[id])
-      const updates = new Map<string, string | null>()
-
-      if (missingIds.length > 0) {
-        await Promise.all(
-          missingIds.map(async (id) => {
-            try {
-              const res = await fetch(`/api/avatar/contact/${id}?format=json`, { cache: "no-store" })
-              if (!res.ok) {
-                updates.set(id, null)
-                return
-              }
-              const json = await res.json()
-              updates.set(id, typeof json?.url === "string" ? json.url : null)
-            } catch (err) {
-              console.warn("Failed to load contact avatar", id, err)
-              updates.set(id, null)
-            }
-          }),
-        )
-      }
-
-      if (cancelled) return
-
-      setAvatarUrls((prev) => {
-        const next: Record<string, string> = {}
-        idsWithAvatar.forEach((id) => {
-          const update = updates.has(id) ? updates.get(id) : prev[id]
-          if (update) {
-            next[id] = update
-          }
-        })
-        return next
-      })
-    }
-
-    loadAvatarUrls()
-
-    return () => {
-      cancelled = true
-    }
-  }, [contacts])
 
   const handleDelete = async (contact: Contact) => {
     if (!confirm(`Are you sure you want to delete ${contact.full_name}?`)) return
@@ -249,7 +194,7 @@ export function ContactsListClient() {
                       <div className="flex items-center gap-3">
                         <Avatar className="h-8 w-8">
                           <AvatarImage
-                            src={avatarUrls[contact.id]}
+                            src={getPublicStorageUrl("avatar", contact.avatar_path)}
                             alt={contact.full_name}
                           />
                           <AvatarFallback>
