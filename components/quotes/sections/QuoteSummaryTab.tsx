@@ -102,6 +102,46 @@ const parseIsoDate = (value?: string | null) => {
   return Number.isNaN(parsed.getTime()) ? null : parsed
 }
 
+const parseLegDateTime = (date?: string | null, time?: string | null) => {
+  if (!date) return null
+  const safeDate = date.trim()
+  if (!safeDate) return null
+  const safeTime = (time && time.trim()) || "00:00"
+  const isoCandidate = `${safeDate}T${safeTime}`
+  const parsed = new Date(isoCandidate)
+  return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+
+const parseLegDeparture = (leg: any): Date | null => {
+  if (!leg) return null
+
+  if (leg.depart_dt) {
+    const direct = new Date(leg.depart_dt)
+    if (!Number.isNaN(direct.getTime())) {
+      return direct
+    }
+  }
+
+  const datePriority = leg.departureDate ?? leg.depart_dt ?? leg.depart_dt_local
+  const timePriority = leg.departureTime ?? leg.depart_time ?? leg.depart_time_local
+
+  return parseLegDateTime(datePriority, timePriority)
+}
+
+const getEarliestLegDeparture = (legs?: any[]) => {
+  if (!Array.isArray(legs) || legs.length === 0) return null
+
+  const parsedDates = legs
+    .map(parseLegDeparture)
+    .filter((value): value is Date => !!value && !Number.isNaN(value.getTime()))
+
+  if (parsedDates.length === 0) return null
+
+  return parsedDates.reduce((earliest, current) =>
+    current.getTime() < earliest.getTime() ? current : earliest
+  )
+}
+
 function OptionImageThumbnail({
   src,
   alt,
@@ -308,6 +348,8 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
   useEffect(() => {
     if (hasInitializedExpiration.current) return
 
+    const now = new Date()
+    const fallbackExpiration = addHours(now, 24)
     const existingExpiration =
       (quote as any)?.valid_until ??
       (quote as any)?.validUntil ??
@@ -317,7 +359,22 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
       null
 
     const parsedExisting = parseIsoDate(existingExpiration)
-    const baseline = parsedExisting ?? addHours(new Date(), 24)
+    const earliestDeparture = getEarliestLegDeparture(quote?.legs)
+
+    const isSameAsDeparture =
+      parsedExisting && earliestDeparture
+        ? Math.abs(parsedExisting.getTime() - earliestDeparture.getTime()) <= 5 * 60 * 1000
+        : false
+
+    let baseline = fallbackExpiration
+
+    if (parsedExisting && !isSameAsDeparture) {
+      baseline = parsedExisting
+    }
+
+    if (baseline.getTime() <= now.getTime()) {
+      baseline = fallbackExpiration
+    }
 
     setExpirationDate(toDateInputValue(baseline))
     setExpirationTime(toTimeInputValue(baseline))
