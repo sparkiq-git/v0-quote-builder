@@ -22,8 +22,6 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  const pathname = request.nextUrl.pathname
-
   const isNextInternal =
     pathname.startsWith("/_next") ||
     pathname.startsWith("/__next") ||
