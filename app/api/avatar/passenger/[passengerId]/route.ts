@@ -19,6 +19,11 @@ export async function GET(request: NextRequest, { params }: { params: { passenge
       return NextResponse.json({ error: "No avatar found" }, { status: 404 })
     }
 
+    const format = request.nextUrl.searchParams.get("format")
+    if (format === "json") {
+      return NextResponse.json({ url: result.url })
+    }
+
     return NextResponse.redirect(result.url)
   } catch (error) {
     console.error("Passenger avatar API error:", error)

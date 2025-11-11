@@ -16,11 +16,14 @@ export async function GET(request: NextRequest, { params }: { params: { userId: 
     }
 
     if (!result.url) {
-      // Return a default avatar or 404
       return NextResponse.json({ error: "No avatar found" }, { status: 404 })
     }
 
-    // Redirect to the signed URL
+    const format = request.nextUrl.searchParams.get("format")
+    if (format === "json") {
+      return NextResponse.json({ url: result.url })
+    }
+
     return NextResponse.redirect(result.url)
   } catch (error) {
     console.error("Avatar API error:", error)

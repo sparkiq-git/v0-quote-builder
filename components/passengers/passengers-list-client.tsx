@@ -51,6 +51,7 @@ export function PassengersListClient() {
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [editingPassenger, setEditingPassenger] = useState<Passenger | null>(null)
+  const [avatarUrls, setAvatarUrls] = useState<Record<string, string>>({})
   const { toast } = useToast()
 
   const fetchPassengers = async () => {
@@ -80,6 +81,61 @@ export function PassengersListClient() {
   useEffect(() => {
     fetchPassengers()
   }, [searchQuery, statusFilter])
+
+  useEffect(() => {
+    let cancelled = false
+
+    const loadAvatarUrls = async () => {
+      const idsWithAvatar = passengers.filter((passenger) => passenger.avatar_path).map((passenger) => passenger.id)
+      if (idsWithAvatar.length === 0) {
+        if (!cancelled) {
+          setAvatarUrls({})
+        }
+        return
+      }
+
+      const missingIds = idsWithAvatar.filter((id) => !avatarUrls[id])
+      const updates = new Map<string, string | null>()
+
+      if (missingIds.length > 0) {
+        await Promise.all(
+          missingIds.map(async (id) => {
+            try {
+              const res = await fetch(`/api/avatar/passenger/${id}?format=json`, { cache: "no-store" })
+              if (!res.ok) {
+                updates.set(id, null)
+                return
+              }
+              const json = await res.json()
+              updates.set(id, typeof json?.url === "string" ? json.url : null)
+            } catch (err) {
+              console.warn("Failed to load passenger avatar", id, err)
+              updates.set(id, null)
+            }
+          }),
+        )
+      }
+
+      if (cancelled) return
+
+      setAvatarUrls((prev) => {
+        const next: Record<string, string> = {}
+        idsWithAvatar.forEach((id) => {
+          const update = updates.has(id) ? updates.get(id) : prev[id]
+          if (update) {
+            next[id] = update
+          }
+        })
+        return next
+      })
+    }
+
+    loadAvatarUrls()
+
+    return () => {
+      cancelled = true
+    }
+  }, [passengers])
 
   const handleDelete = async (passenger: Passenger) => {
     if (!confirm(`Are you sure you want to delete ${passenger.full_name}?`)) return
@@ -202,7 +258,7 @@ export function PassengersListClient() {
                       <div className="flex items-center gap-3">
                         <Avatar className="h-8 w-8">
                           <AvatarImage
-                            src={passenger.avatar_path ? `/api/avatar/passenger/${passenger.id}` : undefined}
+                            src={avatarUrls[passenger.id]}
                             alt={passenger.full_name}
                           />
                           <AvatarFallback>

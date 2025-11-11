@@ -19,6 +19,11 @@ export async function GET(request: NextRequest, { params }: { params: { contactI
       return NextResponse.json({ error: "No avatar found" }, { status: 404 })
     }
 
+    const format = request.nextUrl.searchParams.get("format")
+    if (format === "json") {
+      return NextResponse.json({ url: result.url })
+    }
+
     return NextResponse.redirect(result.url)
   } catch (error) {
     console.error("Contact avatar API error:", error)

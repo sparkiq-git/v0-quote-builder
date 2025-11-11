@@ -43,6 +43,7 @@ export function UsersListClient() {
   const [showEditModal, setShowEditModal] = useState(false)
   const [showRoleManagement, setShowRoleManagement] = useState(false)
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null)
+  const [avatarUrls, setAvatarUrls] = useState<Record<string, string>>({})
   const { toast } = useToast()
 
   const loadUsers = async () => {
@@ -82,6 +83,60 @@ export function UsersListClient() {
   useEffect(() => {
     loadUsers()
   }, [search, roleFilter, crewFilter])
+
+  useEffect(() => {
+    let cancelled = false
+    const loadAvatarUrls = async () => {
+      const idsWithAvatar = users.filter((user) => user.avatar_path).map((user) => user.id)
+      if (idsWithAvatar.length === 0) {
+        if (!cancelled) {
+          setAvatarUrls({})
+        }
+        return
+      }
+
+      const missingIds = idsWithAvatar.filter((id) => !avatarUrls[id])
+      const updates = new Map<string, string | null>()
+
+      if (missingIds.length > 0) {
+        await Promise.all(
+          missingIds.map(async (id) => {
+            try {
+              const res = await fetch(`/api/avatar/${id}?format=json`, { cache: "no-store" })
+              if (!res.ok) {
+                updates.set(id, null)
+                return
+              }
+              const json = await res.json()
+              updates.set(id, typeof json?.url === "string" ? json.url : null)
+            } catch (err) {
+              console.warn("Failed to load avatar url for user", id, err)
+              updates.set(id, null)
+            }
+          }),
+        )
+      }
+
+      if (cancelled) return
+
+      setAvatarUrls((prev) => {
+        const next: Record<string, string> = {}
+        idsWithAvatar.forEach((id) => {
+          const update = updates.has(id) ? updates.get(id) : prev[id]
+          if (update) {
+            next[id] = update
+          }
+        })
+        return next
+      })
+    }
+
+    loadAvatarUrls()
+
+    return () => {
+      cancelled = true
+    }
+  }, [users])
 
   const handleEditUser = (user: AdminUser) => {
     setSelectedUser(user)
@@ -325,7 +380,7 @@ export function UsersListClient() {
                       <div className="flex items-center gap-3">
                         <Avatar className="h-8 w-8">
                           <AvatarImage
-                            src={user.avatar_path ? `/api/avatar/${user.id}` : undefined}
+                            src={avatarUrls[user.id]}
                             alt={user.display_name || user.email}
                           />
                           <AvatarFallback>
