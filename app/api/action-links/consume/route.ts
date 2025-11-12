@@ -6,11 +6,19 @@ import { sha256Base64url } from "@/lib/security/token"
 import { ensureIdempotency } from "@/lib/idempotency"
 import { rlPerIp } from "@/lib/redis"
 
+// Helper function to normalize phone numbers for comparison
+function normalizePhone(phone: string): string {
+  return phone.replace(/\D/g, "") // Remove all non-digits
+}
+
 const ConsumeSchema = z.object({
   token: z.string().min(20),
-  email: z.string().email(),
+  email: z.string().email().optional(),
+  phone: z.string().optional(),
   // optional payload specific to action
   payload: z.record(z.any()).optional(),
+}).refine((data) => data.email || data.phone, {
+  message: "Either email or phone must be provided",
 })
 
 export async function POST(req: Request) {
@@ -32,7 +40,7 @@ export async function POST(req: Request) {
   const firstTime = await ensureIdempotency(`consume:${idemKey}`, 60)
   if (!firstTime) return NextResponse.json({ ok: true, idempotent: true })
 
-  const { token, email, payload } = parsed.data
+  const { token, email, phone, payload } = parsed.data
   const tokenHash = sha256Base64url(token)
 
   const supabase = await createActionLinkClient(true)
@@ -49,8 +57,25 @@ export async function POST(req: Request) {
   if (link.status !== "active") return NextResponse.json({ error: "Link not active" }, { status: 400 })
   if (new Date(link.expires_at) < now) return NextResponse.json({ error: "Link expired" }, { status: 400 })
   if (link.use_count >= link.max_uses) return NextResponse.json({ error: "Max uses exceeded" }, { status: 400 })
-  if (link.email.toLowerCase() !== email.toLowerCase())
-    return NextResponse.json({ error: "Email mismatch" }, { status: 400 })
+  
+  // Verify email or phone matches
+  let verificationMatch = false
+  if (email && link.email) {
+    verificationMatch = link.email.toLowerCase() === email.toLowerCase()
+  } else if (phone && link.phone) {
+    verificationMatch = normalizePhone(link.phone) === normalizePhone(phone)
+  } else if (phone && link.email) {
+    // Fallback: check if phone matches email (for backward compatibility)
+    verificationMatch = false
+  } else if (email && link.phone) {
+    // Fallback: check if email matches phone (for backward compatibility)
+    verificationMatch = false
+  }
+  
+  if (!verificationMatch) {
+    const errorType = email ? "Email" : "Phone"
+    return NextResponse.json({ error: `${errorType} mismatch` }, { status: 400 })
+  }
 
   // 🔧 Perform the action for link.action_type
   // Example: if quote => mark quote as accepted; if invoice => record intent, etc.

@@ -47,7 +47,9 @@ const PublicItineraryPage = dynamic(() => import("@/components/itineraries/publi
 export default function ActionPage({ params }: { params: { token: string } }) {
   const { toast } = useToast()
   const router = useRouter()
+  const [verificationMethod, setVerificationMethod] = useState<"email" | "phone">("email")
   const [email, setEmail] = useState("")
+  const [phone, setPhone] = useState("")
   const [captcha, setCaptcha] = useState<string | null>(null)
   const [verifying, setVerifying] = useState(false)
   const [verified, setVerified] = useState<VerifiedLinkPayload | null>(null)
@@ -69,9 +71,10 @@ export default function ActionPage({ params }: { params: { token: string } }) {
 
   useEffect(() => {
     if (!verified || verified.action_type !== "view_itinerary") return
-    const target = `/public/itinerary/${params.token}${email ? `?email=${encodeURIComponent(email)}` : ""}`
+    const identifier = email || phone
+    const target = `/public/itinerary/${params.token}${identifier ? `?${verificationMethod}=${encodeURIComponent(identifier)}` : ""}`
     router.replace(target)
-  }, [verified, email, params.token, router])
+  }, [verified, email, phone, verificationMethod, params.token, router])
 
   // Helper function to get user-friendly error messages
   function getUserFriendlyError(errorMessage: string): { title: string; message: string } {
@@ -89,6 +92,14 @@ export default function ActionPage({ params }: { params: { token: string } }) {
         title: "Email Mismatch",
         message:
           "The email address you entered doesn't match the one this link was sent to. Please check and try again.",
+      }
+    }
+
+    if (lowerError.includes("phone mismatch") || (lowerError.includes("phone") && lowerError.includes("mismatch"))) {
+      return {
+        title: "Phone Mismatch",
+        message:
+          "The phone number you entered doesn't match the one this link was sent to. Please check and try again.",
       }
     }
 
@@ -156,10 +167,18 @@ export default function ActionPage({ params }: { params: { token: string } }) {
     setVerifying(true)
 
     // Client-side validation
-    if (!email || !email.includes("@")) {
-      setError("Please enter a valid email address")
-      setVerifying(false)
-      return
+    if (verificationMethod === "email") {
+      if (!email || !email.includes("@")) {
+        setError("Please enter a valid email address")
+        setVerifying(false)
+        return
+      }
+    } else {
+      if (!phone || phone.replace(/\D/g, "").length < 10) {
+        setError("Please enter a valid phone number")
+        setVerifying(false)
+        return
+      }
     }
 
     if (!captcha) {
@@ -174,7 +193,7 @@ export default function ActionPage({ params }: { params: { token: string } }) {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           token: params.token,
-          email,
+          ...(verificationMethod === "email" ? { email } : { phone }),
           captchaToken: captcha,
         }),
       })
@@ -232,7 +251,7 @@ export default function ActionPage({ params }: { params: { token: string } }) {
         },
         body: JSON.stringify({
           token: params.token,
-          email,
+          ...(verificationMethod === "email" ? { email } : { phone }),
           payload: { result }, // Enhanced payload structure
         }),
       })
@@ -295,19 +314,63 @@ export default function ActionPage({ params }: { params: { token: string } }) {
           <Card className="max-w-sm w-full p-6 shadow-lg">
             <CardContent className="space-y-5">
               <div className="text-center">
-                <h1 className="text-lg font-semibold">Verify Your Email</h1>
+                <h1 className="text-lg font-semibold">Verify Your Identity</h1>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Enter the email this secure link was sent to and complete the CAPTCHA to continue.
+                  Enter the {verificationMethod === "email" ? "email" : "phone number"} this secure link was sent to and complete the CAPTCHA to continue.
                 </p>
               </div>
 
-              <Input
-                id="email-input"
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
+              {/* Verification Method Toggle */}
+              <div className="flex gap-2 border rounded-lg p-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setVerificationMethod("email")
+                    setPhone("")
+                    setError(null)
+                  }}
+                  className={`flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors ${
+                    verificationMethod === "email"
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:bg-muted"
+                  }`}
+                >
+                  Email
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setVerificationMethod("phone")
+                    setEmail("")
+                    setError(null)
+                  }}
+                  className={`flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors ${
+                    verificationMethod === "phone"
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:bg-muted"
+                  }`}
+                >
+                  Phone
+                </button>
+              </div>
+
+              {verificationMethod === "email" ? (
+                <Input
+                  id="email-input"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              ) : (
+                <Input
+                  id="phone-input"
+                  type="tel"
+                  placeholder="(555) 123-4567"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                />
+              )}
 
               <div className="flex justify-center pt-2">
                 {siteKey ? (
@@ -320,7 +383,7 @@ export default function ActionPage({ params }: { params: { token: string } }) {
               {error && <p className="text-sm text-red-500">{error}</p>}
 
               <Button
-                disabled={!email || !captcha || verifying}
+                disabled={(!email && !phone) || !captcha || verifying}
                 onClick={handleVerify}
                 className="w-full font-semibold"
               >
@@ -344,14 +407,14 @@ export default function ActionPage({ params }: { params: { token: string } }) {
     secureContent = (
       <PublicQuotePage
         params={{ token: params.token }}
-        verifiedEmail={email}
+        verifiedEmail={verificationMethod === "email" ? email : undefined}
         quote={quote}
         onAccept={undefined}
         onDecline={undefined}
       />
     )
   } else if (actionType === "view_itinerary") {
-    secureContent = <PublicItineraryPage token={params.token} verifiedEmail={email} />
+    secureContent = <PublicItineraryPage token={params.token} verifiedEmail={verificationMethod === "email" ? email : undefined} />
   } else {
     secureContent = (
       <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">

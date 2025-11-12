@@ -6,10 +6,18 @@ import { rlPerIp, rlPerToken } from "@/lib/redis"
 import { verifyTurnstile } from "@/lib/supabase/turnstile"
 import { getQuoteData, invalidateQuoteCache } from "@/lib/cache/quote-cache"
 
+// Helper function to normalize phone numbers for comparison
+function normalizePhone(phone: string): string {
+  return phone.replace(/\D/g, "") // Remove all non-digits
+}
+
 const VerifySchema = z.object({
   token: z.string().min(20),
-  email: z.string().email(),
+  email: z.string().email().optional(),
+  phone: z.string().optional(),
   captchaToken: z.string().min(10),
+}).refine((data) => data.email || data.phone, {
+  message: "Either email or phone must be provided",
 })
 
 export async function POST(req: Request) {
@@ -31,7 +39,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: parsed.error.message }, { status: 400 })
     }
 
-    const { token, email, captchaToken } = parsed.data
+    const { token, email, phone, captchaToken } = parsed.data
 
     // --- Rate limit by IP ---
     try {
@@ -99,8 +107,25 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: "Link expired" }, { status: 400 })
     if (link.use_count >= link.max_uses)
       return NextResponse.json({ ok: false, error: "Max uses exceeded" }, { status: 400 })
-    if (link.email.toLowerCase() !== email.toLowerCase())
-      return NextResponse.json({ ok: false, error: "Email mismatch" }, { status: 400 })
+    
+    // Verify email or phone matches
+    let verificationMatch = false
+    if (email && link.email) {
+      verificationMatch = link.email.toLowerCase() === email.toLowerCase()
+    } else if (phone && link.phone) {
+      verificationMatch = normalizePhone(link.phone) === normalizePhone(phone)
+    } else if (phone && link.email) {
+      // Fallback: check if phone matches email (for backward compatibility)
+      verificationMatch = false
+    } else if (email && link.phone) {
+      // Fallback: check if email matches phone (for backward compatibility)
+      verificationMatch = false
+    }
+    
+    if (!verificationMatch) {
+      const errorType = email ? "Email" : "Phone"
+      return NextResponse.json({ ok: false, error: `${errorType} mismatch` }, { status: 400 })
+    }
 
     // --- Update last verified timestamp (no audit log - too noisy) ---
     try {
