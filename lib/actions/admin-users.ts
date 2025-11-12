@@ -3,6 +3,8 @@
 import { createClient } from "@supabase/supabase-js"
 import type { AdminUser, ShiftRotation } from "@/lib/types/admin"
 import { uploadAvatar } from "./avatar-upload"
+import { createClient as createServerClient } from "@/lib/supabase/server"
+import { getCurrentTenantId as getTenantId } from "@/lib/supabase/member-helpers"
 
 const getAdminClient = () => {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -22,37 +24,80 @@ const getAdminClient = () => {
 
 export async function getUsers(page = 1, limit = 50, search = "", roleFilter = "", crewFilter = "") {
   try {
-    const supabase = getAdminClient()
+    // Get current tenant_id (RLS-safe)
+    const tenantId = await getTenantId()
+    if (!tenantId) {
+      return { success: false, error: "No tenant found. Please ensure you're logged in.", data: [] }
+    }
 
-    // Get users from auth.users
-    const { data: authData, error: authError } = await supabase.auth.admin.listUsers({
-      page,
-      perPage: limit,
-    })
+    // Use regular client to query member table (respects RLS)
+    const supabase = await createServerClient()
+    
+    // Build query for members in current tenant
+    let memberQuery = supabase
+      .from("member")
+      .select(`
+        id,
+        tenant_id,
+        user_id,
+        role,
+        created_at,
+        is_global_admin
+      `)
+      .eq("tenant_id", tenantId)
 
-    if (authError) throw authError
+    // Apply role filter if provided
+    if (roleFilter) {
+      memberQuery = memberQuery.eq("role", roleFilter)
+    }
 
-    let users: AdminUser[] = authData.users.map((user) => ({
-      id: user.id,
-      email: user.email || "",
-      display_name: user.user_metadata?.display_name || user.user_metadata?.full_name,
-      phone_number: user.user_metadata?.phone_number,
-      roles: Array.isArray(user.app_metadata?.roles)
-        ? user.app_metadata.roles
-        : user.app_metadata?.role
-          ? [user.app_metadata.role]
-          : [],
-      status: user.banned_at ? "disabled" : "active",
-      is_crew: user.app_metadata?.is_crew || false,
-      avatar_path: user.user_metadata?.avatar_path,
-      created_at: user.created_at,
-      last_sign_in_at: user.last_sign_in_at,
-      app_metadata: user.app_metadata,
-      user_metadata: user.user_metadata,
-      crew: null,
-    }))
+    const { data: members, error: memberError } = await memberQuery.order("created_at", { ascending: false })
 
-    // Apply filters
+    if (memberError) {
+      console.error("Error fetching members:", memberError)
+      return { success: false, error: "Failed to fetch members", data: [] }
+    }
+
+    if (!members || members.length === 0) {
+      return { success: true, data: [] }
+    }
+
+    // Get auth user data for these members using service role client
+    const adminClient = getAdminClient()
+    const userIds = members.map((m) => m.user_id)
+
+    // Fetch auth users data
+    const { data: authData, error: authError } = await adminClient.auth.admin.listUsers()
+    if (authError) {
+      console.error("Error fetching auth users:", authError)
+      return { success: false, error: "Failed to fetch user details", data: [] }
+    }
+
+    // Map members to AdminUser format
+    let users: AdminUser[] = members
+      .map((member) => {
+        const authUser = authData.users.find((u) => u.id === member.user_id)
+        if (!authUser) return null
+
+        return {
+          id: authUser.id,
+          email: authUser.email || "",
+          display_name: authUser.user_metadata?.display_name || authUser.user_metadata?.full_name,
+          phone_number: authUser.user_metadata?.phone_number,
+          roles: [member.role], // Use role from member table
+          status: authUser.banned_until ? "disabled" : "active",
+          is_crew: authUser.app_metadata?.is_crew || false,
+          avatar_path: authUser.user_metadata?.avatar_path,
+          created_at: authUser.created_at,
+          last_sign_in_at: authUser.last_sign_in_at,
+          app_metadata: authUser.app_metadata,
+          user_metadata: authUser.user_metadata,
+          crew: null,
+        }
+      })
+      .filter((u): u is AdminUser => u !== null)
+
+    // Apply search filter
     if (search) {
       const searchLower = search.toLowerCase()
       users = users.filter(
@@ -60,17 +105,37 @@ export async function getUsers(page = 1, limit = 50, search = "", roleFilter = "
       )
     }
 
-    if (roleFilter) {
-      users = users.filter((u) => u.roles.includes(roleFilter))
-    }
-
+    // Apply crew filter
     if (crewFilter === "crew") {
       users = users.filter((u) => u.is_crew)
     } else if (crewFilter === "non-crew") {
       users = users.filter((u) => !u.is_crew)
     }
 
-    return { success: true, data: users }
+    // Apply pagination
+    const start = (page - 1) * limit
+    const end = start + limit
+    const paginatedUsers = users.slice(start, end)
+
+    // Fetch crew profiles for users who are crew
+    const crewUserIds = paginatedUsers.filter((u) => u.is_crew).map((u) => u.id)
+    if (crewUserIds.length > 0) {
+      const { data: crewData } = await adminClient
+        .from("crew")
+        .select("*")
+        .in("user_id", crewUserIds)
+
+      if (crewData) {
+        paginatedUsers.forEach((user) => {
+          const crewProfile = crewData.find((c) => c.user_id === user.id)
+          if (crewProfile) {
+            user.crew = crewProfile as any
+          }
+        })
+      }
+    }
+
+    return { success: true, data: paginatedUsers }
   } catch (error) {
     console.error("Get users error:", error)
     return { success: false, error: "Failed to fetch users", data: [] }
@@ -79,7 +144,14 @@ export async function getUsers(page = 1, limit = 50, search = "", roleFilter = "
 
 export async function createUser(formData: FormData) {
   try {
-    const supabase = getAdminClient()
+    // Get current tenant_id (RLS-safe)
+    const tenantId = await getTenantId()
+    if (!tenantId) {
+      return { success: false, error: "No tenant found. Please ensure you're logged in." }
+    }
+
+    const adminClient = getAdminClient()
+    const supabase = await createServerClient()
 
     const email = formData.get("email") as string
     const displayName = formData.get("display_name") as string
@@ -89,8 +161,8 @@ export async function createUser(formData: FormData) {
     const crewDataStr = formData.get("crew_data") as string
     const crewData = crewDataStr && crewDataStr !== "null" ? JSON.parse(crewDataStr) : null
 
-    // Create user with Supabase Auth
-    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+    // Create user with Supabase Auth (requires service role)
+    const { data: authData, error: authError } = await adminClient.auth.admin.createUser({
       email,
       email_confirm: true,
       user_metadata: {
@@ -101,7 +173,7 @@ export async function createUser(formData: FormData) {
         role,
         roles: [role],
         is_crew: isCrew,
-        tenant_id: process.env.NEXT_PUBLIC_TENANT_ID,
+        tenant_id: tenantId, // Use tenant_id from member table
       },
     })
 
@@ -113,7 +185,7 @@ export async function createUser(formData: FormData) {
         if (avatarFile) {
           console.log("User exists but has avatar file - attempting to find user and update avatar")
           // Try to find the existing user and update their avatar
-          const { data: existingUsers } = await supabase.auth.admin.listUsers()
+          const { data: existingUsers } = await adminClient.auth.admin.listUsers()
           const existingUser = existingUsers.users.find(u => u.email === email)
           
           if (existingUser) {
@@ -128,6 +200,24 @@ export async function createUser(formData: FormData) {
         return { success: false, error: "A user with this email address has already been registered" }
       }
       throw authError
+    }
+
+    if (!authData.user) {
+      return { success: false, error: "Failed to create user" }
+    }
+
+    // Create member record in member table (RLS will handle permissions)
+    const { error: memberError } = await supabase.from("member").insert({
+      tenant_id: tenantId,
+      user_id: authData.user.id,
+      role: role,
+      is_global_admin: false,
+    })
+
+    if (memberError) {
+      console.error("Error creating member record:", memberError)
+      // Don't fail the entire operation, but log it
+      // The user was created in auth, but member record failed
     }
 
     // Handle avatar upload if provided - using clean upload function
@@ -150,7 +240,7 @@ export async function createUser(formData: FormData) {
 
     // Create crew profile if needed
     if (isCrew && crewData && authData.user) {
-      const { error: crewError } = await supabase.from("crew").insert({
+      const { error: crewError } = await adminClient.from("crew").insert({
         user_id: authData.user.id,
         first_name: crewData.first_name,
         last_name: crewData.last_name,
@@ -166,7 +256,7 @@ export async function createUser(formData: FormData) {
     }
 
     // Send invite email
-    const { error: inviteError } = await supabase.auth.admin.inviteUserByEmail(email)
+    const { error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(email)
     if (inviteError) console.error("Invite email error:", inviteError)
 
     return { success: true, data: authData.user }
@@ -178,10 +268,17 @@ export async function createUser(formData: FormData) {
 
 export async function updateUser(userId: string, data: any) {
   try {
-    const supabase = getAdminClient()
+    // Get current tenant_id (RLS-safe)
+    const tenantId = await getTenantId()
+    if (!tenantId) {
+      return { success: false, error: "No tenant found. Please ensure you're logged in." }
+    }
 
-    // Update auth user
-    const { error: authError } = await supabase.auth.admin.updateUserById(userId, {
+    const adminClient = getAdminClient()
+    const supabase = await createServerClient()
+
+    // Update auth user (requires service role)
+    const { error: authError } = await adminClient.auth.admin.updateUserById(userId, {
       user_metadata: {
         display_name: data.display_name,
         phone_number: data.phone_number,
@@ -196,12 +293,27 @@ export async function updateUser(userId: string, data: any) {
 
     if (authError) throw authError
 
+    // Update member record in member table (RLS will handle permissions)
+    const roleToUpdate = data.role || data.roles?.[0]
+    if (roleToUpdate) {
+      const { error: memberError } = await supabase
+        .from("member")
+        .update({ role: roleToUpdate })
+        .eq("user_id", userId)
+        .eq("tenant_id", tenantId)
+
+      if (memberError) {
+        console.error("Error updating member record:", memberError)
+        // Don't fail the entire operation, but log it
+      }
+    }
+
     // Update or create crew profile if needed
     if (data.is_crew && data.crew_data) {
-      const { data: existingCrew } = await supabase.from("crew").select("id").eq("user_id", userId).single()
+      const { data: existingCrew } = await adminClient.from("crew").select("id").eq("user_id", userId).single()
 
       if (existingCrew) {
-        await supabase
+        await adminClient
           .from("crew")
           .update({
             first_name: data.crew_data.first_name,
@@ -215,7 +327,7 @@ export async function updateUser(userId: string, data: any) {
           })
           .eq("user_id", userId)
       } else {
-        await supabase.from("crew").insert({
+        await adminClient.from("crew").insert({
           user_id: userId,
           ...data.crew_data,
         })
@@ -231,13 +343,33 @@ export async function updateUser(userId: string, data: any) {
 
 export async function deleteUser(userId: string) {
   try {
-    const supabase = getAdminClient()
+    // Get current tenant_id (RLS-safe)
+    const tenantId = await getTenantId()
+    if (!tenantId) {
+      return { success: false, error: "No tenant found. Please ensure you're logged in." }
+    }
 
-    // Delete crew profile first if exists
-    await supabase.from("crew").delete().eq("user_id", userId)
+    const adminClient = getAdminClient()
+    const supabase = await createServerClient()
 
-    // Delete user
-    const { error } = await supabase.auth.admin.deleteUser(userId)
+    // Delete member record first (RLS will handle permissions)
+    // The CASCADE constraint will handle this automatically, but we'll do it explicitly
+    const { error: memberError } = await supabase
+      .from("member")
+      .delete()
+      .eq("user_id", userId)
+      .eq("tenant_id", tenantId)
+
+    if (memberError) {
+      console.error("Error deleting member record:", memberError)
+      // Continue with deletion even if member record deletion fails
+    }
+
+    // Delete crew profile if exists
+    await adminClient.from("crew").delete().eq("user_id", userId)
+
+    // Delete user from auth (requires service role)
+    const { error } = await adminClient.auth.admin.deleteUser(userId)
     if (error) throw error
 
     return { success: true }
@@ -275,43 +407,72 @@ export async function resetPassword(email: string) {
 
 export async function bulkUpdateUserRoles(userIds: string[], role: string, action: "add" | "remove") {
   try {
-    const supabase = getAdminClient()
+    // Get current tenant_id (RLS-safe)
+    const tenantId = await getTenantId()
+    if (!tenantId) {
+      return { success: false, error: "No tenant found. Please ensure you're logged in.", data: [] }
+    }
+
+    const adminClient = getAdminClient()
+    const supabase = await createServerClient()
     const results = []
 
     for (const userId of userIds) {
-      // Get current user data
-      const { data: userData, error: userError } = await supabase.auth.admin.getUserById(userId)
-      if (userError) {
-        results.push({ userId, success: false, error: userError.message })
-        continue
-      }
+      try {
+        // Get current member record
+        const { data: memberData, error: memberError } = await supabase
+          .from("member")
+          .select("role")
+          .eq("user_id", userId)
+          .eq("tenant_id", tenantId)
+          .single()
 
-      const currentRoles = Array.isArray(userData.user.app_metadata?.roles)
-        ? userData.user.app_metadata.roles
-        : userData.user.app_metadata?.role
-          ? [userData.user.app_metadata.role]
-          : []
+        if (memberError || !memberData) {
+          results.push({ userId, success: false, error: "Member record not found" })
+          continue
+        }
 
-      let updatedRoles: string[]
-      if (action === "add") {
-        updatedRoles = currentRoles.includes(role) ? currentRoles : [...currentRoles, role]
-      } else {
-        updatedRoles = currentRoles.filter(r => r !== role)
-      }
+        // Since member table has a single role field, "add" sets the role, "remove" sets to default "user"
+        const newRole = action === "add" ? role : "user"
 
-      // Update user roles
-      const { error: updateError } = await supabase.auth.admin.updateUserById(userId, {
-        app_metadata: {
-          ...userData.user.app_metadata,
-          roles: updatedRoles,
-          role: updatedRoles[0] || null,
-        },
-      })
+        // Update member table (RLS will handle permissions)
+        const { error: memberUpdateError } = await supabase
+          .from("member")
+          .update({ role: newRole })
+          .eq("user_id", userId)
+          .eq("tenant_id", tenantId)
 
-      if (updateError) {
-        results.push({ userId, success: false, error: updateError.message })
-      } else {
-        results.push({ userId, success: true })
+        if (memberUpdateError) {
+          results.push({ userId, success: false, error: memberUpdateError.message })
+          continue
+        }
+
+        // Also update auth user app_metadata for backward compatibility
+        const { data: userData, error: userError } = await adminClient.auth.admin.getUserById(userId)
+        if (userError) {
+          results.push({ userId, success: false, error: userError.message })
+          continue
+        }
+
+        const { error: updateError } = await adminClient.auth.admin.updateUserById(userId, {
+          app_metadata: {
+            ...userData.user.app_metadata,
+            roles: [newRole],
+            role: newRole,
+          },
+        })
+
+        if (updateError) {
+          results.push({ userId, success: false, error: updateError.message })
+        } else {
+          results.push({ userId, success: true })
+        }
+      } catch (error) {
+        results.push({
+          userId,
+          success: false,
+          error: error instanceof Error ? error.message : "Unknown error",
+        })
       }
     }
 
@@ -335,17 +496,26 @@ export async function bulkUpdateUserRoles(userIds: string[], role: string, actio
 
 export async function getRoleStatistics() {
   try {
-    const supabase = getAdminClient()
+    // Get current tenant_id (RLS-safe)
+    const tenantId = await getTenantId()
+    if (!tenantId) {
+      return { success: false, error: "No tenant found. Please ensure you're logged in.", data: {} }
+    }
 
-    // Get all users
-    const { data: authData, error: authError } = await supabase.auth.admin.listUsers({
-      page: 1,
-      perPage: 1000, // Adjust based on your user count
-    })
+    // Use regular client to query member table (respects RLS)
+    const supabase = await createServerClient()
+    
+    const { data: members, error: memberError } = await supabase
+      .from("member")
+      .select("role")
+      .eq("tenant_id", tenantId)
 
-    if (authError) throw authError
+    if (memberError) {
+      console.error("Error fetching members for statistics:", memberError)
+      return { success: false, error: "Failed to get role statistics", data: {} }
+    }
 
-    // Calculate role statistics
+    // Calculate role statistics from member table
     const roleStats = {
       admin: 0,
       manager: 0,
@@ -354,18 +524,11 @@ export async function getRoleStatistics() {
       viewer: 0,
     }
 
-    authData.users.forEach((user) => {
-      const roles = Array.isArray(user.app_metadata?.roles)
-        ? user.app_metadata.roles
-        : user.app_metadata?.role
-          ? [user.app_metadata.role]
-          : []
-
-      roles.forEach((role) => {
-        if (role in roleStats) {
-          roleStats[role as keyof typeof roleStats]++
-        }
-      })
+    members?.forEach((member) => {
+      const role = member.role
+      if (role in roleStats) {
+        roleStats[role as keyof typeof roleStats]++
+      }
     })
 
     return { success: true, data: roleStats }
