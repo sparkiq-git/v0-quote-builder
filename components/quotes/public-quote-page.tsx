@@ -680,9 +680,15 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
 
   const layoutClasses = getLayoutClasses()
 
-  // Check if quote is expired
-  const isExpired = quote?.validUntil && new Date(quote.validUntil) < new Date()
-  const expirationDate = quote?.validUntil ? formatDateTime(quote.validUntil) : null
+  // Get expiration date/time - handle both camelCase and snake_case
+  const validUntil = quote?.validUntil || quote?.valid_until
+  const isExpired = validUntil && new Date(validUntil) < new Date()
+  const expirationDate = validUntil ? formatDateTime(validUntil) : null
+  const expirationDateFormatted = validUntil 
+    ? formatDateTime(validUntil) 
+    : quote?.expirationDate && quote?.expirationTime
+      ? `${formatDate(quote.expirationDate)} at ${quote.expirationTime}`
+      : null
 
   return (
     <div className={layoutClasses.container}>
@@ -778,6 +784,23 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
             </div>
           </SectionCard>
 
+          {/* Quote Expiration Note */}
+          {expirationDateFormatted && (
+            <SectionCard>
+              <div className="flex items-start gap-2">
+                <Clock className={`h-4 w-4 mt-0.5 ${isExpired ? "text-red-600" : "text-amber-600"}`} />
+                <div className="flex-1">
+                  <p className={`text-xs font-medium ${isExpired ? "text-red-600" : "text-amber-600"}`}>
+                    {isExpired ? "Quote Expired" : "Quote Expiration"}
+                  </p>
+                  <p className="text-xs text-gray-600 font-light mt-0.5">
+                    This quote {isExpired ? "expired" : "expires"} on {expirationDateFormatted}
+                  </p>
+                </div>
+              </div>
+            </SectionCard>
+          )}
+
           {/* Enhanced Aircraft Options */}
           <div className="space-y-2 sm:space-y-3 md:space-y-4 lg:space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 bg-white/80 backdrop-blur-sm p-3 sm:p-4 md:p-5 lg:p-6 rounded-xl border border-gray-200/50">
@@ -792,6 +815,13 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
                 <StatusIcon className="h-3 w-3" />
                 {statusDisplay.text}
               </Badge>
+            </div>
+            
+            {/* Availability Disclaimer */}
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 sm:p-4">
+              <p className="text-xs text-amber-800 font-light">
+                <span className="font-medium">Note:</span> All aircraft are subject to availability. Final confirmation will be provided upon acceptance of this quote.
+              </p>
             </div>
             <div className={layoutClasses.grid}>
               {displayOptions.map((option) => (
@@ -977,6 +1007,23 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
                       </div>
                     </div>
 
+                    {/* Quote Expiration Note */}
+                    {expirationDateFormatted && (
+                      <div className="pb-4 border-b border-gray-200/50">
+                        <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                          <Clock className={`h-4 w-4 mt-0.5 ${isExpired ? "text-red-600" : "text-amber-600"}`} />
+                          <div className="flex-1">
+                            <p className={`text-xs font-medium ${isExpired ? "text-red-600" : "text-amber-600"}`}>
+                              {isExpired ? "Quote Expired" : "Quote Expiration"}
+                            </p>
+                            <p className="text-xs text-gray-600 font-light mt-0.5">
+                              This quote {isExpired ? "expired" : "expires"} on {expirationDateFormatted}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Trip Summary */}
                     <div className="pb-4 border-b border-gray-200/50">
                       <p className="font-semibold text-sm mb-3">Trip Summary</p>
@@ -1101,6 +1148,32 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
                       <StatusIcon className="h-3 w-3" />
                       {statusDisplay.text}
                     </Badge>
+                  </div>
+                </div>
+
+                {/* Quote Expiration Note - Desktop */}
+                {expirationDateFormatted && (
+                  <div className="px-2 xl:px-4 lg:px-0 mb-3">
+                    <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                      <Clock className={`h-4 w-4 mt-0.5 ${isExpired ? "text-red-600" : "text-amber-600"}`} />
+                      <div className="flex-1">
+                        <p className={`text-xs font-medium ${isExpired ? "text-red-600" : "text-amber-600"}`}>
+                          {isExpired ? "Quote Expired" : "Quote Expiration"}
+                        </p>
+                        <p className="text-xs text-gray-600 font-light mt-0.5">
+                          This quote {isExpired ? "expired" : "expires"} on {expirationDateFormatted}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Availability Disclaimer - Desktop */}
+                <div className="px-2 xl:px-4 lg:px-0 mb-3">
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                    <p className="text-xs text-amber-800 font-light">
+                      <span className="font-medium">Note:</span> All aircraft are subject to availability. Final confirmation will be provided upon acceptance of this quote.
+                    </p>
                   </div>
                 </div>
 
