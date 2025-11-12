@@ -23,6 +23,9 @@ import {
   Wifi,
   Coffee,
   Utensils,
+  Copy,
+  Check,
+  Link as LinkIcon,
 } from "lucide-react"
 import { formatCurrency } from "@/lib/utils/format"
 import { useToast } from "@/hooks/use-toast"
@@ -139,6 +142,7 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
   const [publishedUrl, setPublishedUrl] = useState<string | null>(null)
   const [expirationDate, setExpirationDate] = useState<string>("")
   const [expirationTime, setExpirationTime] = useState<string>("")
+  const [copied, setCopied] = useState(false)
 
   // ✅ Fallback URL
   const quoteUrl =
@@ -267,7 +271,8 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
         }
       }
 
-      setPublishedUrl(json.link || json.link_url || null)
+      const linkUrl = json.link || json.link_url || null
+      setPublishedUrl(linkUrl)
       
       // Show success toast with status update confirmation
       console.log("🎉 Showing success toast for quote publish")
@@ -278,10 +283,7 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
           : "Your client has been emailed a secure link to view and confirm the quote. Status update pending.",
       })
 
-      // Redirect to leads page after successful publish
-      setTimeout(() => {
-        router.push("/leads")
-      }, 2000) // Give user time to see the success message
+      // Don't redirect automatically - let user copy the link first
     } catch (err: any) {
       console.error("Publish error:", err)
       toast({
@@ -305,6 +307,27 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
     // Note: Aircraft data is already in quote options
     // No need to fetch separately
   }, [quote?.options])
+
+  const handleCopyLink = async () => {
+    if (!publishedUrl) return
+    
+    try {
+      await navigator.clipboard.writeText(publishedUrl)
+      setCopied(true)
+      toast({
+        title: "Link Copied!",
+        description: "The quote link has been copied to your clipboard.",
+      })
+      setTimeout(() => setCopied(false), 2000)
+    } catch (err) {
+      console.error("Failed to copy link:", err)
+      toast({
+        title: "Copy Failed",
+        description: "Failed to copy link. Please try selecting and copying manually.",
+        variant: "destructive",
+      })
+    }
+  }
 
   /* ---------------- 🧾 Render ---------------- */
   return (
@@ -682,6 +705,50 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
 
         <Separator />
 
+        {/* Published Link Section */}
+        {publishedUrl && (
+          <>
+            <div className="p-4 border rounded-lg bg-primary/5 border-primary/20">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-2">
+                    <LinkIcon className="h-4 w-4 text-primary" />
+                    <h3 className="text-sm font-semibold text-primary">Quote Link Generated</h3>
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    Copy and share this link with your client. They can use it to view and confirm the quote.
+                  </p>
+                  <div className="flex items-center gap-2 p-2 bg-background border rounded-md">
+                    <code className="flex-1 text-xs break-all text-muted-foreground font-mono">
+                      {publishedUrl}
+                    </code>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleCopyLink}
+                      className="flex-shrink-0"
+                      title="Copy link"
+                    >
+                      {copied ? (
+                        <>
+                          <Check className="h-4 w-4 mr-1 text-green-600" />
+                          Copied
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="h-4 w-4 mr-1" />
+                          Copy
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <Separator />
+          </>
+        )}
+
         {/* Actions */}
         <div className="flex justify-between items-center pt-4">
           <Button variant="outline" onClick={onBack}>
@@ -689,14 +756,23 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
           </Button>
 
           <div className="flex items-center gap-3">
-            <Button 
-              onClick={handlePublish} 
-              disabled={publishing || !isExpirationValid}
-              title={!isExpirationValid ? "Please set an expiration date and time before publishing" : ""}
-            >
-              <Send className="mr-2 h-4 w-4" />
-              {publishing ? "Publishing..." : !isExpirationValid ? "Set Expiration First" : "Publish Quote"}
-            </Button>
+            {publishedUrl ? (
+              <Button 
+                onClick={() => router.push("/leads")}
+                variant="default"
+              >
+                Done
+              </Button>
+            ) : (
+              <Button 
+                onClick={handlePublish} 
+                disabled={publishing || !isExpirationValid}
+                title={!isExpirationValid ? "Please set an expiration date and time before publishing" : ""}
+              >
+                <Send className="mr-2 h-4 w-4" />
+                {publishing ? "Publishing..." : !isExpirationValid ? "Set Expiration First" : "Publish Quote"}
+              </Button>
+            )}
           </div>
         </div>
       </CardContent>

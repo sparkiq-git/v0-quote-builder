@@ -17,6 +17,9 @@ import {
   UserCog,
   Info,
   Share2,
+  Copy,
+  Check,
+  Link as LinkIcon,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -120,6 +123,8 @@ export default function ItineraryDetailPage() {
   const [loadingPassengers, setLoadingPassengers] = useState(false)
   const [loadingCrew, setLoadingCrew] = useState(false)
   const [publishing, setPublishing] = useState(false)
+  const [publishedLinks, setPublishedLinks] = useState<Array<{ email: string; link_url: string }>>([])
+  const [copiedIndex, setCopiedIndex] = useState<number | null>(null)
 
   const fetchItinerary = useCallback(async () => {
     if (!id) return
@@ -266,6 +271,20 @@ export default function ItineraryDetailPage() {
 
       const data = await response.json()
 
+      // Extract published links from results
+      const links: Array<{ email: string; link_url: string }> = []
+      if (data.results && Array.isArray(data.results)) {
+        data.results.forEach((result: any) => {
+          if (result.link_url && !result.deduped) {
+            links.push({
+              email: result.email || "Unknown",
+              link_url: result.link_url,
+            })
+          }
+        })
+      }
+      setPublishedLinks(links)
+
       const fragments: string[] = []
       if (typeof data.published === "number") {
         fragments.push(
@@ -329,6 +348,25 @@ export default function ItineraryDetailPage() {
         </div>
       </div>
     )
+  }
+
+  const handleCopyLink = async (linkUrl: string, index: number) => {
+    try {
+      await navigator.clipboard.writeText(linkUrl)
+      setCopiedIndex(index)
+      toast({
+        title: "Link Copied!",
+        description: "The itinerary link has been copied to your clipboard.",
+      })
+      setTimeout(() => setCopiedIndex(null), 2000)
+    } catch (err) {
+      console.error("Failed to copy link:", err)
+      toast({
+        title: "Copy Failed",
+        description: "Failed to copy link. Please try selecting and copying manually.",
+        variant: "destructive",
+      })
+    }
   }
 
   const canConfirmTrip = itinerary.status === "draft" && itinerary.invoice?.status === "paid"
@@ -402,6 +440,58 @@ export default function ItineraryDetailPage() {
               )}
             </div>
           </div>
+
+          {/* Published Links Section */}
+          {publishedLinks.length > 0 && (
+            <Card className="shadow-md border-primary/20 bg-primary/5">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <LinkIcon className="h-5 w-5 text-primary" />
+                  Itinerary Links Generated
+                </CardTitle>
+                <CardDescription>
+                  Copy and share these links with your clients. They can use them to view their itinerary.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {publishedLinks.map((link, index) => (
+                  <div key={index} className="p-3 bg-background border rounded-lg">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-medium text-muted-foreground mb-1">
+                          {link.email}
+                        </div>
+                        <div className="flex items-center gap-2 p-2 bg-muted/50 border rounded-md">
+                          <code className="flex-1 text-xs break-all text-foreground font-mono">
+                            {link.link_url}
+                          </code>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleCopyLink(link.link_url, index)}
+                            className="flex-shrink-0"
+                            title="Copy link"
+                          >
+                            {copiedIndex === index ? (
+                              <>
+                                <Check className="h-4 w-4 mr-1 text-green-600" />
+                                Copied
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="h-4 w-4 mr-1" />
+                                Copy
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
