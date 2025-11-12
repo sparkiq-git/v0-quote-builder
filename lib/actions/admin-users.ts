@@ -4,7 +4,7 @@ import { createClient } from "@supabase/supabase-js"
 import type { AdminUser, ShiftRotation } from "@/lib/types/admin"
 import { uploadAvatar } from "./avatar-upload"
 import { createClient as createServerClient } from "@/lib/supabase/server"
-import { getCurrentTenantId as getTenantId } from "@/lib/supabase/member-helpers"
+import { getCurrentTenantId as getTenantId, isFatherTenant } from "@/lib/supabase/member-helpers"
 
 const getAdminClient = () => {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -26,14 +26,18 @@ export async function getUsers(page = 1, limit = 50, search = "", roleFilter = "
   try {
     // Get current tenant_id (RLS-safe)
     const tenantId = await getTenantId()
-    if (!tenantId) {
+    const isFather = await isFatherTenant()
+    
+    if (!tenantId && !isFather) {
       return { success: false, error: "No tenant found. Please ensure you're logged in.", data: [] }
     }
 
     // Use regular client to query member table (respects RLS)
+    // RLS policies will automatically allow father tenant to see all members
     const supabase = await createServerClient()
     
-    // Build query for members in current tenant
+    // Build query for members - RLS will handle tenant filtering
+    // Father tenant will see all members, others will see only their tenant
     let memberQuery = supabase
       .from("member")
       .select(`
@@ -44,7 +48,11 @@ export async function getUsers(page = 1, limit = 50, search = "", roleFilter = "
         created_at,
         is_global_admin
       `)
-      .eq("tenant_id", tenantId)
+
+    // Only filter by tenant_id if NOT father tenant (RLS will handle father tenant)
+    if (!isFather && tenantId) {
+      memberQuery = memberQuery.eq("tenant_id", tenantId)
+    }
 
     // Apply role filter if provided
     if (roleFilter) {
@@ -498,17 +506,26 @@ export async function getRoleStatistics() {
   try {
     // Get current tenant_id (RLS-safe)
     const tenantId = await getTenantId()
-    if (!tenantId) {
+    const isFather = await isFatherTenant()
+    
+    if (!tenantId && !isFather) {
       return { success: false, error: "No tenant found. Please ensure you're logged in.", data: {} }
     }
 
     // Use regular client to query member table (respects RLS)
+    // RLS policies will automatically allow father tenant to see all members
     const supabase = await createServerClient()
     
-    const { data: members, error: memberError } = await supabase
+    let query = supabase
       .from("member")
       .select("role")
-      .eq("tenant_id", tenantId)
+    
+    // Only filter by tenant_id if NOT father tenant (RLS will handle father tenant)
+    if (!isFather && tenantId) {
+      query = query.eq("tenant_id", tenantId)
+    }
+    
+    const { data: members, error: memberError } = await query
 
     if (memberError) {
       console.error("Error fetching members for statistics:", memberError)

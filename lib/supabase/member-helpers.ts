@@ -76,19 +76,59 @@ export async function isAdminOrManager(): Promise<boolean> {
 }
 
 /**
+ * Check if current user's tenant is the father tenant
+ * Father tenant can see and manage all tenants
+ */
+export async function isFatherTenant(): Promise<boolean> {
+  try {
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) return false
+
+    // Check if user's tenant is the father tenant
+    const { data: member, error: memberError } = await supabase
+      .from("member")
+      .select("tenant_id")
+      .eq("user_id", user.id)
+      .single()
+
+    if (memberError || !member) return false
+
+    const { data: tenant, error: tenantError } = await supabase
+      .from("tenant")
+      .select("is_father")
+      .eq("id", member.tenant_id)
+      .single()
+
+    if (tenantError || !tenant) return false
+
+    return tenant.is_father === true
+  } catch (error) {
+    console.error("Error checking if father tenant:", error)
+    return false
+  }
+}
+
+/**
  * Get all members for the current user's tenant
+ * If user is from father tenant, returns all members across all tenants
  * This respects RLS policies
  */
 export async function getTenantMembers() {
   try {
     const supabase = await createClient()
     const tenantId = await getCurrentTenantId()
+    const isFather = await isFatherTenant()
 
-    if (!tenantId) {
+    if (!tenantId && !isFather) {
       return { success: false, error: "No tenant found", data: [] }
     }
 
-    const { data, error } = await supabase
+    // Build query - if father tenant, don't filter by tenant_id
+    let query = supabase
       .from("member")
       .select(`
         id,
@@ -107,8 +147,13 @@ export async function getTenantMembers() {
           banned_until
         )
       `)
-      .eq("tenant_id", tenantId)
-      .order("created_at", { ascending: false })
+
+    // Only filter by tenant_id if not father tenant
+    if (!isFather && tenantId) {
+      query = query.eq("tenant_id", tenantId)
+    }
+
+    const { data, error } = await query.order("created_at", { ascending: false })
 
     if (error) {
       console.error("Error fetching tenant members:", error)
