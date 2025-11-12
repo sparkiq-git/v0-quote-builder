@@ -242,9 +242,10 @@ export async function createUser(formData: FormData) {
     const crewData = crewDataStr && crewDataStr !== "null" ? JSON.parse(crewDataStr) : null
 
     // Create user with Supabase Auth (requires service role)
+    // Don't set email_confirm: true - let the invite email handle confirmation
     const { data: authData, error: authError } = await adminClient.auth.admin.createUser({
       email,
-      email_confirm: true,
+      email_confirm: false, // Will be confirmed via invite email
       user_metadata: {
         display_name: displayName || email.split("@")[0],
         phone_number: phone,
@@ -335,9 +336,42 @@ export async function createUser(formData: FormData) {
       if (crewError) console.error("Crew profile creation error:", crewError)
     }
 
-    // Send invite email
-    const { error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(email)
-    if (inviteError) console.error("Invite email error:", inviteError)
+    // Send invite email - this will send a password setup email to the user
+    // Since user is created with email_confirm: false, inviteUserByEmail will work
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
+    const { data: inviteData, error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(email, {
+      redirectTo: siteUrl ? `${siteUrl}/auth/set-password` : undefined,
+    })
+
+    if (inviteError) {
+      console.error("Error sending invite email:", {
+        code: inviteError.status,
+        message: inviteError.message,
+        email: email
+      })
+      
+      // If invite fails because user already exists, try generating a recovery link instead
+      if (inviteError.message?.includes("email_exists") || inviteError.status === 422) {
+        console.log("User already exists, generating recovery link instead...")
+        const { data: recoveryData, error: recoveryError } = await adminClient.auth.admin.generateLink({
+          type: "recovery",
+          email: email,
+          options: {
+            redirectTo: siteUrl ? `${siteUrl}/auth/set-password` : undefined,
+          },
+        })
+        
+        if (recoveryError) {
+          console.error("Recovery link generation also failed:", recoveryError)
+          // Don't fail the entire operation - user is created, just email failed
+          // Admin can manually resend invite later
+        } else {
+          console.log("Recovery link generated (user should check email or admin can send manually)")
+        }
+      }
+    } else {
+      console.log("Invite email sent successfully to:", email)
+    }
 
     return { success: true, data: authData.user }
   } catch (error) {
