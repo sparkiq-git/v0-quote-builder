@@ -28,14 +28,54 @@ export async function getUsers(page = 1, limit = 50, search = "", roleFilter = "
     const tenantId = await getTenantId()
     const isFather = await isFatherTenant()
     
-    if (!tenantId && !isFather) {
-      return { success: false, error: "No tenant found. Please ensure you're logged in.", data: [] }
+    // Check if user has a member record
+    const supabase = await createServerClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (!user) {
+      return { success: false, error: "You must be logged in to view users.", data: [] }
     }
 
-    // Use regular client to query member table (respects RLS)
-    // RLS policies will automatically allow father tenant to see all members
-    const supabase = await createServerClient()
+    console.log("getUsers debug:", {
+      userId: user.id,
+      tenantId,
+      isFather,
+      hasAppMetadataTenantId: !!user.app_metadata?.tenant_id
+    })
+
+    // Check if user has a member record (use maybeSingle to avoid error if no record exists)
+    const { data: currentUserMember, error: memberCheckError } = await supabase
+      .from("member")
+      .select("id, tenant_id, role")
+      .eq("user_id", user.id)
+      .maybeSingle()
+
+    console.log("Member check result:", {
+      hasMember: !!currentUserMember,
+      memberError: memberCheckError ? {
+        code: memberCheckError.code,
+        message: memberCheckError.message
+      } : null,
+      memberData: currentUserMember
+    })
+
+    // If no member record exists and no tenant_id from app_metadata, user needs migration
+    if (!currentUserMember && !tenantId) {
+      return { 
+        success: false, 
+        error: "Your user account is not associated with a tenant. Please contact your administrator or run the member migration script (supabase/migrations/migrate_existing_users_to_member.sql).", 
+        data: [] 
+      }
+    }
     
+    if (!tenantId && !isFather) {
+      return { 
+        success: false, 
+        error: "No tenant found. Please ensure you're logged in and have a member record.", 
+        data: [] 
+      }
+    }
+
     // Build query for members - RLS will handle tenant filtering
     // Father tenant will see all members, others will see only their tenant
     let memberQuery = supabase
@@ -62,23 +102,55 @@ export async function getUsers(page = 1, limit = 50, search = "", roleFilter = "
     const { data: members, error: memberError } = await memberQuery.order("created_at", { ascending: false })
 
     if (memberError) {
-      console.error("Error fetching members:", memberError)
-      return { success: false, error: "Failed to fetch members", data: [] }
+      console.error("Error fetching members:", {
+        code: memberError.code,
+        message: memberError.message,
+        details: memberError.details,
+        hint: memberError.hint,
+        tenantId,
+        isFather,
+        userId: user?.id
+      })
+      // Provide more specific error message
+      if (memberError.code === 'PGRST301' || memberError.message?.includes('permission denied') || memberError.code === '42501') {
+        return { 
+          success: false, 
+          error: `Permission denied by RLS policy. Error: ${memberError.message}. Code: ${memberError.code}. Please check your RLS policies.`, 
+          data: [] 
+        }
+      }
+      return { success: false, error: `Failed to fetch members: ${memberError.message} (Code: ${memberError.code || 'unknown'})`, data: [] }
     }
 
     if (!members || members.length === 0) {
+      console.log("No members found", { tenantId, isFather, userId: user?.id })
       return { success: true, data: [] }
     }
 
     // Get auth user data for these members using service role client
-    const adminClient = getAdminClient()
+    let adminClient
+    try {
+      adminClient = getAdminClient()
+    } catch (error) {
+      console.error("Error creating admin client:", error)
+      return { 
+        success: false, 
+        error: `Failed to initialize admin client: ${error instanceof Error ? error.message : 'Unknown error'}. Please check SUPABASE_SERVICE_ROLE_KEY environment variable.`, 
+        data: [] 
+      }
+    }
+
     const userIds = members.map((m) => m.user_id)
 
     // Fetch auth users data
     const { data: authData, error: authError } = await adminClient.auth.admin.listUsers()
     if (authError) {
-      console.error("Error fetching auth users:", authError)
-      return { success: false, error: "Failed to fetch user details", data: [] }
+      console.error("Error fetching auth users:", {
+        code: authError.status,
+        message: authError.message,
+        userIds: userIds.length
+      })
+      return { success: false, error: `Failed to fetch user details: ${authError.message}`, data: [] }
     }
 
     // Map members to AdminUser format

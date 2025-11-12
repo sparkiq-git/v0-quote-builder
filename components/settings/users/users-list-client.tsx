@@ -211,11 +211,18 @@ export function UsersListClient() {
           <CardContent className="flex items-center gap-4 p-6">
             <AlertCircle className="h-8 w-8 text-destructive" />
             <div>
-              <h3 className="font-semibold text-destructive">Configuration Error</h3>
+              <h3 className="font-semibold text-destructive">Error Loading Users</h3>
               <p className="text-sm text-muted-foreground mt-1">{error}</p>
-              <p className="text-sm text-muted-foreground mt-2">
-                Please ensure the SUPABASE_SERVICE_ROLE_KEY environment variable is configured.
-              </p>
+              {error?.includes("member record") && (
+                <div className="text-sm text-muted-foreground mt-2 space-y-1">
+                  <p className="font-medium">This usually means:</p>
+                  <ul className="list-disc list-inside ml-2 space-y-1">
+                    <li>Your user account doesn't have a member record in the database</li>
+                    <li>You need to run the member migration script</li>
+                    <li>Or contact your administrator to add you to a tenant</li>
+                  </ul>
+                </div>
+              )}
               <Button variant="outline" size="sm" className="mt-3 bg-transparent" onClick={loadUsers}>
                 Retry
               </Button>
