@@ -174,6 +174,7 @@ export async function GET(request: NextRequest, { params }: { params: { token: s
           images: [] as any[],
         }
 
+        // Fetch aircraft images filtered by tenant_id
         const { data: images, error: imagesError } = await supabase
           .from("aircraft_image")
           .select("id, public_url, storage_path, caption, is_primary, display_order, created_at")
@@ -183,12 +184,31 @@ export async function GET(request: NextRequest, { params }: { params: { token: s
           .order("display_order", { ascending: true })
           .order("created_at", { ascending: false })
 
+        // Also fetch model images if model exists, filtered by tenant_id
+        let modelImages: any[] = []
+        if (aircraftRow.aircraft_model?.id) {
+          const { data: modelImgs, error: modelImagesError } = await supabase
+            .from("aircraft_model_image")
+            .select("id, public_url, storage_path, caption, is_primary, display_order, created_at")
+            .eq("tenant_id", itinerary.tenant_id)
+            .eq("aircraft_model_id", aircraftRow.aircraft_model.id)
+            .order("is_primary", { ascending: false })
+            .order("display_order", { ascending: true })
+            .order("created_at", { ascending: false })
+          
+          if (!modelImagesError && modelImgs) {
+            modelImages = modelImgs
+          }
+        }
+
         if (imagesError) {
           console.error("Error fetching aircraft images:", imagesError)
         } else if (images) {
           const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ""
-          aircraft.images = images
-            .map((img) => {
+          
+          // Combine aircraft images and model images, prioritizing aircraft images
+          const allImages = [
+            ...images.map((img) => {
               const url =
                 img.public_url ||
                 (supabaseUrl
@@ -203,8 +223,31 @@ export async function GET(request: NextRequest, { params }: { params: { token: s
                     display_order: img.display_order ?? 0,
                   }
                 : null
-            })
-            .filter(Boolean)
+            }),
+            ...modelImages.map((img) => {
+              const url =
+                img.public_url ||
+                (supabaseUrl
+                  ? `${supabaseUrl}/storage/v1/object/public/aircraft-media/${img.storage_path}`
+                  : null)
+              return url
+                ? {
+                    id: img.id,
+                    url,
+                    caption: img.caption,
+                    is_primary: !!img.is_primary,
+                    display_order: img.display_order ?? 0,
+                  }
+                : null
+            }),
+          ].filter(Boolean)
+          
+          // Sort by is_primary and display_order
+          aircraft.images = allImages.sort((a: any, b: any) => {
+            if (a.is_primary && !b.is_primary) return -1
+            if (!a.is_primary && b.is_primary) return 1
+            return a.display_order - b.display_order
+          })
         }
       }
     }

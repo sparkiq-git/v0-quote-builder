@@ -95,8 +95,10 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     console.log("🛩️ Aircraft IDs to fetch:", aircraftIds)
     
     let aircraftData = []
+    const quoteTenantId = quote.tenant_id
     
     if (aircraftIds.length > 0) {
+      // First fetch aircraft with basic info (filtered by tenant_id)
       const { data: aircraft, error: aircraftError } = await supabase
         .from("aircraft")
         .select(`
@@ -109,19 +111,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
             aircraft_manufacturer!manufacturer_id (
               id,
               name
-            ),
-            aircraft_model_image (
-              id,
-              public_url,
-              is_primary,
-              display_order
             )
-          ),
-          aircraft_image (
-            id,
-            public_url,
-            is_primary,
-            display_order
           ),
           aircraft_amenity (
             id,
@@ -138,14 +128,76 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
           )
         `)
         .in("id", aircraftIds)
+        .eq("tenant_id", quoteTenantId) // Ensure we only get aircraft from quote's tenant
       
       if (aircraftError) {
         console.error("Aircraft fetch error:", aircraftError)
       } else {
         aircraftData = aircraft || []
         console.log("🛩️ Aircraft data fetched:", aircraftData.length, "aircraft")
-        if (aircraftData.length > 0) {
-          console.log("🛩️ First aircraft:", aircraftData[0])
+        
+        // Now fetch images separately, filtered by tenant_id
+        if (aircraftData.length > 0 && quoteTenantId) {
+          // Fetch aircraft images for all aircraft
+          const { data: aircraftImages, error: aircraftImagesError } = await supabase
+            .from("aircraft_image")
+            .select("id, aircraft_id, public_url, is_primary, display_order")
+            .in("aircraft_id", aircraftIds)
+            .eq("tenant_id", quoteTenantId)
+            .order("is_primary", { ascending: false })
+            .order("display_order", { ascending: true })
+          
+          // Fetch aircraft model images for all models
+          const modelIds = aircraftData
+            .map(a => a.aircraft_model?.id)
+            .filter(Boolean) as string[]
+          
+          let modelImages: any[] = []
+          if (modelIds.length > 0) {
+            const { data: modelImgs, error: modelImagesError } = await supabase
+              .from("aircraft_model_image")
+              .select("id, aircraft_model_id, public_url, is_primary, display_order")
+              .in("aircraft_model_id", modelIds)
+              .eq("tenant_id", quoteTenantId)
+              .order("is_primary", { ascending: false })
+              .order("display_order", { ascending: true })
+            
+            if (!modelImagesError && modelImgs) {
+              modelImages = modelImgs
+            }
+          }
+          
+          // Attach images to aircraft data
+          aircraftData = aircraftData.map((ac: any) => {
+            const acImages = (aircraftImages || [])
+              .filter((img: any) => img.aircraft_id === ac.id)
+              .sort((a: any, b: any) => {
+                if (a.is_primary && !b.is_primary) return -1
+                if (!a.is_primary && b.is_primary) return 1
+                return a.display_order - b.display_order
+              })
+            
+            const modelImgs = (modelImages || [])
+              .filter((img: any) => img.aircraft_model_id === ac.aircraft_model?.id)
+              .sort((a: any, b: any) => {
+                if (a.is_primary && !b.is_primary) return -1
+                if (!a.is_primary && b.is_primary) return 1
+                return a.display_order - b.display_order
+              })
+            
+            return {
+              ...ac,
+              aircraft_image: acImages,
+              aircraft_model: ac.aircraft_model ? {
+                ...ac.aircraft_model,
+                aircraft_model_image: modelImgs
+              } : null
+            }
+          })
+          
+          if (aircraftData.length > 0) {
+            console.log("🛩️ First aircraft with filtered images:", aircraftData[0])
+          }
         }
       }
     }
@@ -230,11 +282,11 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
                 return a.display_order - b.display_order
               })
               .map((img: any) => {
-                // If the URL is malformed, try to regenerate it
+                // If the URL is malformed, try to regenerate it using quote's tenant_id
                 if (img.public_url && !img.public_url.includes('/models/')) {
-                  // Try to reconstruct the correct path
+                  // Try to reconstruct the correct path using quote's tenant_id
                   const fileName = img.public_url.split('/').pop()
-                  const reconstructedUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/aircraft-media/tenant/${aircraftModel.created_by}/models/${aircraftModel.id}/${fileName}`
+                  const reconstructedUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/aircraft-media/tenant/${quoteTenantId}/models/${aircraftModel.id}/${fileName}`
                   return reconstructedUrl
                 }
                 return img.public_url
