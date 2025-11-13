@@ -300,18 +300,6 @@ export default function ModelImageManager({ modelId, tenantId, onImagesUpdated }
             <ImagePlus className="h-4 w-4 mr-2" />
             Select Images
           </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={async () => {
-              // Only run on client side
-              if (typeof window === 'undefined') return;
-              
-              const { createClient } = await import("@/lib/supabase/client");
-              const supabase = createClient();
-              
-          </Button>
           <input
             ref={inputRef}
             type="file"

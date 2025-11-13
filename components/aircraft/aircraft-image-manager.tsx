@@ -261,18 +261,6 @@ export default function AircraftImageManager({ aircraftId, tenantId, onImagesUpd
             <ImagePlus className="mr-2 h-4 w-4" />
             Add Images
           </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={async () => {
-              // Only run on client side
-              if (typeof window === 'undefined') return;
-              
-              const { createClient } = await import("@/lib/supabase/client");
-              const supabase = createClient();
-              
-          </Button>
         </div>
         <p className="text-sm text-gray-500">Click to select images or drag and drop</p>
       </div>
