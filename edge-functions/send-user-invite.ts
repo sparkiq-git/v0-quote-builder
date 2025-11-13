@@ -53,7 +53,7 @@ function buildInviteEmailHtml({
 <body style="background:#F9FAFB; margin:0; padding:30px 0;">
 <div style="max-width:720px; margin:auto; background:#fff; border-radius:20px; border:1px solid ${border}; overflow:hidden;">
 <div style="text-align:center; padding:20px;">
-${logoUrl ? `<img src="${esc(logoUrl)}" alt="AeroIQ Logo" style="max-width:200px; height:auto; display:block; margin:0 auto;" />` : `<h2 style="color:${colorPrimary}; margin:0;">AeroIQ</h2>`}
+${logoUrl ? `<img src="${esc(logoUrl)}" alt="Logo" style="max-width:200px;" />` : `<h2 style="color:${colorPrimary}; margin:0;">AeroIQ</h2>`}
 </div>
 <div style="padding:22px;">
 <p style="font-size:15px; color:${colorPrimary}; margin:0 0 10px;">Hi ${userName ? esc(userName) : "there"},</p>
@@ -64,10 +64,6 @@ Set Password
 </a>
 </div>
 <p style="font-size:12px; color:${subtle}; margin:20px 0 0;">This invitation link will expire in 7 days.</p>
-<p style="font-size:11px; color:${subtle}; margin:16px 0 0; padding-top:16px; border-top:1px solid ${border};">If the button doesn't work, copy and paste this link into your browser:</p>
-<p style="font-size:11px; word-break:break-all; color:${subtle}; margin:8px 0 0;">
-<a href="${esc(linkUrl)}" style="color:${colorAccent}; text-decoration:none;">${esc(linkUrl)}</a>
-</p>
 </div>
 <div style="text-align:center; padding:15px; font-size:12px; color:${subtle};">Powered by <strong>AeroIQ</strong></div>
 </div>
@@ -143,20 +139,10 @@ Deno.serve(async (req)=>{
       .eq("is_active", true)
       .maybeSingle();
 
-    const fromEmail = brand?.from_email ?? DEFAULT_FROM;
-    // Handle logo_path - it might be a full URL, relative path, or storage path
-    let logoUrl = null;
-    if (brand?.logo_path) {
-      const logoPath = brand.logo_path.trim();
-      // If it's already a full URL, use it as-is
-      if (logoPath.startsWith("http://") || logoPath.startsWith("https://")) {
-        logoUrl = logoPath;
-      } else {
-        // Otherwise, construct the full storage URL
-        const cleanPath = logoPath.replace(/^\/*/, "");
-        logoUrl = `${SUPABASE_URL}/storage/v1/object/public/branding/${cleanPath}`;
-      }
-    }
+    const fromEmail = brand?.from_email || DEFAULT_FROM;
+    const logoUrl = brand?.logo_path 
+      ? `${SUPABASE_URL}/storage/v1/object/public/branding/${brand.logo_path}` 
+      : null;
 
     // Generate password setup link using Supabase Auth Admin API
     // Use "invite" type for new user invitations
