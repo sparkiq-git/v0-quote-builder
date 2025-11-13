@@ -336,41 +336,50 @@ export async function createUser(formData: FormData) {
       if (crewError) console.error("Crew profile creation error:", crewError)
     }
 
-    // Send invite email - this will send a password setup email to the user
-    // Since user is created with email_confirm: false, inviteUserByEmail will work
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
-    const { data: inviteData, error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(email, {
-      redirectTo: siteUrl ? `${siteUrl}/auth/set-password` : undefined,
-    })
+    // Send invite email via edge function
+    try {
+      const fnUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/send-user-invite`
+      const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-    if (inviteError) {
-      console.error("Error sending invite email:", {
-        code: inviteError.status,
-        message: inviteError.message,
-        email: email
-      })
-      
-      // If invite fails because user already exists, try generating a recovery link instead
-      if (inviteError.message?.includes("email_exists") || inviteError.status === 422) {
-        console.log("User already exists, generating recovery link instead...")
-        const { data: recoveryData, error: recoveryError } = await adminClient.auth.admin.generateLink({
-          type: "recovery",
-          email: email,
-          options: {
-            redirectTo: siteUrl ? `${siteUrl}/auth/set-password` : undefined,
-          },
-        })
+      if (!anonKey) {
+        console.error("Missing NEXT_PUBLIC_SUPABASE_ANON_KEY - cannot send invite email")
+      } else if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+        console.error("Missing NEXT_PUBLIC_SUPABASE_URL - cannot send invite email")
+      } else {
+        const { data: { user: currentUser } } = await supabase.auth.getUser()
         
-        if (recoveryError) {
-          console.error("Recovery link generation also failed:", recoveryError)
+        const res = await fetch(fnUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: anonKey,
+            Authorization: `Bearer ${anonKey}`,
+          },
+          body: JSON.stringify({
+            tenant_id: tenantId,
+            email: email,
+            user_id: authData.user.id,
+            created_by: currentUser?.id || null,
+            user_name: displayName || email.split("@")[0],
+          }),
+        })
+
+        const json = await res.json().catch(() => ({}))
+        if (!res.ok || !json.ok) {
+          console.error("Error sending invite email via edge function:", {
+            status: res.status,
+            error: json.error,
+            email: email
+          })
           // Don't fail the entire operation - user is created, just email failed
           // Admin can manually resend invite later
         } else {
-          console.log("Recovery link generated (user should check email or admin can send manually)")
+          console.log("Invite email sent successfully to:", email)
         }
       }
-    } else {
-      console.log("Invite email sent successfully to:", email)
+    } catch (inviteErr: any) {
+      console.error("Exception sending invite email:", inviteErr)
+      // Don't fail the entire operation - user is created, just email failed
     }
 
     return { success: true, data: authData.user }

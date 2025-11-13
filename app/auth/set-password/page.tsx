@@ -1,10 +1,6 @@
 "use client";
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
-export const runtime = "edge";
 
-
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -96,6 +92,19 @@ export default function SetPasswordPage() {
           const { createClient } = await import("@/lib/supabase/client");
           const supabase = createClient();
           
+          // Try recovery type first (for edge function generated links)
+          const { data: recoveryData, error: recoveryError } = await supabase.auth.verifyOtp({
+            type: "recovery",
+            token: qs.token,
+          });
+          
+          if (!recoveryError && recoveryData?.session) {
+            if (cancelled) return;
+            setPhase("ready");
+            return;
+          }
+          
+          // Fallback to invite type
           const { data, error } = await supabase.auth.verifyOtp({
             type: "invite",
             token: qs.token,
@@ -126,7 +135,7 @@ export default function SetPasswordPage() {
     return () => {
       cancelled = true;
     };
-  }, [supabase]);
+  }, []);
 
   async function handleSetPassword(e: React.FormEvent) {
     e.preventDefault();
@@ -158,116 +167,119 @@ export default function SetPasswordPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      {error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-
-      <Card>
-        <CardHeader className="text-center">
-          <CardTitle className="text-xl">Activate your account</CardTitle>
-          <CardDescription>
-            {phase === "checking" && "Verifying your invitation…"}
-            {phase === "ready" && "Set a password to complete your registration"}
-            {phase === "need-session" && "We couldn’t establish a session from this link."}
-            {phase === "error" && "There was a problem verifying your link."}
-          </CardDescription>
-        </CardHeader>
-
-        <CardContent>
-          {phase === "checking" && (
-            <div className="flex justify-center py-8 text-muted-foreground">
-              <Loader2 className="h-5 w-5 animate-spin" />
-            </div>
-          )}
-
-          {phase === "need-session" && (
-            <div className="space-y-4 text-sm">
-              <p>
-                Your email client may have removed part of the link. Please tap the invite link
-                again, or open it in a browser like Chrome or Safari. If the issue persists, ask
-                your admin to resend the invitation.
-              </p>
-              <div className="text-center">
-                <Button onClick={() => window.location.reload()}>Try Again</Button>
-              </div>
-            </div>
-          )}
-
-          {phase === "error" && (
-            <div className="space-y-4 text-sm">
-              <p>We couldn’t verify this invitation. It may be expired or already used.</p>
-              <div className="text-center">
-                <a
-                  href="/auth/sign-in"
-                  className="underline underline-offset-4 hover:text-primary"
-                >
-                  Go to sign in
-                </a>
-              </div>
-            </div>
-          )}
-
-          {phase === "ready" && (
-            <form onSubmit={handleSetPassword}>
-              <div className="grid gap-6">
-                <div className="grid gap-3">
-                  <Label htmlFor="password">New Password</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    autoComplete="new-password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    disabled={false}
-                  />
-                </div>
-
-                <div className="grid gap-3">
-                  <Label htmlFor="confirmPassword">Confirm Password</Label>
-                  <Input
-                    id="confirmPassword"
-                    type="password"
-                    autoComplete="new-password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    required
-                    disabled={false}
-                  />
-                </div>
-
-                <Button type="submit" className="w-full">
-                  Set Password
-                </Button>
-
-                <div className="text-center text-sm">
-                  Already have an account?{" "}
-                  <a
-                    href="/auth/sign-in"
-                    className="underline underline-offset-4 hover:text-primary"
-                  >
-                    Sign in
-                  </a>
-                </div>
-              </div>
-            </form>
-          )}
-        </CardContent>
-      </Card>
-
-      <div className="text-muted-foreground text-center text-xs text-balance">
-        By setting your password, you agree to our{" "}
-        <a href="#" className="underline underline-offset-4 hover:text-primary">
-          Terms of Service
-        </a>{" "}
-        and{" "}
-        <a href="#" className="underline underline-offset-4 hover:text-primary">
-          Privacy Policy
+    <div className="bg-muted flex min-h-svh flex-col items-center justify-center gap-6 p-6 md:p-10">
+      <div className="flex w-full max-w-sm flex-col gap-6">
+        <a href="#" className="flex items-center justify-center self-center">
+          <img src="/images/aeroiq-logo.png" alt="AeroIQ Logo" className="h-8 w-auto drop-shadow-lg" />
         </a>
-        .
+
+        {error && (
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        <Card className="shadow-lg">
+          <CardHeader className="text-center">
+            <CardTitle className="text-xl">Activate your account</CardTitle>
+            <CardDescription>
+              {phase === "checking" && "Verifying your invitation…"}
+              {phase === "ready" && "Set a password to complete your registration"}
+              {phase === "need-session" && "We couldn't establish a session from this link."}
+              {phase === "error" && "There was a problem verifying your link."}
+            </CardDescription>
+          </CardHeader>
+
+          <CardContent>
+            {phase === "checking" && (
+              <div className="flex justify-center py-8 text-muted-foreground">
+                <Loader2 className="h-5 w-5 animate-spin" />
+              </div>
+            )}
+
+            {phase === "need-session" && (
+              <div className="space-y-4 text-sm">
+                <p>
+                  Your email client may have removed part of the link. Please tap the invite link
+                  again, or open it in a browser like Chrome or Safari. If the issue persists, ask
+                  your admin to resend the invitation.
+                </p>
+                <div className="text-center">
+                  <Button onClick={() => window.location.reload()}>Try Again</Button>
+                </div>
+              </div>
+            )}
+
+            {phase === "error" && (
+              <div className="space-y-4 text-sm">
+                <p>We couldn't verify this invitation. It may be expired or already used.</p>
+                <div className="text-center">
+                  <Button asChild variant="outline">
+                    <a href="/auth/sign-in">Go to sign in</a>
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {phase === "ready" && (
+              <form onSubmit={handleSetPassword}>
+                <div className="grid gap-6">
+                  <div className="grid gap-3">
+                    <Label htmlFor="password">New Password</Label>
+                    <Input
+                      id="password"
+                      type="password"
+                      autoComplete="new-password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      placeholder="Enter your password"
+                    />
+                  </div>
+
+                  <div className="grid gap-3">
+                    <Label htmlFor="confirmPassword">Confirm Password</Label>
+                    <Input
+                      id="confirmPassword"
+                      type="password"
+                      autoComplete="new-password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      required
+                      placeholder="Confirm your password"
+                    />
+                  </div>
+
+                  <Button type="submit" className="w-full">
+                    Set Password
+                  </Button>
+
+                  <div className="text-center text-sm">
+                    Already have an account?{" "}
+                    <a
+                      href="/auth/sign-in"
+                      className="underline underline-offset-4 hover:text-primary"
+                    >
+                      Sign in
+                    </a>
+                  </div>
+                </div>
+              </form>
+            )}
+          </CardContent>
+        </Card>
+
+        <div className="text-muted-foreground text-center text-xs text-balance">
+          By setting your password, you agree to our{" "}
+          <a href="#" className="underline underline-offset-4 hover:text-primary">
+            Terms of Service
+          </a>{" "}
+          and{" "}
+          <a href="#" className="underline underline-offset-4 hover:text-primary">
+            Privacy Policy
+          </a>
+          .
+        </div>
       </div>
     </div>
   );
