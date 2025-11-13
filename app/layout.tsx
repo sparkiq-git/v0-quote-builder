@@ -26,6 +26,41 @@ export const metadata: Metadata = {
   title: "Aero IQ",
   description: "Lead Management & Quote Publishing System for Aircraft Charter Brokers",
   generator: "Aero IQ",
+  icons: {
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/favicon.ico", sizes: "any" },
+    ],
+    apple: [
+      { url: "/apple-icon.png", sizes: "180x180", type: "image/png" },
+    ],
+    other: [
+      {
+        rel: "apple-touch-icon-precomposed",
+        url: "/apple-icon.png",
+      },
+    ],
+  },
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Aero IQ",
+  },
+  formatDetection: {
+    telephone: false,
+  },
+  openGraph: {
+    type: "website",
+    siteName: "Aero IQ",
+    title: "Aero IQ",
+    description: "Lead Management & Quote Publishing System for Aircraft Charter Brokers",
+  },
+  twitter: {
+    card: "summary",
+    title: "Aero IQ",
+    description: "Lead Management & Quote Publishing System for Aircraft Charter Brokers",
+  },
 }
 
 export default async function RootLayout({
