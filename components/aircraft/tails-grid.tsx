@@ -113,7 +113,7 @@ function ImageCarousel({ images, alt }: ImageCarouselProps) {
 }
 
 export function TailsGrid() {
-  const { aircraft, loading, error } = useAircraft()
+  const { aircraft, loading, error, refetch } = useAircraft()
   const { toast } = useToast()
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
@@ -122,6 +122,17 @@ export function TailsGrid() {
   const [deleteTailId, setDeleteTailId] = useState<string | null>(null)
   const [editTailId, setEditTailId] = useState<string | null>(null)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+
+  // Listen for aircraft data updates
+  useEffect(() => {
+    const handleDataUpdate = () => {
+      refetch()
+    }
+    window.addEventListener('aircraft-data-updated', handleDataUpdate)
+    return () => {
+      window.removeEventListener('aircraft-data-updated', handleDataUpdate)
+    }
+  }, [refetch])
   const [imageTailId, setImageTailId] = useState<string | null>(null)
   const [imageDialogOpen, setImageDialogOpen] = useState(false)
 
@@ -155,7 +166,7 @@ export function TailsGrid() {
         title: "Tail archived",
         description: "The aircraft tail has been archived successfully.",
       })
-      // TODO: Refresh data
+      refetch()
     } catch (error) {
       toast({
         title: "Error",
@@ -179,7 +190,7 @@ export function TailsGrid() {
         title: "Tail unarchived",
         description: "The aircraft tail has been unarchived successfully.",
       })
-      // TODO: Refresh data
+      refetch()
     } catch (error) {
       toast({
         title: "Error",
@@ -202,7 +213,7 @@ export function TailsGrid() {
         title: "Tail deleted",
         description: "The aircraft tail has been deleted successfully.",
       })
-      // TODO: Refresh data
+      refetch()
     } catch (error) {
       toast({
         title: "Error",

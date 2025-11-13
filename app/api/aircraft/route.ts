@@ -1,6 +1,7 @@
 // app/api/aircraft/route.ts
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
+import { getCurrentTenantId } from "@/lib/supabase/member-helpers"
 
 // Force dynamic rendering for this route since it requires authentication
 export const dynamic = 'force-dynamic'
@@ -10,7 +11,7 @@ export async function GET() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-  const tenantId = user.app_metadata?.tenant_id
+  const tenantId = await getCurrentTenantId()
   if (!tenantId) return NextResponse.json({ error: "Missing tenant_id" }, { status: 400 })
 
   const { data, error } = await supabase
@@ -62,7 +63,7 @@ export async function POST(req: Request) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-  const tenantId = user.app_metadata?.tenant_id
+  const tenantId = await getCurrentTenantId()
   if (!tenantId) return NextResponse.json({ error: "Missing tenant_id" }, { status: 400 })
 
   const { tail_number, type_rating_id, model_id, manufacturer_id, operator_id, home_base, capacity_pax } = body

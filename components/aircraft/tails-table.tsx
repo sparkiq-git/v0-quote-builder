@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -26,7 +26,7 @@ import { computeEffectiveTail } from "@/lib/utils/aircraft"
 import { useAircraft } from "@/hooks/use-aircraft"
 
 export function TailsTable() {
-  const { aircraft, loading, error } = useAircraft()
+  const { aircraft, loading, error, refetch } = useAircraft()
   const { toast } = useToast()
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
@@ -37,6 +37,17 @@ export function TailsTable() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [imageTailId, setImageTailId] = useState<string | null>(null)
   const [imageDialogOpen, setImageDialogOpen] = useState(false)
+
+  // Listen for aircraft data updates
+  useEffect(() => {
+    const handleDataUpdate = () => {
+      refetch()
+    }
+    window.addEventListener('aircraft-data-updated', handleDataUpdate)
+    return () => {
+      window.removeEventListener('aircraft-data-updated', handleDataUpdate)
+    }
+  }, [refetch])
 
   const filteredTails = aircraft.filter((tail) => {
     const model = tail.aircraftModel
@@ -68,7 +79,7 @@ export function TailsTable() {
         title: "Tail archived",
         description: "The aircraft tail has been archived successfully.",
       })
-      // TODO: Refresh data
+      refetch()
     } catch (error) {
       toast({
         title: "Error",
@@ -92,7 +103,7 @@ export function TailsTable() {
         title: "Tail unarchived",
         description: "The aircraft tail has been unarchived successfully.",
       })
-      // TODO: Refresh data
+      refetch()
     } catch (error) {
       toast({
         title: "Error",
@@ -115,7 +126,7 @@ export function TailsTable() {
         title: "Tail deleted",
         description: "The aircraft tail has been deleted successfully.",
       })
-      // TODO: Refresh data
+      refetch()
     } catch (error) {
       toast({
         title: "Error",
@@ -182,7 +193,7 @@ export function TailsTable() {
             {Array.from(new Set(aircraft.map(tail => tail.aircraftModel?.id).filter(Boolean)))
               .map((modelId) => {
                 const model = aircraft.find(tail => tail.aircraftModel?.id === modelId)?.aircraftModel
-                return model ? (
+                return model && modelId ? (
                   <SelectItem key={modelId} value={modelId}>
                     {model.name}
                   </SelectItem>
@@ -243,7 +254,7 @@ export function TailsTable() {
                       setEditTailId(tail.id)
                       setIsEditDialogOpen(true)
                     }}
-                    className={`${tail.isArchived ? "opacity-60" : ""} hover:bg-muted/50 transition-colors cursor-pointer`}
+                    className={`${tail.status === "inactive" ? "opacity-60" : ""} hover:bg-muted/50 transition-colors cursor-pointer`}
                   >
                     <TableCell>
                       <div className="space-y-1">
@@ -317,13 +328,13 @@ export function TailsTable() {
                             <ImageIcon className="mr-2 h-4 w-4" />
                             Add Images
                           </DropdownMenuItem>
-                          {!tail.isArchived && (
+                          {tail.status !== "inactive" && (
                             <DropdownMenuItem onClick={() => handleArchiveTail(tail.id)}>
                               <Archive className="mr-2 h-4 w-4" />
                               Archive
                             </DropdownMenuItem>
                           )}
-                          {tail.isArchived && (
+                          {tail.status === "inactive" && (
                             <DropdownMenuItem onClick={() => handleUnarchiveTail(tail.id)}>
                               <ArchiveRestore className="mr-2 h-4 w-4" />
                               Unarchive

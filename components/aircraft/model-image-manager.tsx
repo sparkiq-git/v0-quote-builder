@@ -165,17 +165,9 @@ export default function ModelImageManager({ modelId, tenantId, onImagesUpdated }
         throw new Error("Please sign in to upload images")
       }
       
-      console.log("User authenticated:", user.id)
-
       // Use server-side API to bypass RLS restrictions
       for (let i = 0; i < imageFiles.length; i++) {
         const file = imageFiles[i]
-        
-        console.log("Uploading file via server API:", {
-          fileName: file.name,
-          fileSize: file.size,
-          contentType: file.type
-        })
 
         // Create FormData for server upload
         const formData = new FormData()
@@ -185,29 +177,22 @@ export default function ModelImageManager({ modelId, tenantId, onImagesUpdated }
         formData.append("userId", user.id)
 
         // Upload via server-side API
-        console.log("🚀 Calling server API...")
         const response = await fetch("/api/upload-image", {
           method: "POST",
           body: formData,
         })
 
-        console.log("📡 Server response status:", response.status)
-        
         if (!response.ok) {
           const errorText = await response.text()
-          console.error("❌ Server response error:", errorText)
           throw new Error(`Server upload failed: ${response.status} ${errorText}`)
         }
 
         const result = await response.json()
-        console.log("📦 Server response data:", result)
 
         if (!result.success) {
-          console.error("Server upload error:", result.error)
           throw new Error(`Server upload failed: ${result.error}`)
         }
 
-        console.log("✅ Server upload successful:", result.data)
         setImages((prev) => [...prev, { url: result.data.url, id: result.data.id }])
       }
 
@@ -326,29 +311,6 @@ export default function ModelImageManager({ modelId, tenantId, onImagesUpdated }
               const { createClient } = await import("@/lib/supabase/client");
               const supabase = createClient();
               
-              console.log("🧪 Debug Info:")
-              console.log("Tenant ID:", tenantId)
-              console.log("Model ID:", modelId)
-              const { data: { user } } = await supabase.auth.getUser()
-              console.log("User:", user?.id)
-              const { data: buckets } = await supabase.storage.listBuckets()
-              console.log("Available buckets:", buckets?.map(b => b.name))
-              
-              // Test bucket access
-              const possibleBuckets = ["aircraft-media", "aircraft", "aircraft-images", "images", "uploads"]
-              for (const bucketName of possibleBuckets) {
-                try {
-                  const { data: files, error } = await supabase.storage
-                    .from(bucketName)
-                    .list("", { limit: 1 })
-                  console.log(`Bucket ${bucketName}:`, error ? `❌ ${error.message}` : "✅ Accessible")
-                } catch (error) {
-                  console.log(`Bucket ${bucketName}: ❌ Error`)
-                }
-              }
-            }}
-          >
-            Debug
           </Button>
           <input
             ref={inputRef}

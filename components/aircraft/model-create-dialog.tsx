@@ -52,11 +52,9 @@ export function ModelCreateDialog({
         // Only run on client side
         if (typeof window === 'undefined') return;
         
-        const { createClient } = await import("@/lib/supabase/client");
-        const supabase = createClient();
-        
-        const { data } = await supabase.auth.getUser()
-        setTenantId(data?.user?.app_metadata?.tenant_id ?? null)
+        const { getCurrentTenantIdClient } = await import("@/lib/supabase/client-member-helpers");
+        const tenantId = await getCurrentTenantIdClient()
+        setTenantId(tenantId)
       } catch (err) {
         console.error("Error fetching tenant ID:", err)
       }

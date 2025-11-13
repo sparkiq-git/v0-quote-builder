@@ -33,7 +33,7 @@ import { Check, ChevronsUpDown, Plus } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface TailCreateDialogProps {
-  children: React.ReactNode
+  children?: React.ReactNode
   tailId?: string
   open?: boolean
   onOpenChange?: (open: boolean) => void
@@ -69,12 +69,12 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
         // Only run on client side
         if (typeof window === 'undefined') return;
         
+        const { getCurrentTenantIdClient } = await import("@/lib/supabase/client-member-helpers");
+        const tenantId = await getCurrentTenantIdClient()
+        setTenantId(tenantId)
+        
         const { createClient } = await import("@/lib/supabase/client");
         const supabase = createClient();
-        
-        const { data } = await supabase.auth.getUser()
-        const tenantId = data?.user?.app_metadata?.tenant_id ?? null
-        setTenantId(tenantId)
         
         // Get a default type rating (first available)
         if (tenantId) {
@@ -100,6 +100,12 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
       if (!tailId || !open) return
       try {
         setLoading(true)
+        // Only run on client side
+        if (typeof window === 'undefined') return;
+        
+        const { createClient } = await import("@/lib/supabase/client");
+        const supabase = createClient();
+        
         const { data, error } = await supabase
           .from("aircraft")
           .select("*")
@@ -150,29 +156,6 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
     },
   })
 
-  // Debug form state
-  useEffect(() => {
-    if (open) {
-      console.log("🔍 Dialog opened - Form state:", {
-        isEditing,
-        tailId,
-        existingTail: !!existingTail,
-        tenantId,
-        defaultTypeRatingId,
-        modelsLoading,
-        operatorsLoading,
-        loading,
-        isSubmitting
-      })
-    }
-  }, [open, isEditing, tailId, existingTail, tenantId, defaultTypeRatingId, modelsLoading, operatorsLoading, loading, isSubmitting])
-
-  // Debug form errors
-  useEffect(() => {
-    if (Object.keys(errors).length > 0) {
-      console.log("❌ Form validation errors detected:", errors)
-    }
-  }, [errors])
 
   // Load existing amenities when editing
   useEffect(() => {
@@ -245,6 +228,12 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
     if (!tenantId) return false
     
     try {
+      // Only run on client side
+      if (typeof window === 'undefined') return false;
+      
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+      
       let query = supabase
         .from("aircraft")
         .select("id")
@@ -266,11 +255,7 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
   }
 
   const onSubmit = async (data: TailFormData) => {
-    console.log("🎯 onSubmit function called!")
-    console.log("📊 Form data received:", data)
-    console.log("🔍 Current form state:", { isEditing, existingTail: !!existingTail, tenantId })
     try {
-      console.log("🚀 Form submission started:", { data, isEditing, existingTail: !!existingTail })
       
       if (!tenantId) {
         console.error("❌ No tenant ID found")
@@ -308,6 +293,14 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
         cruising_speed: useDefaultSpeed ? null : data.speedKnotsOverride || null,
       }
 
+      // Only run on client side
+      if (typeof window === 'undefined') return;
+      
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+
+      let createdTailId: string | undefined = undefined;
+
       if (isEditing && existingTail) {
         const { error } = await supabase
           .from("aircraft")
@@ -320,6 +313,7 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
           title: "Tail updated",
           description: "The aircraft tail has been updated successfully.",
         })
+        createdTailId = existingTail.id
       } else {
         const { data: newTail, error } = await supabase
           .from("aircraft")
@@ -336,14 +330,42 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
 
         // Set the new tail data to allow image management
         setExistingTail(newTail)
+        createdTailId = newTail.id
+        
+        // Dispatch custom event to trigger data refresh in parent components
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('aircraft-data-updated'))
+        }
+        
+        // Update amenities for the new aircraft before returning
+        if (selectedAmenityIds.length > 0 && createdTailId) {
+          try {
+            const amenitiesResponse = await fetch(`/api/aircraft/${createdTailId}/amenities`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                amenityIds: selectedAmenityIds
+              })
+            })
+
+            if (!amenitiesResponse.ok) {
+              console.warn("Failed to update amenities, but aircraft was saved successfully")
+            }
+          } catch (amenitiesError) {
+            console.warn("Error updating amenities:", amenitiesError)
+          }
+        }
+        
         // Don't close the dialog, allow user to add images
         return
       }
 
-      // Update amenities for the aircraft
-      if (selectedAmenityIds.length > 0 || isEditing) {
+      // Update amenities for the aircraft (when editing)
+      if (selectedAmenityIds.length > 0 && createdTailId) {
         try {
-          const amenitiesResponse = await fetch(`/api/aircraft/${isEditing ? tailId : newTail.id}/amenities`, {
+          const amenitiesResponse = await fetch(`/api/aircraft/${createdTailId}/amenities`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -363,6 +385,11 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
 
       // Close the dialog after successful update
       setOpen(false)
+      
+      // Dispatch custom event to trigger data refresh in parent components
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('aircraft-data-updated'))
+      }
     } catch (error: any) {
       console.error("Error in form submission:", error)
       toast({
@@ -397,10 +424,7 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
               : "Add a new aircraft tail with specific tail number and optional overrides."}
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6" onInvalid={(e) => {
-          console.log("❌ Form validation failed:", e)
-          console.log("Form errors:", errors)
-        }}>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <Label className="text-base font-semibold">Step 1: Select Aircraft Model</Label>
@@ -705,6 +729,12 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
                     if (tailId) {
                       try {
                         console.log("🔄 Refreshing tail data after image upload...")
+                        // Only run on client side
+                        if (typeof window === 'undefined') return;
+                        
+                        const { createClient } = await import("@/lib/supabase/client");
+                        const supabase = createClient();
+                        
                         const { data, error } = await supabase
                           .from("aircraft")
                           .select("*")
@@ -712,15 +742,12 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
                           .single()
                         
                         if (error) {
-                          console.error("Error refreshing tail data:", error)
                           return
                         }
                         
-                        console.log("✅ Tail data refreshed:", data)
                         setExistingTail(data)
                         
                         // Update the form with the refreshed data
-                        console.log("🔄 Resetting form with refreshed data:", data)
                         reset({
                           modelId: data.model_id,
                           tailNumber: data.tail_number,
@@ -733,16 +760,8 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
                           speedKnotsOverride: data.cruising_speed || undefined,
                           images: [],
                         })
-                        console.log("✅ Form reset completed")
                         
-                        // Check form validity after reset
-                        setTimeout(() => {
-                          const formState = getValues()
-                          const formErrors = getFieldState("modelId").error || getFieldState("tailNumber").error
-                          console.log("📋 Form state after reset:", { formState, formErrors })
-                        }, 100)
                       } catch (error) {
-                        console.error("Error refreshing tail data:", error)
                       }
                     }
                   }}

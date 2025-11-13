@@ -16,15 +16,14 @@ export function TailImageDialog({ tailId, open, onOpenChange }: TailImageDialogP
   const [tenantId, setTenantId] = useState<string | null>(null)
 
   useEffect(() => {
-    // Get tenant ID from user metadata
+    // Get tenant ID from member table
     const getTenantId = async () => {
       try {
-        const { createClient } = await import("@/lib/supabase/client")
-        const supabase = createClient()
-        const { data: { user } } = await supabase.auth.getUser()
+        const { getCurrentTenantIdClient } = await import("@/lib/supabase/client-member-helpers")
+        const tenantId = await getCurrentTenantIdClient()
         
-        if (user?.app_metadata?.tenant_id) {
-          setTenantId(user.app_metadata.tenant_id)
+        if (tenantId) {
+          setTenantId(tenantId)
         } else {
           toast({
             title: "Authentication Error",

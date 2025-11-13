@@ -34,6 +34,12 @@ export default function AircraftImageManager({ aircraftId, tenantId, onImagesUpd
   // Load existing images
   useEffect(() => {
     const fetchImages = async () => {
+      // Only run on client side
+      if (typeof window === 'undefined') return;
+      
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+      
       const { data, error } = await supabase
         .from("aircraft_image")
         .select("id, public_url")
@@ -79,7 +85,6 @@ export default function AircraftImageManager({ aircraftId, tenantId, onImagesUpd
         
         // Set a fallback timeout to enable the button after 2 seconds
         const timeout = setTimeout(() => {
-          console.log("Fallback: Enabling crop button after timeout")
           setImageLoaded(true)
         }, 2000)
         setImageLoadTimeout(timeout)
@@ -171,17 +176,9 @@ export default function AircraftImageManager({ aircraftId, tenantId, onImagesUpd
         throw new Error("Please sign in to upload images")
       }
       
-      console.log("User authenticated:", user.id)
-
       // Use server-side API to bypass RLS restrictions
       for (let i = 0; i < imageFiles.length; i++) {
         const file = imageFiles[i]
-        
-        console.log("Uploading file via server API:", {
-          fileName: file.name,
-          fileSize: file.size,
-          contentType: file.type
-        })
 
         // Create FormData for server upload
         const formData = new FormData()
@@ -191,33 +188,26 @@ export default function AircraftImageManager({ aircraftId, tenantId, onImagesUpd
         formData.append("userId", user.id)
 
         // Upload via server-side API
-        console.log("🚀 Calling server API...")
         const response = await fetch("/api/upload-aircraft-image", {
           method: "POST",
           body: formData,
         })
 
-        console.log("📡 Server response status:", response.status)
         
         if (!response.ok) {
           const errorText = await response.text()
-          console.error("❌ Server response error:", errorText)
           throw new Error(`Server upload failed: ${response.status} ${errorText}`)
         }
 
         const result = await response.json()
-        console.log("📦 Server response data:", result)
 
         if (!result.success) {
-          console.error("Server upload error:", result.error)
           throw new Error(`Server upload failed: ${result.error}`)
         }
 
-        console.log("✅ Server upload successful:", result.data)
         setImages((prev) => [...prev, { url: result.data.url, id: result.data.id }])
       }
 
-      console.log("✅ All images uploaded successfully")
       toast({ title: "Success", description: `${imageFiles.length} image(s) uploaded successfully` })
       setImageFiles([])
       setImagePreviews([])
@@ -282,29 +272,6 @@ export default function AircraftImageManager({ aircraftId, tenantId, onImagesUpd
               const { createClient } = await import("@/lib/supabase/client");
               const supabase = createClient();
               
-              console.log("🧪 Aircraft Image Debug Info:")
-              console.log("Aircraft ID:", aircraftId)
-              console.log("Tenant ID:", tenantId)
-              const { data: { user } } = await supabase.auth.getUser()
-              console.log("User:", user?.id)
-              const { data: buckets } = await supabase.storage.listBuckets()
-              console.log("Available buckets:", buckets?.map(b => b.name))
-              
-              // Test bucket access
-              const possibleBuckets = ["aircraft-media", "aircraft", "aircraft-images", "images", "uploads"]
-              for (const bucketName of possibleBuckets) {
-                try {
-                  const { data: files, error } = await supabase.storage
-                    .from(bucketName)
-                    .list("", { limit: 1 })
-                  console.log(`Bucket ${bucketName}:`, error ? `❌ ${error.message}` : "✅ Accessible")
-                } catch (error) {
-                  console.log(`Bucket ${bucketName}: ❌ Error`)
-                }
-              }
-            }}
-          >
-            Debug Storage
           </Button>
         </div>
         <p className="text-sm text-gray-500">Click to select images or drag and drop</p>
@@ -393,7 +360,6 @@ export default function AircraftImageManager({ aircraftId, tenantId, onImagesUpd
                   onZoomChange={setZoom}
                   onCropComplete={handleCropComplete}
                   onImageLoaded={() => {
-                    console.log("Image loaded in cropper")
                     // Clear the fallback timeout since image loaded properly
                     if (imageLoadTimeout) {
                       clearTimeout(imageLoadTimeout)

@@ -51,12 +51,8 @@ export function ModelEditDialog({
         // Only run on client side
         if (typeof window === 'undefined') return;
         
-        const { createClient } = await import("@/lib/supabase/client");
-        const supabase = createClient();
-        
-        const { data } = await supabase.auth.getUser()
-        const tenantId = data?.user?.app_metadata?.tenant_id ?? null
-        console.log("Loaded tenant ID:", tenantId)
+        const { getCurrentTenantIdClient } = await import("@/lib/supabase/client-member-helpers");
+        const tenantId = await getCurrentTenantIdClient()
         setTenantId(tenantId)
       } catch (err) {
         console.error("Error loading tenant ID:", err)
@@ -130,10 +126,6 @@ export function ModelEditDialog({
 
         {model && (
           <>
-            {/* Debug info */}
-            <div className="text-xs text-muted-foreground mb-2">
-              Debug: tenantId={tenantId}, model.tenant_id={model.tenant_id}
-            </div>
             <div className="space-y-4">
               <div>
                 <Label htmlFor="name">Model Name</Label>

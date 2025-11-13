@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
+import { getCurrentTenantId } from "@/lib/supabase/member-helpers"
 import { z } from "zod"
 
 const AmenitySelectionSchema = z.object({
@@ -78,10 +79,25 @@ export async function POST(
     const body = await req.json()
     const { amenityIds } = AmenitySelectionSchema.parse(body)
 
-    // Get tenant ID from user metadata
-    const tenantId = user.app_metadata?.tenant_id
+    // Get tenant ID from member table
+    const tenantId = await getCurrentTenantId()
     if (!tenantId) {
       return NextResponse.json({ success: false, error: "Tenant ID not found" }, { status: 400 })
+    }
+    
+    // Verify aircraft belongs to user's tenant
+    const { data: aircraft, error: aircraftError } = await supabase
+      .from("aircraft")
+      .select("tenant_id")
+      .eq("id", aircraftId)
+      .single()
+      
+    if (aircraftError || !aircraft) {
+      return NextResponse.json({ success: false, error: "Aircraft not found" }, { status: 404 })
+    }
+    
+    if (aircraft.tenant_id !== tenantId) {
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 403 })
     }
 
     // First, remove all existing amenities for this aircraft
