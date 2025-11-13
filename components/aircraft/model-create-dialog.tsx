@@ -250,22 +250,7 @@ export function ModelCreateDialog({
                   {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
                 </div>
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="categoryId">Category *</Label>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-7"
-                      onClick={() => {
-                        setSizeComboOpen(false)
-                        setCreateSizeDialogOpen(true)
-                      }}
-                    >
-                      <Plus className="h-3 w-3 mr-1" />
-                      Add
-                    </Button>
-                  </div>
+                  <Label htmlFor="categoryId">Category *</Label>
                   <Controller
                     name="categoryId"
                     control={control}
