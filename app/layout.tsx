@@ -23,9 +23,9 @@ const jetbrainsMono = JetBrains_Mono({
 })
 
 export const metadata: Metadata = {
-  title: "AeroIQ",
+  title: "Aero IQ",
   description: "Lead Management & Quote Publishing System for Aircraft Charter Brokers",
-  generator: "v0.app",
+  generator: "Aero IQ",
 }
 
 export default async function RootLayout({
