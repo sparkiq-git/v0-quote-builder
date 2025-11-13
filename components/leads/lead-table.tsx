@@ -116,7 +116,7 @@ export function LeadTable({ data, setLeads, onOpenNewCountChange }: LeadTablePro
           status: "new",
         }
 
-        const { data: newQuote, error: insertError } = await supabase.from("quotes").insert([quote]).select().single()
+        const { data: newQuote, error: insertError } = await supabase.from("quote").insert([quote]).select().single()
         if (insertError) throw insertError
 
         await supabase.from("lead").update({ status: "converted" }).eq("id", leadId)
