@@ -36,7 +36,7 @@ export function NavUser({ user }: NavUserProps) {
     const { createClient } = await import("@/lib/supabase/client")
     const supabase = createClient()
     await supabase.auth.signOut()
-    window.location.href = "/sign-in"
+    window.location.href = "/auth/sign-in"
   }
 
   return (

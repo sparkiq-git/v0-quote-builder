@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr"
 import { NextResponse, type NextRequest } from "next/server"
 
 const PUBLIC_PATHS = [
-  "/sign-in",
+  "/auth/sign-in",
   "/auth/callback",
   "/auth/set-password",
   "/q",
@@ -53,7 +53,7 @@ export async function middleware(request: NextRequest) {
 
   // If Supabase not configured, bounce protected routes to sign-in
   if (!supabaseUrl || !supabaseAnonKey) {
-    const redirectUrl = new URL("/sign-in", request.url)
+    const redirectUrl = new URL("/auth/sign-in", request.url)
     redirectUrl.searchParams.set("next", pathname)
     redirectUrl.searchParams.set("error", "supabase-not-configured")
     return NextResponse.redirect(redirectUrl)
@@ -81,7 +81,7 @@ export async function middleware(request: NextRequest) {
 
   // Protect the route if unauthenticated
   if (!user) {
-    const redirectUrl = new URL("/sign-in", request.url)
+    const redirectUrl = new URL("/auth/sign-in", request.url)
     redirectUrl.searchParams.set("next", pathname)
     return NextResponse.redirect(redirectUrl)
   }

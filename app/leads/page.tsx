@@ -42,7 +42,7 @@ export default function LeadsPage() {
         return
       }
       if (!session) {
-        router.push("/sign-in")
+        router.push("/auth/sign-in")
         return
       }
 
@@ -51,7 +51,7 @@ export default function LeadsPage() {
 
       authListener = supabase.auth.onAuthStateChange((_event, newSession) => {
         if (newSession) supabase.realtime.setAuth(newSession.access_token)
-        else router.push("/sign-in")
+        else router.push("/auth/sign-in")
       })
     }
 

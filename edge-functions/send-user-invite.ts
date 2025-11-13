@@ -144,9 +144,19 @@ Deno.serve(async (req)=>{
       .maybeSingle();
 
     const fromEmail = brand?.from_email ?? DEFAULT_FROM;
-    const logoUrl = brand?.logo_path 
-      ? `${SUPABASE_URL}/storage/v1/object/public/branding/${brand.logo_path.replace(/^\/*/, "")}` 
-      : null;
+    // Handle logo_path - it might be a full URL, relative path, or storage path
+    let logoUrl = null;
+    if (brand?.logo_path) {
+      const logoPath = brand.logo_path.trim();
+      // If it's already a full URL, use it as-is
+      if (logoPath.startsWith("http://") || logoPath.startsWith("https://")) {
+        logoUrl = logoPath;
+      } else {
+        // Otherwise, construct the full storage URL
+        const cleanPath = logoPath.replace(/^\/*/, "");
+        logoUrl = `${SUPABASE_URL}/storage/v1/object/public/branding/${cleanPath}`;
+      }
+    }
 
     // Generate password setup link using Supabase Auth Admin API
     // Use "invite" type for new user invitations
