@@ -101,27 +101,23 @@ export function LeadTable({ data, setLeads, onOpenNewCountChange }: LeadTablePro
         const { createClient } = await import("@/lib/supabase/client")
         const supabase = createClient()
 
-        const { data: leadData, error: fetchError } = await supabase.from("lead").select("*").eq("id", leadId).single()
-        if (fetchError) throw fetchError
+        // Use the same RPC function that works in lead-detail-modal
+        const { data: newQuoteId, error } = await supabase.rpc("rpc_convert_lead_to_quote", {
+          p_lead_id: leadId,
+        })
 
-        const quote = {
-          tenant_id: leadData.tenant_id,
-          customer_name: leadData.customer_name,
-          customer_email: leadData.customer_email,
-          company: leadData.company,
-          trip_summary: leadData.trip_summary,
-          leg_count: leadData.leg_count,
-          total_pax: leadData.total_pax,
-          created_at: new Date().toISOString(),
-          status: "new",
+        if (error) {
+          console.error("Convert error:", error)
+          toast({
+            title: "Error",
+            description: error.message || "Failed to convert lead.",
+            variant: "destructive",
+          })
+          return
         }
 
-        const { data: newQuote, error: insertError } = await supabase.from("quote").insert([quote]).select().single()
-        if (insertError) throw insertError
-
-        await supabase.from("lead").update({ status: "converted" }).eq("id", leadId)
         toast({ title: "Lead converted", description: "Lead successfully converted to quote." })
-        router.push(`/quotes/${newQuote.id}`)
+        router.push(`/quotes/${newQuoteId}`)
       } catch (err) {
         console.error("Convert error:", err)
         toast({ title: "Error", description: "Failed to convert lead.", variant: "destructive" })
