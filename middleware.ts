@@ -4,6 +4,7 @@ import { NextResponse, type NextRequest } from "next/server"
 const PUBLIC_PATHS = [
   "/sign-in",
   "/auth/callback",
+  "/auth/set-password",
   "/q",
   "/public/itinerary",
   "/action",
