@@ -53,21 +53,21 @@ function buildInviteEmailHtml({
 <body style="background:#F9FAFB; margin:0; padding:30px 0;">
 <div style="max-width:720px; margin:auto; background:#fff; border-radius:20px; border:1px solid ${border}; overflow:hidden;">
 <div style="text-align:center; padding:20px;">
-${logoUrl ? `<img src="${esc(logoUrl)}" alt="Logo" style="max-width:200px;" />` : `<h2 style="color:${colorPrimary}; margin:0;">AeroIQ</h2>`}
+${logoUrl ? `<img src="${esc(logoUrl)}" alt="AeroIQ Logo" style="max-width:200px; height:auto; display:block; margin:0 auto;" />` : `<h2 style="color:${colorPrimary}; margin:0;">AeroIQ</h2>`}
 </div>
 <div style="padding:22px;">
 <p style="font-size:15px; color:${colorPrimary}; margin:0 0 10px;">Hi ${userName ? esc(userName) : "there"},</p>
-<p style="font-size:14px; color:${colorPrimary}; margin:0 0 14px;">You've been invited to join AeroIQ. Click the button below to set your password and activate your account.</p>
+<p style="font-size:14px; color:${colorPrimary}; margin:0 0 14px; line-height:1.6;">You've been invited to join <strong>AeroIQ</strong>. Click the button below to set your password and activate your account.</p>
 <div style="text-align:center; margin:22px 0;">
 <a href="${esc(linkUrl)}" style="display:inline-block; background:${colorAccent}; color:#fff; text-decoration:none; padding:12px 18px; border-radius:10px; font-weight:600;">
 Set Password
 </a>
 </div>
-<p style="font-size:13px; color:${subtle}; margin:0 0 8px;">or use this link:</p>
-<p style="font-size:12px; word-break:break-all; color:${colorPrimary}; margin:0 0 20px;">
+<p style="font-size:12px; color:${subtle}; margin:20px 0 0;">This invitation link will expire in 7 days.</p>
+<p style="font-size:11px; color:${subtle}; margin:16px 0 0; padding-top:16px; border-top:1px solid ${border};">If the button doesn't work, copy and paste this link into your browser:</p>
+<p style="font-size:11px; word-break:break-all; color:${subtle}; margin:8px 0 0;">
 <a href="${esc(linkUrl)}" style="color:${colorAccent}; text-decoration:none;">${esc(linkUrl)}</a>
 </p>
-<p style="font-size:12px; color:${subtle}; margin:0;">This invitation link will expire in 7 days.</p>
 </div>
 <div style="text-align:center; padding:15px; font-size:12px; color:${subtle};">Powered by <strong>AeroIQ</strong></div>
 </div>
