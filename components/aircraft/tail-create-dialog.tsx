@@ -41,12 +41,15 @@ interface TailCreateDialogProps {
 
 export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpenChange }: TailCreateDialogProps) {
   const { models, loading: modelsLoading } = useAircraftModels()
-  const { operators, loading: operatorsLoading } = useOperators()
+  const { operators, loading: operatorsLoading, createOperator } = useOperators()
   const { aircraftAmenities, loading: amenitiesLoading } = useAircraftAmenities(tailId || undefined)
   const { toast } = useToast()
   const [internalOpen, setInternalOpen] = useState(false)
   const [modelComboOpen, setModelComboOpen] = useState(false)
   const [operatorComboOpen, setOperatorComboOpen] = useState(false)
+  const [createOperatorDialogOpen, setCreateOperatorDialogOpen] = useState(false)
+  const [newOperator, setNewOperator] = useState({ name: "", icao_code: "", iata_code: "" })
+  const [creatingOperator, setCreatingOperator] = useState(false)
   const [useDefaultCapacity, setUseDefaultCapacity] = useState(true)
   const [useDefaultRange, setUseDefaultRange] = useState(true)
   const [useDefaultSpeed, setUseDefaultSpeed] = useState(true)
@@ -410,21 +413,109 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
     setOperatorComboOpen(false)
   }
 
+  const handleCreateOperator = async () => {
+    if (!newOperator.name.trim()) {
+      toast({ title: "Operator name is required", variant: "destructive" })
+      return
+    }
+
+    setCreatingOperator(true)
+    try {
+      const result = await createOperator({
+        name: newOperator.name.trim(),
+        icao_code: newOperator.icao_code.trim() || null,
+        iata_code: newOperator.iata_code.trim() || null,
+      })
+
+      if (result.success && result.data) {
+        toast({ title: "Operator created", description: `${result.data.name} has been added.` })
+        setValue("operator", result.data.id)
+        setNewOperator({ name: "", icao_code: "", iata_code: "" })
+        setCreateOperatorDialogOpen(false)
+        setOperatorComboOpen(false)
+      } else {
+        toast({ title: "Error", description: result.error || "Failed to create operator", variant: "destructive" })
+      }
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message || "Failed to create operator", variant: "destructive" })
+    } finally {
+      setCreatingOperator(false)
+    }
+  }
+
   const activeModels = models.filter((model) => !model.isArchived)
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{isEditing ? "Edit Aircraft Tail" : "Create Aircraft Tail"}</DialogTitle>
-          <DialogDescription>
-            {isEditing
-              ? "Update the aircraft tail details below."
-              : "Add a new aircraft tail with specific tail number and optional overrides."}
-          </DialogDescription>
-        </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+    <>
+      {/* Create Operator Dialog */}
+      <Dialog open={createOperatorDialogOpen} onOpenChange={setCreateOperatorDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Create Operator</DialogTitle>
+            <DialogDescription>Add a new operator to your fleet</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="operator-name">Name *</Label>
+              <Input
+                id="operator-name"
+                value={newOperator.name}
+                onChange={(e) => setNewOperator({ ...newOperator, name: e.target.value })}
+                placeholder="e.g., NetJets"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && newOperator.name.trim()) {
+                    e.preventDefault()
+                    handleCreateOperator()
+                  }
+                }}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="grid gap-2">
+                <Label htmlFor="operator-icao">ICAO Code</Label>
+                <Input
+                  id="operator-icao"
+                  value={newOperator.icao_code}
+                  onChange={(e) => setNewOperator({ ...newOperator, icao_code: e.target.value.toUpperCase() })}
+                  placeholder="e.g., NJA"
+                  maxLength={3}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="operator-iata">IATA Code</Label>
+                <Input
+                  id="operator-iata"
+                  value={newOperator.iata_code}
+                  onChange={(e) => setNewOperator({ ...newOperator, iata_code: e.target.value.toUpperCase() })}
+                  placeholder="e.g., 1I"
+                  maxLength={2}
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setCreateOperatorDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleCreateOperator} disabled={creatingOperator || !newOperator.name.trim()}>
+              {creatingOperator ? "Creating..." : "Create Operator"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger asChild>{children}</DialogTrigger>
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{isEditing ? "Edit Aircraft Tail" : "Create Aircraft Tail"}</DialogTitle>
+            <DialogDescription>
+              {isEditing
+                ? "Update the aircraft tail details below."
+                : "Add a new aircraft tail with specific tail number and optional overrides."}
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <Label className="text-base font-semibold">Step 1: Select Aircraft Model</Label>
@@ -516,7 +607,24 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
                         <Command>
                           <CommandInput placeholder="Search operators..." />
                           <CommandList>
-                            <CommandEmpty>No operators found.</CommandEmpty>
+                            <CommandEmpty>
+                              <div className="py-2 text-center text-sm">
+                                <p className="mb-2">No operators found.</p>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    setOperatorComboOpen(false)
+                                    setCreateOperatorDialogOpen(true)
+                                  }}
+                                  className="h-8"
+                                >
+                                  <Plus className="h-3 w-3 mr-1" />
+                                  Create Operator
+                                </Button>
+                              </div>
+                            </CommandEmpty>
                             <CommandGroup>
                               <CommandItem value="" onSelect={() => handleOperatorSelect("")}>
                                 <Check
@@ -542,6 +650,17 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
                                   </div>
                                 </CommandItem>
                               ))}
+                              <CommandItem
+                                value="__create_operator__"
+                                onSelect={() => {
+                                  setOperatorComboOpen(false)
+                                  setCreateOperatorDialogOpen(true)
+                                }}
+                                className="text-primary border-t"
+                              >
+                                <Plus className="mr-2 h-4 w-4" />
+                                <span>Create new operator...</span>
+                              </CommandItem>
                             </CommandGroup>
                           </CommandList>
                         </Command>
@@ -795,5 +914,6 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
         </form>
       </DialogContent>
     </Dialog>
+    </>
   )
 }
