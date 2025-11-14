@@ -23,6 +23,7 @@ import { insertModel } from "@/lib/supabase/queries/models"
 import ModelImageManager from "@/components/aircraft/model-image-manager"
 import type { AircraftModelRecord } from "@/lib/types"
 import { useAircraftSizes } from "@/hooks/use-aircraft-sizes"
+import { useManufacturers } from "@/hooks/use-manufacturers"
 import { Check, ChevronsUpDown, Plus } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -41,6 +42,7 @@ export function ModelCreateDialog({
 }: ModelCreateDialogProps) {
   const { toast } = useToast()
   const { sizes, loading: sizesLoading, createSize } = useAircraftSizes()
+  const { manufacturers, loading: manufacturersLoading, createManufacturer } = useManufacturers()
   const [internalOpen, setInternalOpen] = useState(false)
   const open = controlledOpen ?? internalOpen
   const setOpen = onOpenChange ?? setInternalOpen
@@ -52,6 +54,10 @@ export function ModelCreateDialog({
   const [createSizeDialogOpen, setCreateSizeDialogOpen] = useState(false)
   const [newSize, setNewSize] = useState({ code: "", display_name: "", description: "", size: "" })
   const [creatingSize, setCreatingSize] = useState(false)
+  const [manufacturerComboOpen, setManufacturerComboOpen] = useState(false)
+  const [createManufacturerDialogOpen, setCreateManufacturerDialogOpen] = useState(false)
+  const [newManufacturerName, setNewManufacturerName] = useState("")
+  const [creatingManufacturer, setCreatingManufacturer] = useState(false)
 
   // 🔹 Fetch tenant ID on client only
   useEffect(() => {
@@ -84,7 +90,7 @@ export function ModelCreateDialog({
     defaultValues: {
       name: "",
       categoryId: "",
-      manufacturer: "",
+      manufacturerId: "",
       defaultCapacity: undefined,
       defaultRangeNm: undefined,
       defaultSpeedKnots: undefined,
@@ -93,6 +99,7 @@ export function ModelCreateDialog({
   })
 
   const categoryId = watch("categoryId")
+  const manufacturerId = watch("manufacturerId")
 
   const handleSizeSelect = (sizeCode: string) => {
     setValue("categoryId", sizeCode)
@@ -139,16 +146,46 @@ export function ModelCreateDialog({
     }
   }
 
+  const handleManufacturerSelect = (id: string) => {
+    setValue("manufacturerId", id)
+    setManufacturerComboOpen(false)
+  }
+
+  const handleCreateManufacturer = async () => {
+    if (!newManufacturerName.trim()) {
+      toast({ title: "Manufacturer name is required", variant: "destructive" })
+      return
+    }
+
+    setCreatingManufacturer(true)
+    try {
+      const result = await createManufacturer(newManufacturerName.trim())
+      if (result.success && result.data) {
+        toast({ title: "Manufacturer created", description: `${result.data.name} has been added.` })
+        setValue("manufacturerId", result.data.id, { shouldValidate: true, shouldDirty: true })
+        setNewManufacturerName("")
+        setCreateManufacturerDialogOpen(false)
+        setManufacturerComboOpen(false)
+      } else {
+        toast({ title: "Error", description: result.error || "Failed to create manufacturer", variant: "destructive" })
+      }
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message || "Failed to create manufacturer", variant: "destructive" })
+    } finally {
+      setCreatingManufacturer(false)
+    }
+  }
+
   const handleCreate = async (data: ModelFormData) => {
     try {
       if (!tenantId) throw new Error("Tenant ID not found.")
       setLoading(true)
       // Map categoryId to size_code for the database
-      const { categoryId, ...rest } = data
-      const created = await insertModel({ 
-        ...rest, 
+      const { categoryId, manufacturerId, ...rest } = data
+      const created = await insertModel({
+        ...rest,
         size_code: categoryId || null,
-        tenant_id: tenantId 
+        manufacturer_id: manufacturerId,
       })
       setCreatedModel(created)
       toast({ title: "Model created", description: "Now add images for this model." })
@@ -169,6 +206,9 @@ export function ModelCreateDialog({
       setNewSize({ code: "", display_name: "", description: "", size: "" })
       setSizeComboOpen(false)
       setCreateSizeDialogOpen(false)
+      setManufacturerComboOpen(false)
+      setCreateManufacturerDialogOpen(false)
+      setNewManufacturerName("")
     }
   }
 
@@ -230,6 +270,35 @@ export function ModelCreateDialog({
             </Button>
             <Button onClick={handleCreateSize} disabled={creatingSize || !newSize.code.trim() || !newSize.display_name.trim()}>
               {creatingSize ? "Creating..." : "Create Size"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Manufacturer Dialog */}
+      <Dialog open={createManufacturerDialogOpen} onOpenChange={setCreateManufacturerDialogOpen}>
+        <DialogContent className="max-w-full md:max-w-md overflow-y-auto max-h-[100vh]">
+          <DialogHeader>
+            <DialogTitle>Create Manufacturer</DialogTitle>
+            <DialogDescription>Add a new aircraft manufacturer</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="manufacturer-name">Name *</Label>
+              <Input
+                id="manufacturer-name"
+                value={newManufacturerName}
+                onChange={(e) => setNewManufacturerName(e.target.value)}
+                placeholder="e.g., Embraer"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setCreateManufacturerDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleCreateManufacturer} disabled={creatingManufacturer || !newManufacturerName.trim()}>
+              {creatingManufacturer ? "Creating..." : "Create Manufacturer"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -347,9 +416,86 @@ export function ModelCreateDialog({
                 </div>
               </div>
 
-            <div>
-              <Label htmlFor="manufacturer">Manufacturer</Label>
-              <Input id="manufacturer" {...register("manufacturer")} placeholder="Embraer" />
+            <div className="space-y-2">
+              <Label>Manufacturer *</Label>
+              <Controller
+                name="manufacturerId"
+                control={control}
+                render={({ field }) => (
+                  <Popover open={manufacturerComboOpen} onOpenChange={setManufacturerComboOpen} modal={true}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={manufacturerComboOpen}
+                        className="w-full justify-between bg-transparent"
+                        disabled={manufacturersLoading}
+                      >
+                        {field.value
+                          ? manufacturers.find((m) => m.id === field.value)?.name || "Select manufacturer..."
+                          : "Select manufacturer..."}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-full p-0">
+                      <Command>
+                        <CommandInput placeholder="Search manufacturers..." />
+                        <CommandList>
+                          <CommandEmpty>
+                            <div className="py-2 text-center text-sm">
+                              <p className="mb-2">No manufacturers found.</p>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setManufacturerComboOpen(false)
+                                  setCreateManufacturerDialogOpen(true)
+                                }}
+                                className="h-8"
+                              >
+                                <Plus className="h-3 w-3 mr-1" />
+                                Create Manufacturer
+                              </Button>
+                            </div>
+                          </CommandEmpty>
+                          <CommandGroup>
+                            {manufacturers.map((manufacturer) => (
+                              <CommandItem
+                                key={manufacturer.id}
+                                value={manufacturer.name}
+                                onSelect={() => handleManufacturerSelect(manufacturer.id)}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    field.value === manufacturer.id ? "opacity-100" : "opacity-0",
+                                  )}
+                                />
+                                <span>{manufacturer.name}</span>
+                              </CommandItem>
+                            ))}
+                            <CommandItem
+                              value="__create_manufacturer__"
+                              onSelect={() => {
+                                setManufacturerComboOpen(false)
+                                setCreateManufacturerDialogOpen(true)
+                              }}
+                              className="text-primary border-t"
+                            >
+                              <Plus className="mr-2 h-4 w-4" />
+                              <span>Create new manufacturer...</span>
+                            </CommandItem>
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                )}
+              />
+              {errors.manufacturerId && (
+                <p className="text-sm text-destructive">{errors.manufacturerId.message}</p>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
