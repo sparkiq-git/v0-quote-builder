@@ -30,6 +30,7 @@ export function QuoteOptionsTab({ quote, onUpdate, onNext, onBack }: Props) {
   const { toast } = useToast()
   const options = Array.isArray(quote?.options) ? quote.options : []
   const [tailCreateDialogOpen, setTailCreateDialogOpen] = useState(false)
+  const [pendingTailOptionId, setPendingTailOptionId] = useState<string | null>(null)
   const [editOpenFor, setEditOpenFor] = useState<string | null>(null)
   const [aircraftCache, setAircraftCache] = useState<Record<string, AircraftFull>>({})
   const [saving, setSaving] = useState(false)
@@ -195,6 +196,90 @@ const handleUpdateOption = (id: string, updates: Partial<QuoteOption>) => {
   });
 };
 
+  const applyAircraftSelection = (
+    optionId: string,
+    aircraft: AircraftFull,
+    opts?: { toastMessage?: string; skipToast?: boolean },
+  ) => {
+    if (!aircraft?.aircraft_id) return
+
+    setAircraftCache((prev) => ({ ...prev, [aircraft.aircraft_id]: aircraft }))
+
+    const aircraftImages = aircraft.aircraft_images || (aircraft.primary_image_url ? [aircraft.primary_image_url] : [])
+
+    const aircraftModel = {
+      id: aircraft.aircraft_id,
+      name: aircraft.model_name || "",
+      manufacturer: aircraft.manufacturer_name || "",
+      defaultCapacity: aircraft.capacity_pax ?? null,
+      defaultRangeNm: aircraft.range_nm ?? null,
+      defaultSpeedKnots: null,
+      images: aircraftImages,
+    }
+
+    const aircraftTail = {
+      id: aircraft.aircraft_id,
+      tailNumber: aircraft.tail_number || "",
+      operator: aircraft.operator_name || "",
+      operator_id: "",
+      year: aircraft.year_of_manufacture || null,
+      yearOfRefurbish: aircraft.year_of_refurbish || null,
+      cruisingSpeed: null,
+      rangeNm: aircraft.range_nm || null,
+      amenities: aircraft.amenities || [],
+      images: aircraftImages,
+      capacityOverride: aircraft.capacity_pax || null,
+      rangeNmOverride: aircraft.range_nm || null,
+      speedKnotsOverride: null,
+      status: aircraft.status || "ACTIVE",
+      homeBase: aircraft.home_base || "",
+      serialNumber: aircraft.serial_number || null,
+      mtowKg: aircraft.mtow_kg || null,
+    }
+
+    handleUpdateOption(optionId, {
+      aircraft_id: aircraft.aircraft_id,
+      aircraft_tail_id: aircraft.aircraft_id,
+      selectedAmenities: aircraft.amenities || [],
+      aircraftModel,
+      aircraftTail,
+    })
+
+    if (!opts?.skipToast) {
+      toast({
+        title: "Aircraft Selected",
+        description:
+          opts?.toastMessage || `${aircraft.model_name || ""} (${aircraft.tail_number || ""}) selected.`,
+      })
+    }
+  }
+
+  const handleTailCreated = async (newTail: any) => {
+    if (!newTail?.id || !pendingTailOptionId) return
+
+    try {
+      const res = await fetch(`/api/aircraft-full/${newTail.id}`)
+      const json = await res.json()
+      if (!res.ok || !json?.data) {
+        throw new Error(json?.error || "Failed to load newly created aircraft.")
+      }
+
+      const aircraft: AircraftFull = json.data
+      applyAircraftSelection(pendingTailOptionId, aircraft, {
+        toastMessage: `${aircraft.model_name || ""} (${aircraft.tail_number || ""}) saved and selected.`,
+      })
+    } catch (error: any) {
+      console.error("Error auto-selecting new tail:", error)
+      toast({
+        title: "Selection error",
+        description: error?.message || "Unable to select the newly created aircraft.",
+        variant: "destructive",
+      })
+    } finally {
+      setPendingTailOptionId(null)
+    }
+  }
+
 
 
   const handleRemoveOption = (id: string) => {
@@ -273,54 +358,11 @@ const handleNext = () => {
                     <Label>Aircraft Selection</Label>
                     <AircraftCombobox
                       value={option.aircraft_id || null}
-                      onSelect={(a) => {
-                        // Store the full aircraft data in cache
-                        setAircraftCache((prev) => ({ ...prev, [a.aircraft_id]: a }))
-                        
-                        // Also store the aircraft data in the option itself for persistence
-                        const aircraftModel = {
-                          id: a.aircraft_id,
-                          name: a.model_name || "",
-                          manufacturer: a.manufacturer_name || "",
-                          defaultCapacity: a.capacity_pax || null,
-                          defaultRangeNm: a.range_nm || null,
-                          defaultSpeedKnots: null,
-                          images: a.aircraft_images || (a.primary_image_url ? [a.primary_image_url] : []),
-                        }
-                        
-                        const aircraftTail = {
-                          id: a.aircraft_id,
-                          tailNumber: a.tail_number || "",
-                          operator: a.operator_name || "",
-                          operator_id: "", // AircraftFull doesn't have operator_id field
-                          year: a.year_of_manufacture || null,
-                          yearOfRefurbish: a.year_of_refurbish || null,
-                          cruisingSpeed: null,
-                          rangeNm: a.range_nm || null,
-                          amenities: a.amenities || [],
-                          images: a.aircraft_images || (a.primary_image_url ? [a.primary_image_url] : []),
-                          capacityOverride: a.capacity_pax || null,
-                          rangeNmOverride: a.range_nm || null,
-                          speedKnotsOverride: null,
-                          status: a.status || "ACTIVE",
-                          homeBase: a.home_base || "",
-                          serialNumber: a.serial_number || null,
-                          mtowKg: a.mtow_kg || null,
-                        }
-                        
-                        handleUpdateOption(option.id, {
-                          aircraft_id: a.aircraft_id,
-                          aircraft_tail_id: a.aircraft_id, // Assuming same for now
-                          selectedAmenities: a.amenities || [],
-                          aircraftModel: aircraftModel,
-                          aircraftTail: aircraftTail,
-                        })
-                        toast({
-                          title: "Aircraft Selected",
-                          description: `${a.model_name || ""} (${a.tail_number || ""}) selected.`,
-                        })
+                      onSelect={(a) => applyAircraftSelection(option.id, a)}
+                      onClickAdd={() => {
+                        setPendingTailOptionId(option.id)
+                        setTailCreateDialogOpen(true)
                       }}
-                      onClickAdd={() => setTailCreateDialogOpen(true)}
                     />
 
                  {option.aircraft_id && aircraftCache[option.aircraft_id] && (
@@ -524,7 +566,13 @@ const handleNext = () => {
       {/* Modals and Drawers */}
       <TailCreateDialog
         open={tailCreateDialogOpen}
-        onOpenChange={setTailCreateDialogOpen}
+        onOpenChange={(isOpen) => {
+          setTailCreateDialogOpen(isOpen)
+          if (!isOpen) {
+            setPendingTailOptionId(null)
+          }
+        }}
+        onCreated={handleTailCreated}
       />
 
       <AircraftEditDrawer

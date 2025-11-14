@@ -37,9 +37,16 @@ interface TailCreateDialogProps {
   tailId?: string
   open?: boolean
   onOpenChange?: (open: boolean) => void
+  onCreated?: (tail: any) => void | Promise<void>
 }
 
-export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpenChange }: TailCreateDialogProps) {
+export function TailCreateDialog({
+  children,
+  tailId,
+  open: controlledOpen,
+  onOpenChange,
+  onCreated,
+}: TailCreateDialogProps) {
   const { toast } = useToast()
   const [internalOpen, setInternalOpen] = useState(false)
   const [modelComboOpen, setModelComboOpen] = useState(false)
@@ -357,6 +364,14 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
         // Set the new tail data to allow image management
         setExistingTail(newTail)
         setActiveTailId(newTail.id)
+
+        if (onCreated) {
+          try {
+            await onCreated(newTail)
+          } catch (callbackError) {
+            console.error("onCreated callback error:", callbackError)
+          }
+        }
         createdTailId = newTail.id
         
         // Dispatch custom event to refresh lists
