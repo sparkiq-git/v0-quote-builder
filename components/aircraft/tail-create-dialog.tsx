@@ -177,7 +177,7 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
     if (!pendingModelId) return
     const modelExists = models.find((model) => model.id === pendingModelId)
     if (modelExists) {
-      setValue("modelId", pendingModelId, { shouldValidate: true, shouldDirty: true })
+      setValue("modelId", pendingModelId, { shouldDirty: true })
       setPendingModelId(null)
       setModelComboOpen(false)
       toast({
@@ -452,7 +452,7 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
         // Wait for React to process state updates, then set the value and re-open combobox
         // This ensures the operators list has been refreshed in the component
         setTimeout(() => {
-          setValue("operator", result.data.id, { shouldValidate: true, shouldDirty: true })
+          setValue("operator", result.data.id, { shouldDirty: true })
           // Re-open the combobox to show the newly created item is selected
           setOperatorComboOpen(true)
         }, 150)
@@ -604,7 +604,7 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
 
           <div className="space-y-4">
             <Label className="text-base font-semibold">Basic Information</Label>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="tailNumber">Tail Number *</Label>
                 <Input id="tailNumber" {...register("tailNumber")} placeholder="e.g., N123AB" />
@@ -698,7 +698,7 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
                 />
               </div>
             </div>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid gap-4 md:grid-cols-3">
               <div className="space-y-2">
                 <Label htmlFor="year">Year</Label>
                 <Input
