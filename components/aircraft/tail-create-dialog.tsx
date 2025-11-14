@@ -40,9 +40,6 @@ interface TailCreateDialogProps {
 }
 
 export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpenChange }: TailCreateDialogProps) {
-  const { models, loading: modelsLoading, refetch: refetchModels } = useAircraftModels()
-  const { operators, loading: operatorsLoading, createOperator } = useOperators()
-  const { aircraftAmenities, loading: amenitiesLoading } = useAircraftAmenities(tailId || undefined)
   const { toast } = useToast()
   const [internalOpen, setInternalOpen] = useState(false)
   const [modelComboOpen, setModelComboOpen] = useState(false)
@@ -61,10 +58,16 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
   const [selectedAmenityIds, setSelectedAmenityIds] = useState<string[]>([])
   const [pendingModelId, setPendingModelId] = useState<string | null>(null)
 
+  const currentTailId = existingTail?.id ?? tailId ?? undefined
+
+  const { models, loading: modelsLoading, refetch: refetchModels } = useAircraftModels()
+  const { operators, loading: operatorsLoading, createOperator } = useOperators()
+  const { aircraftAmenities, loading: amenitiesLoading } = useAircraftAmenities(currentTailId)
+
   const open = controlledOpen !== undefined ? controlledOpen : internalOpen
   const setOpen = onOpenChange || setInternalOpen
 
-  const isEditing = !!tailId
+  const isEditing = !!(tailId || existingTail?.id)
 
   // Fetch tenant ID and default type rating
   useEffect(() => {
