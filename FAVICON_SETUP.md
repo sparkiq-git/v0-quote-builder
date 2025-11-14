@@ -6,13 +6,13 @@
 All favicon files should be placed in the `/public` folder at the root level. Next.js automatically serves files from `/public` at the root URL.
 
 **Recommended structure:**
-```
+\`\`\`
 /public
   ├── favicon.ico          # Fallback for older browsers
   ├── icon.svg             # Modern SVG favicon (already exists!)
   ├── apple-icon.png       # 180x180 for Apple devices
   └── manifest.json        # Web app manifest
-```
+\`\`\`
 
 ### 2. **Why NOT Supabase Storage for Favicons?**
 - **Performance**: Favicons are critical resources loaded on every page
@@ -46,7 +46,7 @@ You'll need to create these files from your logo:
 5. **icon-512.png** (512x512 for PWA)
 
 ### Step 2: Place Files in `/public`
-```
+\`\`\`
 /public
   ├── favicon.ico
   ├── icon.svg (already exists)
@@ -54,7 +54,7 @@ You'll need to create these files from your logo:
   ├── icon-192.png
   ├── icon-512.png
   └── manifest.json
-```
+\`\`\`
 
 ### Step 3: Update `app/layout.tsx`
 Use Next.js metadata API for optimal configuration.
@@ -87,4 +87,3 @@ Next.js 14 automatically detects these files in `/public`:
 - `apple-icon.png` → `<link rel="apple-touch-icon">`
 
 You can also explicitly configure them in metadata for more control.
-

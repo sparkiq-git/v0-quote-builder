@@ -154,4 +154,3 @@ CREATE INDEX IF NOT EXISTS idx_member_user_id ON public.member(user_id);
 CREATE INDEX IF NOT EXISTS idx_member_tenant_id ON public.member(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_member_tenant_user ON public.member(tenant_id, user_id);
 CREATE INDEX IF NOT EXISTS idx_tenant_is_father ON public.tenant(is_father) WHERE is_father = true;
-

@@ -488,7 +488,7 @@ export function TailCreateDialog({
     <>
       {/* Create Operator Dialog */}
       <Dialog open={createOperatorDialogOpen} onOpenChange={setCreateOperatorDialogOpen}>
-        <DialogContent className="max-w-full md:max-w-md overflow-y-auto max-h-[100vh]">
+        <DialogContent className="max-w-full md:max-w-md overflow-y-auto max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>Create Operator</DialogTitle>
             <DialogDescription>Add a new operator to your fleet</DialogDescription>

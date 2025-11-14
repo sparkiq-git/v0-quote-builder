@@ -43,4 +43,3 @@ export async function getCurrentTenantIdClient(): Promise<string | null> {
     }
   }
 }
-

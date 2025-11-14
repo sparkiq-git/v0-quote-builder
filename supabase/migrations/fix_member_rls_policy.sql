@@ -28,4 +28,3 @@ USING (
     WHERE user_id = auth.uid()
   )
 );
-

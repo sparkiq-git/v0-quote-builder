@@ -69,7 +69,7 @@
 **Impact:** HIGH - Multi-tenant data leakage risk
 
 **Recommendation:**
-```typescript
+\`\`\`typescript
 // Add tenant_id verification to all operations
 const tenantId = user.app_metadata?.tenant_id
 const { data: existing } = await supabase
@@ -81,7 +81,7 @@ const { data: existing } = await supabase
 if (existing?.tenant_id !== tenantId) {
   return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
 }
-```
+\`\`\`
 
 ### 2. **Inconsistent Tenant ID Retrieval** (6/10) 🟡
 **Issue:** Using deprecated `app_metadata.tenant_id` instead of `member` table
@@ -94,14 +94,14 @@ if (existing?.tenant_id !== tenantId) {
 **Impact:** MEDIUM - May break when you fully migrate to member table
 
 **Recommendation:**
-```typescript
+\`\`\`typescript
 // Replace all instances of:
 const tenantId = data?.user?.app_metadata?.tenant_id ?? null
 
 // With:
 import { getCurrentTenantId } from "@/lib/supabase/member-helpers"
 const tenantId = await getCurrentTenantId()
-```
+\`\`\`
 
 ### 3. **Missing Supabase Client Initialization** (Fixed) ✅
 **Status:** Just fixed - was causing runtime errors
@@ -121,7 +121,7 @@ const tenantId = await getCurrentTenantId()
 **Impact:** MEDIUM - Poor UX, stale data
 
 **Recommendation:**
-```typescript
+\`\`\`typescript
 // Use React Query or SWR for automatic refetching
 // Or add manual refresh:
 const { aircraft, loading, error, refetch } = useAircraft()
@@ -129,7 +129,7 @@ const { aircraft, loading, error, refetch } = useAircraft()
 // After mutations:
 await handleArchiveTail(tailId)
 refetch() // or setAircraft(await fetchAircraft())
-```
+\`\`\`
 
 ### 5. **Hardcoded Default Values** (6.5/10)
 **Issue:** Magic numbers in multiple places
@@ -142,11 +142,11 @@ refetch() // or setAircraft(await fetchAircraft())
 **Impact:** LOW-MEDIUM - May show incorrect data if model defaults aren't set
 
 **Recommendation:**
-```typescript
+\`\`\`typescript
 // Fetch from aircraft_model table:
 defaultRangeNm: aircraft.aircraft_model?.range_nm || 2000,
 defaultSpeedKnots: aircraft.aircraft_model?.cruising_speed || 400,
-```
+\`\`\`
 
 ### 6. **Debug Code in Production** (7/10)
 **Issue:** Console.log statements and debug UI elements
@@ -159,13 +159,13 @@ defaultSpeedKnots: aircraft.aircraft_model?.cruising_speed || 400,
 **Impact:** LOW - Performance and security (may leak info)
 
 **Recommendation:**
-```typescript
+\`\`\`typescript
 // Use environment-based logging:
 const isDev = process.env.NODE_ENV === 'development'
 if (isDev) console.log(...)
 
 // Or use a proper logger with levels
-```
+\`\`\`
 
 ### 7. **Missing Error Boundaries** (6.5/10)
 **Issue:** No React error boundaries to catch component crashes
@@ -177,12 +177,12 @@ if (isDev) console.log(...)
 **Impact:** MEDIUM - Poor resilience
 
 **Recommendation:**
-```typescript
+\`\`\`typescript
 // Wrap grid/table components in ErrorBoundary
 <ErrorBoundary fallback={<ErrorCard />}>
   <TailsGrid />
 </ErrorBoundary>
-```
+\`\`\`
 
 ### 8. **No Optimistic Updates** (6/10)
 **Issue:** UI doesn't update optimistically during mutations
@@ -394,4 +394,3 @@ Your aircraft workflow is **well-structured and functional** with good UX patter
 ---
 
 **Score: 7.2/10** - Good, with room for improvement in security and data management.
-

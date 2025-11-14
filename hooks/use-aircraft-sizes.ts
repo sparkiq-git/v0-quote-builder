@@ -67,4 +67,3 @@ export function useAircraftSizes() {
 
   return { sizes, loading, error, refetch: fetchSizes, createSize }
 }
-
