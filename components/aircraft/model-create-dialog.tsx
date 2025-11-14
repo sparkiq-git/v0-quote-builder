@@ -316,7 +316,7 @@ export function ModelCreateDialog({
       <Dialog open={open} onOpenChange={handleDialogChange}>
         {children && <DialogTrigger asChild>{children}</DialogTrigger>}
 
-        <DialogContent className="max-w-full md:max-w-[65rem] overflow-y-auto max-h-[100vh]">
+        <DialogContent className="max-w-full md:max-w-[45rem] overflow-y-auto max-h-[100vh]">
           <DialogHeader>
             <DialogTitle>Create Aircraft Model</DialogTitle>
             <DialogDescription>Add a new aircraft model to your catalog.</DialogDescription>
