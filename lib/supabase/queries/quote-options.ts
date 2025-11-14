@@ -20,7 +20,11 @@ export async function upsertQuoteOptions(quoteId: string, options: any[]) {
 
   // ✅ Normalize + sequentially label options
   const validOptions = (options || [])
-    .filter((o) => o.aircraftModelId || o.aircraft_id)
+    .filter((o) => {
+      const aircraftId = o.aircraftModelId || o.aircraft_id
+      // Filter out empty strings and falsy values, only keep valid UUIDs
+      return aircraftId && typeof aircraftId === 'string' && aircraftId.trim() !== '' && isUUID(aircraftId)
+    })
     .map((o, idx) => ({
       id: isUUID(o.id) ? o.id : crypto.randomUUID(),
       quote_id: quoteId,

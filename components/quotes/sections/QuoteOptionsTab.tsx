@@ -10,7 +10,7 @@ import { Switch } from "@/components/ui/switch"
 import { Plane, Plus, Trash2, ChevronRight } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { AircraftCombobox } from "@/components/ui/aircraft-combobox"
-import { AircraftCreateModal } from "@/components/aircraft/AircraftCreateModal"
+import { TailCreateDialog } from "@/components/aircraft/tail-create-dialog"
 import { AircraftEditDrawer } from "@/components/aircraft/AircraftEditDrawer"
 import { AircraftSummaryCard } from "@/components/aircraft/AircraftSummaryCard"
 import { formatCurrency } from "@/lib/utils/format"
@@ -29,7 +29,7 @@ interface Props {
 export function QuoteOptionsTab({ quote, onUpdate, onNext, onBack }: Props) {
   const { toast } = useToast()
   const options = Array.isArray(quote?.options) ? quote.options : []
-  const [createOpen, setCreateOpen] = useState(false)
+  const [tailCreateDialogOpen, setTailCreateDialogOpen] = useState(false)
   const [editOpenFor, setEditOpenFor] = useState<string | null>(null)
   const [aircraftCache, setAircraftCache] = useState<Record<string, AircraftFull>>({})
   const [saving, setSaving] = useState(false)
@@ -133,8 +133,21 @@ useEffect(() => {
   }
 }, [quote?.options])
 
+// Listen for aircraft creation events to refresh cache
+useEffect(() => {
+  const handleAircraftDataUpdated = () => {
+    // When a new aircraft is created, the combobox will refresh when opened
+    // This event is mainly for other components, but we can use it to clear cache if needed
+    console.log("🔄 Aircraft data updated event received")
+  }
 
-
+  if (typeof window !== 'undefined') {
+    window.addEventListener('aircraft-data-updated', handleAircraftDataUpdated)
+    return () => {
+      window.removeEventListener('aircraft-data-updated', handleAircraftDataUpdated)
+    }
+  }
+}, [])
 
 // Note: Aircraft data is already provided in the quote prop
 // No need to fetch separately
@@ -143,8 +156,8 @@ useEffect(() => {
     const newOption: any = {
       id: crypto.randomUUID(),
       label: `Option ${options.length + 1}`,
-      aircraft_id: "",
-      aircraft_tail_id: "",
+      aircraft_id: null, // Use null instead of empty string to avoid UUID validation errors
+      aircraft_tail_id: null,
       flight_hours: 0,
       cost_operator: 0,
       price_commission: 0,
@@ -307,7 +320,7 @@ const handleNext = () => {
                           description: `${a.model_name || ""} (${a.tail_number || ""}) selected.`,
                         })
                       }}
-                      onClickAdd={() => setCreateOpen(true)}
+                      onClickAdd={() => setTailCreateDialogOpen(true)}
                     />
 
                  {option.aircraft_id && aircraftCache[option.aircraft_id] && (
@@ -509,32 +522,9 @@ const handleNext = () => {
       </CardContent>
 
       {/* Modals and Drawers */}
-      <AircraftCreateModal
-        open={createOpen}
-        onOpenChange={setCreateOpen}
-        onCreated={(created) => {
-          const normalized: AircraftFull = {
-            aircraft_id: created.id,
-            tenant_id: created.tenant_id,
-            tail_number: created.tail_number,
-            manufacturer_name: null,
-            model_name: null,
-            operator_name: null,
-            primary_image_url: null,
-            amenities: [],
-            capacity_pax: created.capacity_pax,
-            range_nm: created.range_nm,
-            status: created.status,
-            home_base: created.home_base,
-            year_of_manufacture: created.year_of_manufacture,
-            year_of_refurbish: created.year_of_refurbish,
-            serial_number: created.serial_number,
-            mtow_kg: created.mtow_kg,
-            notes: created.notes,
-            meta: created.meta,
-          }
-          setAircraftCache((prev) => ({ ...prev, [normalized.aircraft_id]: normalized }))
-        }}
+      <TailCreateDialog
+        open={tailCreateDialogOpen}
+        onOpenChange={setTailCreateDialogOpen}
       />
 
       <AircraftEditDrawer

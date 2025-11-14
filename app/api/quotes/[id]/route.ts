@@ -682,26 +682,56 @@ if (existingIds.length > 0) {
 
   /* ---------------- 🛩️ Upsert quote options ---------------- */
   if (options && Array.isArray(options)) {
-    const { error: optionError } = await supabase
-      .from("quote_option")
-      .upsert(
-        options.map((o: any, index: number) => ({
-          id: o.id,
-          label: o.label || `Option ${index + 1}`,
-          quote_id: o.quote_id || id,
-          aircraft_id: o.aircraft_id,
-          flight_hours: o.flight_hours ?? 0,
-          cost_operator: o.cost_operator ?? 0,
-          price_commission: o.price_commission ?? 0,
-          price_base: o.price_base ?? 0,
-          price_total: o.price_total ?? 0,
-          notes: o.notes ?? null,
-          updated_at: new Date().toISOString(),
-        }))
-      )
+    // Filter out options without valid aircraft_id (empty strings, null, undefined)
+    const validOptions = options
+      .filter((o: any) => {
+        const aircraftId = o.aircraft_id
+        // Only include options with valid UUID strings
+        return aircraftId && typeof aircraftId === 'string' && aircraftId.trim() !== '' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(aircraftId)
+      })
+      .map((o: any, index: number) => ({
+        id: o.id,
+        label: o.label || `Option ${index + 1}`,
+        quote_id: o.quote_id || id,
+        aircraft_id: o.aircraft_id,
+        flight_hours: o.flight_hours ?? 0,
+        cost_operator: o.cost_operator ?? 0,
+        price_commission: o.price_commission ?? 0,
+        price_base: o.price_base ?? 0,
+        price_total: o.price_total ?? 0,
+        notes: o.notes ?? null,
+        updated_at: new Date().toISOString(),
+      }))
 
-    if (optionError)
-      return NextResponse.json({ error: optionError.message }, { status: 500 })
+    // Only upsert if there are valid options
+    if (validOptions.length > 0) {
+      const { error: optionError } = await supabase
+        .from("quote_option")
+        .upsert(validOptions)
+
+      if (optionError)
+        return NextResponse.json({ error: optionError.message }, { status: 500 })
+    }
+
+    // Delete options that are no longer in the list (including ones with invalid aircraft_id)
+    const validOptionIds = new Set(validOptions.map((o: any) => o.id))
+    const { data: existingOptions } = await supabase
+      .from("quote_option")
+      .select("id")
+      .eq("quote_id", id)
+
+    if (existingOptions) {
+      const idsToDelete = existingOptions
+        .map((r: any) => r.id)
+        .filter((id: string) => !validOptionIds.has(id))
+
+      if (idsToDelete.length > 0) {
+        await supabase
+          .from("quote_option")
+          .delete()
+          .in("id", idsToDelete)
+      }
+    }
   }
 
 
