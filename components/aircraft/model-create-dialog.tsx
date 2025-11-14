@@ -116,10 +116,18 @@ export function ModelCreateDialog({
 
       if (result.success && result.data) {
         toast({ title: "Aircraft size created", description: `${result.data.display_name} has been added.` })
-        setValue("categoryId", result.data.code)
-        setNewSize({ code: "", display_name: "", description: "", size: "" })
+        
+        // Close the create dialog first
         setCreateSizeDialogOpen(false)
-        setSizeComboOpen(false)
+        setNewSize({ code: "", display_name: "", description: "", size: "" })
+        
+        // Wait for React to process state updates, then set the value and re-open combobox
+        // This ensures the sizes list has been refreshed in the component
+        setTimeout(() => {
+          setValue("categoryId", result.data.code, { shouldValidate: true, shouldDirty: true })
+          // Re-open the combobox to show the newly created item is selected
+          setSizeComboOpen(true)
+        }, 150)
       } else {
         toast({ title: "Error", description: result.error || "Failed to create aircraft size", variant: "destructive" })
       }

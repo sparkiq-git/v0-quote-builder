@@ -64,9 +64,18 @@ export function AircraftCreateModal({ open, onOpenChange, onCreated }: Props) {
 
       if (result.success && result.data) {
         toast({ title: "Operator created", description: `${result.data.name} has been added.` })
-        set("operator_id", result.data.id)
-        setNewOperator({ name: "", icao_code: "", iata_code: "" })
+        
+        // Close the create dialog first
         setCreateOperatorDialogOpen(false)
+        setNewOperator({ name: "", icao_code: "", iata_code: "" })
+        
+        // Wait for React to process state updates, then set the value and re-open combobox
+        // This ensures the operators list has been refreshed in the component
+        setTimeout(() => {
+          set("operator_id", result.data.id)
+          // Re-open the combobox to show the newly created item is selected
+          setOperatorComboOpen(true)
+        }, 150)
       } else {
         toast({ title: "Error", description: result.error || "Failed to create operator", variant: "destructive" })
       }
