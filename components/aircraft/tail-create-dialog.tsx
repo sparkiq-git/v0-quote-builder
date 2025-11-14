@@ -58,6 +58,7 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
   const [loading, setLoading] = useState(false)
   const [defaultTypeRatingId, setDefaultTypeRatingId] = useState<string | null>(null)
   const [selectedAmenityIds, setSelectedAmenityIds] = useState<string[]>([])
+  const [pendingModelId, setPendingModelId] = useState<string | null>(null)
 
   const open = controlledOpen !== undefined ? controlledOpen : internalOpen
   const setOpen = onOpenChange || setInternalOpen
@@ -171,6 +172,20 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
   const selectedModelId = watch("modelId")
   const selectedModel = selectedModelId ? models.find(m => m.id === selectedModelId) : null
   const tailNumber = watch("tailNumber")
+
+  useEffect(() => {
+    if (!pendingModelId) return
+    const modelExists = models.find((model) => model.id === pendingModelId)
+    if (modelExists) {
+      setValue("modelId", pendingModelId, { shouldValidate: true, shouldDirty: true })
+      setPendingModelId(null)
+      setModelComboOpen(false)
+      toast({
+        title: "Model selected",
+        description: `${modelExists.name} has been added to this tail.`,
+      })
+    }
+  }, [pendingModelId, models, setValue, toast])
 
   useEffect(() => {
     if (open && existingTail) {
@@ -529,15 +544,8 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
               <Label className="text-base font-semibold">Step 1: Select Aircraft Model</Label>
               <ModelCreateDialog
                 onCreated={async (modelId: string) => {
-                  // Refresh the models list to include the newly created model
+                  setPendingModelId(modelId)
                   await refetchModels()
-                  // Wait a bit for React to process the state update
-                  setTimeout(() => {
-                    // Set the newly created model ID in the form
-                    setValue("modelId", modelId, { shouldValidate: true, shouldDirty: true })
-                    // Close the model combobox if it's open
-                    setModelComboOpen(false)
-                  }, 150)
                 }}
               >
                 <Button type="button" variant="outline" size="sm">
