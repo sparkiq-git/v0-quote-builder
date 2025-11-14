@@ -318,17 +318,11 @@ export function ModelCreateDialog({
 
         <DialogContent className="max-w-full md:max-w-[65rem] overflow-y-auto max-h-[100vh]">
           <DialogHeader>
-            <DialogTitle>
-              {createdModel ? "Upload Images" : "Create Aircraft Model"}
-            </DialogTitle>
-            <DialogDescription>
-              {createdModel
-                ? `Upload and manage images for ${createdModel.name}`
-                : "Add a new aircraft model to your catalog."}
-            </DialogDescription>
+            <DialogTitle>Create Aircraft Model</DialogTitle>
+            <DialogDescription>Add a new aircraft model to your catalog.</DialogDescription>
           </DialogHeader>
 
-        <form onSubmit={handleSubmit(handleCreate)} className="space-y-4">
+          <form onSubmit={handleSubmit(handleCreate)} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="name">Model Name *</Label>
