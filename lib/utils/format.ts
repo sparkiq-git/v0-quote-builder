@@ -1,5 +1,39 @@
-import { format, formatDistanceToNow, isValid, parseISO } from "date-fns"
 import { getAirportCoordinates } from "@/lib/data/airports"
+
+function parseDate(dateString: string | undefined | null): Date | null {
+  if (!dateString) return null
+  const date = new Date(dateString)
+  if (Number.isNaN(date.getTime())) return null
+  return date
+}
+
+const dateFormatter = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+})
+
+const dateTimeFormatter = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+  hour: "numeric",
+  minute: "numeric",
+})
+
+const relativeTimeFormatter = new Intl.RelativeTimeFormat("en", {
+  numeric: "auto",
+})
+
+const RELATIVE_TIME_DIVISIONS = [
+  { amount: 60, unit: "seconds" as Intl.RelativeTimeFormatUnit },
+  { amount: 60, unit: "minutes" as Intl.RelativeTimeFormatUnit },
+  { amount: 24, unit: "hours" as Intl.RelativeTimeFormatUnit },
+  { amount: 7, unit: "days" as Intl.RelativeTimeFormatUnit },
+  { amount: 4.34524, unit: "weeks" as Intl.RelativeTimeFormatUnit },
+  { amount: 12, unit: "months" as Intl.RelativeTimeFormatUnit },
+  { amount: Number.POSITIVE_INFINITY, unit: "years" as Intl.RelativeTimeFormatUnit },
+]
 
 export function formatCurrency(amount: number): string {
   // Handle NaN, undefined, or null values
@@ -16,24 +50,31 @@ export function formatCurrency(amount: number): string {
 }
 
 export function formatDate(dateString: string): string {
-  if (!dateString) return "Date TBD"
-  const date = parseISO(dateString)
-  if (!isValid(date)) return "Invalid date"
-  return format(date, "MMM d, yyyy")
+  const date = parseDate(dateString)
+  if (!date) return "Date TBD"
+  return dateFormatter.format(date)
 }
 
 export function formatDateTime(dateString: string): string {
-  if (!dateString) return "Date TBD"
-  const date = parseISO(dateString)
-  if (!isValid(date)) return "Invalid date"
-  return format(date, "MMM d, yyyy h:mm a")
+  const date = parseDate(dateString)
+  if (!date) return "Date TBD"
+  return dateTimeFormatter.format(date)
 }
 
 export function formatTimeAgo(dateString: string): string {
-  if (!dateString) return "Date TBD"
-  const date = parseISO(dateString)
-  if (!isValid(date)) return "Invalid date"
-  return formatDistanceToNow(date, { addSuffix: true })
+  const date = parseDate(dateString)
+  if (!date) return "Date TBD"
+
+  let duration = (date.getTime() - Date.now()) / 1000
+
+  for (const division of RELATIVE_TIME_DIVISIONS) {
+    if (Math.abs(duration) < division.amount) {
+      return relativeTimeFormatter.format(Math.round(duration), division.unit)
+    }
+    duration /= division.amount
+  }
+
+  return relativeTimeFormatter.format(Math.round(duration), "years")
 }
 
 export function formatFlightTime(hours: number): string {
