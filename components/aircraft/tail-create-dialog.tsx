@@ -55,6 +55,7 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
   const [useDefaultSpeed, setUseDefaultSpeed] = useState(true)
   const [tenantId, setTenantId] = useState<string | null>(null)
   const [existingTail, setExistingTail] = useState<any>(null)
+  const [activeTailId, setActiveTailId] = useState<string | null>(tailId ?? null)
   const [loading, setLoading] = useState(false)
   const [defaultTypeRatingId, setDefaultTypeRatingId] = useState<string | null>(null)
   const [selectedAmenityIds, setSelectedAmenityIds] = useState<string[]>([])
@@ -118,6 +119,7 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
         
         if (error) throw error
         setExistingTail(data)
+        setActiveTailId(data.id)
       } catch (err) {
         console.error("Error loading tail:", err)
         toast({ title: "Error", description: "Failed to load aircraft tail.", variant: "destructive" })
@@ -130,6 +132,7 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
       loadTail()
     } else {
       setExistingTail(null)
+      setActiveTailId(tailId ?? null)
     }
   }, [open, tailId, toast])
 
@@ -332,6 +335,7 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
           description: "The aircraft tail has been updated successfully.",
         })
         createdTailId = existingTail.id
+        setActiveTailId(existingTail.id)
       } else {
         const { data: newTail, error } = await supabase
           .from("aircraft")
@@ -348,6 +352,7 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
 
         // Set the new tail data to allow image management
         setExistingTail(newTail)
+        setActiveTailId(newTail.id)
         createdTailId = newTail.id
         
         // Dispatch custom event to refresh lists
@@ -865,9 +870,10 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
           {tenantId && (
             <div className="mt-8 border-t pt-6">
               <h3 className="text-lg font-semibold mb-4">Aircraft Images</h3>
-              {existingTail ? (
+              {activeTailId ? (
                 <AircraftImageManager
-                  aircraftId={existingTail.id}
+                  key={activeTailId}
+                  aircraftId={activeTailId}
                   tenantId={tenantId}
                   onImagesUpdated={async () => {
                     try {
@@ -877,27 +883,24 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
                       const { data, error } = await supabase
                         .from("aircraft")
                         .select("*")
-                        .eq("id", existingTail.id)
+                        .eq("id", activeTailId)
                         .single()
 
-                      if (error || !data) {
-                        console.error("Failed to refresh aircraft after image upload:", error)
-                        return
+                      if (!error && data) {
+                        setExistingTail(data)
+                        reset({
+                          modelId: data.model_id,
+                          tailNumber: data.tail_number,
+                          operator: data.operator_id || "",
+                          year: data.year_of_manufacture,
+                          yearOfRefurbishment: data.year_of_refurbish || undefined,
+                          status: data.status?.toLowerCase() || "active",
+                          capacityOverride: data.capacity_pax || undefined,
+                          rangeNmOverride: data.range_nm || undefined,
+                          speedKnotsOverride: data.cruising_speed || undefined,
+                          images: [],
+                        })
                       }
-
-                      setExistingTail(data)
-                      reset({
-                        modelId: data.model_id,
-                        tailNumber: data.tail_number,
-                        operator: data.operator_id || "",
-                        year: data.year_of_manufacture,
-                        yearOfRefurbishment: data.year_of_refurbish || undefined,
-                        status: data.status?.toLowerCase() || "active",
-                        capacityOverride: data.capacity_pax || undefined,
-                        rangeNmOverride: data.range_nm || undefined,
-                        speedKnotsOverride: data.cruising_speed || undefined,
-                        images: [],
-                      })
                     } catch (error) {
                       console.error("Error refreshing aircraft after image upload:", error)
                     }
