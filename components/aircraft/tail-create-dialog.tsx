@@ -706,9 +706,12 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
                   type="number"
                   min="1900"
                   max={new Date().getFullYear() + 5}
-                  {...register("year", { 
-                    valueAsNumber: true,
-                    setValueAs: (value) => isNaN(value) ? undefined : value
+                  {...register("year", {
+                    setValueAs: (value) => {
+                      if (value === "" || value === null || value === undefined) return undefined
+                      const parsed = Number(value)
+                      return Number.isNaN(parsed) ? undefined : parsed
+                    },
                   })}
                   placeholder="2020"
                 />
@@ -721,9 +724,12 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
                   type="number"
                   min="1900"
                   max={new Date().getFullYear() + 5}
-                  {...register("yearOfRefurbishment", { 
-                    valueAsNumber: true,
-                    setValueAs: (value) => isNaN(value) ? undefined : value
+                  {...register("yearOfRefurbishment", {
+                    setValueAs: (value) => {
+                      if (value === "" || value === null || value === undefined) return undefined
+                      const parsed = Number(value)
+                      return Number.isNaN(parsed) ? undefined : parsed
+                    },
                   })}
                   placeholder="2022"
                 />

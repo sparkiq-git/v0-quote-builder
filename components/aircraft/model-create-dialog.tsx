@@ -495,8 +495,11 @@ export function ModelCreateDialog({
                   type="number"
                   min="1"
                   {...register("defaultCapacity", {
-                    valueAsNumber: true,
-                    setValueAs: (value) => (isNaN(value) ? undefined : value),
+                    setValueAs: (value) => {
+                      if (value === "" || value === null || value === undefined) return undefined
+                      const parsed = Number(value)
+                      return Number.isNaN(parsed) ? undefined : parsed
+                    },
                   })}
                 />
               </div>
@@ -507,8 +510,11 @@ export function ModelCreateDialog({
                   type="number"
                   min="1"
                   {...register("defaultRangeNm", {
-                    valueAsNumber: true,
-                    setValueAs: (value) => (isNaN(value) ? undefined : value),
+                    setValueAs: (value) => {
+                      if (value === "" || value === null || value === undefined) return undefined
+                      const parsed = Number(value)
+                      return Number.isNaN(parsed) ? undefined : parsed
+                    },
                   })}
                 />
               </div>
@@ -519,8 +525,11 @@ export function ModelCreateDialog({
                   type="number"
                   min="1"
                   {...register("defaultSpeedKnots", {
-                    valueAsNumber: true,
-                    setValueAs: (value) => (isNaN(value) ? undefined : value),
+                    setValueAs: (value) => {
+                      if (value === "" || value === null || value === undefined) return undefined
+                      const parsed = Number(value)
+                      return Number.isNaN(parsed) ? undefined : parsed
+                    },
                   })}
                 />
               </div>
