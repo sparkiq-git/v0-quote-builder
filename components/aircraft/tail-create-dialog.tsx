@@ -303,6 +303,7 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
         tenant_id: tenantId,
         tail_number: data.tailNumber,
         model_id: data.modelId,
+        manufacturer_id: selectedModel?.manufacturerId || null,
         operator_id: data.operator || null,
         type_rating_id: defaultTypeRatingId, // Required field
         year_of_manufacture: data.year || null,
