@@ -180,13 +180,26 @@ export function ModelCreateDialog({
     try {
       if (!tenantId) throw new Error("Tenant ID not found.")
       setLoading(true)
-      // Map categoryId to size_code for the database
-      const { categoryId, manufacturerId, ...rest } = data
-      const created = await insertModel({
+      const {
+        categoryId,
+        manufacturerId,
+        defaultCapacity,
+        defaultRangeNm,
+        defaultSpeedKnots,
+        images,
+        ...rest
+      } = data
+
+      const payload = {
         ...rest,
         size_code: categoryId || null,
         manufacturer_id: manufacturerId,
-      })
+        capacity_pax: typeof defaultCapacity === "number" ? defaultCapacity : null,
+        range_nm: typeof defaultRangeNm === "number" ? defaultRangeNm : null,
+        cruising_speed: typeof defaultSpeedKnots === "number" ? defaultSpeedKnots : null,
+      }
+
+      const created = await insertModel(payload)
       setCreatedModel(created)
       toast({ title: "Model created", description: "Now add images for this model." })
       // Pass the created model ID to the callback
