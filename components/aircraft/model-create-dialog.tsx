@@ -20,8 +20,6 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useToast } from "@/hooks/use-toast"
 import { ModelFormSchema, type ModelFormData } from "@/lib/schemas/aircraft"
 import { insertModel } from "@/lib/supabase/queries/models"
-import ModelImageManager from "@/components/aircraft/model-image-manager"
-import type { AircraftModelRecord } from "@/lib/types"
 import { useAircraftSizes } from "@/hooks/use-aircraft-sizes"
 import { useManufacturers } from "@/hooks/use-manufacturers"
 import { Check, ChevronsUpDown, Plus } from "lucide-react"
@@ -48,7 +46,6 @@ export function ModelCreateDialog({
   const setOpen = onOpenChange ?? setInternalOpen
 
   const [tenantId, setTenantId] = useState<string | null>(null)
-  const [createdModel, setCreatedModel] = useState<AircraftModelRecord | null>(null)
   const [loading, setLoading] = useState(false)
   const [sizeComboOpen, setSizeComboOpen] = useState(false)
   const [createSizeDialogOpen, setCreateSizeDialogOpen] = useState(false)
@@ -200,10 +197,10 @@ export function ModelCreateDialog({
       }
 
       const created = await insertModel(payload)
-      setCreatedModel(created)
-      toast({ title: "Model created", description: "Now add images for this model." })
+      toast({ title: "Model created", description: "Model added to catalog." })
       // Pass the created model ID to the callback
       await onCreated?.(created.id)
+      handleDialogChange(false)
     } catch (err: any) {
       toast({ title: "Error creating model", description: err.message, variant: "destructive" })
     } finally {
@@ -214,7 +211,6 @@ export function ModelCreateDialog({
   const handleDialogChange = (isOpen: boolean) => {
     setOpen(isOpen)
     if (!isOpen) {
-      setCreatedModel(null)
       reset()
       setNewSize({ code: "", display_name: "", description: "", size: "" })
       setSizeComboOpen(false)
@@ -332,9 +328,7 @@ export function ModelCreateDialog({
             </DialogDescription>
           </DialogHeader>
 
-          {/* --- STEP 1: Basic form --- */}
-          {!createdModel && (
-            <form onSubmit={handleSubmit(handleCreate)} className="space-y-4">
+        <form onSubmit={handleSubmit(handleCreate)} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="name">Model Name *</Label>
@@ -559,22 +553,7 @@ export function ModelCreateDialog({
                 {loading ? "Creating..." : "Create Model"}
               </Button>
             </DialogFooter>
-          </form>
-        )}
-
-        {/* --- STEP 2: Image upload --- */}
-        {createdModel && tenantId && (
-          <div className="mt-6 border-t pt-6 space-y-4">
-            <h3 className="text-lg font-semibold">Upload Images</h3>
-            <ModelImageManager modelId={createdModel.id} tenantId={tenantId} />
-
-            <DialogFooter>
-              <Button variant="outline" onClick={() => handleDialogChange(false)}>
-                Done
-              </Button>
-            </DialogFooter>
-          </div>
-        )}
+        </form>
       </DialogContent>
     </Dialog>
     </>
