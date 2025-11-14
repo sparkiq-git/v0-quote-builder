@@ -225,7 +225,7 @@ export function ModelCreateDialog({
     <>
       {/* Create Aircraft Size Dialog */}
       <Dialog open={createSizeDialogOpen} onOpenChange={setCreateSizeDialogOpen}>
-        <DialogContent className="max-w-full md:max-w-md overflow-y-auto max-h-[100vh]">
+        <DialogContent className="max-w-full md:max-w-md overflow-y-auto max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>Create Aircraft Size</DialogTitle>
             <DialogDescription>Add a new aircraft size category</DialogDescription>
