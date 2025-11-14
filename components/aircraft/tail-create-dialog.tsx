@@ -350,52 +350,44 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
         setExistingTail(newTail)
         createdTailId = newTail.id
         
-        // Dispatch custom event to trigger data refresh in parent components
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('aircraft-data-updated'))
+        // Dispatch custom event to refresh lists
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("aircraft-data-updated"))
         }
-        
-        // Update amenities for the new aircraft before returning
+
+        // Update amenities immediately for the newly created tail
         if (selectedAmenityIds.length > 0 && createdTailId) {
           try {
-            const amenitiesResponse = await fetch(`/api/aircraft/${createdTailId}/amenities`, {
+            await fetch(`/api/aircraft/${createdTailId}/amenities`, {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
               },
               body: JSON.stringify({
-                amenityIds: selectedAmenityIds
-              })
+                amenityIds: selectedAmenityIds,
+              }),
             })
-
-            if (!amenitiesResponse.ok) {
-              console.warn("Failed to update amenities, but aircraft was saved successfully")
-            }
           } catch (amenitiesError) {
             console.warn("Error updating amenities:", amenitiesError)
           }
         }
-        
-        // Don't close the dialog, allow user to add images
+
+        // Don't close the dialog yet so the user can manage images immediately
         return
       }
 
-      // Update amenities for the aircraft (when editing)
+      // Update amenities for existing tails
       if (selectedAmenityIds.length > 0 && createdTailId) {
         try {
-          const amenitiesResponse = await fetch(`/api/aircraft/${createdTailId}/amenities`, {
+          await fetch(`/api/aircraft/${createdTailId}/amenities`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
-              amenityIds: selectedAmenityIds
-            })
+              amenityIds: selectedAmenityIds,
+            }),
           })
-
-          if (!amenitiesResponse.ok) {
-            console.warn("Failed to update amenities, but aircraft was saved successfully")
-          }
         } catch (amenitiesError) {
           console.warn("Error updating amenities:", amenitiesError)
         }
@@ -873,62 +865,49 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
           {tenantId && (
             <div className="mt-8 border-t pt-6">
               <h3 className="text-lg font-semibold mb-4">Aircraft Images</h3>
-              {isEditing && existingTail && tenantId ? (
-                <AircraftImageManager 
-                  aircraftId={existingTail.id} 
-                  tenantId={tenantId} 
+              {existingTail ? (
+                <AircraftImageManager
+                  aircraftId={existingTail.id}
+                  tenantId={tenantId}
                   onImagesUpdated={async () => {
-                    // Refresh the existing tail data after image upload
-                    if (tailId) {
-                      try {
-                        console.log("🔄 Refreshing tail data after image upload...")
-                        // Only run on client side
-                        if (typeof window === 'undefined') return;
-                        
-                        const { createClient } = await import("@/lib/supabase/client");
-                        const supabase = createClient();
-                        
-                        const { data, error } = await supabase
-                          .from("aircraft")
-                          .select("*")
-                          .eq("id", tailId)
-                          .single()
-                        
-                        if (error) {
-                          return
-                        }
-                        
-                        setExistingTail(data)
-                        
-                        // Update the form with the refreshed data
-                        reset({
-                          modelId: data.model_id,
-                          tailNumber: data.tail_number,
-                          operator: data.operator_id || "",
-                          year: data.year_of_manufacture,
-                          yearOfRefurbishment: data.year_of_refurbish || undefined,
-                          status: data.status?.toLowerCase() || "active",
-                          capacityOverride: data.capacity_pax || undefined,
-                          rangeNmOverride: data.range_nm || undefined,
-                          speedKnotsOverride: data.cruising_speed || undefined,
-                          images: [],
-                        })
-                        
-                      } catch (error) {
+                    try {
+                      const { createClient } = await import("@/lib/supabase/client")
+                      const supabase = createClient()
+
+                      const { data, error } = await supabase
+                        .from("aircraft")
+                        .select("*")
+                        .eq("id", existingTail.id)
+                        .single()
+
+                      if (error || !data) {
+                        console.error("Failed to refresh aircraft after image upload:", error)
+                        return
                       }
+
+                      setExistingTail(data)
+                      reset({
+                        modelId: data.model_id,
+                        tailNumber: data.tail_number,
+                        operator: data.operator_id || "",
+                        year: data.year_of_manufacture,
+                        yearOfRefurbishment: data.year_of_refurbish || undefined,
+                        status: data.status?.toLowerCase() || "active",
+                        capacityOverride: data.capacity_pax || undefined,
+                        rangeNmOverride: data.range_nm || undefined,
+                        speedKnotsOverride: data.cruising_speed || undefined,
+                        images: [],
+                      })
+                    } catch (error) {
+                      console.error("Error refreshing aircraft after image upload:", error)
                     }
                   }}
                 />
               ) : (
                 <div className="space-y-2">
                   <p className="text-sm text-muted-foreground">
-                    {!isEditing ? "Save the aircraft first to manage images." : "Loading..."}
+                    Save the aircraft details above to start uploading photos.
                   </p>
-                  {!tenantId && (
-                    <p className="text-sm text-destructive">
-                      Unable to load tenant information. Please refresh the page.
-                    </p>
-                  )}
                 </div>
               )}
             </div>
