@@ -545,7 +545,7 @@ export function TailCreateDialog({
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>{children}</DialogTrigger>
-        <DialogContent className="max-w-full md:max-w-[65rem] overflow-y-auto max-h-[100vh]">
+        <DialogContent className="max-w-full md:max-w-[50rem] overflow-y-auto max-h-[100vh]">
           <DialogHeader>
             <DialogTitle>{isEditing ? "Edit Aircraft Tail" : "Create Aircraft Tail"}</DialogTitle>
             <DialogDescription>
