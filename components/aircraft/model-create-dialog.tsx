@@ -28,7 +28,7 @@ import { cn } from "@/lib/utils"
 
 interface ModelCreateDialogProps {
   children?: React.ReactNode
-  onCreated?: () => Promise<void> | void
+  onCreated?: (modelId: string) => Promise<void> | void
   open?: boolean
   onOpenChange?: (open: boolean) => void
 }
@@ -151,7 +151,8 @@ export function ModelCreateDialog({
       })
       setCreatedModel(created)
       toast({ title: "Model created", description: "Now add images for this model." })
-      await onCreated?.()
+      // Pass the created model ID to the callback
+      await onCreated?.(created.id)
     } catch (err: any) {
       toast({ title: "Error creating model", description: err.message, variant: "destructive" })
     } finally {

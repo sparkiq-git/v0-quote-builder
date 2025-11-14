@@ -40,7 +40,7 @@ interface TailCreateDialogProps {
 }
 
 export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpenChange }: TailCreateDialogProps) {
-  const { models, loading: modelsLoading } = useAircraftModels()
+  const { models, loading: modelsLoading, refetch: refetchModels } = useAircraftModels()
   const { operators, loading: operatorsLoading, createOperator } = useOperators()
   const { aircraftAmenities, loading: amenitiesLoading } = useAircraftAmenities(tailId || undefined)
   const { toast } = useToast()
@@ -527,7 +527,19 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <Label className="text-base font-semibold">Step 1: Select Aircraft Model</Label>
-              <ModelCreateDialog>
+              <ModelCreateDialog
+                onCreated={async (modelId: string) => {
+                  // Refresh the models list to include the newly created model
+                  await refetchModels()
+                  // Wait a bit for React to process the state update
+                  setTimeout(() => {
+                    // Set the newly created model ID in the form
+                    setValue("modelId", modelId, { shouldValidate: true, shouldDirty: true })
+                    // Close the model combobox if it's open
+                    setModelComboOpen(false)
+                  }, 150)
+                }}
+              >
                 <Button type="button" variant="outline" size="sm">
                   <Plus className="mr-2 h-4 w-4" />
                   Quick Add Model
