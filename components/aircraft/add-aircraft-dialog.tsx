@@ -82,7 +82,7 @@ export function AddAircraftDialog() {
           Add Aircraft
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="max-w-full md:max-w-[65rem] overflow-y-auto max-h-[100vh]">
         <DialogHeader>
           <DialogTitle>Add New Aircraft Type</DialogTitle>
           <DialogDescription>Add a new aircraft type to your catalog for use in quotes.</DialogDescription>

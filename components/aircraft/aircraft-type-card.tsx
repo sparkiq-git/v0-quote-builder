@@ -119,7 +119,7 @@ export function AircraftTypeCard({ aircraft }: AircraftTypeCardProps) {
                   <Edit className="h-4 w-4" />
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[425px]">
+              <DialogContent className="max-w-full md:max-w-[65rem] overflow-y-auto max-h-[100vh]">
                 <DialogHeader>
                   <DialogTitle>Edit Aircraft Type</DialogTitle>
                   <DialogDescription>Make changes to the aircraft specifications.</DialogDescription>

@@ -114,7 +114,7 @@ export function AircraftCreateModal({ open, onOpenChange, onCreated }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="max-w-full md:max-w-[65rem] overflow-y-auto max-h-[100vh]">
         <DialogHeader>
           <DialogTitle>Add Aircraft</DialogTitle>
         </DialogHeader>
@@ -147,7 +147,7 @@ export function AircraftCreateModal({ open, onOpenChange, onCreated }: Props) {
                       Add
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="sm:max-w-md">
+                  <DialogContent className="max-w-full md:max-w-md overflow-y-auto max-h-[100vh]">
                     <DialogHeader>
                       <DialogTitle>Create Operator</DialogTitle>
                       <DialogDescription>Add a new operator to your fleet</DialogDescription>

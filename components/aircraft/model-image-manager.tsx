@@ -362,7 +362,7 @@ export default function ModelImageManager({ modelId, tenantId, onImagesUpdated }
 
       {/* Crop Dialog */}
       <Dialog open={cropOpen} onOpenChange={setCropOpen}>
-        <DialogContent className="sm:max-w-[90vw] sm:max-h-[90vh] overflow-hidden">
+        <DialogContent className="max-w-full md:max-w-[65rem] overflow-y-auto max-h-[100vh]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Crop className="h-5 w-5" />

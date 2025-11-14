@@ -449,7 +449,7 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
     <>
       {/* Create Operator Dialog */}
       <Dialog open={createOperatorDialogOpen} onOpenChange={setCreateOperatorDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="max-w-full md:max-w-md overflow-y-auto max-h-[100vh]">
           <DialogHeader>
             <DialogTitle>Create Operator</DialogTitle>
             <DialogDescription>Add a new operator to your fleet</DialogDescription>
@@ -506,7 +506,7 @@ export function TailCreateDialog({ children, tailId, open: controlledOpen, onOpe
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>{children}</DialogTrigger>
-        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-full md:max-w-[65rem] overflow-y-auto max-h-[100vh]">
           <DialogHeader>
             <DialogTitle>{isEditing ? "Edit Aircraft Tail" : "Create Aircraft Tail"}</DialogTitle>
             <DialogDescription>

@@ -105,7 +105,7 @@ export function AircraftTypeListItem({ aircraft }: AircraftTypeListItemProps) {
                       Edit
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="sm:max-w-[425px]">
+                  <DialogContent className="max-w-full md:max-w-[65rem] overflow-y-auto max-h-[100vh]">
                     <DialogHeader>
                       <DialogTitle>Edit Aircraft Type</DialogTitle>
                       <DialogDescription>Make changes to the aircraft specifications.</DialogDescription>

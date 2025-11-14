@@ -330,7 +330,7 @@ export default function AircraftImageManager({ aircraftId, tenantId, onImagesUpd
 
       {/* Crop Dialog */}
       <Dialog open={cropOpen} onOpenChange={setCropOpen}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="max-w-full md:max-w-[65rem] overflow-y-auto max-h-[100vh]">
           <DialogHeader>
             <DialogTitle>Crop Image</DialogTitle>
             <DialogDescription>Adjust the crop area and zoom level</DialogDescription>

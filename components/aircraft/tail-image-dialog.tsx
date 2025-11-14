@@ -52,7 +52,7 @@ export function TailImageDialog({ tailId, open, onOpenChange }: TailImageDialogP
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-full md:max-w-[65rem] overflow-y-auto max-h-[100vh]">
         <DialogHeader>
           <DialogTitle>Manage Tail Images</DialogTitle>
         </DialogHeader>

@@ -116,7 +116,7 @@ export function ModelEditDialog({
     <Dialog open={open} onOpenChange={handleDialogChange}>
       {children && <DialogTrigger asChild>{children}</DialogTrigger>}
 
-      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-full md:max-w-[65rem] overflow-y-auto max-h-[100vh]">
         <DialogHeader>
           <DialogTitle>Edit Aircraft Model</DialogTitle>
           <DialogDescription>Update details and manage images.</DialogDescription>
