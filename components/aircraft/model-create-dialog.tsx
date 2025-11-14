@@ -286,7 +286,7 @@ export function ModelCreateDialog({
 
       {/* Create Manufacturer Dialog */}
       <Dialog open={createManufacturerDialogOpen} onOpenChange={setCreateManufacturerDialogOpen}>
-        <DialogContent className="max-w-full md:max-w-md overflow-y-auto max-h-[100vh]">
+        <DialogContent className="max-w-full md:max-w-md overflow-y-auto max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>Create Manufacturer</DialogTitle>
             <DialogDescription>Add a new aircraft manufacturer</DialogDescription>
