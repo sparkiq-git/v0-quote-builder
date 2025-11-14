@@ -17,7 +17,7 @@ export const ModelFormSchema = z.object({
           return val.startsWith("http") || val.startsWith("https") || val.startsWith("/")
         }, "Invalid image URL or path"),
     )
-    .min(1, "At least one image is required"),
+    .default([]),
 })
 
 export const TailFormSchema = z.object({

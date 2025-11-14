@@ -88,6 +88,7 @@ export function ModelCreateDialog({
       defaultCapacity: undefined,
       defaultRangeNm: undefined,
       defaultSpeedKnots: undefined,
+      images: [],
     },
   })
 
