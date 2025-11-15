@@ -399,6 +399,7 @@ const handleNext = () => {
                               flight_hours: parseFloat(e.target.value) || 0,
                             })
                           }
+                          onFocus={(e) => e.target.select()}
                         />
                       </div>
                       <div className="grid gap-1.5">
@@ -411,6 +412,7 @@ const handleNext = () => {
                               cost_operator: parseFloat(e.target.value) || 0,
                             })
                           }
+                          onFocus={(e) => e.target.select()}
                         />
                       </div>
                       <div className="grid gap-1.5">
@@ -423,6 +425,7 @@ const handleNext = () => {
                               price_commission: parseFloat(e.target.value) || 0,
                             })
                           }
+                          onFocus={(e) => e.target.select()}
                         />
                       </div>
                     </div>
@@ -438,6 +441,7 @@ const handleNext = () => {
                             price_base: parseFloat(e.target.value) || 0,
                           })
                         }
+                        onFocus={(e) => e.target.select()}
                       />
                     </div>
 
@@ -505,6 +509,7 @@ const handleNext = () => {
                                     ),
                                   })
                                 }
+                                onFocus={(e) => e.target.select()}
                                 className="w-24"
                               />
                               <Button

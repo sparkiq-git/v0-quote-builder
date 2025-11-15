@@ -353,6 +353,7 @@ const handleAddLeg = () => {
                       passengers: parseInt(e.target.value) || 1,
                     }))
                   }
+                  onFocus={(e) => e.target.select()}
                   className="border rounded-md px-3 py-2 bg-background"
                 />
               </div>
@@ -465,6 +466,7 @@ const handleAddLeg = () => {
                           )
                         )
                       }
+                      onFocus={(e) => e.target.select()}
                       className="border rounded-md px-3 py-2 bg-background"
                     />
                   </div>
