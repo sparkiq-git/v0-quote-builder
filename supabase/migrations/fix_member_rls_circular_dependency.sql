@@ -111,4 +111,3 @@ USING (
   OR
   (tenant_id = public.get_user_tenant_id() AND public.is_user_admin_or_manager())
 );
-

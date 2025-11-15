@@ -5,4 +5,3 @@ export function getPublicStorageUrl(bucket: string, path?: string | null): strin
   const normalizedPath = path.replace(/^\/+/, "")
   return `${SUPABASE_PUBLIC_URL}/storage/v1/object/public/${bucket}/${normalizedPath}`
 }
-

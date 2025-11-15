@@ -225,7 +225,7 @@ export function ModelCreateDialog({
     <>
       {/* Create Aircraft Size Dialog */}
       <Dialog open={createSizeDialogOpen} onOpenChange={setCreateSizeDialogOpen}>
-        <DialogContent className="max-w-full md:max-w-md overflow-y-auto max-h-[100vh]">
+        <DialogContent className="max-w-full md:max-w-md overflow-y-auto max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>Create Aircraft Size</DialogTitle>
             <DialogDescription>Add a new aircraft size category</DialogDescription>
@@ -286,7 +286,7 @@ export function ModelCreateDialog({
 
       {/* Create Manufacturer Dialog */}
       <Dialog open={createManufacturerDialogOpen} onOpenChange={setCreateManufacturerDialogOpen}>
-        <DialogContent className="max-w-full md:max-w-md overflow-y-auto max-h-[100vh]">
+        <DialogContent className="max-w-full md:max-w-md overflow-y-auto max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>Create Manufacturer</DialogTitle>
             <DialogDescription>Add a new aircraft manufacturer</DialogDescription>
@@ -316,7 +316,7 @@ export function ModelCreateDialog({
       <Dialog open={open} onOpenChange={handleDialogChange}>
         {children && <DialogTrigger asChild>{children}</DialogTrigger>}
 
-        <DialogContent className="max-w-full md:max-w-[65rem] overflow-y-auto max-h-[100vh]">
+        <DialogContent className="max-w-full md:max-w-[45rem] overflow-y-auto max-h-[100vh]">
           <DialogHeader>
             <DialogTitle>Create Aircraft Model</DialogTitle>
             <DialogDescription>Add a new aircraft model to your catalog.</DialogDescription>

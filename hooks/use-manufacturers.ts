@@ -65,4 +65,3 @@ export function useManufacturers() {
 
   return { manufacturers, loading, error, refetch: fetchManufacturers, createManufacturer }
 }
-

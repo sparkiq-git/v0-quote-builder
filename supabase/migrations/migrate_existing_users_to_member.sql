@@ -55,4 +55,3 @@ BEGIN
     RAISE NOTICE 'Migration complete: All users with tenant_id now have member records';
   END IF;
 END $$;
-
