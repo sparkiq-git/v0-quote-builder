@@ -64,6 +64,7 @@ export function TailCreateDialog({
   const [defaultTypeRatingId, setDefaultTypeRatingId] = useState<string | null>(null)
   const [selectedAmenityIds, setSelectedAmenityIds] = useState<string[]>([])
   const [pendingModelId, setPendingModelId] = useState<string | null>(null)
+  const [modelCreateDialogOpen, setModelCreateDialogOpen] = useState(false)
 
   const currentTailId = existingTail?.id ?? tailId ?? undefined
 
@@ -186,19 +187,62 @@ export function TailCreateDialog({
   const selectedModel = selectedModelId ? models.find(m => m.id === selectedModelId) : null
   const tailNumber = watch("tailNumber")
 
+  // Handle pending model ID with retry logic for production
   useEffect(() => {
     if (!pendingModelId) return
-    const modelExists = models.find((model) => model.id === pendingModelId)
-    if (modelExists) {
-      setValue("modelId", pendingModelId, { shouldDirty: true })
-      setPendingModelId(null)
-      setModelComboOpen(false)
-      toast({
-        title: "Model selected",
-        description: `${modelExists.name} has been added to this tail.`,
-      })
+    
+    const checkAndSetModel = async () => {
+      // First check immediately
+      let modelExists = models.find((model) => model.id === pendingModelId)
+      
+      // If not found and we have models loading, wait a bit for refresh
+      if (!modelExists && modelsLoading) {
+        // Wait for models to load with timeout
+        const maxAttempts = 10
+        let attempts = 0
+        
+        while (attempts < maxAttempts && !modelExists) {
+          await new Promise(resolve => setTimeout(resolve, 200))
+          modelExists = models.find((model) => model.id === pendingModelId)
+          attempts++
+          
+          // If models finish loading and we still don't have it, try refetching once
+          if (attempts === 5 && !modelsLoading && !modelExists) {
+            try {
+              await refetchModels()
+              await new Promise(resolve => setTimeout(resolve, 300))
+              modelExists = models.find((model) => model.id === pendingModelId)
+            } catch (err) {
+              console.error("Error refetching models:", err)
+            }
+          }
+        }
+      }
+      
+      if (modelExists) {
+        setValue("modelId", pendingModelId, { shouldDirty: true })
+        setPendingModelId(null)
+        setModelComboOpen(false)
+        toast({
+          title: "Model selected",
+          description: `${modelExists.name} has been added to this tail.`,
+        })
+      } else {
+        // Model not found after retries
+        console.error("Model not found after creation:", pendingModelId)
+        toast({
+          title: "Model created",
+          description: "Please manually select the newly created model.",
+          variant: "default",
+        })
+        setPendingModelId(null)
+        // Optionally refresh models list one more time
+        refetchModels().catch(console.error)
+      }
     }
-  }, [pendingModelId, models, setValue, toast])
+    
+    checkAndSetModel()
+  }, [pendingModelId, models, modelsLoading, setValue, toast, refetchModels])
 
   useEffect(() => {
     if (open && existingTail) {
@@ -396,8 +440,13 @@ export function TailCreateDialog({
           }
         }
 
-        // Don't close the dialog yet so the user can manage images immediately
-        return
+        // Close the dialog after successful creation and callback
+      // This allows the onCreated callback to complete before closing
+      setTimeout(() => {
+        setOpen(false)
+      }, 100)
+      
+      return
       }
 
       // Update amenities for existing tails
@@ -486,9 +535,19 @@ export function TailCreateDialog({
 
   return (
     <>
-      {/* Create Operator Dialog */}
-      <Dialog open={createOperatorDialogOpen} onOpenChange={setCreateOperatorDialogOpen}>
-        <DialogContent className="max-w-full md:max-w-md overflow-y-auto max-h-[90vh]">
+      {/* Create Operator Dialog - Higher z-index to appear above parent dialog */}
+      <Dialog 
+        open={createOperatorDialogOpen} 
+        onOpenChange={(isOpen) => {
+          setCreateOperatorDialogOpen(isOpen)
+          // Close operator combobox when operator dialog opens
+          if (isOpen) {
+            setOperatorComboOpen(false)
+          }
+        }}
+        modal={true}
+      >
+        <DialogContent className="max-w-full md:max-w-md overflow-y-auto max-h-[90vh]" style={{ zIndex: 60 }}>
           <DialogHeader>
             <DialogTitle>Create Operator</DialogTitle>
             <DialogDescription>Add a new operator to your fleet</DialogDescription>
@@ -543,9 +602,17 @@ export function TailCreateDialog({
         </DialogContent>
       </Dialog>
 
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open} onOpenChange={setOpen} modal={true}>
         <DialogTrigger asChild>{children}</DialogTrigger>
-        <DialogContent className="max-w-full md:max-w-[50rem] overflow-y-auto max-h-[100vh]">
+        <DialogContent 
+          className="max-w-full md:max-w-[50rem] overflow-y-auto max-h-[100vh]"
+          onOpenAutoFocus={(e) => {
+            // Prevent auto-focus when nested dialogs are open
+            if (modelCreateDialogOpen || createOperatorDialogOpen) {
+              e.preventDefault()
+            }
+          }}
+        >
           <DialogHeader>
             <DialogTitle>{isEditing ? "Edit Aircraft Tail" : "Create Aircraft Tail"}</DialogTitle>
             <DialogDescription>
@@ -559,12 +626,22 @@ export function TailCreateDialog({
             <div className="flex items-center justify-between">
               <Label className="text-base font-semibold">Step 1: Select Aircraft Model</Label>
               <ModelCreateDialog
+                open={modelCreateDialogOpen}
+                onOpenChange={(isOpen) => {
+                  setModelCreateDialogOpen(isOpen)
+                  // Close model combobox when model dialog opens to prevent overlay conflicts
+                  if (isOpen) {
+                    setModelComboOpen(false)
+                  }
+                }}
                 onCreated={async (modelId: string) => {
                   setPendingModelId(modelId)
                   await refetchModels()
+                  // Close model create dialog after creation
+                  setModelCreateDialogOpen(false)
                 }}
               >
-                <Button type="button" variant="outline" size="sm">
+                <Button type="button" variant="outline" size="sm" onClick={() => setModelCreateDialogOpen(true)}>
                   <Plus className="mr-2 h-4 w-4" />
                   Quick Add Model
                 </Button>
@@ -575,7 +652,7 @@ export function TailCreateDialog({
               name="modelId"
               control={control}
               render={({ field }) => (
-                <Popover open={modelComboOpen} onOpenChange={setModelComboOpen} modal={true}>
+                <Popover open={modelComboOpen} onOpenChange={setModelComboOpen} modal={false}>
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
@@ -635,7 +712,7 @@ export function TailCreateDialog({
                   name="operator"
                   control={control}
                   render={({ field }) => (
-                    <Popover open={operatorComboOpen} onOpenChange={setOperatorComboOpen} modal={true}>
+                    <Popover open={operatorComboOpen} onOpenChange={setOperatorComboOpen} modal={false}>
                       <PopoverTrigger asChild>
                         <Button
                           variant="outline"
