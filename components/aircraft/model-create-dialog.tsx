@@ -223,18 +223,9 @@ export function ModelCreateDialog({
 
   return (
     <>
-      {/* Create Aircraft Size Dialog - Higher z-index */}
-      <Dialog 
-        open={createSizeDialogOpen} 
-        onOpenChange={(isOpen) => {
-          setCreateSizeDialogOpen(isOpen)
-          if (isOpen) {
-            setSizeComboOpen(false)
-          }
-        }}
-        modal={true}
-      >
-        <DialogContent className="max-w-full md:max-w-md overflow-y-auto max-h-[90vh]" style={{ zIndex: 70 }}>
+      {/* Create Aircraft Size Dialog */}
+      <Dialog open={createSizeDialogOpen} onOpenChange={setCreateSizeDialogOpen} modal={true}>
+        <DialogContent className="max-w-full md:max-w-md overflow-y-auto max-h-[90vh] z-[90]">
           <DialogHeader>
             <DialogTitle>Create Aircraft Size</DialogTitle>
             <DialogDescription>Add a new aircraft size category</DialogDescription>
@@ -293,18 +284,9 @@ export function ModelCreateDialog({
         </DialogContent>
       </Dialog>
 
-      {/* Create Manufacturer Dialog - Higher z-index */}
-      <Dialog 
-        open={createManufacturerDialogOpen} 
-        onOpenChange={(isOpen) => {
-          setCreateManufacturerDialogOpen(isOpen)
-          if (isOpen) {
-            setManufacturerComboOpen(false)
-          }
-        }}
-        modal={true}
-      >
-        <DialogContent className="max-w-full md:max-w-md overflow-y-auto max-h-[90vh]" style={{ zIndex: 70 }}>
+      {/* Create Manufacturer Dialog */}
+      <Dialog open={createManufacturerDialogOpen} onOpenChange={setCreateManufacturerDialogOpen} modal={true}>
+        <DialogContent className="max-w-full md:max-w-md overflow-y-auto max-h-[90vh] z-[90]">
           <DialogHeader>
             <DialogTitle>Create Manufacturer</DialogTitle>
             <DialogDescription>Add a new aircraft manufacturer</DialogDescription>
@@ -334,16 +316,7 @@ export function ModelCreateDialog({
       <Dialog open={open} onOpenChange={handleDialogChange} modal={true}>
         {children && <DialogTrigger asChild>{children}</DialogTrigger>}
 
-        <DialogContent 
-          className="max-w-full md:max-w-[45rem] overflow-y-auto max-h-[100vh]"
-          style={{ zIndex: 60 }}
-          onOpenAutoFocus={(e) => {
-            // Prevent auto-focus when nested dialogs are open
-            if (createSizeDialogOpen || createManufacturerDialogOpen) {
-              e.preventDefault()
-            }
-          }}
-        >
+        <DialogContent className="max-w-full md:max-w-[45rem] overflow-y-auto max-h-[100vh] z-[70]">
           <DialogHeader>
             <DialogTitle>Create Aircraft Model</DialogTitle>
             <DialogDescription>Add a new aircraft model to your catalog.</DialogDescription>
@@ -362,7 +335,7 @@ export function ModelCreateDialog({
                   name="categoryId"
                   control={control}
                   render={({ field }) => (
-                    <Popover open={sizeComboOpen} onOpenChange={setSizeComboOpen} modal={false}>
+                    <Popover open={sizeComboOpen} onOpenChange={setSizeComboOpen} modal={true}>
                       <PopoverTrigger asChild>
                         <Button
                           variant="outline"
@@ -442,7 +415,7 @@ export function ModelCreateDialog({
                   name="manufacturerId"
                   control={control}
                   render={({ field }) => (
-                    <Popover open={manufacturerComboOpen} onOpenChange={setManufacturerComboOpen} modal={false}>
+                    <Popover open={manufacturerComboOpen} onOpenChange={setManufacturerComboOpen} modal={true}>
                       <PopoverTrigger asChild>
                         <Button
                           variant="outline"
