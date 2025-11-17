@@ -38,12 +38,8 @@ function DialogOverlay({
     <DialogPrimitive.Overlay
       data-slot="dialog-overlay"
       className={cn(
-<<<<<<< Current (Your changes)
         'data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/50 pointer-events-auto',
-=======
-        'data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/50 pointer-events-none',
         // Support dynamic z-index via className override for nested dialogs
->>>>>>> Incoming (Background Agent changes)
         className,
       )}
       {...props}
@@ -68,19 +64,28 @@ function DialogContent({
       : ''
   const zIndexMatch = classNameStr.match(/z-\[(\d+)\]/)
   const contentZIndex = zIndexMatch ? parseInt(zIndexMatch[1], 10) : 50
-  const overlayZIndex = Math.max(contentZIndex - 1, 40) // Overlay should be one level below content, min 40
+  // Overlay should be one level below content, but ensure proper stacking
+  // For nested dialogs: z-60 dialog has z-59 overlay, z-70 dialog has z-69 overlay
+  const overlayZIndex = contentZIndex > 50 ? contentZIndex - 1 : 50
+  
+  // Remove z-index from className to avoid conflicts, we'll apply it via style
+  const classNameWithoutZ = classNameStr.replace(/z-\[\d+\]/g, '').trim()
   
   const finalClassName = cn(
     'bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border p-6 shadow-lg duration-200 sm:max-w-lg',
-    className,
+    classNameWithoutZ,
   )
   
   return (
     <DialogPortal data-slot="dialog-portal">
-      <DialogOverlay className={cn(`z-[${overlayZIndex}]`)} />
+      <DialogOverlay 
+        className={cn(`z-[${overlayZIndex}]`)} 
+        style={{ zIndex: overlayZIndex }}
+      />
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={finalClassName}
+        style={{ zIndex: contentZIndex }}
         {...props}
       >
         {children}

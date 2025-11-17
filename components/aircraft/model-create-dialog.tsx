@@ -84,6 +84,7 @@ export function ModelCreateDialog({
     reset,
   } = useForm<ModelFormData>({
     resolver: zodResolver(ModelFormSchema),
+    mode: "onChange",
     defaultValues: {
       name: "",
       categoryId: "",
@@ -175,7 +176,10 @@ export function ModelCreateDialog({
 
   const handleCreate = async (data: ModelFormData) => {
     try {
-      if (!tenantId) throw new Error("Tenant ID not found.")
+      if (!tenantId) {
+        toast({ title: "Error", description: "Tenant ID not found.", variant: "destructive" })
+        return
+      }
       setLoading(true)
       const {
         categoryId,
@@ -203,6 +207,7 @@ export function ModelCreateDialog({
       handleDialogChange(false)
     } catch (err: any) {
       toast({ title: "Error creating model", description: err.message, variant: "destructive" })
+      // Don't reset form on error - let user fix and resubmit
     } finally {
       setLoading(false)
     }
@@ -211,6 +216,7 @@ export function ModelCreateDialog({
   const handleDialogChange = (isOpen: boolean) => {
     setOpen(isOpen)
     if (!isOpen) {
+      // Only reset form when dialog closes, not when it opens
       reset()
       setNewSize({ code: "", display_name: "", description: "", size: "" })
       setSizeComboOpen(false)
@@ -219,6 +225,7 @@ export function ModelCreateDialog({
       setCreateManufacturerDialogOpen(false)
       setNewManufacturerName("")
     }
+    // When dialog opens, don't reset - preserve any existing form state
   }
 
   return (
@@ -322,12 +329,17 @@ export function ModelCreateDialog({
             <DialogDescription>Add a new aircraft model to your catalog.</DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleSubmit(handleCreate)} className="space-y-8">
+          <form onSubmit={handleSubmit(handleCreate)} className="space-y-8" noValidate>
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="name">Model Name *</Label>
-                <Input id="name" {...register("name")} placeholder="Phenom 300E" />
-                {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
+                <Input 
+                  id="name" 
+                  {...register("name")} 
+                  placeholder="Phenom 300E"
+                  autoComplete="off"
+                />
+                {errors.name && <p className="text-sm text-destructive">{errors.name.message || "Name is required"}</p>}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="categoryId">Category *</Label>
