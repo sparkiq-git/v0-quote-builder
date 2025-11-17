@@ -53,6 +53,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "latest",
+    "date-fns": "^3.0.0",
     "crypto": "latest",
     "embla-carousel-react": "latest",
     "geist": "^1.3.1",
