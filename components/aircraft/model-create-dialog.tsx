@@ -241,15 +241,33 @@ export function ModelCreateDialog({
     setOpen(isOpen)
     if (!isOpen) {
       // Only reset form when dialog closes, not when it opens
-      reset()
+      reset({
+        name: "",
+        categoryId: "",
+        manufacturerId: "",
+        defaultCapacity: undefined,
+        defaultRangeNm: undefined,
+        defaultSpeedKnots: undefined,
+        images: [],
+      })
       setNewSize({ code: "", display_name: "", description: "", size: "" })
       setSizeComboOpen(false)
       setCreateSizeDialogOpen(false)
       setManufacturerComboOpen(false)
       setCreateManufacturerDialogOpen(false)
       setNewManufacturerName("")
+    } else {
+      // When dialog opens, ensure form is properly initialized
+      reset({
+        name: "",
+        categoryId: "",
+        manufacturerId: "",
+        defaultCapacity: undefined,
+        defaultRangeNm: undefined,
+        defaultSpeedKnots: undefined,
+        images: [],
+      }, { keepDefaultValues: true })
     }
-    // When dialog opens, don't reset - preserve any existing form state
   }
 
   return (
@@ -368,30 +386,38 @@ export function ModelCreateDialog({
                 <Controller
                   name="name"
                   control={control}
-                  render={({ field, fieldState }) => (
-                    <>
-                      <Input 
-                        id="name" 
-                        value={field.value || ""}
-                        onChange={(e) => {
-                          const value = e.target.value
-                          field.onChange(value)
-                          // Clear error immediately when user types valid input
-                          if (fieldState.error && value.trim().length > 0) {
-                            trigger("name")
-                          }
-                        }}
-                        onBlur={field.onBlur}
-                        placeholder="Phenom 300E"
-                        autoComplete="off"
-                      />
-                      {fieldState.error && (
-                        <p className="text-sm text-destructive">
-                          {fieldState.error.message || "Name is required"}
-                        </p>
-                      )}
-                    </>
-                  )}
+                  defaultValue=""
+                  render={({ field, fieldState }) => {
+                    // Ensure value is always a string for proper binding in production
+                    // This prevents React from omitting the value attribute
+                    const fieldValue = String(field.value ?? "")
+                    return (
+                      <>
+                        <Input 
+                          id="name" 
+                          name={field.name}
+                          value={fieldValue}
+                          onChange={(e) => {
+                            const value = e.target.value
+                            field.onChange(value)
+                            // Clear error immediately when user types valid input
+                            if (fieldState.error && value.trim().length > 0) {
+                              trigger("name")
+                            }
+                          }}
+                          onBlur={field.onBlur}
+                          ref={field.ref}
+                          placeholder="Phenom 300E"
+                          autoComplete="off"
+                        />
+                        {fieldState.error && (
+                          <p className="text-sm text-destructive">
+                            {fieldState.error.message || "Name is required"}
+                          </p>
+                        )}
+                      </>
+                    )
+                  }}
                 />
               </div>
               <div className="space-y-2">
