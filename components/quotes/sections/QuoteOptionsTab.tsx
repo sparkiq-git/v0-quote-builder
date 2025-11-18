@@ -11,7 +11,6 @@ import { Plane, Plus, Trash2, ChevronRight } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { AircraftCombobox } from "@/components/ui/aircraft-combobox"
 import { TailCreateDialog } from "@/components/aircraft/tail-create-dialog"
-import { AircraftEditDrawer } from "@/components/aircraft/AircraftEditDrawer"
 import { AircraftSummaryCard } from "@/components/aircraft/AircraftSummaryCard"
 import { formatCurrency } from "@/lib/utils/format"
 import { useEffect } from "react"
@@ -31,7 +30,7 @@ export function QuoteOptionsTab({ quote, onUpdate, onNext, onBack }: Props) {
   const options = Array.isArray(quote?.options) ? quote.options : []
   const [tailCreateDialogOpen, setTailCreateDialogOpen] = useState(false)
   const [pendingTailOptionId, setPendingTailOptionId] = useState<string | null>(null)
-  const [editOpenFor, setEditOpenFor] = useState<string | null>(null)
+  const [editTailId, setEditTailId] = useState<string | null>(null)
   const [aircraftCache, setAircraftCache] = useState<Record<string, AircraftFull>>({})
   const [saving, setSaving] = useState(false)
   const [initialized, setInitialized] = useState(false)
@@ -368,7 +367,7 @@ const handleNext = () => {
                  {option.aircraft_id && aircraftCache[option.aircraft_id] && (
   <AircraftSummaryCard
     aircraft={aircraftCache[option.aircraft_id]}
-    onEdit={() => setEditOpenFor(option.aircraft_id!)}
+    onEdit={() => setEditTailId(option.aircraft_id!)}
   />
 )}
                  {option.aircraft_id && !aircraftCache[option.aircraft_id] && (
@@ -580,45 +579,23 @@ const handleNext = () => {
         onCreated={handleTailCreated}
       />
 
-      <AircraftEditDrawer
-        aircraftId={editOpenFor ?? ""}
-        open={!!editOpenFor}
-        onOpenChange={(v) => !v && setEditOpenFor(null)}
-        initial={(() => {
-          const a = editOpenFor ? aircraftCache[editOpenFor] : undefined
-          if (!a) return undefined
-          return {
-            tail_number: a.tail_number,
-            home_base: a.home_base ?? null,
-            capacity_pax: a.capacity_pax ?? null,
-            range_nm: a.range_nm ?? null,
-            notes: a.notes ?? null,
+      <TailCreateDialog
+        tailId={editTailId || undefined}
+        open={!!editTailId}
+        onOpenChange={(isOpen) => {
+          if (!isOpen) {
+            setEditTailId(null)
           }
-        })()}
-        onUpdated={(updated) => {
-          setAircraftCache((prev) => ({
-            ...prev,
-            [updated.id]: {
-              ...(prev[updated.id] || {}),
-              aircraft_id: updated.id,
-              tenant_id: updated.tenant_id,
-              tail_number: updated.tail_number,
-              capacity_pax: updated.capacity_pax,
-              range_nm: updated.range_nm,
-              status: updated.status,
-              home_base: updated.home_base,
-              notes: updated.notes,
-            },
-          }))
         }}
-        onDeleted={() => {
-          if (!editOpenFor) return
-          setAircraftCache((prev) => {
-            const copy = { ...prev }
-            delete copy[editOpenFor]
-            return copy
+        onCreated={async (tail) => {
+          // After editing, close the dialog and show success message
+          setEditTailId(null)
+          toast({
+            title: "Aircraft updated",
+            description: "Aircraft tail has been updated successfully.",
           })
-          setEditOpenFor(null)
+          // Note: The aircraft cache will be refreshed when the quote is reloaded
+          // or the user can manually refresh the page to see the updated data
         }}
       />
     </Card>

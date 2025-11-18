@@ -211,12 +211,13 @@ export function TailCreateDialog({
         modelId: existingTail.model_id,
         tailNumber: existingTail.tail_number,
         operator: existingTail.operator_id || "",
-        year: existingTail.year_of_manufacture,
-        yearOfRefurbishment: existingTail.year_of_refurbish || undefined,
+        // Convert null to undefined for number fields to match schema
+        year: existingTail.year_of_manufacture ?? undefined,
+        yearOfRefurbishment: existingTail.year_of_refurbish ?? undefined,
         status: existingTail.status?.toLowerCase() || "active",
-        capacityOverride: existingTail.capacity_pax || undefined,
-        rangeNmOverride: existingTail.range_nm || undefined,
-        speedKnotsOverride: existingTail.cruising_speed || undefined,
+        capacityOverride: existingTail.capacity_pax ?? undefined,
+        rangeNmOverride: existingTail.range_nm ?? undefined,
+        speedKnotsOverride: existingTail.cruising_speed ?? undefined,
         images: [],
       })
       setUseDefaultCapacity(existingTail.capacity_pax === null)
