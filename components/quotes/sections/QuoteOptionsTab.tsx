@@ -7,6 +7,12 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
 import { Plane, Plus, Trash2, ChevronRight } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { AircraftCombobox } from "@/components/ui/aircraft-combobox"
@@ -353,14 +359,14 @@ const handleUpdateOption = (id: string, updates: Partial<QuoteOption>) => {
 }
 
   const calculateOptionTotal = (option: any) => {
-    const fees = calculateFees(option)
+    // Use actual values from option (which may be manually edited)
     return (
       (option.cost_operator || 0) + 
       (option.price_commission || 0) + 
       (option.price_base || 0) + 
-      fees.price_fet + 
-      fees.price_extras_total + 
-      fees.price_taxes
+      (option.price_fet || 0) + 
+      (option.price_extras_total || 0) + 
+      (option.price_taxes || 0)
     )
   }
 
@@ -519,89 +525,138 @@ const handleNext = () => {
 
                     {/* Fees & Taxes */}
                     <div className="pt-2 border-t">
-                      <div className="mb-3">
-                        <Label className="font-medium">Fees & Taxes</Label>
-                        <p className="text-xs text-muted-foreground">
-                          Automatically calculated fees and taxes based on operator cost and passenger count.
-                        </p>
-                      </div>
-
-                      <div className="space-y-3">
-                        {/* Federal Excise Tax (FET) */}
-                        <div className="flex items-center justify-between p-3 bg-muted/40 rounded-lg">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <Label className="font-medium">Federal Excise Tax (FET)</Label>
-                              <span className="text-xs text-muted-foreground">
-                                (7.5% of Operator Cost)
-                              </span>
-                            </div>
-                            <p className="text-sm font-semibold text-foreground mt-1">
-                              {formatCurrency(calculateFees(option).price_fet)}
+                      <Accordion type="single" collapsible className="w-full">
+                        <AccordionItem value="fees-taxes">
+                          <AccordionTrigger className="text-sm font-medium">
+                            Fees & Taxes
+                          </AccordionTrigger>
+                          <AccordionContent className="space-y-4 pt-2">
+                            <p className="text-xs text-muted-foreground mb-4">
+                              Fees and taxes are pre-calculated but can be edited as needed. Toggle switches to enable/disable automatic calculation.
                             </p>
-                          </div>
-                          <Switch
-                            checked={option.fetEnabled === true}
-                            onCheckedChange={(enabled) => {
-                              const fees = calculateFees({ ...option, fetEnabled: enabled })
-                              handleUpdateOption(option.id, {
-                                fetEnabled: enabled,
-                                ...fees,
-                              })
-                            }}
-                          />
-                        </div>
 
-                        {/* US Domestic Segment Fee */}
-                        <div className="flex items-center justify-between p-3 bg-muted/40 rounded-lg">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <Label className="font-medium">US Domestic Segment Fee</Label>
-                              <span className="text-xs text-muted-foreground">
-                                ($5 × {getPassengerCount()} passengers)
-                              </span>
+                            {/* Federal Excise Tax (FET) */}
+                            <div className="space-y-2 p-3 bg-muted/40 rounded-lg">
+                              <div className="flex items-center justify-between">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <Label className="font-medium text-sm">Federal Excise Tax (FET)</Label>
+                                    <Switch
+                                      checked={option.fetEnabled === true}
+                                      onCheckedChange={(enabled) => {
+                                        const fees = calculateFees({ ...option, fetEnabled: enabled })
+                                        handleUpdateOption(option.id, {
+                                          fetEnabled: enabled,
+                                          ...fees,
+                                        })
+                                      }}
+                                    />
+                                  </div>
+                                  <p className="text-xs text-muted-foreground mb-2">
+                                    Calculated: 7.5% of Operator Cost = {formatCurrency((option.cost_operator || 0) * 0.075)}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="grid gap-1.5">
+                                <Label className="text-xs">Amount</Label>
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  value={option.price_fet ?? 0}
+                                  onChange={(e) => {
+                                    const value = parseFloat(e.target.value) || 0
+                                    handleUpdateOption(option.id, {
+                                      price_fet: value,
+                                    })
+                                  }}
+                                  onFocus={(e) => e.target.select()}
+                                  placeholder={formatCurrency((option.cost_operator || 0) * 0.075)}
+                                />
+                              </div>
                             </div>
-                            <p className="text-sm font-semibold text-foreground mt-1">
-                              {formatCurrency(calculateFees(option).price_extras_total)}
-                            </p>
-                          </div>
-                          <Switch
-                            checked={option.usDomesticEnabled === true}
-                            onCheckedChange={(enabled) => {
-                              const fees = calculateFees({ ...option, usDomesticEnabled: enabled })
-                              handleUpdateOption(option.id, {
-                                usDomesticEnabled: enabled,
-                                ...fees,
-                              })
-                            }}
-                          />
-                        </div>
 
-                        {/* US International Head Tax */}
-                        <div className="flex items-center justify-between p-3 bg-muted/40 rounded-lg">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <Label className="font-medium">US International Head Tax</Label>
-                              <span className="text-xs text-muted-foreground">
-                                ($22.40 × {getPassengerCount()} passengers)
-                              </span>
+                            {/* US Domestic Segment Fee */}
+                            <div className="space-y-2 p-3 bg-muted/40 rounded-lg">
+                              <div className="flex items-center justify-between">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <Label className="font-medium text-sm">US Domestic Segment Fee</Label>
+                                    <Switch
+                                      checked={option.usDomesticEnabled === true}
+                                      onCheckedChange={(enabled) => {
+                                        const fees = calculateFees({ ...option, usDomesticEnabled: enabled })
+                                        handleUpdateOption(option.id, {
+                                          usDomesticEnabled: enabled,
+                                          ...fees,
+                                        })
+                                      }}
+                                    />
+                                  </div>
+                                  <p className="text-xs text-muted-foreground mb-2">
+                                    Calculated: $5 × {getPassengerCount()} passengers = {formatCurrency(5 * getPassengerCount())}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="grid gap-1.5">
+                                <Label className="text-xs">Amount</Label>
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  value={option.price_extras_total ?? 0}
+                                  onChange={(e) => {
+                                    const value = parseFloat(e.target.value) || 0
+                                    handleUpdateOption(option.id, {
+                                      price_extras_total: value,
+                                    })
+                                  }}
+                                  onFocus={(e) => e.target.select()}
+                                  placeholder={formatCurrency(5 * getPassengerCount())}
+                                />
+                              </div>
                             </div>
-                            <p className="text-sm font-semibold text-foreground mt-1">
-                              {formatCurrency(calculateFees(option).price_taxes)}
-                            </p>
-                          </div>
-                          <Switch
-                            checked={option.usInternationalEnabled === true}
-                            onCheckedChange={(enabled) => {
-                              const fees = calculateFees({ ...option, usInternationalEnabled: enabled })
-                              handleUpdateOption(option.id, {
-                                usInternationalEnabled: enabled,
-                                ...fees,
-                              })
-                            }}
-                          />
-                        </div>
-                      </div>
+
+                            {/* US International Head Tax */}
+                            <div className="space-y-2 p-3 bg-muted/40 rounded-lg">
+                              <div className="flex items-center justify-between">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <Label className="font-medium text-sm">US International Head Tax</Label>
+                                    <Switch
+                                      checked={option.usInternationalEnabled === true}
+                                      onCheckedChange={(enabled) => {
+                                        const fees = calculateFees({ ...option, usInternationalEnabled: enabled })
+                                        handleUpdateOption(option.id, {
+                                          usInternationalEnabled: enabled,
+                                          ...fees,
+                                        })
+                                      }}
+                                    />
+                                  </div>
+                                  <p className="text-xs text-muted-foreground mb-2">
+                                    Calculated: $22.40 × {getPassengerCount()} passengers = {formatCurrency(22.40 * getPassengerCount())}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="grid gap-1.5">
+                                <Label className="text-xs">Amount</Label>
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  value={option.price_taxes ?? 0}
+                                  onChange={(e) => {
+                                    const value = parseFloat(e.target.value) || 0
+                                    handleUpdateOption(option.id, {
+                                      price_taxes: value,
+                                    })
+                                  }}
+                                  onFocus={(e) => e.target.select()}
+                                  placeholder={formatCurrency(22.40 * getPassengerCount())}
+                                />
+                              </div>
+                            </div>
+                          </AccordionContent>
+                        </AccordionItem>
+                      </Accordion>
                     </div>
                   </div>
                 </div>

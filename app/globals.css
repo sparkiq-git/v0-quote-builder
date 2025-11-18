@@ -144,6 +144,25 @@
   }
 }
 
+/* Accordion animations */
+@keyframes accordion-down {
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--radix-accordion-content-height);
+  }
+}
+
+@keyframes accordion-up {
+  from {
+    height: var(--radix-accordion-content-height);
+  }
+  to {
+    height: 0;
+  }
+}
+
 .animate-fade-in {
   animation: fade-in 0.6s ease-out;
 }
@@ -154,6 +173,14 @@
 
 .animate-slide-up-delayed {
   animation: slide-up 0.8s ease-out 0.2s both;
+}
+
+.animate-accordion-down {
+  animation: accordion-down 0.2s ease-out;
+}
+
+.animate-accordion-up {
+  animation: accordion-up 0.2s ease-out;
 }
 
 :root {
