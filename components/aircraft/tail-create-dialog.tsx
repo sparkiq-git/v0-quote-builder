@@ -157,9 +157,12 @@ export function TailCreateDialog({
     control,
     getValues,
     getFieldState,
+    trigger,
     formState: { errors, isSubmitting },
   } = useForm<TailFormData>({
     resolver: zodResolver(TailFormSchema),
+    mode: "onSubmit", // Only validate on submit to avoid premature errors
+    reValidateMode: "onChange", // Re-validate on change after first submit attempt
     defaultValues: {
       modelId: "",
       tailNumber: "",
@@ -679,14 +682,47 @@ export function TailCreateDialog({
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="tailNumber">Tail Number *</Label>
-                <Input id="tailNumber" {...register("tailNumber")} placeholder="e.g., N123AB" />
-                {errors.tailNumber && <p className="text-sm text-destructive">{errors.tailNumber.message}</p>}
-                {tailNumberValidation.checking && (
-                  <p className="text-sm text-muted-foreground">Checking availability...</p>
-                )}
-                {!tailNumberValidation.checking && tailNumberValidation.isValid === false && (
-                  <p className="text-sm text-destructive">This tail number is already in use</p>
-                )}
+                <Controller
+                  name="tailNumber"
+                  control={control}
+                  defaultValue=""
+                  render={({ field, fieldState }) => {
+                    // Ensure value is always a string for proper binding in production
+                    // This prevents React from omitting the value attribute
+                    const fieldValue = String(field.value ?? "")
+                    return (
+                      <>
+                        <Input 
+                          id="tailNumber" 
+                          name={field.name}
+                          value={fieldValue}
+                          onChange={(e) => {
+                            const value = e.target.value
+                            field.onChange(value)
+                            // Clear error immediately when user types valid input
+                            if (fieldState.error && value.trim().length > 0) {
+                              trigger("tailNumber")
+                            }
+                          }}
+                          onBlur={field.onBlur}
+                          ref={field.ref}
+                          placeholder="e.g., N123AB"
+                        />
+                        {fieldState.error && (
+                          <p className="text-sm text-destructive">
+                            {fieldState.error.message || "Tail number is required"}
+                          </p>
+                        )}
+                        {tailNumberValidation.checking && (
+                          <p className="text-sm text-muted-foreground">Checking availability...</p>
+                        )}
+                        {!tailNumberValidation.checking && tailNumberValidation.isValid === false && (
+                          <p className="text-sm text-destructive">This tail number is already in use</p>
+                        )}
+                      </>
+                    )
+                  }}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="operator">Operator</Label>
