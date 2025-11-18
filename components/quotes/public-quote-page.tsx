@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, type ReactNode } from "react"
+import { useState, useEffect, useMemo, type ReactNode } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import {
@@ -241,6 +241,69 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
   const [selectedOptionId, setSelectedOptionId] = useState<string | null>(quote?.selectedOptionId || null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  // Normalize legs data when quote prop changes (ensure dates/times are always strings)
+  // Use useMemo to create a normalized version without mutating the prop
+  const normalizedQuote = useMemo(() => {
+    if (!quote) return quote
+    
+    if (quote.legs && Array.isArray(quote.legs)) {
+      return {
+        ...quote,
+        legs: quote.legs.map((leg: any) => {
+          // Normalize departureDate - handle null, undefined, Date objects, and strings
+          let departureDate = ""
+          if (leg.departureDate) {
+            if (typeof leg.departureDate === 'string') {
+              departureDate = leg.departureDate.split('T')[0] // Extract date part if ISO
+            } else if (leg.departureDate instanceof Date) {
+              departureDate = leg.departureDate.toISOString().split('T')[0]
+            } else {
+              departureDate = String(leg.departureDate)
+            }
+          } else if (leg.depart_dt) {
+            if (typeof leg.depart_dt === 'string') {
+              departureDate = leg.depart_dt.split('T')[0]
+            } else if (leg.depart_dt instanceof Date) {
+              departureDate = leg.depart_dt.toISOString().split('T')[0]
+            } else {
+              departureDate = String(leg.depart_dt)
+            }
+          }
+          
+          // Normalize departureTime - handle null, undefined, and strings
+          let departureTime = ""
+          if (leg.departureTime) {
+            if (typeof leg.departureTime === 'string') {
+              departureTime = leg.departureTime.split(':').slice(0, 2).join(':') // Extract HH:MM
+            } else {
+              departureTime = String(leg.departureTime)
+            }
+          } else if (leg.depart_time) {
+            if (typeof leg.depart_time === 'string') {
+              departureTime = leg.depart_time.split(':').slice(0, 2).join(':')
+            } else {
+              departureTime = String(leg.depart_time)
+            }
+          }
+          
+          return {
+            ...leg,
+            departureDate,
+            departureTime,
+            // Preserve original fields for backward compatibility
+            depart_dt: leg.depart_dt,
+            depart_time: leg.depart_time,
+          }
+        })
+      }
+    }
+    
+    return quote
+  }, [quote])
+
+  // Use normalizedQuote throughout to ensure legs are always properly formatted
+  const workingQuote = normalizedQuote || quote
+
   useEffect(() => {
     if (quote && !hasViewed) {
       // TODO: Add analytics tracking here if needed
@@ -252,8 +315,8 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
   useEffect(() => {
     const loadLogo = async () => {
       try {
-        if (!quote?.tenant_id) return
-        const res = await fetch(`/api/tenant-logo?tenantId=${encodeURIComponent(quote.tenant_id)}`)
+        if (!workingQuote?.tenant_id) return
+        const res = await fetch(`/api/tenant-logo?tenantId=${encodeURIComponent(workingQuote.tenant_id)}`)
         if (!res.ok) return
         const json = await res.json()
         if (json?.logoUrl) setTenantLogoUrl(json.logoUrl)
@@ -262,7 +325,7 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
       }
     }
     loadLogo()
-  }, [quote?.tenant_id])
+  }, [workingQuote?.tenant_id])
 
   // Initialize selectedOptionId from quote data and handle auto-selection
   useEffect(() => {
@@ -297,7 +360,7 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
     }
   }, [quote?.selectedOptionId, quote?.options, quote?.status, selectedOptionId])
 
-  const selectedOption = quote?.options?.find((o) => o.id === selectedOptionId) || null
+  const selectedOption = workingQuote?.options?.find((o: any) => o.id === selectedOptionId) || null
 
   // Helper function to call trip_notifications edge function via API route
   const callTripNotifications = async (
@@ -307,18 +370,18 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
     try {
       console.log("🔔 callTripNotifications called:", { actionType, metadata, quote: quote?.id })
       
-      if (!quote?.tenant_id || !quote?.customer?.email) {
+      if (!workingQuote?.tenant_id || !workingQuote?.customer?.email) {
         console.warn("⚠️ Missing required quote data for trip_notifications:", {
-          hasTenantId: !!quote?.tenant_id,
-          hasEmail: !!quote?.customer?.email,
+          hasTenantId: !!workingQuote?.tenant_id,
+          hasEmail: !!workingQuote?.customer?.email,
           verifiedEmail: !!verifiedEmail,
         })
         return
       }
 
       const payload = {
-        tenant_id: quote.tenant_id,
-        email: quote.customer.email || verifiedEmail || "",
+        tenant_id: workingQuote.tenant_id,
+        email: workingQuote.customer.email || verifiedEmail || "",
         action_type: actionType,
         metadata,
       }
@@ -363,7 +426,7 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
     setSelectedOptionId(optionId)
 
     try {
-      const response = await fetch(`/api/quotes/${quote.id}`, {
+      const response = await fetch(`/api/quotes/${workingQuote.id}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -403,7 +466,7 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
 
     setIsSubmitting(true)
     try {
-      const response = await fetch(`/api/quotes/${quote.id}`, {
+      const response = await fetch(`/api/quotes/${workingQuote.id}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -439,22 +502,22 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
         // Don't throw - allow redirect to proceed even if notification fails
       } else {
         console.log("🔔 Sending notification with:", {
-          quote_id: quote.id,
+          quote_id: workingQuote.id,
           selected_option_id: selectedOptionId,
-          optionExists: quote.options?.some(opt => opt.id === selectedOptionId),
+          optionExists: workingQuote.options?.some((opt: any) => opt.id === selectedOptionId),
         })
 
         // Call trip_notifications edge function for quote_accepted
         await callTripNotifications("quote_accepted", {
-          quote_id: quote.id,
+          quote_id: workingQuote.id,
           selected_option_id: selectedOptionId,
-          created_by: quote.created_by_user_id || quote.created_by || null,
+          created_by: workingQuote.created_by_user_id || workingQuote.created_by || null,
         })
       }
 
       // Redirect to success page instead of showing toast
-      const logo = quote.branding?.logo || "/images/aero-iq-logo.png"
-      const successUrl = `/success?name=${encodeURIComponent(quote.customer?.name || "Valued Customer")}&quoteId=${quote.id}&logo=${encodeURIComponent(logo)}`
+      const logo = workingQuote.branding?.logo || "/images/aero-iq-logo.png"
+      const successUrl = `/success?name=${encodeURIComponent(workingQuote.customer?.name || "Valued Customer")}&quoteId=${workingQuote.id}&logo=${encodeURIComponent(logo)}`
       window.location.href = successUrl
     } catch (error: any) {
       console.error("Failed to accept quote:", error)
@@ -481,7 +544,7 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
 
     setIsSubmitting(true)
     try {
-      const response = await fetch(`/api/quotes/${quote.id}`, {
+      const response = await fetch(`/api/quotes/${workingQuote.id}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -510,7 +573,7 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
 
       // Call trip_notifications edge function for quote_declined
       await callTripNotifications("quote_declined", {
-        quote_id: quote.id,
+        quote_id: workingQuote.id,
         reason: declineReason,
         notes: declineNotes || null,
       })
@@ -536,7 +599,7 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
   // =========================
 
   // Show loading state if quote is not available
-  if (!quote) {
+  if (!workingQuote) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
@@ -549,7 +612,7 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
 
   // REAL DATA (from store) wired into props/sections
   const servicesTotal =
-    quote.services?.reduce((sum, s) => {
+    workingQuote.services?.reduce((sum: number, s: any) => {
       const amount = s.amount || 0
       return sum + (isNaN(amount) ? 0 : amount)
     }, 0) || 0
@@ -570,13 +633,13 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
 
   const displayOptions =
     (["client_accepted", "availability_confirmed", "payment_received", "itinerary_created"] as const).includes(
-      quote.status,
+      workingQuote.status,
     ) && selectedOptionId
       ? [
-          ...quote.options.filter((o) => o.id === selectedOptionId),
-          ...quote.options.filter((o) => o.id !== selectedOptionId),
+          ...workingQuote.options.filter((o: any) => o.id === selectedOptionId),
+          ...workingQuote.options.filter((o: any) => o.id !== selectedOptionId),
         ]
-      : quote.options || []
+      : workingQuote.options || []
 
   const getStatusDisplay = (status: string) => {
     switch (status) {
@@ -599,14 +662,14 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
     }
   }
 
-  const statusDisplay = getStatusDisplay(quote.status)
+  const statusDisplay = getStatusDisplay(workingQuote.status)
   const StatusIcon = statusDisplay.icon
 
   const getButtonText = () => {
     if (!isLocked) {
       return selectedOptionId ? "Confirm & Request Availability" : "Select an aircraft to accept"
     }
-    switch (quote.status) {
+    switch (workingQuote.status) {
       case "accepted":
         return "Quote Accepted - Awaiting Availability"
       case "availability_confirmed":
@@ -630,7 +693,7 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
         ? { background: "#1e40af !important", color: "#ffffff !important" }
         : { background: "#e5e7eb !important", color: "#4b5563 !important" }
     }
-    switch (quote.status) {
+    switch (workingQuote.status) {
       case "itinerary_created":
         return { background: "#059669 !important", color: "#ffffff !important" }
       case "declined":
@@ -720,17 +783,17 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
                 </div>
               )}
               <div>
-                <p className="font-semibold text-sm">{quote.customer?.name ?? "Fernando Arriaga"}</p>
-                <p className="text-xs text-gray-600 font-light">{quote.customer?.company ?? "Spark IQ"}</p>
+                <p className="font-semibold text-sm">{workingQuote.customer?.name ?? "Fernando Arriaga"}</p>
+                <p className="text-xs text-gray-600 font-light">{workingQuote.customer?.company ?? "Spark IQ"}</p>
               </div>
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
                   <Mail className="h-4 w-4 text-gray-500" />
-                  <span className="text-xs font-light">{quote.customer?.email ?? "farriaga@sparkiq.io"}</span>
+                  <span className="text-xs font-light">{workingQuote.customer?.email ?? "farriaga@sparkiq.io"}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Phone className="h-4 w-4 text-gray-500" />
-                  <span className="text-xs font-light">{quote.customer?.phone ?? "619-606-1123"}</span>
+                  <span className="text-xs font-light">{workingQuote.customer?.phone ?? "619-606-1123"}</span>
                 </div>
               </div>
             </div>
@@ -749,18 +812,18 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
           <SectionCard>
             <div className="divide-y divide-gray-200">
               <p className="font-semibold text-sm py-1.5">Trip Summary</p>
-              {quote.legs?.map((leg, index) => (
+              {workingQuote.legs?.map((leg: any, index: number) => (
                 <LegRow key={index} leg={leg} index={index} />
               ))}
             </div>
           </SectionCard>
 
           {/* Additional Services (list) */}
-          {quote.services?.length > 0 && (
+          {workingQuote.services?.length > 0 && (
             <SectionCard>
               <p className="font-semibold text-sm">Additional Services</p>
               <ul className="space-y-0 text-xs font-light">
-                {quote.services.map((service) => (
+                {workingQuote.services.map((service: any) => (
                   <li key={service.id} className="text-gray-700">
                     <span className="font-medium">{service.name}</span>
                     {service.description && <span className="text-gray-500"> — {service.description}</span>}
@@ -780,7 +843,7 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
                 <span className="font-semibold text-right text-xs">{formatCurrency(selectedOptionTotal)}</span>
               </div>
 
-              {quote.services?.map((s) => (
+              {workingQuote.services?.map((s: any) => (
                 <div key={s.id} className="grid grid-cols-2 items-center text-xs">
                   <span className="text-gray-600 font-light">{s.name}</span>
                   <span className="text-right font-light">{formatCurrency(s.amount)}</span>
@@ -810,14 +873,14 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
               </Badge>
             </div>
             <div className={layoutClasses.grid}>
-              {displayOptions.map((option) => (
+              {displayOptions.map((option: any) => (
                 <div key={option.id} className="w-full">
                   <AdaptiveQuoteCard
                     option={option}
                     isSelected={option.id === selectedOptionId}
                     isLocked={isLocked}
                     onSelect={() => handleSelectOption(option.id)}
-                    primaryColor={quote.branding?.primaryColor}
+                    primaryColor={workingQuote.branding?.primaryColor}
                     hasSelectedOption={!!selectedOptionId}
                   />
                 </div>
@@ -826,9 +889,9 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
           </div>
 
           {/* Mobile Terms (visible on phones) */}
-          {quote.options?.length >= 1 && quote.terms && (
+          {workingQuote.options?.length >= 1 && workingQuote.terms && (
             <SectionCard className="mt-2">
-              <p className="text-xs text-muted-foreground whitespace-pre-wrap font-light">{quote.terms}</p>
+              <p className="text-xs text-muted-foreground whitespace-pre-wrap font-light">{workingQuote.terms}</p>
             </SectionCard>
           )}
 
@@ -846,9 +909,9 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
             "
           >
             <div className="space-y-3 pb-6">
-              {quote.status === "itinerary_created" && (
+              {workingQuote.status === "itinerary_created" && (
                 <Button asChild className="w-full !bg-gray-600 hover:!bg-gray-700 !text-white !font-semibold">
-                  <a href={`/itineraries/${quote.id}`} target="_blank" rel="noopener noreferrer">
+                  <a href={`/itineraries/${workingQuote.id}`} target="_blank" rel="noopener noreferrer">
                     View Your Itinerary
                   </a>
                 </Button>
@@ -871,9 +934,9 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
               {/* Not Interested button - show below confirm button */}
               {!isLocked &&
                 !selectedOptionId &&
-                (quote.status === "pending_response" ||
-                  quote.status === "opened" ||
-                  quote.status === "awaiting response") && (
+                (workingQuote.status === "pending_response" ||
+                  workingQuote.status === "opened" ||
+                  workingQuote.status === "awaiting response") && (
                   <Button
                     variant="outline"
                     className="w-full border-gray-300 text-gray-700 hover:bg-gray-100 bg-transparent"
@@ -1006,18 +1069,18 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
                     <div className="pb-4 border-b border-gray-200/50">
                       <p className="font-semibold text-sm mb-3">Trip Summary</p>
                       <div className="divide-y divide-gray-200">
-                        {quote.legs?.map((leg, index) => (
+                        {workingQuote.legs?.map((leg: any, index: number) => (
                           <LegRow key={index} leg={leg} index={index} />
                         ))}
                       </div>
                     </div>
 
                     {/* Additional Services */}
-                    {quote.services?.length > 0 && (
+                    {workingQuote.services?.length > 0 && (
                       <div className="pb-4 border-b border-gray-200/50">
                         <p className="font-semibold text-sm mb-3">Additional Services</p>
                         <ul className="space-y-1 text-xs font-light">
-                          {quote.services.map((service) => (
+                          {workingQuote.services.map((service: any) => (
                             <li key={service.id} className="text-gray-700">
                               <span className="font-medium">{service.name}</span>
                               {service.description && <span className="text-gray-500"> — {service.description}</span>}
@@ -1038,7 +1101,7 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
                           </span>
                         </div>
 
-                        {quote.services?.map((s) => (
+                        {workingQuote.services?.map((s: any) => (
                           <div key={s.id} className="grid grid-cols-2 items-center text-xs">
                             <span className="text-gray-600 font-light">{s.name}</span>
                             <span className="text-right font-light">{formatCurrency(s.amount)}</span>
@@ -1130,14 +1193,14 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
                 </div>
 
                 <div className="px-2 xl:px-4 space-y-2 lg:space-y-3 xl:space-y-4 lg:px-0">
-                  {displayOptions.map((option) => (
+                  {displayOptions.map((option: any) => (
                     <div key={option.id} className="w-full">
                       <AdaptiveQuoteCard
                         option={option}
                         isSelected={option.id === selectedOptionId}
                         isLocked={isLocked}
                         onSelect={() => handleSelectOption(option.id)}
-                        primaryColor={quote.branding?.primaryColor}
+                        primaryColor={workingQuote.branding?.primaryColor}
                         hasSelectedOption={!!selectedOptionId}
                       />
                     </div>

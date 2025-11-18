@@ -211,6 +211,10 @@ export default function ActionPage({ params }: { params: { token: string } }) {
       setVerified(linkData)
 
       if (linkData.action_type === "quote" && linkData.metadata?.quote_id) {
+        // Add a small delay to ensure verify route's status update completes
+        // This prevents race conditions where quote is fetched before status update
+        await new Promise(resolve => setTimeout(resolve, 300))
+        
         try {
           const quoteRes = await safeFetchJSON(`${API_ENDPOINTS.QUOTES}/${linkData.metadata.quote_id}`, {
             method: "GET",
@@ -219,9 +223,41 @@ export default function ActionPage({ params }: { params: { token: string } }) {
               "x-public-quote": "true",
             },
           })
+          
+          // Ensure legs data is properly formatted
+          if (quoteRes?.legs) {
+            quoteRes.legs = quoteRes.legs.map((leg: any) => ({
+              ...leg,
+              departureDate: leg.departureDate || leg.depart_dt || "",
+              departureTime: leg.departureTime || leg.depart_time || "",
+            }))
+          }
+          
           setQuote(quoteRes)
         } catch (quoteErr) {
           console.error("Failed to fetch quote:", quoteErr)
+          // Try one more time after a longer delay
+          setTimeout(async () => {
+            try {
+              const retryRes = await safeFetchJSON(`${API_ENDPOINTS.QUOTES}/${linkData.metadata.quote_id}`, {
+                method: "GET",
+                headers: {
+                  "content-type": "application/json",
+                  "x-public-quote": "true",
+                },
+              })
+              if (retryRes?.legs) {
+                retryRes.legs = retryRes.legs.map((leg: any) => ({
+                  ...leg,
+                  departureDate: leg.departureDate || leg.depart_dt || "",
+                  departureTime: leg.departureTime || leg.depart_time || "",
+                }))
+              }
+              setQuote(retryRes)
+            } catch (retryErr) {
+              console.error("Retry fetch also failed:", retryErr)
+            }
+          }, 1000)
         }
       }
     } catch (e: any) {

@@ -167,11 +167,18 @@ export async function POST(req: Request) {
             quoteUpdates.first_opened_at = now.toISOString()
           }
 
-          // Update database
-          await supabase
+          // Update database - only update status and tracking fields, preserve all other data
+          const { error: updateError } = await supabase
             .from("quote")
             .update(quoteUpdates)
             .eq("id", link.metadata.quote_id)
+
+          if (updateError) {
+            console.error("❌ Failed to update quote status:", updateError)
+            // Non-critical, continue even if update fails
+          } else {
+            console.log("✅ Quote status updated to 'opened' for quote:", link.metadata.quote_id)
+          }
 
           // Invalidate cache so next read is fresh
           await invalidateQuoteCache(link.metadata.quote_id)

@@ -219,29 +219,56 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       ...quote,
       // Map selected_option_id to selectedOptionId for frontend compatibility
       selectedOptionId: quote.selected_option_id || null,
-      legs: (legs || []).map((leg: any) => ({
-        id: leg.id,
-        origin: leg.origin_code,
-        destination: leg.destination_code,
-        // Convert null to empty string for form inputs, preserve actual values
-        departureDate: leg.depart_dt || "",
-        departureTime: leg.depart_time || "",
-        passengers: leg.pax_count,
-        notes: leg.notes,
-        fboOriginId: leg.fbo_origin_id,
-        fboDestinationId: leg.fbo_destination_id,
-        origin_lat: leg.origin_lat,
-        origin_long: leg.origin_long,
-        destination_lat: leg.destination_lat,
-        destination_long: leg.destination_long,
-        distance_nm: leg.distance_nm,
-        // Preserve original field names for backward compatibility
-        origin_code: leg.origin_code,
-        destination_code: leg.destination_code,
-        depart_dt: leg.depart_dt,
-        depart_time: leg.depart_time,
-        pax_count: leg.pax_count,
-      })),
+      legs: (legs || []).map((leg: any) => {
+        // Ensure dates/times are always strings (never null/undefined) for form compatibility
+        // Handle both DATE and string formats from database
+        let departDate = ""
+        if (leg.depart_dt) {
+          if (typeof leg.depart_dt === 'string') {
+            // If it's already a string, use it (might be ISO date or date string)
+            departDate = leg.depart_dt.split('T')[0] // Extract date part if ISO format
+          } else if (leg.depart_dt instanceof Date) {
+            // If it's a Date object, convert to YYYY-MM-DD
+            departDate = leg.depart_dt.toISOString().split('T')[0]
+          } else {
+            departDate = String(leg.depart_dt)
+          }
+        }
+        
+        let departTime = ""
+        if (leg.depart_time) {
+          if (typeof leg.depart_time === 'string') {
+            // If it's already a string, use it (might be HH:MM:SS or HH:MM)
+            departTime = leg.depart_time.split(':').slice(0, 2).join(':') // Extract HH:MM part
+          } else {
+            departTime = String(leg.depart_time)
+          }
+        }
+        
+        return {
+          id: leg.id,
+          origin: leg.origin || leg.origin_code || "",
+          destination: leg.destination || leg.destination_code || "",
+          // Convert null/undefined to empty string for form inputs
+          departureDate: departDate,
+          departureTime: departTime,
+          passengers: leg.passengers || leg.pax_count || 1,
+          notes: leg.notes || "",
+          fboOriginId: leg.fbo_origin_id,
+          fboDestinationId: leg.fbo_destination_id,
+          origin_lat: leg.origin_lat ?? null,
+          origin_long: leg.origin_long ?? null,
+          destination_lat: leg.destination_lat ?? null,
+          destination_long: leg.destination_long ?? null,
+          distance_nm: leg.distance_nm ?? null,
+          // Preserve original field names for backward compatibility
+          origin_code: leg.origin_code || "",
+          destination_code: leg.destination_code || "",
+          depart_dt: leg.depart_dt,
+          depart_time: leg.depart_time,
+          pax_count: leg.pax_count || leg.passengers || 1,
+        }
+      }),
       options: (options || []).map((option: any) => {
         const aircraft = aircraftData.find(a => a.id === option.aircraft_id)
         const aircraftModel = aircraft?.aircraft_model
