@@ -530,35 +530,33 @@ const handleNext = () => {
                           <AccordionTrigger className="text-sm font-medium">
                             Fees & Taxes
                           </AccordionTrigger>
-                          <AccordionContent className="space-y-4 pt-2">
-                            <p className="text-xs text-muted-foreground mb-4">
+                          <AccordionContent className="space-y-3 pt-2">
+                            <p className="text-xs text-muted-foreground mb-3">
                               Fees and taxes are pre-calculated but can be edited as needed. Toggle switches to enable/disable automatic calculation.
                             </p>
 
                             {/* Federal Excise Tax (FET) */}
-                            <div className="space-y-2 p-3 bg-muted/40 rounded-lg">
-                              <div className="flex items-center justify-between">
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <Label className="font-medium text-sm">Federal Excise Tax (FET)</Label>
-                                    <Switch
-                                      checked={option.fetEnabled === true}
-                                      onCheckedChange={(enabled) => {
-                                        const fees = calculateFees({ ...option, fetEnabled: enabled })
-                                        handleUpdateOption(option.id, {
-                                          fetEnabled: enabled,
-                                          ...fees,
-                                        })
-                                      }}
-                                    />
-                                  </div>
-                                  <p className="text-xs text-muted-foreground mb-2">
-                                    Calculated: 7.5% of Operator Cost = {formatCurrency((option.cost_operator || 0) * 0.075)}
-                                  </p>
+                            <div className="grid grid-cols-[1fr_auto] gap-4 items-center p-3 bg-muted/40 rounded-lg">
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-2">
+                                  <Label className="font-medium text-sm">Federal Excise Tax (FET)</Label>
+                                  <Switch
+                                    checked={option.fetEnabled === true}
+                                    onCheckedChange={(enabled) => {
+                                      const fees = calculateFees({ ...option, fetEnabled: enabled })
+                                      handleUpdateOption(option.id, {
+                                        fetEnabled: enabled,
+                                        ...fees,
+                                      })
+                                    }}
+                                  />
                                 </div>
+                                <p className="text-xs text-muted-foreground">
+                                  7.5% of Operator Cost = {formatCurrency((option.cost_operator || 0) * 0.075)}
+                                </p>
                               </div>
-                              <div className="grid gap-1.5">
-                                <Label className="text-xs">Amount</Label>
+                              <div className="w-32">
+                                <Label className="text-xs mb-1.5 block">Amount</Label>
                                 <Input
                                   type="number"
                                   step="0.01"
@@ -571,34 +569,33 @@ const handleNext = () => {
                                   }}
                                   onFocus={(e) => e.target.select()}
                                   placeholder={formatCurrency((option.cost_operator || 0) * 0.075)}
+                                  className="text-sm"
                                 />
                               </div>
                             </div>
 
                             {/* US Domestic Segment Fee */}
-                            <div className="space-y-2 p-3 bg-muted/40 rounded-lg">
-                              <div className="flex items-center justify-between">
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <Label className="font-medium text-sm">US Domestic Segment Fee</Label>
-                                    <Switch
-                                      checked={option.usDomesticEnabled === true}
-                                      onCheckedChange={(enabled) => {
-                                        const fees = calculateFees({ ...option, usDomesticEnabled: enabled })
-                                        handleUpdateOption(option.id, {
-                                          usDomesticEnabled: enabled,
-                                          ...fees,
-                                        })
-                                      }}
-                                    />
-                                  </div>
-                                  <p className="text-xs text-muted-foreground mb-2">
-                                    Calculated: $5 × {getPassengerCount()} passengers = {formatCurrency(5 * getPassengerCount())}
-                                  </p>
+                            <div className="grid grid-cols-[1fr_auto] gap-4 items-center p-3 bg-muted/40 rounded-lg">
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-2">
+                                  <Label className="font-medium text-sm">US Domestic Segment Fee</Label>
+                                  <Switch
+                                    checked={option.usDomesticEnabled === true}
+                                    onCheckedChange={(enabled) => {
+                                      const fees = calculateFees({ ...option, usDomesticEnabled: enabled })
+                                      handleUpdateOption(option.id, {
+                                        usDomesticEnabled: enabled,
+                                        ...fees,
+                                      })
+                                    }}
+                                  />
                                 </div>
+                                <p className="text-xs text-muted-foreground">
+                                  $5 × {getPassengerCount()} passengers = {formatCurrency(5 * getPassengerCount())}
+                                </p>
                               </div>
-                              <div className="grid gap-1.5">
-                                <Label className="text-xs">Amount</Label>
+                              <div className="w-32">
+                                <Label className="text-xs mb-1.5 block">Amount</Label>
                                 <Input
                                   type="number"
                                   step="0.01"
@@ -611,34 +608,33 @@ const handleNext = () => {
                                   }}
                                   onFocus={(e) => e.target.select()}
                                   placeholder={formatCurrency(5 * getPassengerCount())}
+                                  className="text-sm"
                                 />
                               </div>
                             </div>
 
                             {/* US International Head Tax */}
-                            <div className="space-y-2 p-3 bg-muted/40 rounded-lg">
-                              <div className="flex items-center justify-between">
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <Label className="font-medium text-sm">US International Head Tax</Label>
-                                    <Switch
-                                      checked={option.usInternationalEnabled === true}
-                                      onCheckedChange={(enabled) => {
-                                        const fees = calculateFees({ ...option, usInternationalEnabled: enabled })
-                                        handleUpdateOption(option.id, {
-                                          usInternationalEnabled: enabled,
-                                          ...fees,
-                                        })
-                                      }}
-                                    />
-                                  </div>
-                                  <p className="text-xs text-muted-foreground mb-2">
-                                    Calculated: $22.40 × {getPassengerCount()} passengers = {formatCurrency(22.40 * getPassengerCount())}
-                                  </p>
+                            <div className="grid grid-cols-[1fr_auto] gap-4 items-center p-3 bg-muted/40 rounded-lg">
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-2">
+                                  <Label className="font-medium text-sm">US International Head Tax</Label>
+                                  <Switch
+                                    checked={option.usInternationalEnabled === true}
+                                    onCheckedChange={(enabled) => {
+                                      const fees = calculateFees({ ...option, usInternationalEnabled: enabled })
+                                      handleUpdateOption(option.id, {
+                                        usInternationalEnabled: enabled,
+                                        ...fees,
+                                      })
+                                    }}
+                                  />
                                 </div>
+                                <p className="text-xs text-muted-foreground">
+                                  $22.40 × {getPassengerCount()} passengers = {formatCurrency(22.40 * getPassengerCount())}
+                                </p>
                               </div>
-                              <div className="grid gap-1.5">
-                                <Label className="text-xs">Amount</Label>
+                              <div className="w-32">
+                                <Label className="text-xs mb-1.5 block">Amount</Label>
                                 <Input
                                   type="number"
                                   step="0.01"
@@ -651,6 +647,7 @@ const handleNext = () => {
                                   }}
                                   onFocus={(e) => e.target.select()}
                                   placeholder={formatCurrency(22.40 * getPassengerCount())}
+                                  className="text-sm"
                                 />
                               </div>
                             </div>
