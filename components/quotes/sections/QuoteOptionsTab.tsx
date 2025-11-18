@@ -35,21 +35,72 @@ export function QuoteOptionsTab({ quote, onUpdate, onNext, onBack }: Props) {
   const [saving, setSaving] = useState(false)
   const [initialized, setInitialized] = useState(false)
 
-  // 🧩 Normalize options after quote is loaded (ensures no undefined fees)
+  // Helper to get passenger count from quote legs
+  const getPassengerCount = (): number => {
+    // Get passenger count from the first leg (all legs should have the same passenger count)
+    const legs = Array.isArray(quote?.legs) ? quote.legs : []
+    if (legs.length > 0) {
+      return legs[0]?.passengers || legs[0]?.pax_count || 1
+    }
+    return 1 // Default fallback
+  }
+
+  // Calculate fees based on enabled switches
+  const calculateFees = (option: any) => {
+    const operatorCost = option.cost_operator || 0
+    const passengerCount = getPassengerCount()
+    
+    let price_fet = 0
+    let price_extras_total = 0
+    let price_taxes = 0
+
+    if (option.fetEnabled === true) {
+      price_fet = operatorCost * 0.075 // 7.5% of operator cost
+    }
+    if (option.usDomesticEnabled === true) {
+      price_extras_total = 5 * passengerCount // $5 per passenger
+    }
+    if (option.usInternationalEnabled === true) {
+      price_taxes = 22.40 * passengerCount // $22.40 per passenger
+    }
+
+    return { price_fet, price_extras_total, price_taxes }
+  }
+
+  // 🧩 Normalize options after quote is loaded (ensures fee switches are initialized)
 useEffect(() => {
   if (!quote?.options) return
 
-  const normalized = quote.options.map((o) => ({
-    ...o,
-    fees: Array.isArray(o.fees) ? o.fees : [],
-    feesEnabled: o.feesEnabled ?? false,
-  }))
+  const normalized = quote.options.map((o: any) => {
+    const normalizedOption = {
+      ...o,
+      // Initialize fee switches if not present (default to false - users enable as needed)
+      fetEnabled: o.fetEnabled !== undefined ? o.fetEnabled : false,
+      usDomesticEnabled: o.usDomesticEnabled !== undefined ? o.usDomesticEnabled : false,
+      usInternationalEnabled: o.usInternationalEnabled !== undefined ? o.usInternationalEnabled : false,
+      // Ensure fee columns exist
+      price_fet: o.price_fet ?? 0,
+      price_taxes: o.price_taxes ?? 0,
+      price_extras_total: o.price_extras_total ?? 0,
+    }
+    
+    // Recalculate fees if aircraft is selected
+    if (normalizedOption.aircraft_id) {
+      const fees = calculateFees(normalizedOption)
+      return {
+        ...normalizedOption,
+        ...fees,
+      }
+    }
+    
+    return normalizedOption
+  })
 
   // Only update if something changed (avoid re-renders)
   if (JSON.stringify(normalized) !== JSON.stringify(quote.options)) {
     onUpdate({ options: normalized })
   }
-}, [quote])
+}, [quote, aircraftCache])
 
 
   // 🧮 Helper: renumber all options (Option 1, Option 2, etc.)
@@ -162,13 +213,13 @@ useEffect(() => {
       cost_operator: 0,
       price_commission: 0,
       price_base: 0,
+      price_fet: 0,
+      price_taxes: 0,
+      price_extras_total: 0,
       price_total: 0,
-      fees: [
-        { id: crypto.randomUUID(), name: "US Domestic Segment Fee", amount: 0 },
-        { id: crypto.randomUUID(), name: "US International Head Tax", amount: 0 },
-        { id: crypto.randomUUID(), name: "Federal Excise Tax (FET)", amount: 0 },
-      ],
-      feesEnabled: false,
+      fetEnabled: false, // FET disabled by default
+      usDomesticEnabled: false, // US Domestic disabled by default
+      usInternationalEnabled: false, // US International disabled by default
       selectedAmenities: [],
       notes: "",
       // Initialize empty aircraft data objects for consistency
@@ -236,12 +287,27 @@ const handleUpdateOption = (id: string, updates: Partial<QuoteOption>) => {
       mtowKg: aircraft.mtow_kg || null,
     }
 
-    handleUpdateOption(optionId, {
+    // Get the current option to preserve existing values
+    const currentOption = options.find((o) => o.id === optionId)
+    const updatedOption = {
+      ...currentOption,
       aircraft_id: aircraft.aircraft_id,
       aircraft_tail_id: aircraft.aircraft_id,
       selectedAmenities: aircraft.amenities || [],
       aircraftModel,
       aircraftTail,
+      // Initialize fee switches if not already set (default to false)
+      fetEnabled: currentOption?.fetEnabled !== undefined ? currentOption.fetEnabled : false,
+      usDomesticEnabled: currentOption?.usDomesticEnabled !== undefined ? currentOption.usDomesticEnabled : false,
+      usInternationalEnabled: currentOption?.usInternationalEnabled !== undefined ? currentOption.usInternationalEnabled : false,
+    }
+    
+    // Recalculate fees based on the updated option
+    const fees = calculateFees(updatedOption)
+    
+    handleUpdateOption(optionId, {
+      ...updatedOption,
+      ...fees,
     })
 
     if (!opts?.skipToast) {
@@ -287,10 +353,15 @@ const handleUpdateOption = (id: string, updates: Partial<QuoteOption>) => {
 }
 
   const calculateOptionTotal = (option: any) => {
-    const feeTotal = option.feesEnabled
-      ? (option.fees || []).reduce((sum: number, f: any) => sum + (f.amount || 0), 0)
-      : 0
-    return (option.cost_operator || 0) + (option.price_commission || 0) + (option.price_base || 0) + feeTotal
+    const fees = calculateFees(option)
+    return (
+      (option.cost_operator || 0) + 
+      (option.price_commission || 0) + 
+      (option.price_base || 0) + 
+      fees.price_fet + 
+      fees.price_extras_total + 
+      fees.price_taxes
+    )
   }
 
   const total = options.reduce((sum, o) => sum + calculateOptionTotal(o), 0)
@@ -406,11 +477,15 @@ const handleNext = () => {
                         <Input
                           type="number"
                           value={option.cost_operator ?? 0}
-                          onChange={(e) =>
+                          onChange={(e) => {
+                            const operatorCost = parseFloat(e.target.value) || 0
+                            const updatedOption = { ...option, cost_operator: operatorCost }
+                            const fees = calculateFees(updatedOption)
                             handleUpdateOption(option.id, {
-                              cost_operator: parseFloat(e.target.value) || 0,
+                              cost_operator: operatorCost,
+                              ...fees,
                             })
-                          }
+                          }}
                           onFocus={(e) => e.target.select()}
                         />
                       </div>
@@ -429,21 +504,6 @@ const handleNext = () => {
                       </div>
                     </div>
 
-                    {/* Tax */}
-                    <div className="grid gap-1.5">
-                      <Label>Tax</Label>
-                      <Input
-                        type="number"
-                        value={option.price_base ?? 0}
-                        onChange={(e) =>
-                          handleUpdateOption(option.id, {
-                            price_base: parseFloat(e.target.value) || 0,
-                          })
-                        }
-                        onFocus={(e) => e.target.select()}
-                      />
-                    </div>
-
                     {/* Notes */}
                     <div className="grid gap-1.5">
                       <Label>Option Notes</Label>
@@ -457,87 +517,91 @@ const handleNext = () => {
                       />
                     </div>
 
-                    {/* Fees */}
+                    {/* Fees & Taxes */}
                     <div className="pt-2 border-t">
-                      <div className="flex items-center justify-between mb-2">
-                        <div>
-                          <Label className="font-medium">Fees & Taxes</Label>
-                          <p className="text-xs text-muted-foreground">
-                            Enable to apply applicable fees and taxes.
-                          </p>
-                        </div>
-                        <Switch
-                          checked={option.feesEnabled}
-                          onCheckedChange={(enabled) =>
-                            handleUpdateOption(option.id, { feesEnabled: enabled })
-                          }
-                        />
+                      <div className="mb-3">
+                        <Label className="font-medium">Fees & Taxes</Label>
+                        <p className="text-xs text-muted-foreground">
+                          Automatically calculated fees and taxes based on operator cost and passenger count.
+                        </p>
                       </div>
 
-                      {option.feesEnabled && (
-                        <div className="space-y-2">
-                          {(option.fees ?? []).map((fee) => (
-                            <div
-                              key={fee.id}
-                              className="flex items-center gap-3 p-2 bg-muted/40 rounded-lg"
-                            >
-                              <Input
-                                value={fee.name}
-                                onChange={(e) =>
-                                  handleUpdateOption(option.id, {
-                                    fees: option.fees.map((f) =>
-                                      f.id === fee.id ? { ...f, name: e.target.value } : f
-                                    ),
-                                  })
-                                }
-                                className="flex-1"
-                              />
-                              <Input
-                                type="number"
-                                step="0.01"
-                                value={fee.amount ?? 0}
-                                onChange={(e) =>
-                                  handleUpdateOption(option.id, {
-                                    fees: option.fees.map((f) =>
-                                      f.id === fee.id
-                                        ? {
-                                            ...f,
-                                            amount: parseFloat(e.target.value) || 0,
-                                          }
-                                        : f
-                                    ),
-                                  })
-                                }
-                                onFocus={(e) => e.target.select()}
-                                className="w-24"
-                              />
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() =>
-                                  handleUpdateOption(option.id, {
-                                    fees: option.fees.filter((f) => f.id !== fee.id),
-                                  })
-                                }
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
+                      <div className="space-y-3">
+                        {/* Federal Excise Tax (FET) */}
+                        <div className="flex items-center justify-between p-3 bg-muted/40 rounded-lg">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <Label className="font-medium">Federal Excise Tax (FET)</Label>
+                              <span className="text-xs text-muted-foreground">
+                                (7.5% of Operator Cost)
+                              </span>
                             </div>
-                          ))}
-
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-  const newFee: QuoteFee = { id: crypto.randomUUID(), name: "Custom Fee", amount: 0 }
-  handleUpdateOption(option.id, { fees: [...(option.fees ?? []), newFee] })
-}}
-
-                          >
-                            <Plus className="mr-2 h-4 w-4" /> Add Fee
-                          </Button>
+                            <p className="text-sm font-semibold text-foreground mt-1">
+                              {formatCurrency(calculateFees(option).price_fet)}
+                            </p>
+                          </div>
+                          <Switch
+                            checked={option.fetEnabled === true}
+                            onCheckedChange={(enabled) => {
+                              const fees = calculateFees({ ...option, fetEnabled: enabled })
+                              handleUpdateOption(option.id, {
+                                fetEnabled: enabled,
+                                ...fees,
+                              })
+                            }}
+                          />
                         </div>
-                      )}
+
+                        {/* US Domestic Segment Fee */}
+                        <div className="flex items-center justify-between p-3 bg-muted/40 rounded-lg">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <Label className="font-medium">US Domestic Segment Fee</Label>
+                              <span className="text-xs text-muted-foreground">
+                                ($5 × {getPassengerCount()} passengers)
+                              </span>
+                            </div>
+                            <p className="text-sm font-semibold text-foreground mt-1">
+                              {formatCurrency(calculateFees(option).price_extras_total)}
+                            </p>
+                          </div>
+                          <Switch
+                            checked={option.usDomesticEnabled === true}
+                            onCheckedChange={(enabled) => {
+                              const fees = calculateFees({ ...option, usDomesticEnabled: enabled })
+                              handleUpdateOption(option.id, {
+                                usDomesticEnabled: enabled,
+                                ...fees,
+                              })
+                            }}
+                          />
+                        </div>
+
+                        {/* US International Head Tax */}
+                        <div className="flex items-center justify-between p-3 bg-muted/40 rounded-lg">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <Label className="font-medium">US International Head Tax</Label>
+                              <span className="text-xs text-muted-foreground">
+                                ($22.40 × {getPassengerCount()} passengers)
+                              </span>
+                            </div>
+                            <p className="text-sm font-semibold text-foreground mt-1">
+                              {formatCurrency(calculateFees(option).price_taxes)}
+                            </p>
+                          </div>
+                          <Switch
+                            checked={option.usInternationalEnabled === true}
+                            onCheckedChange={(enabled) => {
+                              const fees = calculateFees({ ...option, usInternationalEnabled: enabled })
+                              handleUpdateOption(option.id, {
+                                usInternationalEnabled: enabled,
+                                ...fees,
+                              })
+                            }}
+                          />
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
