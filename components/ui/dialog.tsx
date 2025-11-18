@@ -86,6 +86,34 @@ function DialogContent({
         data-slot="dialog-content"
         className={finalClassName}
         style={{ zIndex: contentZIndex }}
+        onPointerDownOutside={(e) => {
+          // Prevent parent dialog from closing when interacting with nested dialogs
+          const target = e.target as HTMLElement
+          // Check if the click target is inside a dialog with higher z-index
+          const allDialogs = Array.from(document.querySelectorAll('[data-slot="dialog-content"]'))
+          const clickedDialog = target.closest('[data-slot="dialog-content"]')
+          if (clickedDialog) {
+            const clickedZIndex = parseInt(window.getComputedStyle(clickedDialog as HTMLElement).zIndex || '0')
+            const currentZIndex = contentZIndex
+            // If clicked dialog has higher z-index, prevent this dialog from closing
+            if (clickedZIndex > currentZIndex) {
+              e.preventDefault()
+            }
+          }
+        }}
+        onInteractOutside={(e) => {
+          // Prevent parent dialog from intercepting events from nested dialogs
+          const target = e.target as HTMLElement
+          const clickedDialog = target.closest('[data-slot="dialog-content"]')
+          if (clickedDialog) {
+            const clickedZIndex = parseInt(window.getComputedStyle(clickedDialog as HTMLElement).zIndex || '0')
+            const currentZIndex = contentZIndex
+            // If clicked dialog has higher z-index, prevent this dialog from intercepting
+            if (clickedZIndex > currentZIndex) {
+              e.preventDefault()
+            }
+          }
+        }}
         {...props}
       >
         {children}

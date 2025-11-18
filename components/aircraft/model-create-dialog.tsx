@@ -82,9 +82,11 @@ export function ModelCreateDialog({
     control,
     formState: { errors, isSubmitting },
     reset,
+    trigger,
   } = useForm<ModelFormData>({
     resolver: zodResolver(ModelFormSchema),
     mode: "onChange",
+    reValidateMode: "onChange",
     defaultValues: {
       name: "",
       categoryId: "",
@@ -176,6 +178,20 @@ export function ModelCreateDialog({
 
   const handleCreate = async (data: ModelFormData) => {
     try {
+      // Validate required fields before proceeding
+      if (!data.name || data.name.trim() === '') {
+        toast({ title: "Validation Error", description: "Model name is required.", variant: "destructive" })
+        return
+      }
+      if (!data.categoryId || data.categoryId.trim() === '') {
+        toast({ title: "Validation Error", description: "Category is required.", variant: "destructive" })
+        return
+      }
+      if (!data.manufacturerId || data.manufacturerId.trim() === '') {
+        toast({ title: "Validation Error", description: "Manufacturer is required.", variant: "destructive" })
+        return
+      }
+      
       if (!tenantId) {
         toast({ title: "Error", description: "Tenant ID not found.", variant: "destructive" })
         return
@@ -329,13 +345,26 @@ export function ModelCreateDialog({
             <DialogDescription>Add a new aircraft model to your catalog.</DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleSubmit(handleCreate)} className="space-y-8" noValidate>
+          <form 
+            onSubmit={(e) => {
+              e.stopPropagation()
+              handleSubmit(handleCreate)(e)
+            }} 
+            className="space-y-8" 
+            noValidate
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="name">Model Name *</Label>
                 <Input 
                   id="name" 
-                  {...register("name")} 
+                  {...register("name", {
+                    onChange: () => {
+                      // Trigger validation on change to clear errors immediately
+                      trigger("name")
+                    }
+                  })} 
                   placeholder="Phenom 300E"
                   autoComplete="off"
                 />
@@ -551,7 +580,13 @@ export function ModelCreateDialog({
               <Button type="button" variant="outline" onClick={() => handleDialogChange(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={isSubmitting || loading}>
+              <Button 
+                type="submit" 
+                disabled={isSubmitting || loading}
+                onClick={(e) => {
+                  e.stopPropagation()
+                }}
+              >
                 {loading ? "Creating..." : "Create Model"}
               </Button>
             </DialogFooter>
