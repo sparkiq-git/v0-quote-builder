@@ -554,15 +554,16 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
       return sum + (isNaN(amount) ? 0 : amount)
     }, 0) || 0
 
+  // Use price_total if available, otherwise calculate from all pricing components
   const selectedOptionTotal = selectedOption
-    ? (selectedOption.cost_operator || 0) +
-      (selectedOption.price_commission || 0) +
-      (selectedOption.feesEnabled
-        ? selectedOption.fees?.reduce((sum, fee) => {
-            const amount = fee.amount || 0
-            return sum + (isNaN(amount) ? 0 : amount)
-          }, 0) || 0
-        : 0)
+    ? selectedOption.price_total !== undefined && selectedOption.price_total !== null
+      ? selectedOption.price_total
+      : (Number(selectedOption.cost_operator) || 0) +
+        (Number(selectedOption.price_commission) || 0) +
+        (Number(selectedOption.price_base) || 0) +
+        (Number(selectedOption.price_fet) || 0) +
+        (Number(selectedOption.price_extras_total) || 0) +
+        (Number(selectedOption.price_taxes) || 0)
     : 0
 
   const grandTotal = (selectedOptionTotal || 0) + (servicesTotal || 0)

@@ -148,7 +148,15 @@ export function AdaptiveQuoteCard({
   const aircraftTail = option.aircraftTail
   const fallbackLabel = aircraftModel?.name || option.label || "Aircraft"
 
-  const total = (option.cost_operator || 0) + (option.price_commission || 0) + (option.price_base || 0)
+  // Use price_total if available, otherwise calculate from all pricing components
+  const total = option.price_total !== undefined && option.price_total !== null
+    ? option.price_total
+    : (Number(option.cost_operator) || 0) +
+      (Number(option.price_commission) || 0) +
+      (Number(option.price_base) || 0) +
+      (Number(option.price_fet) || 0) +
+      (Number(option.price_extras_total) || 0) +
+      (Number(option.price_taxes) || 0)
 
   const images = collectOptionImages(option, fallbackLabel)
 
