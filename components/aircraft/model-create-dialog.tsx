@@ -83,10 +83,11 @@ export function ModelCreateDialog({
     formState: { errors, isSubmitting },
     reset,
     trigger,
+    getValues,
   } = useForm<ModelFormData>({
     resolver: zodResolver(ModelFormSchema),
-    mode: "onChange",
-    reValidateMode: "onChange",
+    mode: "onSubmit", // Only validate on submit to avoid premature errors
+    reValidateMode: "onChange", // Re-validate on change after first submit attempt
     defaultValues: {
       name: "",
       categoryId: "",
@@ -178,17 +179,24 @@ export function ModelCreateDialog({
 
   const handleCreate = async (data: ModelFormData) => {
     try {
+      // Get current form values to ensure we have the latest
+      const currentValues = getValues()
+      const formData = { ...data, ...currentValues }
+      
       // Validate required fields before proceeding
-      if (!data.name || data.name.trim() === '') {
+      if (!formData.name || formData.name.trim() === '') {
         toast({ title: "Validation Error", description: "Model name is required.", variant: "destructive" })
+        trigger("name") // Trigger validation to show error
         return
       }
-      if (!data.categoryId || data.categoryId.trim() === '') {
+      if (!formData.categoryId || formData.categoryId.trim() === '') {
         toast({ title: "Validation Error", description: "Category is required.", variant: "destructive" })
+        trigger("categoryId")
         return
       }
-      if (!data.manufacturerId || data.manufacturerId.trim() === '') {
+      if (!formData.manufacturerId || formData.manufacturerId.trim() === '') {
         toast({ title: "Validation Error", description: "Manufacturer is required.", variant: "destructive" })
+        trigger("manufacturerId")
         return
       }
       
@@ -205,7 +213,7 @@ export function ModelCreateDialog({
         defaultSpeedKnots,
         images,
         ...rest
-      } = data
+      } = formData
 
       const payload = {
         ...rest,
@@ -357,18 +365,34 @@ export function ModelCreateDialog({
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="name">Model Name *</Label>
-                <Input 
-                  id="name" 
-                  {...register("name", {
-                    onChange: () => {
-                      // Trigger validation on change to clear errors immediately
-                      trigger("name")
-                    }
-                  })} 
-                  placeholder="Phenom 300E"
-                  autoComplete="off"
+                <Controller
+                  name="name"
+                  control={control}
+                  render={({ field, fieldState }) => (
+                    <>
+                      <Input 
+                        id="name" 
+                        value={field.value || ""}
+                        onChange={(e) => {
+                          const value = e.target.value
+                          field.onChange(value)
+                          // Clear error immediately when user types valid input
+                          if (fieldState.error && value.trim().length > 0) {
+                            trigger("name")
+                          }
+                        }}
+                        onBlur={field.onBlur}
+                        placeholder="Phenom 300E"
+                        autoComplete="off"
+                      />
+                      {fieldState.error && (
+                        <p className="text-sm text-destructive">
+                          {fieldState.error.message || "Name is required"}
+                        </p>
+                      )}
+                    </>
+                  )}
                 />
-                {errors.name && <p className="text-sm text-destructive">{errors.name.message || "Name is required"}</p>}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="categoryId">Category *</Label>
