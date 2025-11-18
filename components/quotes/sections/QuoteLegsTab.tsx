@@ -83,6 +83,90 @@ export function QuoteLegsTab({ quote, onUpdate, onLegsChange, onNext, onBack }: 
         ]
   )
 
+  // 🔄 Sync form state when quote.legs changes (e.g., after save/reload)
+  useEffect(() => {
+    if (!legs.length) return
+    
+    // Only update if the data actually changed to avoid unnecessary re-renders
+    const currentFirstLeg = legs[0]
+    const currentSecondLeg = legs[1]
+    
+    setFormState((prev) => {
+      const newState = {
+        origin: currentFirstLeg?.origin || "",
+        origin_code: currentFirstLeg?.origin_code || "",
+        destination: currentFirstLeg?.destination || "",
+        destination_code: currentFirstLeg?.destination_code || "",
+        departureDate: currentFirstLeg?.departureDate || currentFirstLeg?.depart_dt || "",
+        departureTime: currentFirstLeg?.departureTime || currentFirstLeg?.depart_time || "",
+        returnDate: currentSecondLeg?.departureDate || currentSecondLeg?.depart_dt || "",
+        returnTime: currentSecondLeg?.departureTime || currentSecondLeg?.depart_time || "",
+        passengers: currentFirstLeg?.passengers || currentFirstLeg?.pax_count || 1,
+        origin_lat: currentFirstLeg?.origin_lat ?? null,
+        origin_long: currentFirstLeg?.origin_long ?? null,
+        destination_lat: currentFirstLeg?.destination_lat ?? null,
+        destination_long: currentFirstLeg?.destination_long ?? null,
+      }
+      
+      // Only update if something actually changed
+      if (
+        prev.origin !== newState.origin ||
+        prev.origin_code !== newState.origin_code ||
+        prev.destination !== newState.destination ||
+        prev.destination_code !== newState.destination_code ||
+        prev.departureDate !== newState.departureDate ||
+        prev.departureTime !== newState.departureTime ||
+        prev.returnDate !== newState.returnDate ||
+        prev.returnTime !== newState.returnTime ||
+        prev.passengers !== newState.passengers
+      ) {
+        return newState
+      }
+      return prev
+    })
+    
+    // Sync multi-legs if trip type is multi-city
+    if (tripType === "multi-city" && legs.length > 0) {
+      setMultiLegs((prev) => {
+        const newLegs = legs.map((l) => ({
+          id: l.id || crypto.randomUUID(),
+          origin: l.origin || "",
+          origin_code: l.origin_code || "",
+          destination: l.destination || "",
+          destination_code: l.destination_code || "",
+          departureDate: l.departureDate || l.depart_dt || "",
+          departureTime: l.departureTime || l.depart_time || "",
+          passengers: l.passengers || l.pax_count || 1,
+          origin_lat: l.origin_lat ?? null,
+          origin_long: l.origin_long ?? null,
+          destination_lat: l.destination_lat ?? null,
+          destination_long: l.destination_long ?? null,
+        }))
+        
+        // Only update if something changed
+        if (
+          prev.length !== newLegs.length ||
+          prev.some((p, i) => {
+            const n = newLegs[i]
+            return (
+              !n ||
+              p.origin !== n.origin ||
+              p.origin_code !== n.origin_code ||
+              p.destination !== n.destination ||
+              p.destination_code !== n.destination_code ||
+              p.departureDate !== n.departureDate ||
+              p.departureTime !== n.departureTime ||
+              p.passengers !== n.passengers
+            )
+          })
+        ) {
+          return newLegs
+        }
+        return prev
+      })
+    }
+  }, [quote.legs, tripType])
+
   /* ------------------ ✈️ Auto-save on form changes ------------------ */
   useEffect(() => {
     // Auto-save when form state changes (debounced)
@@ -122,12 +206,23 @@ export function QuoteLegsTab({ quote, onUpdate, onLegsChange, onNext, onBack }: 
       }))
     })
 
+    // Helper to normalize empty strings to null
+    const normalizeDate = (date: string | null | undefined): string | null => {
+      if (!date || typeof date !== 'string' || date.trim() === '') return null
+      return date.trim()
+    }
+    
+    const normalizeTime = (time: string | null | undefined): string | null => {
+      if (!time || typeof time !== 'string' || time.trim() === '') return null
+      return time.trim()
+    }
+
     if (tripType === "multi-city") {
       // Save multi-city legs with proper date handling
       const processedLegs = multiLegs.map(leg => ({
         ...leg,
-        departureDate: leg.departureDate || null,
-        departureTime: leg.departureTime || null,
+        departureDate: normalizeDate(leg.departureDate),
+        departureTime: normalizeTime(leg.departureTime),
       }))
       console.log("🛫 Processed multi-city legs:", processedLegs)
       onLegsChange(processedLegs)
@@ -144,8 +239,8 @@ export function QuoteLegsTab({ quote, onUpdate, onLegsChange, onNext, onBack }: 
           origin_code: formState.origin_code,
           destination: formState.destination,
           destination_code: formState.destination_code,
-          departureDate: formState.departureDate || null,
-          departureTime: formState.departureTime || null,
+          departureDate: normalizeDate(formState.departureDate),
+          departureTime: normalizeTime(formState.departureTime),
           passengers: formState.passengers,
           origin_lat: formState.origin_lat,
           origin_long: formState.origin_long,
@@ -155,15 +250,15 @@ export function QuoteLegsTab({ quote, onUpdate, onLegsChange, onNext, onBack }: 
       ]
       
       // Add return leg for round-trip
-      if (tripType === "round-trip" && formState.returnDate) {
+      if (tripType === "round-trip" && normalizeDate(formState.returnDate)) {
         newLegs.push({
           id: legs[1]?.id || crypto.randomUUID(),
           origin: formState.destination,
           origin_code: formState.destination_code,
           destination: formState.origin,
           destination_code: formState.origin_code,
-          departureDate: formState.returnDate || null,
-          departureTime: formState.returnTime || null,
+          departureDate: normalizeDate(formState.returnDate),
+          departureTime: normalizeTime(formState.returnTime),
           passengers: formState.passengers,
           origin_lat: formState.destination_lat,
           origin_long: formState.destination_long,

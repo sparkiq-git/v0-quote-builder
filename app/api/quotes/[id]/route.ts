@@ -223,8 +223,9 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
         id: leg.id,
         origin: leg.origin_code,
         destination: leg.destination_code,
-        departureDate: leg.depart_dt,
-        departureTime: leg.depart_time,
+        // Convert null to empty string for form inputs, preserve actual values
+        departureDate: leg.depart_dt || "",
+        departureTime: leg.depart_time || "",
         passengers: leg.pax_count,
         notes: leg.notes,
         fboOriginId: leg.fbo_origin_id,
@@ -266,7 +267,9 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
           price_total: option.price_total || 0,
           fees: [], // TODO: Add fees support if needed
           feesEnabled: false,
-          selectedAmenities: aircraft?.aircraft_amenity?.map((amenity: any) => amenity.amenity?.name).filter(Boolean) || [],
+          selectedAmenities: Array.from(new Set(
+            aircraft?.aircraft_amenity?.map((amenity: any) => amenity.amenity?.name).filter(Boolean) || []
+          )),
           notes: option.notes,
           conditions: option.conditions,
           additionalNotes: option.additional_notes,
@@ -305,7 +308,9 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
             yearOfRefurbish: aircraft.year_of_refurbish,
             cruisingSpeed: aircraft.cruising_speed,
             rangeNm: aircraft.range_nm,
-            amenities: aircraft.aircraft_amenity?.map((amenity: any) => amenity.amenity?.name).filter(Boolean) || [],
+            amenities: Array.from(new Set(
+              aircraft.aircraft_amenity?.map((amenity: any) => amenity.amenity?.name).filter(Boolean) || []
+            )),
             images: aircraft.aircraft_image
               ?.sort((a: any, b: any) => {
                 if (a.is_primary && !b.is_primary) return -1
@@ -599,6 +604,10 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
               )
             : null
 
+        // Normalize empty strings to null for date/time fields
+        const normalizedDepartDate = l.departureDate && l.departureDate.trim() !== "" ? l.departureDate : null
+        const normalizedDepartTime = l.departureTime && l.departureTime.trim() !== "" ? l.departureTime : null
+        
         return {
           id: l.id || crypto.randomUUID(),
           quote_id: id,
@@ -607,8 +616,8 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
           origin_code: l.origin_code,
           destination: l.destination,
           destination_code: l.destination_code,
-          depart_dt: l.departureDate,
-          depart_time: l.departureTime,
+          depart_dt: normalizedDepartDate,
+          depart_time: normalizedDepartTime,
           pax_count: l.passengers ?? l.pax_count ?? 1,
           origin_lat: l.origin_lat ?? null,
           origin_long: l.origin_long ?? null,

@@ -196,7 +196,8 @@ export function PublicQuoteOptionCard({
 
   const scrollTo = useCallback((index: number) => api?.scrollTo(index), [api])
 
-  const amenities = option.selectedAmenities || []
+  // Deduplicate amenities to prevent duplicates
+  const amenities = Array.from(new Set(option.selectedAmenities || []))
   const capacity = aircraftTail?.capacityOverride || aircraftModel?.defaultCapacity || 8
 
   return (
