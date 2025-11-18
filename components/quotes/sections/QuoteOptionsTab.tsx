@@ -78,27 +78,32 @@ useEffect(() => {
   if (!quote?.options) return
 
   const normalized = quote.options.map((o: any) => {
+    // Ensure fee columns exist
+    const price_fet = o.price_fet ?? 0
+    const price_taxes = o.price_taxes ?? 0
+    const price_extras_total = o.price_extras_total ?? 0
+    
+    // Infer switch states from fee values if not explicitly set
+    // If a fee value > 0, the switch should be enabled (user has applied this fee)
     const normalizedOption = {
       ...o,
-      // Initialize fee switches if not present (default to false - users enable as needed)
-      fetEnabled: o.fetEnabled !== undefined ? o.fetEnabled : false,
-      usDomesticEnabled: o.usDomesticEnabled !== undefined ? o.usDomesticEnabled : false,
-      usInternationalEnabled: o.usInternationalEnabled !== undefined ? o.usInternationalEnabled : false,
-      // Ensure fee columns exist
-      price_fet: o.price_fet ?? 0,
-      price_taxes: o.price_taxes ?? 0,
-      price_extras_total: o.price_extras_total ?? 0,
+      price_fet,
+      price_taxes,
+      price_extras_total,
+      // Initialize fee switches: if explicitly set, use that; otherwise infer from values
+      fetEnabled: o.fetEnabled !== undefined 
+        ? o.fetEnabled 
+        : price_fet > 0, // If FET has a value, it was enabled
+      usDomesticEnabled: o.usDomesticEnabled !== undefined 
+        ? o.usDomesticEnabled 
+        : price_extras_total > 0, // If domestic fee has a value, it was enabled
+      usInternationalEnabled: o.usInternationalEnabled !== undefined 
+        ? o.usInternationalEnabled 
+        : price_taxes > 0, // If international tax has a value, it was enabled
     }
     
-    // Recalculate fees if aircraft is selected
-    if (normalizedOption.aircraft_id) {
-      const fees = calculateFees(normalizedOption)
-      return {
-        ...normalizedOption,
-        ...fees,
-      }
-    }
-    
+    // Don't recalculate fees on load - preserve the saved values
+    // Only recalculate if user explicitly toggles a switch
     return normalizedOption
   })
 

@@ -260,6 +260,9 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
           cost_operator: option.cost_operator || 0,
           price_commission: option.price_commission || 0,
           price_base: option.price_base || 0,
+          price_fet: option.price_fet ?? 0,
+          price_taxes: option.price_taxes ?? 0,
+          price_extras_total: option.price_extras_total ?? 0,
           price_total: option.price_total || 0,
           fees: [], // TODO: Add fees support if needed
           feesEnabled: false,
