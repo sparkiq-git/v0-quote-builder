@@ -1,7 +1,45 @@
 "use client"
 
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Plane } from "lucide-react"
+
+// Helper to normalize and absolutize image URLs
+const absolutizeImageUrl = (src: string | null | undefined): string | null => {
+  if (!src) return null
+  const trimmed = src.trim()
+  if (!trimmed) return null
+
+  // Already absolute URL
+  if (
+    /^https?:\/\//i.test(trimmed) ||
+    trimmed.startsWith("/") ||
+    trimmed.startsWith("data:") ||
+    trimmed.startsWith("blob:")
+  ) {
+    return trimmed
+  }
+
+  // Normalize relative Supabase storage paths
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/+$/, "")
+  if (!supabaseUrl) {
+    return trimmed
+  }
+
+  if (trimmed.startsWith("storage/v1/object/public/")) {
+    return `${supabaseUrl}/${trimmed}`
+  }
+
+  if (trimmed.startsWith("aircraft-media/")) {
+    return `${supabaseUrl}/storage/v1/object/public/${trimmed}`
+  }
+
+  if (trimmed.startsWith("avatar/") || trimmed.startsWith("tenant/")) {
+    return `${supabaseUrl}/storage/v1/object/public/${trimmed}`
+  }
+
+  return trimmed
+}
 
 export function AircraftSummaryCard({
   aircraft,
@@ -20,30 +58,42 @@ export function AircraftSummaryCard({
   }
   onEdit?: () => void
 }) {
+  const [imageError, setImageError] = useState(false)
+  
   if (!aircraft) return null
 
   // Get the best available image (primary > first aircraft image > placeholder)
   const getThumbnailUrl = () => {
-    if (aircraft.primary_image_url) return aircraft.primary_image_url
-    if (aircraft.aircraft_images?.length) return aircraft.aircraft_images[0]
+    if (aircraft.primary_image_url) {
+      return absolutizeImageUrl(aircraft.primary_image_url)
+    }
+    if (aircraft.aircraft_images?.length) {
+      return absolutizeImageUrl(aircraft.aircraft_images[0])
+    }
     return null
   }
 
   const thumbnailUrl = getThumbnailUrl()
+  const showPlaceholder = !thumbnailUrl || imageError
 
   return (
     <div className="flex items-start gap-3 p-3 border rounded-lg bg-muted/30">
       {/* Image */}
-      {thumbnailUrl ? (
+      {showPlaceholder ? (
+        <div className="w-20 h-16 rounded-md bg-muted flex items-center justify-center text-xs text-muted-foreground">
+          <Plane className="h-6 w-6" />
+        </div>
+      ) : (
         <img
           src={thumbnailUrl}
           alt={aircraft.tail_number || ""}
           className="w-20 h-16 rounded-md object-cover"
+          onError={() => {
+            console.warn(`Failed to load aircraft image: ${thumbnailUrl}`)
+            setImageError(true)
+          }}
+          onLoad={() => setImageError(false)}
         />
-      ) : (
-        <div className="w-20 h-16 rounded-md bg-muted flex items-center justify-center text-xs text-muted-foreground">
-          <Plane className="h-6 w-6" />
-        </div>
       )}
 
       {/* Info */}

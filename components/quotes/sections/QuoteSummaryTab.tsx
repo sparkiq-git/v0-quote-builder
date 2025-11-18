@@ -155,7 +155,10 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
       const total =
         (Number(o.cost_operator) || 0) +
         (Number(o.price_commission) || 0) +
-        (Number(o.price_base) || 0)
+        (Number(o.price_base) || 0) +
+        (Number(o.price_fet) || 0) +
+        (Number(o.price_extras_total) || 0) +
+        (Number(o.price_taxes) || 0)
       return sum + total
     }, 0)
   }, [quote.options])
@@ -429,7 +432,10 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
                 const total =
                   (Number(option?.cost_operator) || 0) +
                   (Number(option?.price_commission) || 0) +
-                  (Number(option?.price_base) || 0)
+                  (Number(option?.price_base) || 0) +
+                  (Number(option?.price_fet) || 0) +
+                  (Number(option?.price_extras_total) || 0) +
+                  (Number(option?.price_taxes) || 0)
 
                 // Use the aircraft data that comes from the API
                 const aircraftModel = option?.aircraftModel
@@ -581,10 +587,28 @@ export function QuoteSummaryTab({ quote, onBack }: Props) {
                             <span>{formatCurrency(option.price_commission || 0)}</span>
                           </div>
                           <div className="flex justify-between">
-                            <span className="text-muted-foreground">Tax:</span>
+                            <span className="text-muted-foreground">Base Price:</span>
                             <span>{formatCurrency(option.price_base || 0)}</span>
                           </div>
-                          <div className="flex justify-between font-semibold">
+                          {(option.price_fet || 0) > 0 && (
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Federal Excise Tax (FET):</span>
+                              <span>{formatCurrency(option.price_fet || 0)}</span>
+                            </div>
+                          )}
+                          {(option.price_extras_total || 0) > 0 && (
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">US Domestic Segment Fee:</span>
+                              <span>{formatCurrency(option.price_extras_total || 0)}</span>
+                            </div>
+                          )}
+                          {(option.price_taxes || 0) > 0 && (
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">US International Head Tax:</span>
+                              <span>{formatCurrency(option.price_taxes || 0)}</span>
+                            </div>
+                          )}
+                          <div className="flex justify-between font-semibold col-span-2 pt-2 border-t">
                             <span>Total:</span>
                             <span>{formatCurrency(total)}</span>
                           </div>

@@ -147,6 +147,7 @@ export function QuoteServicesTab({ quote, onUpdate, onNext, onBack }: Props) {
                           parseInt(e.target.value) || 1
                         )
                       }
+                      onFocus={(e) => e.target.select()}
                     />
                   </div>
 
@@ -164,6 +165,7 @@ export function QuoteServicesTab({ quote, onUpdate, onNext, onBack }: Props) {
                           parseFloat(e.target.value) || 0
                         )
                       }
+                      onFocus={(e) => e.target.select()}
                     />
                   </div>
                 </div>

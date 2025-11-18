@@ -692,22 +692,33 @@ if (existingIds.length > 0) {
         // Only include options with valid UUID strings
         return aircraftId && typeof aircraftId === 'string' && aircraftId.trim() !== '' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(aircraftId)
       })
-      .map((o: any, index: number) => ({
-        id: o.id,
-        label: o.label || `Option ${index + 1}`,
-        quote_id: o.quote_id || id,
-        aircraft_id: o.aircraft_id,
-        flight_hours: o.flight_hours ?? 0,
-        cost_operator: o.cost_operator ?? 0,
-        price_commission: o.price_commission ?? 0,
-        price_base: o.price_base ?? 0,
-        price_fet: o.price_fet ?? 0,
-        price_taxes: o.price_taxes ?? 0,
-        price_extras_total: o.price_extras_total ?? 0,
-        price_total: o.price_total ?? 0,
-        notes: o.notes ?? null,
-        updated_at: new Date().toISOString(),
-      }))
+      .map((o: any, index: number) => {
+        // Calculate price_total as sum of all pricing components
+        const price_total = 
+          (Number(o.cost_operator) || 0) +
+          (Number(o.price_commission) || 0) +
+          (Number(o.price_base) || 0) +
+          (Number(o.price_fet) || 0) +
+          (Number(o.price_extras_total) || 0) +
+          (Number(o.price_taxes) || 0)
+        
+        return {
+          id: o.id,
+          label: o.label || `Option ${index + 1}`,
+          quote_id: o.quote_id || id,
+          aircraft_id: o.aircraft_id,
+          flight_hours: o.flight_hours ?? 0,
+          cost_operator: o.cost_operator ?? 0,
+          price_commission: o.price_commission ?? 0,
+          price_base: o.price_base ?? 0,
+          price_fet: o.price_fet ?? 0,
+          price_taxes: o.price_taxes ?? 0,
+          price_extras_total: o.price_extras_total ?? 0,
+          price_total,
+          notes: o.notes ?? null,
+          updated_at: new Date().toISOString(),
+        }
+      })
 
     // Only upsert if there are valid options
     if (validOptions.length > 0) {

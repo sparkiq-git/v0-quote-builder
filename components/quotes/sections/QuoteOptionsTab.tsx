@@ -252,8 +252,15 @@ const handleUpdateOption = (id: string, updates: Partial<QuoteOption>) => {
     return;
   }
 
+  // Find the current option to calculate price_total
+  const currentOption = options.find((o) => o.id === id)
+  const updatedOption = { ...currentOption, ...updates } as any
+  
+  // Calculate price_total as sum of all pricing components
+  const price_total = calculateOptionTotal(updatedOption)
+  
   onUpdate({
-    options: options.map((o) => (o.id === id ? { ...o, ...updates } : o)),
+    options: options.map((o) => (o.id === id ? { ...o, ...updates, price_total } : o)),
   });
 };
 
@@ -316,9 +323,13 @@ const handleUpdateOption = (id: string, updates: Partial<QuoteOption>) => {
     // Recalculate fees based on the updated option
     const fees = calculateFees(updatedOption)
     
+    // Calculate price_total including fees
+    const price_total = calculateOptionTotal({ ...updatedOption, ...fees })
+    
     handleUpdateOption(optionId, {
       ...updatedOption,
       ...fees,
+      price_total,
     })
 
     if (!opts?.skipToast) {
