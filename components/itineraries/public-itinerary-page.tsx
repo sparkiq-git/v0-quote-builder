@@ -203,6 +203,9 @@ const createFallbackGallery = (): AircraftGalleryImage[] =>
   }))
 
 function ExpediaHotelWidget({ className }: { className?: string }) {
+  const EXPEDIA_REFERRAL_CODE = "1011l5mEeV"
+  const expediaBookingUrl = `https://www.expedia.com/Hotels?camref=${EXPEDIA_REFERRAL_CODE}`
+
   useEffect(() => {
     // Load Expedia widget script if not already loaded
     if (typeof window !== "undefined" && !document.querySelector('.eg-widgets-script')) {
@@ -234,9 +237,18 @@ function ExpediaHotelWidget({ className }: { className?: string }) {
           data-program="us-expedia" 
           data-lobs="stays" 
           data-network="pz" 
-          data-camref="1011l5mEeV" 
+          data-camref={EXPEDIA_REFERRAL_CODE} 
           data-pubref=""
         />
+        <Button 
+          asChild 
+          className="w-full bg-blue-900 hover:bg-blue-950 text-white shadow-sm mt-2"
+        >
+          <a href={expediaBookingUrl} target="_blank" rel="noopener noreferrer">
+            Book Hotel on Expedia
+            <ExternalLink className="ml-2 h-4 w-4" />
+          </a>
+        </Button>
       </CardContent>
     </Card>
   )
