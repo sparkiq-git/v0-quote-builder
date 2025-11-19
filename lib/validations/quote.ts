@@ -2,9 +2,16 @@ import { z } from "zod"
 
 // Base validation schemas
 export const emailSchema = z.string().email("Please enter a valid email address")
-export const phoneSchema = z.string().min(10, "Phone number must be at least 10 digits").max(15, "Phone number too long")
+export const phoneSchema = z.string()
+  .min(10, "Phone number must be at least 10 digits")
+  .max(15, "Phone number too long")
+  .regex(/^[\d\s\-\+\(\)]+$/, "Phone number contains invalid characters")
 export const nameSchema = z.string().min(1, "Name is required").max(100, "Name too long")
-export const companySchema = z.string().max(100, "Company name too long").optional()
+// Company is optional - allow empty string, undefined, or valid string up to 100 chars
+export const companySchema = z.union([
+  z.string().max(100, "Company name too long"),
+  z.literal("")
+]).optional()
 
 // Airport validation
 export const airportSchema = z.object({

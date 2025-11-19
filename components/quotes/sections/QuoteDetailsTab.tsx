@@ -81,21 +81,59 @@ export function QuoteDetailsTab({ quote, onUpdate, onNext }: Props) {
 
   const handleFieldChange = (field: "email" | "phone" | "company" | "name", value: string) => {
     // Clear previous validation error for this field
+    const errorKey = `contact_${field}`
     setValidationErrors(prev => {
       const newErrors = { ...prev }
-      delete newErrors[`contact_${field}`]
+      delete newErrors[errorKey]
       return newErrors
     })
 
-    // Validate the field
+    // Update the quote immediately (allow typing without interruption)
+    onUpdate({
+      [`contact_${field}`]: value,
+      customer: { ...quote.customer, [field]: value },
+    })
+
+    // Only validate if field is not empty and user seems to have finished typing
+    // For company (optional field), allow empty without validation
+    if (field === "company" && !value.trim()) {
+      return // Company is optional, allow empty
+    }
+
+    // For other fields, only validate if there's content
+    // (Don't show errors while typing the first few characters)
+    if (!value.trim()) {
+      return // Allow empty while typing
+    }
+
+    // Only validate email format and phone length if there's substantial input
+    // This prevents premature errors while typing
     try {
       let schema
       switch (field) {
         case "email":
-          schema = emailSchema
+          // Only validate email if it looks like they're done typing (has @)
+          if (value.includes("@")) {
+            schema = emailSchema
+          } else {
+            return // Too early to validate
+          }
           break
         case "phone":
-          schema = phoneSchema
+          // Only validate phone length if they've typed enough
+          // Allow typing without errors, but catch invalid formats
+          if (value.length >= 10) {
+            schema = phoneSchema
+          } else if (value.length > 0 && !/^[\d\s\-\+\(\)]+$/.test(value)) {
+            // Invalid characters
+            setValidationErrors(prev => ({ 
+              ...prev, 
+              [errorKey]: "Phone number contains invalid characters"
+            }))
+            return
+          } else {
+            return // Still typing, don't validate yet
+          }
           break
         case "name":
           schema = nameSchema
@@ -108,22 +146,16 @@ export function QuoteDetailsTab({ quote, onUpdate, onNext }: Props) {
       }
 
       schema.parse(value)
-      
-      // If validation passes, update the quote (but don't prompt yet)
-      onUpdate({
-        [`contact_${field}`]: value,
-        customer: { ...quote.customer, [field]: value },
-      })
+      // Validation passed - error already cleared above
     } catch (error) {
       if (error instanceof z.ZodError) {
-        const errors = getValidationErrors(error)
-        setValidationErrors(prev => ({ ...prev, ...errors }))
-        
-        toast({
-          title: "Validation Error",
-          description: Object.values(errors)[0] || "Invalid input",
-          variant: "destructive",
-        })
+        // Get the error message and set it with the correct key
+        const errorMessage = error.errors[0]?.message || "Invalid input"
+        setValidationErrors(prev => ({ 
+          ...prev, 
+          [errorKey]: errorMessage
+        }))
+        // Don't show toast - just show inline error
       }
     }
   }
