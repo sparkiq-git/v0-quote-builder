@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
@@ -30,12 +30,54 @@ interface Props {
   onNext: () => void
 }
 
+interface OriginalContactValues {
+  name: string | null
+  email: string | null
+  phone: string | null
+  company: string | null
+}
+
 export function QuoteDetailsTab({ quote, onUpdate, onNext }: Props) {
   const { toast } = useToast()
   const [showPrompt, setShowPrompt] = useState(false)
-  const [pendingEdit, setPendingEdit] = useState<{ field: string; value: string } | null>(null)
   const [saving, setSaving] = useState(false)
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
+  const originalContactRef = useRef<OriginalContactValues | null>(null)
+
+  // Store original contact values when component mounts or contact_id changes
+  useEffect(() => {
+    if (quote.contact_id) {
+      originalContactRef.current = {
+        name: quote.contact_name || quote.customer?.name || null,
+        email: quote.contact_email || quote.customer?.email || null,
+        phone: quote.contact_phone || quote.customer?.phone || null,
+        company: quote.contact_company || quote.customer?.company || null,
+      }
+    } else {
+      originalContactRef.current = null
+    }
+  }, [quote.contact_id])
+
+  // Check if contact fields have changed
+  const hasContactChanges = (): boolean => {
+    if (!quote.contact_id || !originalContactRef.current) return false
+
+    const current = {
+      name: quote.contact_name || quote.customer?.name || null,
+      email: quote.contact_email || quote.customer?.email || null,
+      phone: quote.contact_phone || quote.customer?.phone || null,
+      company: quote.contact_company || quote.customer?.company || null,
+    }
+
+    const original = originalContactRef.current
+
+    return (
+      current.name !== original.name ||
+      current.email !== original.email ||
+      current.phone !== original.phone ||
+      current.company !== original.company
+    )
+  }
 
   const handleFieldChange = (field: "email" | "phone" | "company" | "name", value: string) => {
     // Clear previous validation error for this field
@@ -67,16 +109,11 @@ export function QuoteDetailsTab({ quote, onUpdate, onNext }: Props) {
 
       schema.parse(value)
       
-      // If validation passes, update the quote
+      // If validation passes, update the quote (but don't prompt yet)
       onUpdate({
         [`contact_${field}`]: value,
         customer: { ...quote.customer, [field]: value },
       })
-
-      if (quote.contact_id) {
-        setPendingEdit({ field, value })
-        setShowPrompt(true)
-      }
     } catch (error) {
       if (error instanceof z.ZodError) {
         const errors = getValidationErrors(error)
@@ -92,7 +129,7 @@ export function QuoteDetailsTab({ quote, onUpdate, onNext }: Props) {
   }
 
   // 🔄 Navigate (save handled by parent)
-  const handleNext = () => {
+  const handleNext = async () => {
     // Validate required fields before proceeding
     const requiredFields = {
       contact_name: quote.contact_name || quote.customer?.name,
@@ -143,6 +180,74 @@ export function QuoteDetailsTab({ quote, onUpdate, onNext }: Props) {
 
     // Clear any existing validation errors
     setValidationErrors({})
+
+    // Check if there are contact changes and a contact_id exists
+    if (quote.contact_id && hasContactChanges()) {
+      // Show dialog to ask if user wants to update the contact
+      setShowPrompt(true)
+      return
+    }
+
+    // No changes or no contact_id, proceed to next step
+    onNext()
+  }
+
+  const handleUpdateContactAndProceed = async () => {
+    if (!quote.contact_id || !originalContactRef.current) {
+      onNext()
+      return
+    }
+
+    setSaving(true)
+    try {
+      const current = {
+        name: quote.contact_name || quote.customer?.name || null,
+        email: quote.contact_email || quote.customer?.email || null,
+        phone: quote.contact_phone || quote.customer?.phone || null,
+        company: quote.contact_company || quote.customer?.company || null,
+      }
+
+      // Build update object with only changed fields
+      const updates: Record<string, string> = {}
+      if (current.name !== originalContactRef.current.name) {
+        updates.full_name = current.name || ""
+      }
+      if (current.email !== originalContactRef.current.email) {
+        updates.email = current.email || ""
+      }
+      if (current.phone !== originalContactRef.current.phone) {
+        updates.phone = current.phone || ""
+      }
+      if (current.company !== originalContactRef.current.company) {
+        updates.company = current.company || ""
+      }
+
+      if (Object.keys(updates).length > 0) {
+        await updateContact(quote.contact_id, updates)
+        toast({
+          title: "Contact updated",
+          description: `${quote.contact_name || 'Contact'}'s information was updated in the database.`,
+        })
+      }
+
+      // Update original values to reflect the saved state
+      originalContactRef.current = current
+      
+      setShowPrompt(false)
+      onNext()
+    } catch (err: any) {
+      toast({
+        title: "Failed to update contact",
+        description: err.message || "An error occurred while updating the contact.",
+        variant: "destructive",
+      })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleSkipUpdateAndProceed = () => {
+    setShowPrompt(false)
     onNext()
   }
 
@@ -161,7 +266,15 @@ export function QuoteDetailsTab({ quote, onUpdate, onNext }: Props) {
               tenantId={quote.tenant_id}
               value={quote.contact_id || null}
               selectedName={quote.contact_name || quote.customer?.name || null}
-              onSelect={(c) =>
+              onSelect={(c) => {
+                // Update original contact values when a new contact is selected
+                originalContactRef.current = {
+                  name: c.full_name || null,
+                  email: c.email || null,
+                  phone: c.phone || null,
+                  company: c.company || null,
+                }
+                
                 onUpdate({
                   contact_id: c.id,
                   contact_name: c.full_name || "",
@@ -176,7 +289,7 @@ export function QuoteDetailsTab({ quote, onUpdate, onNext }: Props) {
                     company: c.company || "",
                   },
                 })
-              }
+              }}
             />
           </div>
 
@@ -235,40 +348,24 @@ export function QuoteDetailsTab({ quote, onUpdate, onNext }: Props) {
             <DialogHeader>
               <DialogTitle>Update contact record?</DialogTitle>
               <DialogDescription>
-                You’re editing the {pendingEdit?.field} for <strong>{quote.contact_name}</strong>.
+                You've made changes to the contact information for <strong>{quote.contact_name || 'this contact'}</strong>.
                 <br />
-                Update this info in the contact database too?
+                Would you like to update this information in the contact database as well?
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setShowPrompt(false)}>
+              <Button 
+                variant="outline" 
+                onClick={handleSkipUpdateAndProceed}
+                disabled={saving}
+              >
                 No, only this quote
               </Button>
               <Button
-                onClick={async () => {
-                  try {
-                    if (quote.contact_id && pendingEdit) {
-                      await updateContact(quote.contact_id, {
-                        [pendingEdit.field]: pendingEdit.value,
-                      })
-                      toast({
-                        title: "Contact updated",
-                        description: `${quote.contact_name}'s ${pendingEdit.field} was updated.`,
-                      })
-                    }
-                  } catch (err: any) {
-                    toast({
-                      title: "Failed to update contact",
-                      description: err.message,
-                      variant: "destructive",
-                    })
-                  } finally {
-                    setShowPrompt(false)
-                    setPendingEdit(null)
-                  }
-                }}
+                onClick={handleUpdateContactAndProceed}
+                disabled={saving}
               >
-                Yes, update contact
+                {saving ? "Updating..." : "Yes, update contact"}
               </Button>
             </DialogFooter>
           </DialogContent>
