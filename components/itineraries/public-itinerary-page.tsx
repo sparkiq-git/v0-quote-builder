@@ -23,6 +23,7 @@ import {
   Sun,
   Sparkles,
   Hotel,
+  Building2,
   ExternalLink,
 } from "lucide-react"
 import {
@@ -108,6 +109,16 @@ interface ItineraryAircraft {
   images?: AircraftGalleryImage[]
 }
 
+interface ItineraryFBO {
+  id: string
+  code: string | null
+  name: string | null
+  city: string | null
+  country: string | null
+  url: string | null
+  image_ref: string | null
+}
+
 interface Itinerary {
   id: string
   tenant_id?: string
@@ -182,9 +193,6 @@ const FALLBACK_GALLERY = [
   "https://images.unsplash.com/photo-1500375592092-40eb2168fd21?auto=format&fit=crop&w=1600&q=80",
 ]
 
-const BOOKING_AID = process.env.NEXT_PUBLIC_BOOKING_AID
-const BOOKING_URL = BOOKING_AID ? `https://www.booking.com/index.html?aid=${BOOKING_AID}` : "https://www.booking.com/"
-
 const createFallbackGallery = (): AircraftGalleryImage[] =>
   FALLBACK_GALLERY.map((url, index) => ({
     id: `fallback-${index}`,
@@ -194,7 +202,18 @@ const createFallbackGallery = (): AircraftGalleryImage[] =>
     display_order: index,
   }))
 
-function BookingReferralCard({ className }: { className?: string }) {
+function ExpediaHotelWidget({ className }: { className?: string }) {
+  useEffect(() => {
+    // Load Expedia widget script if not already loaded
+    if (typeof window !== "undefined" && !document.querySelector('.eg-widgets-script')) {
+      const script = document.createElement("script")
+      script.className = "eg-widgets-script"
+      script.src = "https://creator.expediagroup.com/products/widgets/assets/eg-widgets.js"
+      script.async = true
+      document.body.appendChild(script)
+    }
+  }, [])
+
   return (
     <Card className={cn("border border-blue-200/60 bg-blue-50/70 backdrop-blur-md shadow-xl", className)}>
       <CardContent className="flex flex-col gap-4 p-5">
@@ -205,16 +224,19 @@ function BookingReferralCard({ className }: { className?: string }) {
           <div>
             <p className="text-sm font-semibold">Need a hotel?</p>
             <p className="text-xs text-blue-950/90">
-              Discover curated stays, late check-ins, and loyalty perks via our Booking.com partner link.
+              Discover curated stays, late check-ins, and loyalty perks via Expedia.
             </p>
           </div>
         </div>
-        <Button asChild className="bg-blue-900 hover:bg-blue-950 text-white shadow-sm">
-          <a href={BOOKING_URL} target="_blank" rel="noopener noreferrer">
-            Plan stay with Booking.com
-            <ExternalLink className="ml-2 h-4 w-4" />
-          </a>
-        </Button>
+        <div 
+          className="eg-widget" 
+          data-widget="search" 
+          data-program="us-expedia" 
+          data-lobs="stays" 
+          data-network="pz" 
+          data-camref="1011l5mEeV" 
+          data-pubref=""
+        />
       </CardContent>
     </Card>
   )
@@ -601,6 +623,7 @@ export default function PublicItineraryPage({ token, verifiedEmail }: PublicItin
   const [passengers, setPassengers] = useState<ItineraryPassenger[]>([])
   const [crew, setCrew] = useState<ItineraryCrewMember[]>([])
   const [aircraft, setAircraft] = useState<ItineraryAircraft | null>(null)
+  const [fbos, setFbos] = useState<ItineraryFBO[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [weather, setWeather] = useState<Record<string, WeatherSummary>>({})
@@ -630,6 +653,7 @@ export default function PublicItineraryPage({ token, verifiedEmail }: PublicItin
         setPassengers(data.passengers || [])
         setCrew(data.crew || [])
         setAircraft(data.aircraft || null)
+        setFbos(data.fbos || [])
       } catch (err: any) {
         console.error("Error fetching public itinerary:", err)
         setError(err.message || "Failed to load itinerary")
@@ -806,7 +830,7 @@ export default function PublicItineraryPage({ token, verifiedEmail }: PublicItin
         {/* MOBILE & TABLET VIEW */}
         <div className={deviceInfo.type === "mobile" || deviceInfo.type === "tablet" ? "block" : "hidden"}>
           <div className="space-y-3 sm:space-y-4">
-            <BookingReferralCard />
+            <ExpediaHotelWidget />
             {/* Header Card */}
             <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
               <CardContent className="pt-6">
@@ -1003,6 +1027,9 @@ export default function PublicItineraryPage({ token, verifiedEmail }: PublicItin
                 )}
               </CardContent>
             </Card>
+
+            {/* FBOs */}
+            {itinerary && <FBOCard fbos={fbos} itinerary={itinerary} />}
 
             {/* Weather */}
             {Object.keys(weather).length > 0 && (
@@ -1290,7 +1317,7 @@ export default function PublicItineraryPage({ token, verifiedEmail }: PublicItin
 
             {/* Right Column - Sidebar */}
             <div className="space-y-6">
-              <BookingReferralCard />
+              <ExpediaHotelWidget />
 
               {/* Crew */}
               <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
@@ -1380,6 +1407,9 @@ export default function PublicItineraryPage({ token, verifiedEmail }: PublicItin
               )}
 
               <AircraftProfile aircraft={aircraft} />
+
+              {/* FBOs */}
+              {itinerary && <FBOCard fbos={fbos} itinerary={itinerary} />}
 
               {/* Weather */}
               {Object.keys(weather).length > 0 && (
@@ -2280,6 +2310,133 @@ function DropletIcon(props: React.SVGProps<SVGSVGElement>) {
         strokeLinejoin="round"
       />
     </svg>
+  )
+}
+
+function getFBOImageUrl(imageRef: string | null): string | null {
+  if (!imageRef) return null
+  
+  const trimmed = imageRef.trim()
+  if (!trimmed) return null
+  
+  // If it's already a full URL, return it
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+    return trimmed
+  }
+  
+  // If it's a storage path, construct the URL
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ""
+  if (supabaseUrl) {
+    if (trimmed.startsWith("storage/v1/object/public/")) {
+      return `${supabaseUrl}/${trimmed}`
+    }
+    // Assume it's in a public bucket
+    return `${supabaseUrl}/storage/v1/object/public/${trimmed}`
+  }
+  
+  return null
+}
+
+function FBOCard({ fbos, itinerary }: { fbos: ItineraryFBO[]; itinerary: Itinerary }) {
+  if (!fbos || fbos.length === 0) return null
+
+  // Group FBOs by airport code for display
+  const fbosByCode = new Map<string, ItineraryFBO[]>()
+  fbos.forEach((fbo) => {
+    if (fbo.code) {
+      const code = fbo.code.toUpperCase()
+      if (!fbosByCode.has(code)) {
+        fbosByCode.set(code, [])
+      }
+      fbosByCode.get(code)!.push(fbo)
+    }
+  })
+
+  // Get unique airport codes from itinerary details that have FBOs
+  const airportCodes = Array.from(
+    new Set(
+      itinerary.details
+        .flatMap((detail) => [detail.origin_code, detail.destination_code])
+        .filter((code): code is string => typeof code === "string" && code.trim().length > 0)
+        .map((code) => code.toUpperCase().trim())
+        .filter((code) => fbosByCode.has(code))
+    )
+  )
+
+  if (airportCodes.length === 0) return null
+
+  return (
+    <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+          <Building2 className="h-5 w-5 text-gray-600" />
+          FBOs
+        </CardTitle>
+        <CardDescription className="text-gray-600">Fixed Base Operators at your airports</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          {airportCodes.map((code) => {
+            const codeFBOs = fbosByCode.get(code) || []
+            return (
+              <div key={code} className="space-y-2">
+                <div className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+                  {code}
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {codeFBOs.map((fbo) => {
+                    const imageUrl = getFBOImageUrl(fbo.image_ref)
+                    return (
+                      <div
+                        key={fbo.id}
+                        className="rounded-xl border border-gray-200 bg-gray-50 p-3 hover:bg-gray-100 transition-colors"
+                      >
+                        <div className="flex items-start gap-3">
+                          {imageUrl && (
+                            <div className="flex-shrink-0">
+                              <img
+                                src={imageUrl}
+                                alt={fbo.name || "FBO logo"}
+                                className="h-12 w-12 object-contain rounded"
+                                onError={(e) => {
+                                  // Hide image on error
+                                  e.currentTarget.style.display = "none"
+                                }}
+                              />
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            {fbo.name && (
+                              <p className="text-sm font-semibold text-gray-900 truncate">{fbo.name}</p>
+                            )}
+                            {(fbo.city || fbo.country) && (
+                              <p className="text-xs text-gray-600 mt-0.5">
+                                {[fbo.city, fbo.country].filter(Boolean).join(", ")}
+                              </p>
+                            )}
+                            {fbo.url && (
+                              <a
+                                href={fbo.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs text-blue-600 hover:text-blue-800 mt-1 inline-flex items-center gap-1"
+                              >
+                                Visit website
+                                <ExternalLink className="h-3 w-3" />
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </CardContent>
+    </Card>
   )
 }
 

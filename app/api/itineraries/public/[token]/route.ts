@@ -134,6 +134,31 @@ export async function GET(request: NextRequest, { params }: { params: { token: s
       console.error("Error fetching crew:", crewError)
     }
 
+    // Fetch FBOs for airports in itinerary
+    const airportCodes = Array.from(
+      new Set(
+        (details || [])
+          .flatMap((detail) => [detail.origin_code, detail.destination_code])
+          .filter((code): code is string => typeof code === "string" && code.trim().length > 0)
+          .map((code) => code.toUpperCase().trim())
+      )
+    )
+
+    let fbos: any[] = []
+    if (airportCodes.length > 0) {
+      const { data: fboData, error: fboError } = await supabase
+        .from("airport_fbo")
+        .select("id, code, name, city, country, url, image_ref")
+        .in("code", airportCodes)
+
+      if (fboError) {
+        console.error("Error fetching FBOs:", fboError)
+      } else if (fboData) {
+        // Map FBOs by airport code for easy lookup
+        fbos = fboData
+      }
+    }
+
     let aircraft: any = null
     if (itinerary.aircraft_tail_no) {
       const { data: aircraftRow, error: aircraftError } = await supabase
@@ -282,6 +307,7 @@ export async function GET(request: NextRequest, { params }: { params: { token: s
             confirmed: member.confirmed,
           })) || [],
         aircraft,
+        fbos,
       },
     })
   } catch (error: any) {
