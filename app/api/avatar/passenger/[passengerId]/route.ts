@@ -19,7 +19,21 @@ export async function GET(request: NextRequest, { params }: { params: { passenge
       return NextResponse.json({ error: "No avatar found" }, { status: 404 })
     }
 
-    const format = request.nextUrl.searchParams.get("format")
+    // Safely check for format parameter
+    let format: string | null = null
+    try {
+      if (request.nextUrl) {
+        format = request.nextUrl.searchParams.get("format")
+      } else if (request.url) {
+        // Fallback: parse URL manually if nextUrl is not available
+        const url = new URL(request.url)
+        format = url.searchParams.get("format")
+      }
+    } catch (err) {
+      // If URL parsing fails, just continue without format check
+      console.warn("Could not parse request URL for format parameter:", err)
+    }
+
     if (format === "json") {
       return NextResponse.json({ url: result.url })
     }
