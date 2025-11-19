@@ -85,6 +85,51 @@ export function InvoiceContractWizard({
     }
   }, [fullQuoteData, open])
 
+  // Extract fees from selected option when quote data loads
+  useEffect(() => {
+    if (!fullQuoteData?.options || taxes.length > 0) return // Don't override if taxes already set
+
+    const selectedOptionId = fullQuoteData.selected_option_id || selectedQuote?.selected_option_id
+    const selectedOption = fullQuoteData.options?.find((opt: any) => opt.id === selectedOptionId)
+
+    if (!selectedOption) return
+
+    // Extract fees from quote option (price_fet, price_extras_total, price_taxes)
+    const extractedTaxes: Array<{ id: string; name: string; amount: number }> = []
+
+    // Federal Excise Tax (FET) - 7.5% of operator cost
+    if (selectedOption.price_fet && selectedOption.price_fet > 0) {
+      extractedTaxes.push({
+        id: "quote-fet",
+        name: "Federal Excise Tax (7.5%)",
+        amount: Number(selectedOption.price_fet) || 0,
+      })
+    }
+
+    // US Domestic Segment Fee
+    if (selectedOption.price_extras_total && selectedOption.price_extras_total > 0) {
+      extractedTaxes.push({
+        id: "quote-us-domestic",
+        name: "US Domestic Segment Fee",
+        amount: Number(selectedOption.price_extras_total) || 0,
+      })
+    }
+
+    // US International Head Tax
+    if (selectedOption.price_taxes && selectedOption.price_taxes > 0) {
+      extractedTaxes.push({
+        id: "quote-us-international",
+        name: "US International Head Tax",
+        amount: Number(selectedOption.price_taxes) || 0,
+      })
+    }
+
+    if (extractedTaxes.length > 0) {
+      console.log("📋 Extracted fees from quote option:", extractedTaxes)
+      setTaxes(extractedTaxes)
+    }
+  }, [fullQuoteData, selectedQuote, open])
+
   const handleNext = useCallback(async () => {
     if (!selectedQuote || step !== 1) return
 
@@ -346,16 +391,15 @@ function InvoiceSummaryStep({
   }
 
   // Calculate subtotals - only use selected option
+  // IMPORTANT: Exclude fees (price_fet, price_extras_total, price_taxes) from subtotal
+  // These fees are already included in price_total, but we want them as separate tax line items
   const selectedOptionId = fullQuoteData.selected_option_id || selectedQuote?.selected_option_id
   const selectedOption = fullQuoteData.options?.find((opt: any) => opt.id === selectedOptionId)
 
+  // Aircraft subtotal = cost_operator + price_commission (EXCLUDING fees/taxes)
+  // Fees will be added separately as tax line items
   const subtotalAircraft = selectedOption
-    ? selectedOption.price_total ||
-      (selectedOption.cost_operator || 0) +
-        (selectedOption.price_commission || 0) +
-        (selectedOption.price_extras_total || 0) -
-        (selectedOption.price_discounts_total || 0) ||
-      0
+    ? (selectedOption.cost_operator || 0) + (selectedOption.price_commission || 0)
     : 0
 
   const subtotalServices =
@@ -365,9 +409,6 @@ function InvoiceSummaryStep({
     ) || 0
 
   const subtotal = subtotalAircraft + subtotalServices
-
-  // Calculate Federal Excise Tax amount (7.5% of aircraft total only)
-  const federalExciseTaxAmount = subtotalAircraft * FEDERAL_EXCISE_TAX_RATE
 
   // Calculate tax on taxable service items (7.5% same as Federal Excise Tax)
   const SERVICE_TAX_RATE = 0.075 // 7.5%
@@ -382,28 +423,17 @@ function InvoiceSummaryStep({
     }, 0)
   }, [fullQuoteData.services])
 
-  // Sync Federal Excise Tax and taxable services tax with taxes array
+  // Sync taxable services tax with taxes array (don't override quote-originated fees)
   useEffect(() => {
+    // Preserve quote-originated taxes (they have IDs starting with "quote-")
+    const quoteTaxes = safeTaxes.filter(tax => tax.id.startsWith('quote-'))
     const otherTaxes = safeTaxes.filter(tax => 
+      !tax.id.startsWith('quote-') && 
       tax.id !== FEDERAL_EXCISE_TAX_ID && 
       !tax.id.startsWith('taxable-service-tax-')
     )
     
-    const taxesToAdd: Array<{ id: string; name: string; amount: number }> = []
-    
-    // Add/update Federal Excise Tax if enabled
-    if (hasFederalExciseTax && subtotalAircraft > 0) {
-      const existingFederalTax = safeTaxes.find(tax => tax.id === FEDERAL_EXCISE_TAX_ID)
-      if (!existingFederalTax || Math.abs(existingFederalTax.amount - federalExciseTaxAmount) > 0.01) {
-        taxesToAdd.push({
-          id: FEDERAL_EXCISE_TAX_ID,
-          name: `Federal Excise Tax (7.5%)`,
-          amount: federalExciseTaxAmount,
-        })
-      } else {
-        taxesToAdd.push(existingFederalTax)
-      }
-    }
+    const taxesToAdd: Array<{ id: string; name: string; amount: number }> = [...quoteTaxes]
     
     // Add/update taxable services tax if there are taxable services
     if (taxableServicesTax > 0) {
@@ -442,14 +472,10 @@ function InvoiceSummaryStep({
       onTaxesChange(newTaxes)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [subtotalAircraft, federalExciseTaxAmount, taxableServicesTax])
+  }, [taxableServicesTax, fullQuoteData.services])
 
   // Calculate total tax amount
   const taxTotal = safeTaxes.reduce((sum, tax) => {
-    // Use calculated amount for Federal Excise Tax if it exists
-    if (tax.id === FEDERAL_EXCISE_TAX_ID) {
-      return sum + federalExciseTaxAmount
-    }
     // Use calculated amount for taxable services tax
     if (tax.id.startsWith('taxable-service-tax-')) {
       return sum + taxableServicesTax
@@ -615,8 +641,9 @@ function InvoiceSummaryStep({
                       selectedOption.price_total ||
                         (selectedOption.cost_operator || 0) +
                           (selectedOption.price_commission || 0) +
-                          (selectedOption.price_extras_total || 0) -
-                          (selectedOption.price_discounts_total || 0) ||
+                          (selectedOption.price_fet || 0) +
+                          (selectedOption.price_extras_total || 0) +
+                          (selectedOption.price_taxes || 0) ||
                         0,
                     )}
                   </span>
@@ -882,53 +909,49 @@ function InvoiceSummaryStep({
                 </div>
               </div>
 
-              {/* Federal Excise Tax Quick Toggle */}
-              {selectedOption && subtotalAircraft > 0 && (
-                <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border border-border">
-                  <div className="flex items-center gap-3">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <Label htmlFor="federal-excise-tax" className="font-medium text-sm text-foreground cursor-pointer">
-                          Federal Excise Tax (7.5%)
-                        </Label>
-                        <span className="text-xs text-muted-foreground">(on aircraft only)</span>
+              {/* Quote-originated fees (from QuoteOptionsTab) */}
+              {safeTaxes.filter(tax => tax.id.startsWith('quote-')).length > 0 && (
+                <div className="space-y-2">
+                  <Label className="text-xs font-medium text-foreground">Quote Fees & Taxes</Label>
+                  {safeTaxes
+                    .filter(tax => tax.id.startsWith('quote-'))
+                    .map((tax) => (
+                      <div
+                        key={tax.id}
+                        className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border border-border"
+                      >
+                        <div className="flex-1">
+                          <Label className="font-medium text-sm text-foreground">
+                            {tax.name}
+                          </Label>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            From quote option configuration
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-sm font-semibold text-foreground">
+                            {formatCurrency(tax.amount || 0)}
+                          </span>
+                        </div>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        Automatically calculated at 7.5% of aircraft total: {formatCurrency(subtotalAircraft)}
-                      </p>
-                      {hasFederalExciseTax && (
-                        <p className="text-xs font-medium text-foreground mt-1">
-                          Tax Amount: {formatCurrency(federalExciseTaxAmount)}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  <Switch
-                    id="federal-excise-tax"
-                    checked={hasFederalExciseTax}
-                    onCheckedChange={(checked) => {
-                      const otherTaxes = safeTaxes.filter(tax => tax.id !== FEDERAL_EXCISE_TAX_ID)
-                      if (checked && subtotalAircraft > 0) {
-                        const federalTax = {
-                          id: FEDERAL_EXCISE_TAX_ID,
-                          name: `Federal Excise Tax (7.5%)`,
-                          amount: federalExciseTaxAmount,
-                        }
-                        onTaxesChange([federalTax, ...otherTaxes])
-                      } else {
-                        onTaxesChange(otherTaxes)
-                      }
-                    }}
-                  />
+                    ))}
                 </div>
               )}
 
               {/* Manual Taxes & Fees */}
-              {safeTaxes.filter(tax => tax.id !== FEDERAL_EXCISE_TAX_ID && !tax.id.startsWith('taxable-service-tax-')).length > 0 && (
+              {safeTaxes.filter(tax => 
+                !tax.id.startsWith('quote-') && 
+                tax.id !== FEDERAL_EXCISE_TAX_ID && 
+                !tax.id.startsWith('taxable-service-tax-')
+              ).length > 0 && (
                 <div className="space-y-2">
                   <Label className="text-xs font-medium text-foreground">Other Taxes & Fees</Label>
                   {safeTaxes
-                    .filter(tax => tax.id !== FEDERAL_EXCISE_TAX_ID && !tax.id.startsWith('taxable-service-tax-'))
+                    .filter(tax => 
+                      !tax.id.startsWith('quote-') && 
+                      tax.id !== FEDERAL_EXCISE_TAX_ID && 
+                      !tax.id.startsWith('taxable-service-tax-')
+                    )
                     .map((tax) => (
                       <div
                         key={tax.id}
@@ -937,10 +960,15 @@ function InvoiceSummaryStep({
                         <Input
                           value={tax.name}
                           onChange={(e) => {
-                            const federalTax = safeTaxes.find(t => t.id === FEDERAL_EXCISE_TAX_ID)
-                            const otherTaxes = safeTaxes.filter(t => t.id !== FEDERAL_EXCISE_TAX_ID)
+                            const quoteTaxes = safeTaxes.filter(t => t.id.startsWith('quote-'))
+                            const taxableTaxes = safeTaxes.filter(t => t.id.startsWith('taxable-service-tax-'))
+                            const otherTaxes = safeTaxes.filter(t => 
+                              !t.id.startsWith('quote-') && 
+                              !t.id.startsWith('taxable-service-tax-') && 
+                              t.id !== FEDERAL_EXCISE_TAX_ID
+                            )
                             const updated = otherTaxes.map((t) => (t.id === tax.id ? { ...t, name: e.target.value } : t))
-                            onTaxesChange(federalTax ? [federalTax, ...updated] : updated)
+                            onTaxesChange([...quoteTaxes, ...taxableTaxes, ...updated])
                           }}
                           placeholder="Tax/Fee Name"
                           className="flex-1 h-9 text-sm"
@@ -950,12 +978,17 @@ function InvoiceSummaryStep({
                           step="0.01"
                           value={tax.amount ?? 0}
                           onChange={(e) => {
-                            const federalTax = safeTaxes.find(t => t.id === FEDERAL_EXCISE_TAX_ID)
-                            const otherTaxes = safeTaxes.filter(t => t.id !== FEDERAL_EXCISE_TAX_ID)
+                            const quoteTaxes = safeTaxes.filter(t => t.id.startsWith('quote-'))
+                            const taxableTaxes = safeTaxes.filter(t => t.id.startsWith('taxable-service-tax-'))
+                            const otherTaxes = safeTaxes.filter(t => 
+                              !t.id.startsWith('quote-') && 
+                              !t.id.startsWith('taxable-service-tax-') && 
+                              t.id !== FEDERAL_EXCISE_TAX_ID
+                            )
                             const updated = otherTaxes.map((t) =>
                               t.id === tax.id ? { ...t, amount: parseFloat(e.target.value) || 0 } : t,
                             )
-                            onTaxesChange(federalTax ? [federalTax, ...updated] : updated)
+                            onTaxesChange([...quoteTaxes, ...taxableTaxes, ...updated])
                           }}
                           className="w-32 h-9 text-sm text-right"
                           placeholder="Amount"
@@ -964,7 +997,6 @@ function InvoiceSummaryStep({
                           variant="outline"
                           size="sm"
                           onClick={() => {
-                            const federalTax = safeTaxes.find(t => t.id === FEDERAL_EXCISE_TAX_ID)
                             const updated = safeTaxes.filter((t) => t.id !== tax.id)
                             onTaxesChange(updated)
                           }}
@@ -995,18 +1027,20 @@ function InvoiceSummaryStep({
 
               {safeTaxes.length > 0 && (
                 <>
+                  {/* Quote-originated fees */}
                   {safeTaxes
-                    .filter(tax => tax.id === FEDERAL_EXCISE_TAX_ID)
+                    .filter(tax => tax.id.startsWith('quote-'))
                     .map((tax) => (
                       <div key={tax.id} className="flex justify-between text-sm">
                         <span className="text-muted-foreground">
-                          {tax.name} <span className="text-xs">(auto)</span>
+                          {tax.name} <span className="text-xs">(from quote)</span>
                         </span>
                         <span className="font-semibold text-foreground">
-                          {formatCurrency(federalExciseTaxAmount)}
+                          {formatCurrency(tax.amount || 0)}
                         </span>
                       </div>
                     ))}
+                  {/* Taxable services tax */}
                   {safeTaxes
                     .filter(tax => tax.id.startsWith('taxable-service-tax-'))
                     .map((tax) => (
@@ -1019,8 +1053,13 @@ function InvoiceSummaryStep({
                         </span>
                       </div>
                     ))}
+                  {/* Other manual taxes */}
                   {safeTaxes
-                    .filter(tax => tax.id !== FEDERAL_EXCISE_TAX_ID && !tax.id.startsWith('taxable-service-tax-'))
+                    .filter(tax => 
+                      !tax.id.startsWith('quote-') && 
+                      tax.id !== FEDERAL_EXCISE_TAX_ID && 
+                      !tax.id.startsWith('taxable-service-tax-')
+                    )
                     .map((tax) => (
                       <div key={tax.id} className="flex justify-between text-sm">
                         <span className="text-muted-foreground">{tax.name}</span>
@@ -1203,7 +1242,12 @@ function ContractBuilderStep({
       0,
     ) || 0
 
-  const subtotal = totalAircraftOption + totalServices
+  // Aircraft subtotal should exclude fees (same as in InvoiceSummaryStep)
+  const aircraftSubtotalExcludingFees = selectedOption
+    ? (selectedOption.cost_operator || 0) + (selectedOption.price_commission || 0)
+    : 0
+  
+  const subtotal = aircraftSubtotalExcludingFees + totalServices
   const taxTotal = safeTaxes.reduce((sum, tax) => sum + (tax.amount || 0), 0)
   const grandTotal = subtotal + taxTotal
 
@@ -1276,8 +1320,9 @@ function ContractBuilderStep({
                             option.price_total ||
                               (option.cost_operator || 0) +
                                 (option.price_commission || 0) +
-                                (option.price_extras_total || 0) -
-                                (option.price_discounts_total || 0) ||
+                                (option.price_fet || 0) +
+                                (option.price_extras_total || 0) +
+                                (option.price_taxes || 0) ||
                               0,
                           )}
                         </p>
