@@ -84,8 +84,22 @@ export default function QuotesPage() {
         if (typeof window === "undefined") return
 
         const { createClient } = await import("@/lib/supabase/client")
+        const { getCurrentTenantIdClient } = await import("@/lib/supabase/client-member-helpers")
         const supabase = createClient()
-        const tenantId = process.env.NEXT_PUBLIC_TENANT_ID!
+        
+        // Get current tenant_id for filtering
+        const tenantId = await getCurrentTenantIdClient()
+        
+        if (!tenantId) {
+          toast({
+            title: "Authentication Error",
+            description: "Unable to determine your tenant. Please sign in again.",
+            variant: "destructive",
+          })
+          setLoading(false)
+          return
+        }
+
         const { data, error } = await supabase
           .from("quote")
           .select("*")
