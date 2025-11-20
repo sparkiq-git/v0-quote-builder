@@ -5,7 +5,7 @@ import type React from "react"
 import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { ImagePlus, Trash2, UploadCloud, X, Crop } from "lucide-react"
+import { Trash2, UploadCloud, X, Crop } from "lucide-react"
 import Cropper from "react-easy-crop"
 import Slider from "@mui/material/Slider"
 import { useToast } from "@/hooks/use-toast"
@@ -32,13 +32,12 @@ export default function AircraftImageManager({ aircraftId, tenantId, onImagesUpd
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null)
   const [imageLoaded, setImageLoaded] = useState(false)
   const [imageLoadTimeout, setImageLoadTimeout] = useState<NodeJS.Timeout | null>(null)
+  const [isDragging, setIsDragging] = useState(false)
   const inputRef = useRef<HTMLInputElement | null>(null)
   const supabase = createClient()
 
-  // Load existing images
   useEffect(() => {
     const fetchImages = async () => {
-      // Only run on client side
       if (typeof window === "undefined") return
 
       const { data, error } = await supabase
@@ -54,7 +53,10 @@ export default function AircraftImageManager({ aircraftId, tenantId, onImagesUpd
 
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || [])
+    processFiles(files)
+  }
 
+  const processFiles = (files: File[]) => {
     for (const file of files) {
       if (file.size > 5 * 1024 * 1024) {
         toast({ title: "Image too large", description: "Each image must be < 5MB", variant: "destructive" })
@@ -66,7 +68,6 @@ export default function AircraftImageManager({ aircraftId, tenantId, onImagesUpd
       }
     }
 
-    // For single file, open crop dialog
     if (files.length === 1) {
       const file = files[0]
       setCropFile(file)
@@ -79,12 +80,10 @@ export default function AircraftImageManager({ aircraftId, tenantId, onImagesUpd
         setZoom(1)
         setCroppedAreaPixels(null)
 
-        // Clear any existing timeout
         if (imageLoadTimeout) {
           clearTimeout(imageLoadTimeout)
         }
 
-        // Set a fallback timeout to enable the button after 2 seconds
         const timeout = setTimeout(() => {
           setImageLoaded(true)
         }, 2000)
@@ -92,7 +91,6 @@ export default function AircraftImageManager({ aircraftId, tenantId, onImagesUpd
       }
       reader.readAsDataURL(file)
     } else {
-      // For multiple files, add directly without cropping
       const newFiles = [...imageFiles, ...files]
       setImageFiles(newFiles)
 
@@ -143,7 +141,6 @@ export default function AircraftImageManager({ aircraftId, tenantId, onImagesUpd
       setCropPreview(null)
       setImageLoaded(false)
 
-      // Clear timeout when closing
       if (imageLoadTimeout) {
         clearTimeout(imageLoadTimeout)
         setImageLoadTimeout(null)
@@ -164,8 +161,6 @@ export default function AircraftImageManager({ aircraftId, tenantId, onImagesUpd
       setUploading(true)
       toast({ title: "Uploading images..." })
 
-      // Check authentication first
-      // Only run on client side
       if (typeof window === "undefined") return
 
       const {
@@ -177,18 +172,15 @@ export default function AircraftImageManager({ aircraftId, tenantId, onImagesUpd
         throw new Error("Please sign in to upload images")
       }
 
-      // Use server-side API to bypass RLS restrictions
       for (let i = 0; i < imageFiles.length; i++) {
         const file = imageFiles[i]
 
-        // Create FormData for server upload
         const formData = new FormData()
         formData.append("file", file)
         formData.append("aircraftId", aircraftId)
         formData.append("tenantId", tenantId)
         formData.append("userId", user.id)
 
-        // Upload via server-side API
         const response = await fetch("/api/upload-aircraft-image", {
           method: "POST",
           body: formData,
@@ -237,18 +229,43 @@ export default function AircraftImageManager({ aircraftId, tenantId, onImagesUpd
     }
   }
 
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(true)
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+
+    const files = Array.from(e.dataTransfer.files)
+    processFiles(files)
+  }
+
   return (
     <div className="space-y-4">
       {/* Upload Section */}
-      <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+      <div
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        onClick={() => inputRef.current?.click()}
+        className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
+          isDragging ? "border-primary bg-primary/5" : "border-gray-300 hover:border-gray-400"
+        }`}
+      >
         <input ref={inputRef} type="file" multiple accept="image/*" onChange={handleImageChange} className="hidden" />
-        <div className="flex gap-2 mb-2">
-          <Button type="button" onClick={() => inputRef.current?.click()} variant="outline">
-            <ImagePlus className="mr-2 h-4 w-4" />
-            Add Images
-          </Button>
-        </div>
-        <p className="text-sm text-gray-500">Click to select images or drag and drop</p>
+        <UploadCloud className="mx-auto h-12 w-12 text-gray-400 mb-3" />
+        <p className="text-sm font-medium text-gray-700 mb-1">Click to select images or drag and drop</p>
+        <p className="text-xs text-gray-500">PNG, JPG up to 5MB each</p>
       </div>
 
       {/* Preview Images */}
@@ -329,7 +346,6 @@ export default function AircraftImageManager({ aircraftId, tenantId, onImagesUpd
                   onZoomChange={setZoom}
                   onCropComplete={handleCropComplete}
                   onImageLoaded={() => {
-                    // Clear the fallback timeout since image loaded properly
                     if (imageLoadTimeout) {
                       clearTimeout(imageLoadTimeout)
                       setImageLoadTimeout(null)
