@@ -4,13 +4,20 @@ import { useState, useEffect } from "react"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
 import { AirportCombobox } from "@/components/ui/airport-combobox"
-import { DateTimePicker } from "@/components/ui/date-time-picker"
-import { Plane, ChevronRight, Plus, Trash2 } from "lucide-react"
+import { Calendar } from "@/components/ui/calendar"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import { Plane, ChevronRight, Plus, Trash2, ChevronDown } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
 import type { Quote, Leg } from "@/lib/types"
+import { format } from "date-fns"
 
 type TripType = "one-way" | "round-trip" | "multi-city"
 
@@ -22,14 +29,40 @@ interface Props {
   onBack: () => void
 }
 
+// Helper functions for date conversion
+const stringToDate = (dateString: string | null | undefined): Date | undefined => {
+  if (!dateString || dateString.trim() === "") return undefined
+  const date = new Date(dateString)
+  return isNaN(date.getTime()) ? undefined : date
+}
+
+const dateToString = (date: Date | undefined): string => {
+  if (!date) return ""
+  // Format as YYYY-MM-DD for ISO string compatibility
+  return format(date, "yyyy-MM-dd")
+}
+
+const timeToString = (time: string | null | undefined): string => {
+  if (!time || time.trim() === "") return ""
+  // Ensure time is in HH:mm format
+  if (time.includes(":")) {
+    const [hours, minutes] = time.split(":")
+    return `${hours.padStart(2, "0")}:${minutes.padStart(2, "0")}`
+  }
+  return time
+}
+
 export function QuoteLegsTab({ quote, onUpdate, onLegsChange, onNext, onBack }: Props) {
   const { toast } = useToast()
   const [saving, setSaving] = useState(false)
   const [tripType, setTripType] = useState<TripType>(quote.trip_type || "one-way")
 
-  
-
   const legs = Array.isArray(quote.legs) ? quote.legs : []
+
+  // Popover states for date pickers
+  const [departureDateOpen, setDepartureDateOpen] = useState(false)
+  const [returnDateOpen, setReturnDateOpen] = useState(false)
+  const [multiLegDateOpen, setMultiLegDateOpen] = useState<Record<string, boolean>>({})
 
   // ✈️ One-way / Round-trip form state
   const [formState, setFormState] = useState({
@@ -37,19 +70,19 @@ export function QuoteLegsTab({ quote, onUpdate, onLegsChange, onNext, onBack }: 
     origin_code: legs[0]?.origin_code || "",
     destination: legs[0]?.destination || "",
     destination_code: legs[0]?.destination_code || "",
-    departureDate: legs[0]?.departureDate || legs[0]?.depart_dt || "",
+    departureDate: stringToDate(legs[0]?.departureDate || legs[0]?.depart_dt),
     departureTime: legs[0]?.departureTime || legs[0]?.depart_time || "",
-    returnDate: legs[1]?.departureDate || legs[1]?.depart_dt || "",
+    returnDate: stringToDate(legs[1]?.departureDate || legs[1]?.depart_dt),
     returnTime: legs[1]?.departureTime || legs[1]?.depart_time || "",
     passengers: legs[0]?.passengers || legs[0]?.pax_count || 1,
-    origin_lat: legs[0]?.origin_lat ?? null,          // ✅ add
-    origin_long: legs[0]?.origin_long ?? null,        // ✅ add
-    destination_lat: legs[0]?.destination_lat ?? null,// ✅ add
-    destination_long: legs[0]?.destination_long ?? null, // ✅ add
+    origin_lat: legs[0]?.origin_lat ?? null,
+    origin_long: legs[0]?.origin_long ?? null,
+    destination_lat: legs[0]?.destination_lat ?? null,
+    destination_long: legs[0]?.destination_long ?? null,
   })
 
   // 🧭 Multi-City form state
-  const [multiLegs, setMultiLegs] = useState<Leg[]>(
+  const [multiLegs, setMultiLegs] = useState<(Leg & { departureDate?: Date | undefined })[]>(
     legs.length
       ? legs.map((l) => ({
           id: l.id || crypto.randomUUID(),
@@ -57,7 +90,7 @@ export function QuoteLegsTab({ quote, onUpdate, onLegsChange, onNext, onBack }: 
           origin_code: l.origin_code || "",
           destination: l.destination || "",
           destination_code: l.destination_code || "",
-          departureDate: l.departureDate || l.depart_dt || "",
+          departureDate: stringToDate(l.departureDate || l.depart_dt),
           departureTime: l.departureTime || l.depart_time || "",
           passengers: l.passengers || l.pax_count || 1,
           origin_lat: l.origin_lat ?? null,
@@ -72,7 +105,7 @@ export function QuoteLegsTab({ quote, onUpdate, onLegsChange, onNext, onBack }: 
             origin_code: "",
             destination: "",
             destination_code: "",
-            departureDate: "",
+            departureDate: undefined,
             departureTime: "",
             passengers: 1,
             origin_lat: null,
@@ -92,14 +125,16 @@ export function QuoteLegsTab({ quote, onUpdate, onLegsChange, onNext, onBack }: 
     const currentSecondLeg = legs[1]
     
     setFormState((prev) => {
+      const newDepartureDate = stringToDate(currentFirstLeg?.departureDate || currentFirstLeg?.depart_dt)
+      const newReturnDate = stringToDate(currentSecondLeg?.departureDate || currentSecondLeg?.depart_dt)
       const newState = {
         origin: currentFirstLeg?.origin || "",
         origin_code: currentFirstLeg?.origin_code || "",
         destination: currentFirstLeg?.destination || "",
         destination_code: currentFirstLeg?.destination_code || "",
-        departureDate: currentFirstLeg?.departureDate || currentFirstLeg?.depart_dt || "",
+        departureDate: newDepartureDate,
         departureTime: currentFirstLeg?.departureTime || currentFirstLeg?.depart_time || "",
-        returnDate: currentSecondLeg?.departureDate || currentSecondLeg?.depart_dt || "",
+        returnDate: newReturnDate,
         returnTime: currentSecondLeg?.departureTime || currentSecondLeg?.depart_time || "",
         passengers: currentFirstLeg?.passengers || currentFirstLeg?.pax_count || 1,
         origin_lat: currentFirstLeg?.origin_lat ?? null,
@@ -114,9 +149,9 @@ export function QuoteLegsTab({ quote, onUpdate, onLegsChange, onNext, onBack }: 
         prev.origin_code !== newState.origin_code ||
         prev.destination !== newState.destination ||
         prev.destination_code !== newState.destination_code ||
-        prev.departureDate !== newState.departureDate ||
+        prev.departureDate?.getTime() !== newState.departureDate?.getTime() ||
         prev.departureTime !== newState.departureTime ||
-        prev.returnDate !== newState.returnDate ||
+        prev.returnDate?.getTime() !== newState.returnDate?.getTime() ||
         prev.returnTime !== newState.returnTime ||
         prev.passengers !== newState.passengers
       ) {
@@ -134,7 +169,7 @@ export function QuoteLegsTab({ quote, onUpdate, onLegsChange, onNext, onBack }: 
           origin_code: l.origin_code || "",
           destination: l.destination || "",
           destination_code: l.destination_code || "",
-          departureDate: l.departureDate || l.depart_dt || "",
+          departureDate: stringToDate(l.departureDate || l.depart_dt),
           departureTime: l.departureTime || l.depart_time || "",
           passengers: l.passengers || l.pax_count || 1,
           origin_lat: l.origin_lat ?? null,
@@ -154,7 +189,7 @@ export function QuoteLegsTab({ quote, onUpdate, onLegsChange, onNext, onBack }: 
               p.origin_code !== n.origin_code ||
               p.destination !== n.destination ||
               p.destination_code !== n.destination_code ||
-              p.departureDate !== n.departureDate ||
+              p.departureDate?.getTime() !== n.departureDate?.getTime() ||
               p.departureTime !== n.departureTime ||
               p.passengers !== n.passengers
             )
@@ -206,10 +241,15 @@ export function QuoteLegsTab({ quote, onUpdate, onLegsChange, onNext, onBack }: 
       }))
     })
 
-    // Helper to normalize empty strings to null
-    const normalizeDate = (date: string | null | undefined): string | null => {
-      if (!date || typeof date !== 'string' || date.trim() === '') return null
-      return date.trim()
+    // Helper to normalize Date objects or strings to string or null
+    const normalizeDate = (date: Date | string | null | undefined): string | null => {
+      if (!date) return null
+      if (date instanceof Date) {
+        return isNaN(date.getTime()) ? null : dateToString(date)
+      }
+      if (typeof date === 'string' && date.trim() === '') return null
+      if (typeof date === 'string') return date.trim()
+      return null
     }
     
     const normalizeTime = (time: string | null | undefined): string | null => {
@@ -223,6 +263,8 @@ export function QuoteLegsTab({ quote, onUpdate, onLegsChange, onNext, onBack }: 
         ...leg,
         departureDate: normalizeDate(leg.departureDate),
         departureTime: normalizeTime(leg.departureTime),
+        // Remove departureDate if it's a Date object (it's been converted to string)
+        ...(leg.departureDate instanceof Date ? {} : {})
       }))
       console.log("🛫 Processed multi-city legs:", processedLegs)
       onLegsChange(processedLegs)
@@ -284,13 +326,13 @@ export function QuoteLegsTab({ quote, onUpdate, onLegsChange, onNext, onBack }: 
 
   /* ------------------ 🧱 Multi-leg Handlers ------------------ */
 const handleAddLeg = () => {
-  const newLeg: Leg = {
+  const newLeg: Leg & { departureDate?: Date | undefined } = {
     id: crypto.randomUUID(),
     origin: "",
     origin_code: "",
     destination: "",
     destination_code: "",
-    departureDate: "",
+    departureDate: undefined,
     departureTime: "",
     passengers: multiLegs[multiLegs.length - 1]?.passengers || 1,
     origin_lat: null,
@@ -384,25 +426,44 @@ const handleAddLeg = () => {
               </div>
 
               {/* Departure Date */}
-              <div>
-                <Label>Departure Date *</Label>
-                <DateTimePicker
-                  date={formState.departureDate}
-                  onDateChange={(d) => {
-                    console.log("📅 Departure date changed:", d)
-                    setFormState((prev) => ({ ...prev, departureDate: d }))
-                  }}
-                  showOnlyDate
-                />
+              <div className="flex flex-col gap-3">
+                <Label htmlFor="departure-date-picker" className="px-1">Departure Date *</Label>
+                <Popover open={departureDateOpen} onOpenChange={setDepartureDateOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      id="departure-date-picker"
+                      className="w-full justify-between font-normal"
+                    >
+                      {formState.departureDate 
+                        ? format(formState.departureDate, "MMM dd, yyyy")
+                        : "Select date"}
+                      <ChevronDown className="h-4 w-4 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto overflow-hidden p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={formState.departureDate}
+                      captionLayout="dropdown"
+                      onSelect={(date) => {
+                        setFormState((prev) => ({ ...prev, departureDate: date }))
+                        setDepartureDateOpen(false)
+                      }}
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
 
               {/* Departure Time */}
-              <div>
-                <Label>Departure Time</Label>
-                <DateTimePicker
-                  time={formState.departureTime}
-                  onTimeChange={(t) => setFormState((prev) => ({ ...prev, departureTime: t }))}
-                  showOnlyTime
+              <div className="flex flex-col gap-3">
+                <Label htmlFor="departure-time-picker" className="px-1">Departure Time</Label>
+                <Input
+                  type="time"
+                  id="departure-time-picker"
+                  value={timeToString(formState.departureTime)}
+                  onChange={(e) => setFormState((prev) => ({ ...prev, departureTime: e.target.value }))}
+                  className="bg-background appearance-none [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
                 />
               </div>
             </div>
@@ -410,25 +471,44 @@ const handleAddLeg = () => {
             {tripType === "round-trip" && (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t">
                 {/* Return Date */}
-                <div>
-                  <Label>Return Date *</Label>
-                  <DateTimePicker
-                    date={formState.returnDate}
-                    onDateChange={(d) => {
-                      console.log("📅 Return date changed:", d)
-                      setFormState((prev) => ({ ...prev, returnDate: d }))
-                    }}
-                    showOnlyDate
-                  />
+                <div className="flex flex-col gap-3">
+                  <Label htmlFor="return-date-picker" className="px-1">Return Date *</Label>
+                  <Popover open={returnDateOpen} onOpenChange={setReturnDateOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        id="return-date-picker"
+                        className="w-full justify-between font-normal"
+                      >
+                        {formState.returnDate 
+                          ? format(formState.returnDate, "MMM dd, yyyy")
+                          : "Select date"}
+                        <ChevronDown className="h-4 w-4 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto overflow-hidden p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={formState.returnDate}
+                        captionLayout="dropdown"
+                        onSelect={(date) => {
+                          setFormState((prev) => ({ ...prev, returnDate: date }))
+                          setReturnDateOpen(false)
+                        }}
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
 
                 {/* Return Time */}
-                <div>
-                  <Label>Return Time</Label>
-                  <DateTimePicker
-                    time={formState.returnTime}
-                    onTimeChange={(t) => setFormState((prev) => ({ ...prev, returnTime: t }))}
-                    showOnlyTime
+                <div className="flex flex-col gap-3">
+                  <Label htmlFor="return-time-picker" className="px-1">Return Time</Label>
+                  <Input
+                    type="time"
+                    id="return-time-picker"
+                    value={timeToString(formState.returnTime)}
+                    onChange={(e) => setFormState((prev) => ({ ...prev, returnTime: e.target.value }))}
+                    className="bg-background appearance-none [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
                   />
                 </div>
               </div>
@@ -517,30 +597,53 @@ const handleAddLeg = () => {
 
                   </div>
 
-                  <div>
-                    <Label>Departure Date *</Label>
-                    <DateTimePicker
-                      date={leg.departureDate}
-                      onDateChange={(d) => {
-                        console.log("📅 Multi-city leg date changed:", { legId: leg.id, date: d })
-                        setMultiLegs((prev) =>
-                          prev.map((l) => (l.id === leg.id ? { ...l, departureDate: d } : l))
-                        )
-                      }}
-                      showOnlyDate
-                    />
+                  <div className="flex flex-col gap-3">
+                    <Label htmlFor={`leg-${leg.id}-date-picker`} className="px-1">Departure Date *</Label>
+                    <Popover 
+                      open={multiLegDateOpen[leg.id] || false} 
+                      onOpenChange={(open) => setMultiLegDateOpen(prev => ({ ...prev, [leg.id]: open }))}
+                    >
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          id={`leg-${leg.id}-date-picker`}
+                          className="w-full justify-between font-normal"
+                        >
+                          {leg.departureDate 
+                            ? format(leg.departureDate, "MMM dd, yyyy")
+                            : "Select date"}
+                          <ChevronDown className="h-4 w-4 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto overflow-hidden p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={leg.departureDate}
+                          captionLayout="dropdown"
+                          onSelect={(date) => {
+                            console.log("📅 Multi-city leg date changed:", { legId: leg.id, date })
+                            setMultiLegs((prev) =>
+                              prev.map((l) => (l.id === leg.id ? { ...l, departureDate: date } : l))
+                            )
+                            setMultiLegDateOpen(prev => ({ ...prev, [leg.id]: false }))
+                          }}
+                        />
+                      </PopoverContent>
+                    </Popover>
                   </div>
 
-                  <div>
-                    <Label>Departure Time</Label>
-                    <DateTimePicker
-                      time={leg.departureTime}
-                      onTimeChange={(t) =>
+                  <div className="flex flex-col gap-3">
+                    <Label htmlFor={`leg-${leg.id}-time-picker`} className="px-1">Departure Time</Label>
+                    <Input
+                      type="time"
+                      id={`leg-${leg.id}-time-picker`}
+                      value={timeToString(leg.departureTime)}
+                      onChange={(e) =>
                         setMultiLegs((prev) =>
-                          prev.map((l) => (l.id === leg.id ? { ...l, departureTime: t } : l))
+                          prev.map((l) => (l.id === leg.id ? { ...l, departureTime: e.target.value } : l))
                         )
                       }
-                      showOnlyTime
+                      className="bg-background appearance-none [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
                     />
                   </div>
                 </div>
