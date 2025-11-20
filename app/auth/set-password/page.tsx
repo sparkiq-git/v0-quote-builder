@@ -46,18 +46,6 @@ export default function SetPasswordPage() {
     "checking" | "need-session" | "ready" | "error"
   >("checking");
   const [error, setError] = useState<string | null>(null);
-  const [Loader2, setLoader2] = useState<React.ComponentType<{ className?: string }> | null>(null);
-
-  // Dynamically load Loader2 icon only on client side
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      import("lucide-react")
-        .then((mod) => setLoader2(() => mod.Loader2))
-        .catch((err) => {
-          console.error("Failed to load Loader2 icon:", err);
-        });
-    }
-  }, []);
 
   // 1) Establish session from hash (preferred), or verifyOtp as a fallback.
   useEffect(() => {
@@ -204,11 +192,7 @@ export default function SetPasswordPage() {
           <CardContent>
             {phase === "checking" && (
               <div className="flex justify-center py-8 text-muted-foreground">
-                {Loader2 ? (
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                ) : (
-                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                )}
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
               </div>
             )}
 
