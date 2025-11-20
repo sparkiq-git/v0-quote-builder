@@ -1,5 +1,7 @@
 "use client"
 
+import type React from "react"
+
 import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -8,6 +10,7 @@ import Cropper from "react-easy-crop"
 import Slider from "@mui/material/Slider"
 import { useToast } from "@/hooks/use-toast"
 import { getCroppedImg } from "@/lib/utils/crop"
+import { createClient } from "@/lib/supabase/client"
 
 interface AircraftImageManagerProps {
   aircraftId: string
@@ -30,16 +33,14 @@ export default function AircraftImageManager({ aircraftId, tenantId, onImagesUpd
   const [imageLoaded, setImageLoaded] = useState(false)
   const [imageLoadTimeout, setImageLoadTimeout] = useState<NodeJS.Timeout | null>(null)
   const inputRef = useRef<HTMLInputElement | null>(null)
+  const supabase = createClient()
 
   // Load existing images
   useEffect(() => {
     const fetchImages = async () => {
       // Only run on client side
-      if (typeof window === 'undefined') return;
-      
-      const { createClient } = await import("@/lib/supabase/client");
-      const supabase = createClient();
-      
+      if (typeof window === "undefined") return
+
       const { data, error } = await supabase
         .from("aircraft_image")
         .select("id, public_url")
@@ -71,18 +72,18 @@ export default function AircraftImageManager({ aircraftId, tenantId, onImagesUpd
       setCropFile(file)
       const reader = new FileReader()
       reader.onload = (e) => {
-        setCropPreview(e.target?.result as string || "")
+        setCropPreview((e.target?.result as string) || "")
         setCropOpen(true)
         setImageLoaded(false)
         setCrop({ x: 0, y: 0 })
         setZoom(1)
         setCroppedAreaPixels(null)
-        
+
         // Clear any existing timeout
         if (imageLoadTimeout) {
           clearTimeout(imageLoadTimeout)
         }
-        
+
         // Set a fallback timeout to enable the button after 2 seconds
         const timeout = setTimeout(() => {
           setImageLoaded(true)
@@ -127,21 +128,21 @@ export default function AircraftImageManager({ aircraftId, tenantId, onImagesUpd
         toast({ title: "Crop failed", description: "Failed to generate cropped image", variant: "destructive" })
         return
       }
-      
+
       const file = new File([croppedImage], cropFile.name, { type: cropFile.type })
-      
+
       setImageFiles([...imageFiles, file])
       const reader = new FileReader()
       reader.onload = (e) => {
         setImagePreviews([...imagePreviews, (e.target?.result as string) || ""])
       }
       reader.readAsDataURL(file)
-      
+
       setCropOpen(false)
       setCropFile(null)
       setCropPreview(null)
       setImageLoaded(false)
-      
+
       // Clear timeout when closing
       if (imageLoadTimeout) {
         clearTimeout(imageLoadTimeout)
@@ -165,17 +166,17 @@ export default function AircraftImageManager({ aircraftId, tenantId, onImagesUpd
 
       // Check authentication first
       // Only run on client side
-      if (typeof window === 'undefined') return;
-      
-      const { createClient } = await import("@/lib/supabase/client");
-      const supabase = createClient();
-      
-      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      if (typeof window === "undefined") return
+
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser()
       if (authError || !user) {
         console.error("Auth error:", authError)
         throw new Error("Please sign in to upload images")
       }
-      
+
       // Use server-side API to bypass RLS restrictions
       for (let i = 0; i < imageFiles.length; i++) {
         const file = imageFiles[i]
@@ -193,7 +194,6 @@ export default function AircraftImageManager({ aircraftId, tenantId, onImagesUpd
           body: formData,
         })
 
-        
         if (!response.ok) {
           const errorText = await response.text()
           throw new Error(`Server upload failed: ${response.status} ${errorText}`)
@@ -214,10 +214,10 @@ export default function AircraftImageManager({ aircraftId, tenantId, onImagesUpd
       onImagesUpdated?.()
     } catch (error: any) {
       console.error("❌ Upload failed:", error)
-      toast({ 
-        title: "Upload failed", 
-        description: error.message || "Failed to upload images. Please try again.", 
-        variant: "destructive" 
+      toast({
+        title: "Upload failed",
+        description: error.message || "Failed to upload images. Please try again.",
+        variant: "destructive",
       })
     } finally {
       setUploading(false)
@@ -226,10 +226,7 @@ export default function AircraftImageManager({ aircraftId, tenantId, onImagesUpd
 
   const deleteImage = async (imageId: string) => {
     try {
-      const { error } = await supabase
-        .from('aircraft_image')
-        .delete()
-        .eq('id', imageId)
+      const { error } = await supabase.from("aircraft_image").delete().eq("id", imageId)
 
       if (error) throw error
 
@@ -244,20 +241,9 @@ export default function AircraftImageManager({ aircraftId, tenantId, onImagesUpd
     <div className="space-y-4">
       {/* Upload Section */}
       <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-        <input
-          ref={inputRef}
-          type="file"
-          multiple
-          accept="image/*"
-          onChange={handleImageChange}
-          className="hidden"
-        />
+        <input ref={inputRef} type="file" multiple accept="image/*" onChange={handleImageChange} className="hidden" />
         <div className="flex gap-2 mb-2">
-          <Button
-            type="button"
-            onClick={() => inputRef.current?.click()}
-            variant="outline"
-          >
+          <Button type="button" onClick={() => inputRef.current?.click()} variant="outline">
             <ImagePlus className="mr-2 h-4 w-4" />
             Add Images
           </Button>
@@ -273,7 +259,7 @@ export default function AircraftImageManager({ aircraftId, tenantId, onImagesUpd
             {imagePreviews.map((preview, index) => (
               <div key={index} className="relative">
                 <img
-                  src={preview}
+                  src={preview || "/placeholder.svg"}
                   alt={`Preview ${index + 1}`}
                   className="w-full h-24 object-cover rounded"
                 />
@@ -289,12 +275,7 @@ export default function AircraftImageManager({ aircraftId, tenantId, onImagesUpd
               </div>
             ))}
           </div>
-          <Button 
-            type="button"
-            onClick={uploadImages} 
-            disabled={uploading} 
-            className="w-full"
-          >
+          <Button type="button" onClick={uploadImages} disabled={uploading} className="w-full">
             <UploadCloud className="mr-2 h-4 w-4" />
             {uploading ? "Uploading..." : `Upload ${imageFiles.length} Image(s)`}
           </Button>
@@ -309,7 +290,7 @@ export default function AircraftImageManager({ aircraftId, tenantId, onImagesUpd
             {images.map((image, index) => (
               <div key={image.id || index} className="relative">
                 <img
-                  src={image.url}
+                  src={image.url || "/placeholder.svg"}
                   alt={`Aircraft image ${index + 1}`}
                   className="w-full h-24 object-cover rounded"
                 />
@@ -330,12 +311,12 @@ export default function AircraftImageManager({ aircraftId, tenantId, onImagesUpd
 
       {/* Crop Dialog */}
       <Dialog open={cropOpen} onOpenChange={setCropOpen}>
-        <DialogContent className="max-w-full md:max-w-[65rem] overflow-y-auto max-h-[100vh]">
+        <DialogContent className="max-w-full md:max-w-[65rem] overflow-y-auto max-h-[100vh] z-[100]">
           <DialogHeader>
             <DialogTitle>Crop Image</DialogTitle>
             <DialogDescription>Adjust the crop area and zoom level</DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4">
             <div className="relative h-64 bg-gray-100">
               {cropPreview && (
@@ -358,7 +339,7 @@ export default function AircraftImageManager({ aircraftId, tenantId, onImagesUpd
                 />
               )}
             </div>
-            
+
             <div className="space-y-2">
               <label className="text-sm font-medium">Zoom: {Math.round(zoom * 100)}%</label>
               <Slider
@@ -370,14 +351,14 @@ export default function AircraftImageManager({ aircraftId, tenantId, onImagesUpd
                 className="w-full"
               />
             </div>
-            
+
             <div className="flex justify-end space-x-2">
               <Button type="button" variant="outline" onClick={() => setCropOpen(false)}>
                 Cancel
               </Button>
-              <Button 
+              <Button
                 type="button"
-                onClick={handleCropConfirm} 
+                onClick={handleCropConfirm}
                 disabled={!imageLoaded}
                 title={!imageLoaded ? "Waiting for image to load..." : "Ready to crop"}
               >

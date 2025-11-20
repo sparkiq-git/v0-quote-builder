@@ -22,16 +22,14 @@ export async function createQuote(tenantId?: string) {
   if (typeof window === 'undefined') throw new Error("createQuote can only be called on client side")
   
   const { createClient } = await import("@/lib/supabase/client")
-  const { getCurrentTenantIdClient } = await import("@/lib/supabase/client-member-helpers")
   const supabase = createClient()
   const { data: userData, error: userError } = await supabase.auth.getUser()
   if (userError) throw userError
   const user = userData?.user
   if (!user) throw new Error("User not authenticated")
 
-  // Use provided tenantId, or get from current user, or fallback to env var
-  const tenant_id = tenantId || await getCurrentTenantIdClient() || process.env.NEXT_PUBLIC_TENANT_ID
-  if (!tenant_id) throw new Error("Missing tenant_id. Unable to determine your tenant.")
+  const tenant_id = tenantId || process.env.NEXT_PUBLIC_TENANT_ID
+  if (!tenant_id) throw new Error("Missing tenant_id (argument or env var)")
 
   const validUntil = new Date(Date.now() + 12 * 60 * 60 * 1000).toISOString()
 
@@ -71,31 +69,14 @@ export async function getQuoteById(id: string) {
   if (typeof window === 'undefined') throw new Error("getQuoteById can only be called on client side")
   
   const { createClient } = await import("@/lib/supabase/client")
-  const { getCurrentTenantIdClient } = await import("@/lib/supabase/client-member-helpers")
   const supabase = createClient()
 
-  // Get current tenant_id for filtering
-  const tenantId = await getCurrentTenantIdClient()
-  
-  if (!tenantId) {
-    throw new Error("Unable to determine your tenant. Please sign in again.")
-  }
-
-  // Build query with tenant filtering
   const { data: quote, error: quoteError } = await supabase
     .from("quote")
     .select("*")
     .eq("id", id)
-    .eq("tenant_id", tenantId) // Only fetch quotes from user's tenant
     .single()
-    
-  if (quoteError) {
-    // Check if it's an access denied error
-    if (quoteError.code === 'PGRST116' || quoteError.message?.includes('No rows')) {
-      throw new Error("Quote not found or you don't have permission to access it.")
-    }
-    throw quoteError
-  }
+  if (quoteError) throw quoteError
 
   const [{ data: legs }, { data: servicesDb }, { data: options }] = await Promise.all([
     supabase.from("quote_detail").select("*").eq("quote_id", id).order("seq", { ascending: true }),

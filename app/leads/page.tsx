@@ -49,7 +49,7 @@ export default function LeadsPage() {
       supabase.realtime.setAuth(session.access_token)
       setSessionChecked(true)
 
-      authListener = supabase.auth.onAuthStateChange((_event: string, newSession: any) => {
+      authListener = supabase.auth.onAuthStateChange((_event, newSession) => {
         if (newSession) supabase.realtime.setAuth(newSession.access_token)
         else router.push("/auth/sign-in")
       })
@@ -75,18 +75,11 @@ export default function LeadsPage() {
     let supabase: any = null
     let channel: any = null
     let subscription: any = null
-    let currentTenantId: string | null = null
 
     const fetchLeads = async () => {
       const { createClient } = await import("@/lib/supabase/client")
-      const { getCurrentTenantIdClient } = await import("@/lib/supabase/client-member-helpers")
       supabase = createClient()
-      
-      // Get current tenant_id for filtering
-      currentTenantId = await getCurrentTenantIdClient()
-      
-      // Build query with tenant filtering
-      let query = supabase
+      const { data, error } = await supabase
         .from("lead")
         .select(`
           id,
@@ -98,22 +91,10 @@ export default function LeadsPage() {
           status,
           created_at,
           earliest_departure,
-          visibility,
-          tenant_id,
           lead_tenant_engagement (status, last_viewed_at)
         `)
         .neq("status", "withdrawn")
         .order("created_at", { ascending: false })
-
-      // Apply tenant filtering: show public leads OR leads belonging to current tenant
-      if (currentTenantId) {
-        query = query.or(`visibility.eq.public,tenant_id.eq.${currentTenantId}`)
-      } else {
-        // Fallback: only show public leads if no tenant_id
-        query = query.eq("visibility", "public")
-      }
-
-      const { data, error } = await query
 
       if (error) {
         console.error("Fetch error:", error)
@@ -132,61 +113,21 @@ export default function LeadsPage() {
       setLeads(leadsWithView)
       setLoading(false)
 
-      // Helper function to check if a lead should be visible to the current tenant
-      const shouldShowLead = (lead: any): boolean => {
-        // Filter out withdrawn leads
-        if (lead.status === "withdrawn") return false
-        
-        // If no tenant_id available, only show public leads
-        if (!currentTenantId) {
-          return lead.visibility === "public"
-        }
-        
-        // Show if lead is public OR belongs to current tenant
-        return lead.visibility === "public" || lead.tenant_id === currentTenantId
-      }
-
       // ✅ Realtime channel setup
       channel = supabase.channel("leads-realtime")
 
       // 🔹 Lead INSERT / UPDATE / DELETE
-      channel.on("postgres_changes", { event: "*", schema: "public", table: "lead" }, (payload: any) => {
+      channel.on("postgres_changes", { event: "*", schema: "public", table: "lead" }, (payload) => {
         setLeads((prev) => {
           switch (payload.eventType) {
-            case "INSERT": {
-              const newLead = payload.new as any
-              // Check if lead should be visible to current tenant
-              if (!shouldShowLead(newLead)) return prev
-              // Prevent duplicates
-              if (prev.some((l) => l.id === newLead.id)) return prev
-              // Add lead with engagement defaults
-              return [{ ...newLead, last_viewed_at: null }, ...prev]
-            }
-            case "UPDATE": {
-              const updatedLead = payload.new as any
-              const leadIndex = prev.findIndex((l) => l.id === updatedLead.id)
-              
-              // If lead was in the list, check if it should still be visible
-              if (leadIndex >= 0) {
-                if (shouldShowLead(updatedLead)) {
-                  // Update the lead
-                  return prev.map((lead) => (lead.id === updatedLead.id ? { ...lead, ...updatedLead } : lead))
-                } else {
-                  // Lead no longer matches filter criteria, remove it
-                  return prev.filter((lead) => lead.id !== updatedLead.id)
-                }
-              } else {
-                // Lead wasn't in the list, check if it should be added now
-                if (shouldShowLead(updatedLead)) {
-                  return [{ ...updatedLead, last_viewed_at: null }, ...prev]
-                }
-                return prev
-              }
-            }
-            case "DELETE": {
-              // Only remove if it exists in the list (which means it was visible)
+            case "INSERT":
+              // prevent duplicates
+              if (prev.some((l) => l.id === payload.new.id)) return prev
+              return [{ ...payload.new, last_viewed_at: null }, ...prev]
+            case "UPDATE":
+              return prev.map((lead) => (lead.id === payload.new.id ? { ...lead, ...payload.new } : lead))
+            case "DELETE":
               return prev.filter((lead) => lead.id !== payload.old.id)
-            }
             default:
               return prev
           }
@@ -197,28 +138,15 @@ export default function LeadsPage() {
       channel.on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "lead_tenant_engagement" },
-        (payload: any) => {
+        (payload) => {
           const leadId = payload.new.lead_id
-          const engagementTenantId = payload.new.tenant_id
           const lastViewed = payload.new.last_viewed_at
-          
           if (!leadId) return
-          
-          // Only update if the engagement belongs to the current tenant
-          if (currentTenantId && engagementTenantId !== currentTenantId) {
-            return
-          }
-          
-          // Only update if the lead exists in the current leads array (already filtered)
-          setLeads((prev) => {
-            const leadExists = prev.some((lead) => lead.id === leadId)
-            if (!leadExists) return prev
-            return prev.map((lead) => (lead.id === leadId ? { ...lead, last_viewed_at: lastViewed } : lead))
-          })
+          setLeads((prev) => prev.map((lead) => (lead.id === leadId ? { ...lead, last_viewed_at: lastViewed } : lead)))
         },
       )
 
-      subscription = channel.subscribe((status: string) => console.log("Realtime subscription status:", status))
+      subscription = channel.subscribe((status) => console.log("Realtime subscription status:", status))
     }
 
     fetchLeads()

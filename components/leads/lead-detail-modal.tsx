@@ -72,14 +72,10 @@ export function LeadDetailModal({
 
       try {
         const { createClient } = await import("@/lib/supabase/client");
-        const { getCurrentTenantIdClient } = await import("@/lib/supabase/client-member-helpers");
         const supabase = createClient();
 
-        // Get current tenant_id for filtering
-        const tenantId = await getCurrentTenantIdClient();
-
-        // Build query with tenant filtering
-        let query = supabase
+        // ✅ Fetch lead with its related details (segments/legs)
+        const { data, error } = await supabase
           .from("lead")
           .select(
             `
@@ -88,65 +84,24 @@ export function LeadDetailModal({
           `
           )
           .eq("id", leadId)
-
-        // Apply tenant filtering: allow access if public OR belongs to current tenant
-        if (tenantId) {
-          query = query.or(`visibility.eq.public,tenant_id.eq.${tenantId}`)
-        } else {
-          // Fallback: only show public leads if no tenant_id
-          query = query.eq("visibility", "public")
-        }
-
-        const { data, error } = await query.single()
+          .single()
 
         if (error) {
           console.error("Error fetching lead:", error)
 
-          // fallback: just load lead without details (with same tenant filtering)
-          let fallbackQuery = supabase
+          // fallback: just load lead without details
+          const { data: basicData, error: basicError } = await supabase
             .from("lead")
             .select("*")
             .eq("id", leadId)
-
-          // Apply same tenant filtering
-          if (tenantId) {
-            fallbackQuery = fallbackQuery.or(`visibility.eq.public,tenant_id.eq.${tenantId}`)
-          } else {
-            fallbackQuery = fallbackQuery.eq("visibility", "public")
-          }
-
-          const { data: basicData, error: basicError } = await fallbackQuery.single()
+            .single()
 
           if (basicError) {
             console.error("Error fetching lead (fallback):", basicError)
-            if (basicError.code === 'PGRST116' || basicError.message?.includes('No rows')) {
-              toast({
-                title: "Access Denied",
-                description: "You don't have permission to view this lead, or it doesn't exist.",
-                variant: "destructive",
-              })
-            } else {
-              toast({
-                title: "Error",
-                description: basicError.message || "Failed to fetch lead details.",
-                variant: "destructive",
-              })
-            }
           } else {
             setLead(basicData)
           }
         } else {
-          // Check if we got data (RLS might have filtered it out)
-          if (!data) {
-            toast({
-              title: "Access Denied",
-              description: "You don't have permission to view this lead.",
-              variant: "destructive",
-            })
-            onClose()
-            return
-          }
-
           const leadWithDetails: LeadWithEngagement = {
             ...data,
             details: data.details || [],
