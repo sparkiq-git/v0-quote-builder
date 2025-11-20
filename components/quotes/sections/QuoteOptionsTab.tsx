@@ -247,7 +247,8 @@ const handleUpdateOption = (id: string, updates: Partial<QuoteOption>) => {
   if (
     !updates ||
     Object.keys(updates).length === 0 ||
-    Object.values(updates).every((v) => v === undefined || v === null || v === "")
+    // Allow empty strings for string fields like 'notes', but block if all values are undefined/null
+    Object.values(updates).every((v) => v === undefined || v === null)
   ) {
     return;
   }
