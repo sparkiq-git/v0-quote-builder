@@ -52,12 +52,5 @@ export function createClient() {
 // Export a function to get the client instead of calling it at module level
 export const getSupabaseClient = () => createClient()
 
-// Export the client as a lazy-loaded singleton using the global storage
-// This ensures only one instance is created even if the module is re-evaluated
-export const supabase = new Proxy({} as ReturnType<typeof createBrowserClient>, {
-  get(target, prop) {
-    // Always use createClient() which now uses global storage for true singleton
-    const client = createClient()
-    return client[prop as keyof typeof client]
-  },
-})
+// Removed Proxy export to avoid module resolution issues
+// Use createClient() instead: const supabase = createClient()

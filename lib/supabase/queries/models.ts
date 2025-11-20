@@ -1,6 +1,8 @@
 "use client"
 
-import { supabase } from "@/lib/supabase/client"
+import { createClient } from "@/lib/supabase/client"
+
+const supabase = createClient()
 import type { AircraftModelRecord } from "@/lib/types"
 
 /** 🔹 Get all aircraft models with images and manufacturer info */
