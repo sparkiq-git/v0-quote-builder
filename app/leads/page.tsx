@@ -78,88 +78,59 @@ export default function LeadsPage() {
     let currentTenantId: string | null = null
 
     const fetchLeads = async () => {
-      try {
-        const { createClient } = await import("@/lib/supabase/client")
-        const { getCurrentTenantIdClient } = await import("@/lib/supabase/client-member-helpers")
-        supabase = createClient()
-        
-        // Get current tenant_id for filtering
-        currentTenantId = await getCurrentTenantIdClient()
-        
-        console.log("[LeadsPage] Current tenant ID:", currentTenantId)
-        
-        // Build query - RLS policies will handle tenant filtering at the database level
-        // If RLS is not enabled, we'll filter client-side after fetching
-        let query = supabase
-          .from("lead")
-          .select(`
-            id,
-            customer_name,
-            company,
-            trip_summary,
-            total_pax,
-            leg_count,
-            status,
-            created_at,
-            earliest_departure,
-            visibility,
-            tenant_id,
-            lead_tenant_engagement (status, last_viewed_at)
-          `)
-          .neq("status", "withdrawn")
-          .order("created_at", { ascending: false })
+      const { createClient } = await import("@/lib/supabase/client")
+      const { getCurrentTenantIdClient } = await import("@/lib/supabase/client-member-helpers")
+      supabase = createClient()
+      
+      // Get current tenant_id for filtering
+      currentTenantId = await getCurrentTenantIdClient()
+      
+      // Build query with tenant filtering
+      let query = supabase
+        .from("lead")
+        .select(`
+          id,
+          customer_name,
+          company,
+          trip_summary,
+          total_pax,
+          leg_count,
+          status,
+          created_at,
+          earliest_departure,
+          visibility,
+          tenant_id,
+          lead_tenant_engagement (status, last_viewed_at)
+        `)
+        .neq("status", "withdrawn")
+        .order("created_at", { ascending: false })
 
-        // Note: If RLS is enabled (which it should be), the database automatically filters
-        // based on visibility and tenant_id. We don't need client-side filtering here.
-        // However, if RLS is not enabled, we'll apply filtering after the query.
-
-        const { data, error } = await query
-
-        if (error) {
-          console.error("[LeadsPage] Fetch error:", error)
-          console.error("[LeadsPage] Error code:", error.code)
-          console.error("[LeadsPage] Error details:", JSON.stringify(error, null, 2))
-          setError(`Failed to load leads: ${error.message}`)
-          setLoading(false)
-          return
-        }
-
-        console.log("[LeadsPage] Raw fetched leads count:", data?.length || 0)
-        console.log("[LeadsPage] Sample lead data:", data?.[0] ? JSON.stringify(data[0], null, 2) : "No leads")
-
-        // If RLS is not active, apply client-side filtering as a fallback
-        let filteredData = data || []
-        if (currentTenantId && filteredData.length > 0) {
-          // Double-check: filter by tenant_id or visibility (safeguard if RLS isn't working)
-          filteredData = filteredData.filter((l: any) => {
-            const isPublic = l.visibility === "public"
-            const isOwnTenant = l.tenant_id === currentTenantId
-            return isPublic || isOwnTenant
-          })
-          console.log("[LeadsPage] After client-side filtering:", filteredData.length)
-        } else if (!currentTenantId && filteredData.length > 0) {
-          // No tenant_id - only show public leads
-          filteredData = filteredData.filter((l: any) => l.visibility === "public")
-          console.log("[LeadsPage] After public-only filtering:", filteredData.length)
-        }
-
-        const leadsWithView = filteredData.map(
-          (l: any): LeadWithEngagement => ({
-            ...l,
-            // Use engagement status if available, otherwise use lead's own status
-            status: l.lead_tenant_engagement?.[0]?.status ?? l.status ?? "new",
-            last_viewed_at: l.lead_tenant_engagement?.[0]?.last_viewed_at ?? null,
-          }),
-        )
-
-        console.log("[LeadsPage] Final leads count:", leadsWithView.length)
-        setLeads(leadsWithView)
-        setLoading(false)
-      } catch (err: any) {
-        console.error("[LeadsPage] Unexpected error fetching leads:", err)
-        setError(`Failed to load leads: ${err.message || "Unknown error"}`)
-        setLoading(false)
+      // Apply tenant filtering: show public leads OR leads belonging to current tenant
+      if (currentTenantId) {
+        query = query.or(`visibility.eq.public,tenant_id.eq.${currentTenantId}`)
+      } else {
+        // Fallback: only show public leads if no tenant_id
+        query = query.eq("visibility", "public")
       }
+
+      const { data, error } = await query
+
+      if (error) {
+        console.error("Fetch error:", error)
+        setError("Failed to load leads.")
+        return
+      }
+
+      const leadsWithView = (data || []).map(
+        (l: any): LeadWithEngagement => ({
+          ...l,
+          status: l.lead_tenant_engagement?.[0]?.status ?? "new",
+          last_viewed_at: l.lead_tenant_engagement?.[0]?.last_viewed_at ?? null,
+        }),
+      )
+
+      setLeads(leadsWithView)
+      setLoading(false)
 
       // Helper function to check if a lead should be visible to the current tenant
       const shouldShowLead = (lead: any): boolean => {
