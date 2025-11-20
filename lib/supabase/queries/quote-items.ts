@@ -1,8 +1,6 @@
 "use client"
 
-import { createClient } from "@/lib/supabase/client"
-
-const supabase = createClient()
+import { supabase } from "@/lib/supabase/client"
 
 /* =========================================================
    Helper: Check if a string is a valid UUID

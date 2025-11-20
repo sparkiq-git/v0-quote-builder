@@ -1,8 +1,6 @@
 "use client"
 
-import { createClient } from "@/lib/supabase/client"
-
-const supabase = createClient()
+import { supabase } from "@/lib/supabase/client"
 
 export async function getContacts(tenantId: string) {
   const { data, error } = await supabase

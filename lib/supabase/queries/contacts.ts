@@ -1,6 +1,4 @@
-import { createClient } from "@/lib/supabase/client"
-
-const supabase = createClient()
+import { supabase } from "@/lib/supabase/client"
 
 export async function updateContact(contactId: string, updates: any) {
   const { error } = await supabase.from("contact").update(updates).eq("id", contactId)

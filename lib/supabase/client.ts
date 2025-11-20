@@ -2,34 +2,12 @@
 
 import { createBrowserClient } from "@supabase/ssr"
 
-// Use a global variable (attached to window) to persist across module re-evaluations
-// This prevents multiple GoTrueClient instances in Next.js with hot module reloading
-const GLOBAL_KEY = "__SUPABASE_CLIENT__"
-
-declare global {
-  interface Window {
-    [GLOBAL_KEY]?: ReturnType<typeof createBrowserClient>
-  }
-}
-
-function getGlobalClient(): ReturnType<typeof createBrowserClient> | null {
-  if (typeof window === "undefined") {
-    return null
-  }
-  return (window as any)[GLOBAL_KEY] || null
-}
-
-function setGlobalClient(client: ReturnType<typeof createBrowserClient>): void {
-  if (typeof window !== "undefined") {
-    ;(window as any)[GLOBAL_KEY] = client
-  }
-}
+let client: ReturnType<typeof createBrowserClient> | null = null
 
 export function createClient() {
-  // Return existing client if already created (singleton pattern with global storage)
-  const existingClient = getGlobalClient()
-  if (existingClient) {
-    return existingClient
+  // Return existing client if already created (singleton pattern)
+  if (client) {
+    return client
   }
 
   // Check if we're in browser environment
@@ -44,13 +22,17 @@ export function createClient() {
     throw new Error("Missing Supabase environment variables")
   }
 
-  const client = createBrowserClient(supabaseUrl, supabaseAnonKey)
-  setGlobalClient(client)
+  client = createBrowserClient(supabaseUrl, supabaseAnonKey)
   return client
 }
 
 // Export a function to get the client instead of calling it at module level
 export const getSupabaseClient = () => createClient()
 
-// Removed Proxy export to avoid module resolution issues
-// Use createClient() instead: const supabase = createClient()
+// Create a proxy that initializes the client only when accessed
+export const supabase = new Proxy({} as ReturnType<typeof createBrowserClient>, {
+  get(target, prop) {
+    const client = createClient()
+    return client[prop as keyof typeof client]
+  },
+})
