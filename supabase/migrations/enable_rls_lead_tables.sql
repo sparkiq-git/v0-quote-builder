@@ -295,4 +295,3 @@ COMMENT ON POLICY "Users can update engagement records for their tenant" ON publ
 
 COMMENT ON POLICY "Users can delete engagement records for their tenant" ON public.lead_tenant_engagement IS 
 'Allows users to delete engagement records for their tenant. Father tenant users can delete any.';
-

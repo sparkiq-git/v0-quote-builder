@@ -110,14 +110,13 @@ The following changes were made to the client-side code to work with RLS:
 ## Migration File
 
 The RLS policies are defined in:
-```
+\`\`\`
 supabase/migrations/enable_rls_lead_tables.sql
-```
+\`\`\`
 
 To apply the migration:
-```bash
+\`\`\`bash
 supabase migration up
-```
+\`\`\`
 
 Or manually run the SQL file in your Supabase dashboard.
-

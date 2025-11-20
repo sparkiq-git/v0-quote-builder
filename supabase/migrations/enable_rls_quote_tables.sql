@@ -421,4 +421,3 @@ COMMENT ON POLICY "Users can update quote items for accessible quotes" ON public
 
 COMMENT ON POLICY "Users can delete quote items for accessible quotes" ON public.quote_item IS 
 'Allows users to delete quote_items for quotes they have access to.';
-

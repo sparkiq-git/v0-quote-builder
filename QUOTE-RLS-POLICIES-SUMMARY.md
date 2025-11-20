@@ -115,14 +115,13 @@ Realtime subscriptions automatically respect RLS policies. Users will only recei
 ## Migration File
 
 The RLS policies are defined in:
-```
+\`\`\`
 supabase/migrations/enable_rls_quote_tables.sql
-```
+\`\`\`
 
 To apply the migration:
-```bash
+\`\`\`bash
 supabase migration up
-```
+\`\`\`
 
 Or manually run the SQL file in your Supabase dashboard.
-
