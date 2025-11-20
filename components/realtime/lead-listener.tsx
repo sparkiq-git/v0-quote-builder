@@ -86,11 +86,20 @@ export function LeadListener() {
       const supabase = module.createClient()
       supabase.realtime.setAuth(session.access_token)
 
-      const tenantId =
-        session.user?.app_metadata?.tenant_id ??
-        session.user?.user_metadata?.tenant_id ??
-        session.user?.app_metadata?.tenant ??
-        null
+      // Get tenant_id using the proper method (from member table)
+      let tenantId: string | null = null
+      try {
+        const { getCurrentTenantIdClient } = await import("@/lib/supabase/client-member-helpers")
+        tenantId = await getCurrentTenantIdClient()
+      } catch (error) {
+        console.error("[LeadListener] Failed to get tenant_id:", error)
+        // Fallback to session metadata if helper fails
+        tenantId =
+          session.user?.app_metadata?.tenant_id ??
+          session.user?.user_metadata?.tenant_id ??
+          session.user?.app_metadata?.tenant ??
+          null
+      }
 
       const leadsChannel = supabase.channel("leads-listener")
       const quotesChannel = supabase.channel("quotes-listener")
@@ -98,7 +107,25 @@ export function LeadListener() {
 
       leadsChannel.on("postgres_changes", { event: "INSERT", schema: "public", table: "lead" }, (payload) => {
         const newLead = payload.new as Lead
-        if (tenantId && newLead.tenant_id !== tenantId) return
+        
+        // Filter by tenant: show if lead is public OR belongs to user's tenant
+        // Note: Once RLS is enabled, the database will automatically filter these events
+        // This is a client-side safeguard in case RLS isn't fully active yet
+        if (tenantId) {
+          const isPublic = newLead.visibility === 'public'
+          const isOwnTenant = newLead.tenant_id === tenantId
+          
+          if (!isPublic && !isOwnTenant) {
+            // Lead doesn't belong to this tenant and isn't public - ignore it
+            return
+          }
+        } else {
+          // No tenant_id available - only show public leads
+          if (newLead.visibility !== 'public') {
+            return
+          }
+        }
+        
         pendingLeads.current.push(newLead)
         flushLeads()
       })
@@ -106,6 +133,12 @@ export function LeadListener() {
       quotesChannel.on("postgres_changes", { event: "UPDATE", schema: "public", table: "quote" }, (payload) => {
         const oldQuote = payload.old
         const newQuote = payload.new
+        
+        // Filter by tenant: only show quotes from user's tenant
+        if (tenantId && newQuote.tenant_id !== tenantId) {
+          return
+        }
+        
         if (oldQuote.status === newQuote.status) return
 
         if (newQuote.status === "accepted") {
@@ -131,6 +164,12 @@ export function LeadListener() {
       invoicesChannel.on("postgres_changes", { event: "UPDATE", schema: "public", table: "invoice" }, (payload) => {
         const oldInvoice = payload.old
         const newInvoice = payload.new
+        
+        // Filter by tenant: only show invoices from user's tenant
+        if (tenantId && newInvoice.tenant_id !== tenantId) {
+          return
+        }
+        
         if (oldInvoice.status === newInvoice.status || newInvoice.status !== "paid") return
 
         toast("Invoice Paid! 💰", {

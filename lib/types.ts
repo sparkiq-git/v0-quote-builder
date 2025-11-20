@@ -62,7 +62,8 @@ export interface WeatherForecast {
 
 export interface Lead {
   id: string
-  tenant_id: string
+  visibility?: "public" | "private"
+  tenant_id?: string | null
   customer_name: string
   customer_email?: string
   customer_phone?: string
