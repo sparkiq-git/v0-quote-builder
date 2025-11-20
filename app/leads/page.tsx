@@ -78,8 +78,14 @@ export default function LeadsPage() {
 
     const fetchLeads = async () => {
       const { createClient } = await import("@/lib/supabase/client")
+      const { getCurrentTenantIdClient } = await import("@/lib/supabase/client-member-helpers")
       supabase = createClient()
-      const { data, error } = await supabase
+      
+      // Get current tenant_id for filtering
+      const tenantId = await getCurrentTenantIdClient()
+      
+      // Build query with tenant filtering
+      let query = supabase
         .from("lead")
         .select(`
           id,
@@ -91,10 +97,22 @@ export default function LeadsPage() {
           status,
           created_at,
           earliest_departure,
+          visibility,
+          tenant_id,
           lead_tenant_engagement (status, last_viewed_at)
         `)
         .neq("status", "withdrawn")
         .order("created_at", { ascending: false })
+
+      // Apply tenant filtering: show public leads OR leads belonging to current tenant
+      if (tenantId) {
+        query = query.or(`visibility.eq.public,tenant_id.eq.${tenantId}`)
+      } else {
+        // Fallback: only show public leads if no tenant_id
+        query = query.eq("visibility", "public")
+      }
+
+      const { data, error } = await query
 
       if (error) {
         console.error("Fetch error:", error)
