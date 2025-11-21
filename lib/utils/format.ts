@@ -38,14 +38,14 @@ const RELATIVE_TIME_DIVISIONS = [
 export function formatCurrency(amount: number): string {
   // Handle NaN, undefined, or null values
   if (isNaN(amount) || amount == null) {
-    return "$0"
+    return "$0.00"
   }
   
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(amount)
 }
 
