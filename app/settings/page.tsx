@@ -11,10 +11,16 @@ import { Palette, Building2, SettingsIcon } from "lucide-react"
 import { useMockStore } from "@/lib/mock/store"
 import { useToast } from "@/hooks/use-toast"
 
+// Prevent static generation - this page requires client-side only mock store
+export const dynamic = "force-dynamic"
+
 export default function SettingsPage() {
   const { state, dispatch } = useMockStore()
   const { toast } = useToast()
-  const company = state.companies[0]
+  // Safely access companies array - may not exist in mock store during static generation
+  const company = (state.companies && Array.isArray(state.companies) && state.companies.length > 0) 
+    ? state.companies[0] 
+    : null
 
   const [brandingSettings, setBrandingSettings] = useState({
     primaryColor: company?.primaryColor || "#2563eb",
