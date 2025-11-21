@@ -7,8 +7,21 @@ const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const DEFAULT_FROM = Deno.env.get("FROM_EMAIL") || "AeroIQ <no-reply@aeroiq.io>";
 const PUBLIC_APP_URL = Deno.env.get("NEXT_PUBLIC_APP_URL") || "https://broker.aeroiq.io";
 
+// Validate required environment variables
+if (!SUPABASE_URL || !SERVICE_ROLE || !RESEND_API_KEY) {
+  console.error("Missing required environment variables:", {
+    hasSupabaseUrl: !!SUPABASE_URL,
+    hasServiceRole: !!SERVICE_ROLE,
+    hasResendKey: !!RESEND_API_KEY,
+  });
+}
+
 // ========== CLIENTS ==========
-const supabase = createClient(SUPABASE_URL!, SERVICE_ROLE!, {
+if (!SUPABASE_URL || !SERVICE_ROLE) {
+  throw new Error("Missing required Supabase environment variables");
+}
+
+const supabase = createClient(SUPABASE_URL, SERVICE_ROLE, {
   auth: {
     persistSession: false,
   },
@@ -269,7 +282,45 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const payload = await req.json();
+    // Validate environment variables first
+    if (!SUPABASE_URL || !SERVICE_ROLE || !RESEND_API_KEY) {
+      return new Response(
+        JSON.stringify({
+          ok: false,
+          error: "Server configuration error: Missing required environment variables",
+          details: {
+            hasSupabaseUrl: !!SUPABASE_URL,
+            hasServiceRole: !!SERVICE_ROLE,
+            hasResendKey: !!RESEND_API_KEY,
+          },
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // Parse request body with error handling
+    let payload: any;
+    try {
+      payload = await req.json();
+      console.log("Received payload:", JSON.stringify(payload, null, 2));
+    } catch (parseError: any) {
+      console.error("Failed to parse request body:", parseError);
+      return new Response(
+        JSON.stringify({
+          ok: false,
+          error: "Invalid JSON in request body",
+          details: parseError?.message,
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
     const { tenant_id, email, action_type, metadata } = payload || {};
 
     if (!tenant_id || !email || !action_type) {
@@ -277,6 +328,7 @@ Deno.serve(async (req) => {
         JSON.stringify({
           ok: false,
           error: "Missing required fields: tenant_id, email, action_type",
+          received: { tenant_id: !!tenant_id, email: !!email, action_type: !!action_type },
         }),
         {
           status: 400,
@@ -314,9 +366,23 @@ Deno.serve(async (req) => {
       }
     }
 
-    const quote_id = metadata.quote_id;
+    const quote_id = metadata?.quote_id;
+    
+    if (!quote_id) {
+      return new Response(
+        JSON.stringify({
+          ok: false,
+          error: "Missing quote_id in metadata",
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
 
     // --- QUOTE + SELECTED OPTION (FIXED) ---
+    console.log("Fetching quote:", { quote_id, tenant_id });
     const { data: quote, error: qErr } = await supabase
       .from("quote")
       .select("id, currency, trip_summary, selected_option_id, customer_id, updated_at, legs")
@@ -324,9 +390,33 @@ Deno.serve(async (req) => {
       .eq("tenant_id", tenant_id)
       .single();
 
-    if (qErr || !quote) {
+    if (qErr) {
       console.error("Quote query error:", qErr);
-      throw new Error("Quote not found");
+      return new Response(
+        JSON.stringify({
+          ok: false,
+          error: "Quote not found or access denied",
+          details: qErr.message,
+        }),
+        {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    if (!quote) {
+      console.error("Quote not found:", { quote_id, tenant_id });
+      return new Response(
+        JSON.stringify({
+          ok: false,
+          error: "Quote not found",
+        }),
+        {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
     }
 
     // Get tenant info
@@ -612,10 +702,22 @@ Deno.serve(async (req) => {
     }
   } catch (err: any) {
     console.error("trip_notifications error:", err);
+    console.error("Error stack:", err?.stack);
+    console.error("Error details:", {
+      message: err?.message,
+      name: err?.name,
+      cause: err?.cause,
+    });
+    
+    // Return detailed error for debugging (in production, you might want to hide details)
     return new Response(
       JSON.stringify({
         ok: false,
         error: err?.message || String(err),
+        details: process.env.NODE_ENV === "development" ? {
+          stack: err?.stack,
+          name: err?.name,
+        } : undefined,
       }),
       {
         status: 500,
