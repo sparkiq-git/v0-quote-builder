@@ -2,7 +2,6 @@ import type React from "react"
 import type { Metadata } from "next"
 import { Inter, JetBrains_Mono } from "next/font/google"
 import "./globals.css"
-import { MockStoreProvider } from "@/lib/mock/store"
 import { EnsureResizeObserver } from "@/components/resize-observer-polyfill"
 
 // ✅ Sonner + Realtime
@@ -76,7 +75,6 @@ export default async function RootLayout({
     >
       <body>
         <EnsureResizeObserver />
-        <MockStoreProvider>
           {children}
 
           {/* ✅ Global Sonner toaster */}
@@ -110,7 +108,6 @@ export default async function RootLayout({
 
           {/* ✅ Global listener; runs safely client-side only */}
           <LeadListener />
-        </MockStoreProvider>
       </body>
     </html>
   )
