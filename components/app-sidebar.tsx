@@ -80,17 +80,12 @@ const operationsNavigation = [
     href: "/operations/passengers",
     icon: UserPlus,
   },
-  {
-    title: "Crew",
-    href: "/operations/crew",
-    icon: UserCog,
-  },
 ]
 
 const settingsNavigation = [
   {
     title: "Settings",
-    href: "/settings",
+    href: "",
     icon: Settings,
   },
   {
