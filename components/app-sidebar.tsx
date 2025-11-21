@@ -30,7 +30,6 @@ import {
   UserPlus,
   MapPin,
 } from "lucide-react"
-import { useMockStore } from "@/lib/mock/store"
 import { cn } from "@/lib/utils"
 import { NavUser } from "@/components/nav-user"
 
