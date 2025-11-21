@@ -583,6 +583,7 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
         quote_id: workingQuote.id,
         reason: declineReason,
         notes: declineNotes || null,
+        created_by: workingQuote.created_by_user_id || workingQuote.created_by || null,
       })
 
       toast({
