@@ -515,12 +515,12 @@ export function AdaptiveQuoteCard({
             }`}
             onClick={onSelect}
             disabled={isLocked}
-            aria-label={isSelected ? "Currently selected option" : "Select this aircraft for your charter"}
+            aria-label={isSelected ? "Unselect this option" : "Select this aircraft for your charter"}
           >
             {isSelected ? (
               <span className="flex items-center justify-center gap-2.5">
                 <CheckCircle className="h-5 w-5" aria-hidden="true" />
-                Selected Option
+                Unselect Option
               </span>
             ) : (
               "Select This Aircraft"
@@ -528,7 +528,7 @@ export function AdaptiveQuoteCard({
           </Button>
           <p className="text-center text-[8.4px] text-gray-600 font-light mt-3 leading-relaxed">
             {isSelected
-              ? "You've selected this aircraft for your charter"
+              ? "Click to unselect this option"
               : "Click to choose this aircraft and proceed with your booking"}
           </p>
         </div>

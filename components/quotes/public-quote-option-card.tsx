@@ -405,8 +405,9 @@ export function PublicQuoteOptionCard({
                   }`}
                   onClick={onSelect}
                   disabled={isLocked}
+                  aria-label={isSelected ? "Unselect this option" : "Select this option"}
                 >
-                  {isSelected ? "Selected" : "Select Option"}
+                  {isSelected ? "Unselect Option" : "Select Option"}
                 </Button>
               </div>
             </div>

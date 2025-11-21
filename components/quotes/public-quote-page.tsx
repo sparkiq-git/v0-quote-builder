@@ -238,7 +238,21 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
   const [declineNotes, setDeclineNotes] = useState("")
   const [showValidationAlert, setShowValidationAlert] = useState(false)
   const [isLocked, setIsLocked] = useState(false)
-  const [selectedOptionId, setSelectedOptionId] = useState<string | null>(quote?.selectedOptionId || null)
+  // Only initialize with quote.selectedOptionId if quote is already accepted/locked
+  // For pending quotes, always start with null to force user selection
+  const getInitialSelectedOptionId = () => {
+    if (!quote) return null
+    const isSubmitted =
+      quote.status === "client_accepted" ||
+      quote.status === "availability_confirmed" ||
+      quote.status === "payment_received" ||
+      quote.status === "itinerary_created"
+    const isDeclined = quote.status === "declined"
+    const locked = Boolean(isSubmitted || isDeclined)
+    // Only use database selection if quote is locked (already accepted/declined)
+    return locked && quote.selectedOptionId ? quote.selectedOptionId : null
+  }
+  const [selectedOptionId, setSelectedOptionId] = useState<string | null>(getInitialSelectedOptionId())
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Normalize legs data when quote prop changes (ensure dates/times are always strings)
@@ -327,15 +341,8 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
     loadLogo()
   }, [workingQuote?.tenant_id])
 
-  // Initialize selectedOptionId from quote data and handle auto-selection
+  // Initialize locked state and sync selectedOptionId only for locked quotes
   useEffect(() => {
-    // Sync selectedOptionId with quote data if it exists (from database)
-    // Only update if it's different from current state to avoid unnecessary re-renders
-    if (quote?.selectedOptionId && quote.selectedOptionId !== selectedOptionId) {
-      setSelectedOptionId(quote.selectedOptionId)
-      return // Exit early if we've set a selection from database
-    }
-
     const isSubmitted =
       quote?.status === "client_accepted" ||
       quote?.status === "availability_confirmed" ||
@@ -345,20 +352,16 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
     const locked = Boolean(isSubmitted || isDeclined)
     setIsLocked(locked)
 
-    // Auto-select only if:
-    // - No selection exists (neither in state nor in quote data)
-    // - Quote is not locked
-    // - There's exactly one option
-    if (
-      quote &&
-      quote.options?.length === 1 &&
-      !quote.selectedOptionId &&
-      !selectedOptionId &&
-      !locked
-    ) {
-      setSelectedOptionId(quote.options[0].id)
+    // Only sync with database selection if quote is locked (already accepted/declined)
+    // For pending quotes, user must explicitly select an option
+    if (locked && quote?.selectedOptionId && quote.selectedOptionId !== selectedOptionId) {
+      setSelectedOptionId(quote.selectedOptionId)
+    } else if (!locked && selectedOptionId && quote?.selectedOptionId !== selectedOptionId) {
+      // If quote becomes unlocked (shouldn't happen, but handle edge case)
+      // Reset to null to force user selection
+      setSelectedOptionId(null)
     }
-  }, [quote?.selectedOptionId, quote?.options, quote?.status, selectedOptionId])
+  }, [quote?.selectedOptionId, quote?.status, selectedOptionId])
 
   const selectedOption = workingQuote?.options?.find((o: any) => o.id === selectedOptionId) || null
 
@@ -423,7 +426,11 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
   const handleSelectOption = async (optionId: string) => {
     if (isLocked) return
     setShowValidationAlert(false)
-    setSelectedOptionId(optionId)
+    
+    // Toggle behavior: if clicking the same option, unselect it
+    // Otherwise, select the new option
+    const newSelectedOptionId = selectedOptionId === optionId ? null : optionId
+    setSelectedOptionId(newSelectedOptionId)
 
     try {
       const response = await fetch(`/api/quotes/${workingQuote.id}`, {
@@ -432,7 +439,7 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
           "Content-Type": "application/json",
           "x-public-quote": "true",
         },
-        body: JSON.stringify({ selectedOptionId: optionId }),
+        body: JSON.stringify({ selectedOptionId: newSelectedOptionId }),
       })
 
       if (!response.ok) {
@@ -442,6 +449,8 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
       // Don't show toast for selection, only for final action
     } catch (error) {
       console.error("Failed to update selection:", error)
+      // Revert on error
+      setSelectedOptionId(selectedOptionId)
       toast({
         title: "Error",
         description: "Failed to save your selection. Please try again.",
