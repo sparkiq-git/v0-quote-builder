@@ -499,6 +499,7 @@ const handleNext = () => {
                         <Label>Operator Cost</Label>
                         <Input
                           type="number"
+                          step="any"
                           value={option.cost_operator ?? 0}
                           onChange={(e) => {
                             const operatorCost = parseFloat(e.target.value) || 0
@@ -516,6 +517,7 @@ const handleNext = () => {
                         <Label>Commission</Label>
                         <Input
                           type="number"
+                          step="any"
                           value={option.price_commission ?? 0}
                           onChange={(e) =>
                             handleUpdateOption(option.id, {
