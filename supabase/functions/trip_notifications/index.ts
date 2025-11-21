@@ -6,6 +6,7 @@ const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const DEFAULT_FROM = Deno.env.get("FROM_EMAIL") || "AeroIQ <no-reply@aeroiq.io>";
 const PUBLIC_APP_URL = Deno.env.get("NEXT_PUBLIC_APP_URL") || "https://broker.aeroiq.io";
+const BRAND_BUCKET = Deno.env.get("BRAND_BUCKET") || "branding";
 
 // Validate required environment variables
 if (!SUPABASE_URL || !SERVICE_ROLE || !RESEND_API_KEY) {
@@ -35,7 +36,7 @@ const corsHeaders = {
 };
 
 function esc(s = "") {
-  return s.replace(/[&<>"']/g, (c) =>
+  return (s ?? "").replace(/[&<>"']/g, (c) =>
     ({
       "&": "&amp;",
       "<": "&lt;",
@@ -44,6 +45,33 @@ function esc(s = "") {
       "'": "&#39;",
     })[c] || c
   );
+}
+
+function logoUrl(path: string | null | undefined) {
+  if (!path) return "";
+  if (path.startsWith("http")) return path;
+  return `${SUPABASE_URL?.replace(/\/$/, "")}/storage/v1/object/public/${BRAND_BUCKET}/${path.replace(/^\/+/, "")}`;
+}
+
+async function sendResend(to: string | string[], subject: string, html: string, fromEmail?: string, replyTo?: string) {
+  const from = fromEmail?.trim() || DEFAULT_FROM;
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${RESEND_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from,
+      to: Array.isArray(to) ? to : [to],
+      subject,
+      html,
+      reply_to: replyTo?.trim() || undefined,
+    }),
+  });
+  const json = await res.text();
+  if (!res.ok) throw new Error(`Resend ${res.status}: ${json}`);
+  return json;
 }
 
 function formatCurrency(amount: number | null | undefined, currency: string = "USD"): string {
@@ -433,15 +461,42 @@ Deno.serve(async (req) => {
     const tenantName = tenant?.name || "Team";
 
     // Get customer info
+    console.log("Fetching customer:", { customer_id: quote.customer_id });
     const { data: customer, error: customerErr } = await supabase
       .from("contact")
       .select("name, email, phone")
       .eq("id", quote.customer_id)
       .single();
 
-    if (customerErr || !customer) {
+    if (customerErr) {
       console.error("Customer query error:", customerErr);
-      throw new Error("Customer not found");
+      return new Response(
+        JSON.stringify({
+          ok: false,
+          error: "Customer not found",
+          details: customerErr.message,
+          customer_id: quote.customer_id,
+        }),
+        {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    if (!customer) {
+      console.error("Customer not found:", { customer_id: quote.customer_id });
+      return new Response(
+        JSON.stringify({
+          ok: false,
+          error: "Customer not found",
+          customer_id: quote.customer_id,
+        }),
+        {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
     }
 
     // Get tenant branding
@@ -467,10 +522,28 @@ Deno.serve(async (req) => {
       const selectedOptionId = metadata.selected_option_id || quote.selected_option_id;
 
       if (!selectedOptionId) {
-        throw new Error("No selected option ID found in quote or metadata");
+        console.error("No selected option ID found:", {
+          metadataSelectedOptionId: metadata.selected_option_id,
+          quoteSelectedOptionId: quote.selected_option_id,
+        });
+        return new Response(
+          JSON.stringify({
+            ok: false,
+            error: "No selected option ID found in quote or metadata",
+            details: {
+              metadataSelectedOptionId: metadata.selected_option_id,
+              quoteSelectedOptionId: quote.selected_option_id,
+            },
+          }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
       }
 
       // Fetch the specific selected option
+      console.log("Fetching selected option:", { selectedOptionId, quote_id });
       const { data: option, error: optErr } = await supabase
         .from("quote_option")
         .select(
@@ -499,7 +572,7 @@ Deno.serve(async (req) => {
         .eq("quote_id", quote_id)
         .single();
 
-      if (optErr || !option) {
+      if (optErr) {
         console.error("Option query error:", optErr);
         console.error("Query details:", {
           selectedOptionId,
@@ -507,7 +580,35 @@ Deno.serve(async (req) => {
           quoteSelectedOptionId: quote.selected_option_id,
           metadataSelectedOptionId: metadata.selected_option_id,
         });
-        throw new Error(`Selected option ${selectedOptionId} not found`);
+        return new Response(
+          JSON.stringify({
+            ok: false,
+            error: `Selected option not found`,
+            details: optErr.message,
+            selectedOptionId,
+            quote_id,
+          }),
+          {
+            status: 404,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      }
+
+      if (!option) {
+        console.error("Option not found:", { selectedOptionId, quote_id });
+        return new Response(
+          JSON.stringify({
+            ok: false,
+            error: `Selected option not found`,
+            selectedOptionId,
+            quote_id,
+          }),
+          {
+            status: 404,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
       }
 
       const aircraft = option.aircraft;
@@ -520,42 +621,10 @@ Deno.serve(async (req) => {
         ? Number(option.price_total)
         : operatorCost + commission;
 
-      // Get broker email - try to get the user who created the quote first
-      // Never use the email parameter as fallback for quote notifications (it's the customer email)
-      let brokerEmail: string | null = null;
-      
-      if (metadata?.created_by) {
-        const { data: creator } = await supabase
-          .from("user")
-          .select("email")
-          .eq("id", metadata.created_by)
-          .single();
-        if (creator?.email) {
-          brokerEmail = creator.email;
-        }
-      }
-      
-      // If no creator email found, get first user from tenant
-      if (!brokerEmail) {
-        const { data: brokerUsers } = await supabase
-          .from("user")
-          .select("email")
-          .eq("tenant_id", tenant_id)
-          .limit(1);
-        if (brokerUsers?.[0]?.email) {
-          brokerEmail = brokerUsers[0].email;
-        }
-      }
-      
-      // If still no broker email found, throw error (don't send to customer)
-      if (!brokerEmail) {
-        throw new Error("Could not find broker email to send notification to");
-      }
-
       const acceptedDate = formatDateTime(option.accepted_at || quote.updated_at || new Date().toISOString());
 
       const html = quoteAcceptedEmailHtml({
-        logoUrl,
+        logoUrl: logoUrlPath,
         tenantName,
         acceptedDate,
         contactName: customer.name || "Customer",
@@ -577,25 +646,8 @@ Deno.serve(async (req) => {
 
       const subject = `Quote Accepted - ${tripSummary || "New Quote"}`;
 
-      // Send email to broker
-      const emailRes = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${RESEND_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          from: fromEmail,
-          to: [brokerEmail],
-          subject,
-          html,
-        }),
-      });
-
-      const emailText = await emailRes.text();
-      if (!emailRes.ok) {
-        throw new Error(`Resend ${emailRes.status}: ${emailText}`);
-      }
+      // Send email using sendResend helper (sends to all tenant emails)
+      await sendResend(emails, subject, html, fromEmail, customer.email || undefined);
 
       return new Response(
         JSON.stringify({
@@ -637,13 +689,30 @@ Deno.serve(async (req) => {
         }
       }
       
-      // If still no broker email found, throw error (don't send to customer)
+      // If still no broker email found, return error (don't send to customer)
       if (!brokerEmail) {
-        throw new Error("Could not find broker email to send notification to");
+        console.error("Could not find broker email:", {
+          tenant_id,
+          created_by: metadata?.created_by,
+        });
+        return new Response(
+          JSON.stringify({
+            ok: false,
+            error: "Could not find broker email to send notification to",
+            details: {
+              tenant_id,
+              created_by: metadata?.created_by,
+            },
+          }),
+          {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
       }
 
       const html = quoteDeclinedEmailHtml({
-        logoUrl,
+        logoUrl: logoUrlPath,
         tenantName,
         declinedDate,
         contactName: customer.name || "Customer",
@@ -658,25 +727,8 @@ Deno.serve(async (req) => {
 
       const subject = `Quote Declined - ${tripSummary || "New Quote"}`;
 
-      // Send email to broker
-      const emailRes = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${RESEND_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          from: fromEmail,
-          to: [brokerEmail],
-          subject,
-          html,
-        }),
-      });
-
-      const emailText = await emailRes.text();
-      if (!emailRes.ok) {
-        throw new Error(`Resend ${emailRes.status}: ${emailText}`);
-      }
+      // Send email using sendResend helper (sends to all tenant emails)
+      await sendResend(emails, subject, html, fromEmail, customer.email || undefined);
 
       return new Response(
         JSON.stringify({
