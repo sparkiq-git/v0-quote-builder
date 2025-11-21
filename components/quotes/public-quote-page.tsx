@@ -353,14 +353,12 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
     setIsLocked(locked)
 
     // Only sync with database selection if quote is locked (already accepted/declined)
-    // For pending quotes, user must explicitly select an option
+    // For pending quotes, let user manage selection locally - don't interfere
     if (locked && quote?.selectedOptionId && quote.selectedOptionId !== selectedOptionId) {
       setSelectedOptionId(quote.selectedOptionId)
-    } else if (!locked && selectedOptionId && quote?.selectedOptionId !== selectedOptionId) {
-      // If quote becomes unlocked (shouldn't happen, but handle edge case)
-      // Reset to null to force user selection
-      setSelectedOptionId(null)
     }
+    // Removed the else if that was resetting selection for unlocked quotes
+    // This was preventing users from switching between options
   }, [quote?.selectedOptionId, quote?.status, selectedOptionId])
 
   const selectedOption = workingQuote?.options?.find((o: any) => o.id === selectedOptionId) || null
