@@ -14,7 +14,6 @@ import {
   SidebarGroup,
   SidebarGroupContent,
 } from "@/components/ui/sidebar"
-import { Badge } from "@/components/ui/badge"
 import {
   LayoutDashboard,
   Users,
@@ -23,7 +22,6 @@ import {
   Settings,
   UserCog,
   Building2,
-  UserCircle,
   ChevronDown,
   Users2,
   Contact,
@@ -104,10 +102,6 @@ const settingsNavigation = [
 
 export function AppSidebar() {
   const pathname = usePathname()
-  const { state, dispatch, getMetrics } = useMockStore()
-  const metrics = getMetrics()
-
-  const [isOperationsExpanded, setIsOperationsExpanded] = useState(false)
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   const [user, setUser] = useState<{
@@ -149,6 +143,8 @@ export function AppSidebar() {
     }
   }, [pathname])
 
+  const [isOperationsExpanded, setIsOperationsExpanded] = useState(false)
+
   const handleOperationsClick = () => {
     setIsOperationsExpanded((prev) => !prev)
   }
@@ -188,27 +184,6 @@ export function AppSidebar() {
             <SidebarMenu>
               {mainNavigation.map((item) => {
                 const isActive = pathname === item.href || pathname.startsWith(item.href + "/")
-                let badge = null
-
-                // Add badges for metrics
-                if (item.href === "/leads") {
-                  const newLeads = state.leads.filter((lead) => lead.status === "new").length
-                  if (newLeads > 0) {
-                    badge = (
-                      <Badge variant="secondary" className="ml-auto">
-                        {newLeads}
-                      </Badge>
-                    )
-                  }
-                } else if (item.href === "/quotes") {
-                  if (metrics.quotesPending > 0) {
-                    badge = (
-                      <Badge variant="secondary" className="ml-auto">
-                        {metrics.quotesPending}
-                      </Badge>
-                    )
-                  }
-                }
 
                 return (
                   <SidebarMenuItem key={item.href}>
@@ -216,7 +191,6 @@ export function AppSidebar() {
                       <Link href={item.href} className="flex items-center gap-3 text-gray-500 hover:text-gray-900">
                         <item.icon className="h-4 w-4" />
                         <span>{item.title}</span>
-                        {badge}
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
