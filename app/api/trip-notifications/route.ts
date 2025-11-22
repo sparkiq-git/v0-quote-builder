@@ -113,7 +113,20 @@ export async function POST(req: NextRequest) {
           statusText: directRes.statusText,
           body: responseData,
           rawText: responseText,
+          contentLength: responseText.length,
         })
+        
+        // Log the full error for 404s
+        if (directRes.status === 404) {
+          console.error("🔴 404 ERROR DETAILS:", {
+            status: directRes.status,
+            responseBody: responseData,
+            rawResponse: responseText,
+            errorMessage: responseData?.error,
+            errorDetails: responseData?.details,
+            errorCode: responseData?.code,
+          })
+        }
 
         // If we got an error response, extract the actual error message
         if (!directRes.ok) {

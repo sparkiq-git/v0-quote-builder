@@ -298,11 +298,21 @@ function quoteDeclinedEmailHtml({
 
 // ========== HANDLER ==========
 Deno.serve(async (req) => {
+  // Log function invocation
+  console.log("=".repeat(80));
+  console.log("🚀 trip_notifications EDGE FUNCTION INVOKED");
+  console.log("=".repeat(80));
+  console.log("📥 Method:", req.method);
+  console.log("📥 URL:", req.url);
+  console.log("📥 Headers:", Object.fromEntries(req.headers.entries()));
+  
   if (req.method === "OPTIONS") {
+    console.log("✅ OPTIONS request - returning CORS headers");
     return new Response("ok", { headers: corsHeaders });
   }
 
   if (req.method !== "POST") {
+    console.error("❌ Invalid method:", req.method);
     return new Response("Method Not Allowed", {
       status: 405,
       headers: corsHeaders,
@@ -310,8 +320,11 @@ Deno.serve(async (req) => {
   }
 
   try {
+    console.log("✅ POST request received, starting processing...");
+    
     // Validate environment variables first
     if (!SUPABASE_URL || !SERVICE_ROLE || !RESEND_API_KEY) {
+      console.error("❌ Missing environment variables");
       return new Response(
         JSON.stringify({
           ok: false,
@@ -332,10 +345,12 @@ Deno.serve(async (req) => {
     // Parse request body with error handling
     let payload: any;
     try {
-      payload = await req.json();
-      console.log("Received payload:", JSON.stringify(payload, null, 2));
+      const bodyText = await req.text();
+      console.log("📥 Raw request body:", bodyText);
+      payload = JSON.parse(bodyText);
+      console.log("✅ Parsed payload:", JSON.stringify(payload, null, 2));
     } catch (parseError: any) {
-      console.error("Failed to parse request body:", parseError);
+      console.error("❌ Failed to parse request body:", parseError);
       return new Response(
         JSON.stringify({
           ok: false,
@@ -350,6 +365,13 @@ Deno.serve(async (req) => {
     }
 
     const { tenant_id, email, action_type, metadata } = payload || {};
+    console.log("📋 Extracted values:", { 
+      tenant_id, 
+      email, 
+      action_type, 
+      hasMetadata: !!metadata,
+      metadataKeys: metadata ? Object.keys(metadata) : [],
+    });
 
     if (!tenant_id || !email || !action_type) {
       return new Response(
@@ -783,23 +805,25 @@ Deno.serve(async (req) => {
       );
     }
   } catch (err: any) {
-    console.error("trip_notifications error:", err);
+    console.error("❌❌❌ UNHANDLED ERROR in trip_notifications:", err);
+    console.error("Error type:", typeof err);
+    console.error("Error name:", err?.name);
+    console.error("Error message:", err?.message);
     console.error("Error stack:", err?.stack);
-    console.error("Error details:", {
-      message: err?.message,
-      name: err?.name,
-      cause: err?.cause,
-    });
+    console.error("Error cause:", err?.cause);
+    console.error("Full error object:", JSON.stringify(err, Object.getOwnPropertyNames(err)));
     
-    // Return detailed error for debugging (in production, you might want to hide details)
+    // Return detailed error for debugging
     return new Response(
       JSON.stringify({
         ok: false,
-        error: err?.message || String(err),
-        details: process.env.NODE_ENV === "development" ? {
-          stack: err?.stack,
+        error: err?.message || String(err) || "Unknown error",
+        errorType: err?.name || typeof err,
+        details: {
+          message: err?.message,
           name: err?.name,
-        } : undefined,
+          stack: err?.stack?.split('\n').slice(0, 5).join('\n'), // First 5 lines of stack
+        },
       }),
       {
         status: 500,
