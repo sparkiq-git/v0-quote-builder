@@ -409,7 +409,17 @@ export default function PublicQuotePage({ params, onAccept, onDecline, verifiedE
           status: res.status,
           statusText: res.statusText,
           body: json,
+          error: json?.error,
+          details: json?.details,
+          fullResponse: json,
         })
+        // Log the full error message for debugging
+        if (json?.error) {
+          console.error("🔴 ERROR MESSAGE:", json.error)
+        }
+        if (json?.details) {
+          console.error("🔴 ERROR DETAILS:", json.details)
+        }
         // Don't throw - this is non-critical, log only
       } else {
         console.log("✅ trip_notifications called successfully:", { actionType, metadata, response: json })

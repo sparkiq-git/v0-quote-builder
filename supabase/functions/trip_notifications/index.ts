@@ -318,6 +318,22 @@ Deno.serve(async (req) => {
       headers: corsHeaders,
     });
   }
+  
+  // Add a simple health check/test endpoint
+  const url = new URL(req.url);
+  if (url.searchParams.get("test") === "true") {
+    return new Response(
+      JSON.stringify({
+        ok: true,
+        message: "Function is working",
+        timestamp: new Date().toISOString(),
+      }),
+      {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
+  }
 
   try {
     console.log("✅ POST request received, starting processing...");
@@ -433,9 +449,60 @@ Deno.serve(async (req) => {
 
     // --- QUOTE + SELECTED OPTION (FIXED) ---
     console.log("🔍 Fetching quote:", { quote_id, tenant_id });
+    
+    // First, try to get quote without tenant_id filter to see if it exists
+    const { data: quoteCheck, error: checkErr } = await supabase
+      .from("quote")
+      .select("id, tenant_id")
+      .eq("id", quote_id)
+      .maybeSingle();
+    
+    console.log("🔍 Quote existence check:", { 
+      exists: !!quoteCheck, 
+      quoteTenantId: quoteCheck?.tenant_id,
+      requestedTenantId: tenant_id,
+      match: quoteCheck?.tenant_id === tenant_id,
+      error: checkErr?.message,
+    });
+    
+    if (!quoteCheck) {
+      console.error("❌ Quote does not exist:", { quote_id });
+      return new Response(
+        JSON.stringify({
+          ok: false,
+          error: "Quote not found",
+          quote_id,
+        }),
+        {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+    
+    if (quoteCheck.tenant_id !== tenant_id) {
+      console.error("❌ Quote tenant mismatch:", { 
+        quoteTenantId: quoteCheck.tenant_id, 
+        requestedTenantId: tenant_id 
+      });
+      return new Response(
+        JSON.stringify({
+          ok: false,
+          error: "Quote not found or access denied",
+          quote_id,
+          tenant_id,
+        }),
+        {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+    
+    // Now fetch full quote data
     const { data: quote, error: qErr } = await supabase
       .from("quote")
-      .select("id, currency, trip_summary, selected_option_id, customer_id, updated_at, legs")
+      .select("id, currency, trip_summary, selected_option_id, contact_id, updated_at, legs")
       .eq("id", quote_id)
       .eq("tenant_id", tenant_id)
       .single();
@@ -495,20 +562,38 @@ Deno.serve(async (req) => {
 
     const tenantName = tenant?.name || "Team";
 
-    // Get customer info
-    console.log("🔍 Fetching customer:", { customer_id: quote.customer_id });
+    // Get customer info - use contact_id from quote table
+    // Note: quote table stores contact_id, not customer_id
+    const contactId = quote.contact_id;
+    console.log("🔍 Fetching customer:", { contact_id: contactId });
+    
+    if (!contactId) {
+      console.error("❌ Quote has no contact_id");
+      return new Response(
+        JSON.stringify({
+          ok: false,
+          error: "Quote has no contact associated",
+          quote_id,
+        }),
+        {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+    
     const { data: customer, error: customerErr } = await supabase
       .from("contact")
       .select("name, email, phone")
-      .eq("id", quote.customer_id)
-      .single();
+      .eq("id", contactId)
+      .maybeSingle();
 
     if (customerErr) {
       console.error("❌ Customer query error:", {
         error: customerErr,
         message: customerErr.message,
         code: customerErr.code,
-        customer_id: quote.customer_id,
+        contact_id: contactId,
       });
       return new Response(
         JSON.stringify({
@@ -516,7 +601,7 @@ Deno.serve(async (req) => {
           error: "Customer not found",
           details: customerErr.message,
           code: customerErr.code,
-          customer_id: quote.customer_id,
+          contact_id: contactId,
         }),
         {
           status: 404,
@@ -526,12 +611,12 @@ Deno.serve(async (req) => {
     }
 
     if (!customer) {
-      console.error("❌ Customer not found (no data returned):", { customer_id: quote.customer_id });
+      console.error("❌ Customer not found (no data returned):", { contact_id: contactId });
       return new Response(
         JSON.stringify({
           ok: false,
           error: "Customer not found",
-          customer_id: quote.customer_id,
+          contact_id: contactId,
         }),
         {
           status: 404,
@@ -624,6 +709,58 @@ Deno.serve(async (req) => {
 
       // Fetch the specific selected option
       console.log("🔍 Fetching selected option:", { selectedOptionId, quote_id });
+      
+      // First check if option exists
+      const { data: optionCheck, error: optionCheckErr } = await supabase
+        .from("quote_option")
+        .select("id, quote_id")
+        .eq("id", selectedOptionId)
+        .maybeSingle();
+      
+      console.log("🔍 Option existence check:", {
+        exists: !!optionCheck,
+        optionQuoteId: optionCheck?.quote_id,
+        requestedQuoteId: quote_id,
+        match: optionCheck?.quote_id === quote_id,
+        error: optionCheckErr?.message,
+      });
+      
+      if (!optionCheck) {
+        console.error("❌ Option does not exist:", { selectedOptionId });
+        return new Response(
+          JSON.stringify({
+            ok: false,
+            error: "Selected option not found",
+            selectedOptionId,
+            quote_id,
+          }),
+          {
+            status: 404,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      }
+      
+      if (optionCheck.quote_id !== quote_id) {
+        console.error("❌ Option quote mismatch:", {
+          optionQuoteId: optionCheck.quote_id,
+          requestedQuoteId: quote_id,
+        });
+        return new Response(
+          JSON.stringify({
+            ok: false,
+            error: "Selected option does not belong to this quote",
+            selectedOptionId,
+            quote_id,
+          }),
+          {
+            status: 404,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      }
+      
+      // Now fetch full option data
       const { data: option, error: optErr } = await supabase
         .from("quote_option")
         .select(

@@ -132,33 +132,48 @@ export async function POST(req: NextRequest) {
         if (!directRes.ok) {
           // Handle 404 - could be function not found OR edge function returned 404
           if (directRes.status === 404) {
+            // Log the FULL response for debugging
+            console.error("🔴 FULL 404 RESPONSE:", {
+              status: directRes.status,
+              statusText: directRes.statusText,
+              responseData,
+              rawText: responseText,
+              responseDataString: JSON.stringify(responseData, null, 2),
+            });
+            
             // Check if it's an edge function error response or function not found
             if (responseData?.error && typeof responseData.error === 'string') {
               // Edge function returned a 404 error (e.g., "Selected option not found")
               const errorMessage = responseData.error
               console.error("❌ trip_notifications edge function returned error:", errorMessage)
+              console.error("❌ Full error details:", responseData)
               return NextResponse.json(
                 { 
                   error: errorMessage, 
-                  details: responseData 
+                  details: responseData,
+                  fullResponse: responseData, // Include full response for debugging
                 },
                 { status: 404 }
               )
             } else {
-              // Function itself doesn't exist
-              const errorMessage = `Edge function 'trip_notifications' not found (404). Please ensure the function is deployed in Supabase.`
-              console.error("❌ trip_notifications edge function not found (404):", {
+              // Function itself doesn't exist OR edge function returned 404 without error field
+              const errorMessage = responseData?.error || 
+                                 responseData?.message || 
+                                 `Edge function 'trip_notifications' returned 404. Response: ${responseText.substring(0, 200)}`
+              console.error("❌ trip_notifications 404 (no error field):", {
                 url: fnUrl,
                 status: directRes.status,
                 response: responseData,
+                rawText: responseText,
               })
               return NextResponse.json(
                 { 
                   error: errorMessage, 
                   details: { 
                     status: 404,
-                    suggestion: "Verify the edge function is deployed and the name matches 'trip_notifications'",
-                    response: responseData 
+                    response: responseData,
+                    rawText: responseText,
+                    suggestion: "Check Supabase function logs for details",
                   } 
                 },
                 { status: 404 }
