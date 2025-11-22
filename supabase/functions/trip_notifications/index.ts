@@ -500,9 +500,10 @@ Deno.serve(async (req) => {
     }
     
     // Now fetch full quote data
+    // Note: legs are stored in quote_detail table, not as a column in quote
     const { data: quote, error: qErr } = await supabase
       .from("quote")
-      .select("id, currency, trip_summary, selected_option_id, contact_id, updated_at, legs")
+      .select("id, currency, trip_summary, selected_option_id, contact_id, updated_at")
       .eq("id", quote_id)
       .eq("tenant_id", tenant_id)
       .single();
@@ -679,8 +680,26 @@ Deno.serve(async (req) => {
     const colorPrimary = brand.color_primary || "#0F1D2B";
     const colorAccent = brand.color_accent || "#0F1D2B";
 
-    // Format trip summary
-    const tripSummary = formatTripSummary(quote.legs || []);
+    // Fetch legs from quote_detail table (legs are not a column in quote table)
+    console.log("🔍 Fetching quote legs:", { quote_id });
+    const { data: legs, error: legsErr } = await supabase
+      .from("quote_detail")
+      .select("*")
+      .eq("quote_id", quote_id)
+      .order("seq");
+    
+    if (legsErr) {
+      console.error("⚠️ Error fetching legs (non-critical):", legsErr.message);
+    }
+    
+    console.log("✅ Legs fetched:", { count: legs?.length || 0, legs: legs?.slice(0, 2) });
+    
+    // Format trip summary from legs, or use trip_summary from quote if available
+    const tripSummary = legs && legs.length > 0 
+      ? formatTripSummary(legs) 
+      : (quote.trip_summary || "Trip details");
+    
+    console.log("✅ Trip summary:", tripSummary);
 
     if (action_type === "quote_accepted") {
       // Get selected_option_id from metadata first (most reliable), fallback to quote
