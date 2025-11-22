@@ -410,7 +410,7 @@ Deno.serve(async (req) => {
     }
 
     // --- QUOTE + SELECTED OPTION (FIXED) ---
-    console.log("Fetching quote:", { quote_id, tenant_id });
+    console.log("🔍 Fetching quote:", { quote_id, tenant_id });
     const { data: quote, error: qErr } = await supabase
       .from("quote")
       .select("id, currency, trip_summary, selected_option_id, customer_id, updated_at, legs")
@@ -419,12 +419,21 @@ Deno.serve(async (req) => {
       .single();
 
     if (qErr) {
-      console.error("Quote query error:", qErr);
+      console.error("❌ Quote query error:", {
+        error: qErr,
+        message: qErr.message,
+        code: qErr.code,
+        details: qErr.details,
+        hint: qErr.hint,
+        quote_id,
+        tenant_id,
+      });
       return new Response(
         JSON.stringify({
           ok: false,
           error: "Quote not found or access denied",
           details: qErr.message,
+          code: qErr.code,
         }),
         {
           status: 404,
@@ -434,11 +443,13 @@ Deno.serve(async (req) => {
     }
 
     if (!quote) {
-      console.error("Quote not found:", { quote_id, tenant_id });
+      console.error("❌ Quote not found (no data returned):", { quote_id, tenant_id });
       return new Response(
         JSON.stringify({
           ok: false,
           error: "Quote not found",
+          quote_id,
+          tenant_id,
         }),
         {
           status: 404,
@@ -446,6 +457,8 @@ Deno.serve(async (req) => {
         }
       );
     }
+
+    console.log("✅ Quote found:", { quote_id: quote.id, customer_id: quote.customer_id });
 
     // Get tenant info
     const { data: tenant, error: tenantErr } = await supabase
@@ -461,7 +474,7 @@ Deno.serve(async (req) => {
     const tenantName = tenant?.name || "Team";
 
     // Get customer info
-    console.log("Fetching customer:", { customer_id: quote.customer_id });
+    console.log("🔍 Fetching customer:", { customer_id: quote.customer_id });
     const { data: customer, error: customerErr } = await supabase
       .from("contact")
       .select("name, email, phone")
@@ -469,12 +482,18 @@ Deno.serve(async (req) => {
       .single();
 
     if (customerErr) {
-      console.error("Customer query error:", customerErr);
+      console.error("❌ Customer query error:", {
+        error: customerErr,
+        message: customerErr.message,
+        code: customerErr.code,
+        customer_id: quote.customer_id,
+      });
       return new Response(
         JSON.stringify({
           ok: false,
           error: "Customer not found",
           details: customerErr.message,
+          code: customerErr.code,
           customer_id: quote.customer_id,
         }),
         {
@@ -485,7 +504,7 @@ Deno.serve(async (req) => {
     }
 
     if (!customer) {
-      console.error("Customer not found:", { customer_id: quote.customer_id });
+      console.error("❌ Customer not found (no data returned):", { customer_id: quote.customer_id });
       return new Response(
         JSON.stringify({
           ok: false,
@@ -499,20 +518,59 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Get tenant branding
-    const { data: brand } = await supabase
-      .from("tenant_notifications")
-      .select("from_email, logo_path, color_primary, color_accent, is_active")
-      .eq("tenant_id", tenant_id)
-      .eq("is_active", true)
-      .maybeSingle();
+    console.log("✅ Customer found:", { customer_id: customer.id, email: customer.email });
 
-    const fromEmail = brand?.from_email || DEFAULT_FROM;
-    const logoUrl = brand?.logo_path
-      ? `${SUPABASE_URL}/storage/v1/object/public/branding/${brand.logo_path}`
-      : null;
-    const colorPrimary = brand?.color_primary || "#0F1D2B";
-    const colorAccent = brand?.color_accent || "#0F1D2B";
+    // Get tenant branding (following book-trip-email pattern)
+    console.log("🔍 Fetching tenant branding:", { tenant_id });
+    const { data: brandData, error: brandErr } = await supabase
+      .from("tenant_notifications")
+      .select("email_1, email_2, email_3, from_email, color_primary, color_accent, logo_path, tenant_id")
+      .eq("tenant_id", tenant_id)
+      .eq("is_active", true);
+
+    if (brandErr) {
+      console.error("❌ Branding query error:", brandErr);
+    }
+
+    const brand = brandData?.[0] || {};
+    console.log("✅ Branding found:", { 
+      hasEmail1: !!brand.email_1, 
+      hasEmail2: !!brand.email_2, 
+      hasEmail3: !!brand.email_3,
+      fromEmail: brand.from_email,
+    });
+    
+    // Get tenant emails (email_1, email_2, email_3)
+    const tenantEmails = [brand.email_1, brand.email_2, brand.email_3]
+      .filter((x, i, a) => x && a.indexOf(x) === i);
+    
+    // Combine tenant emails with requester email (if provided)
+    const requesterEmail = email?.trim();
+    const emails = requesterEmail
+      ? [...tenantEmails, requesterEmail].filter((x, i, a) => x && a.indexOf(x) === i)
+      : tenantEmails;
+
+    console.log("📧 Email recipients:", { emails, count: emails.length });
+
+    if (emails.length === 0) {
+      console.error("❌ No active emails for tenant");
+      return new Response(
+        JSON.stringify({
+          ok: false,
+          error: `No active emails for tenant ${tenant_id}`,
+          tenant_id,
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    const fromEmail = brand.from_email || DEFAULT_FROM;
+    const logoUrlPath = logoUrl(brand.logo_path);
+    const colorPrimary = brand.color_primary || "#0F1D2B";
+    const colorAccent = brand.color_accent || "#0F1D2B";
 
     // Format trip summary
     const tripSummary = formatTripSummary(quote.legs || []);
@@ -543,7 +601,7 @@ Deno.serve(async (req) => {
       }
 
       // Fetch the specific selected option
-      console.log("Fetching selected option:", { selectedOptionId, quote_id });
+      console.log("🔍 Fetching selected option:", { selectedOptionId, quote_id });
       const { data: option, error: optErr } = await supabase
         .from("quote_option")
         .select(
@@ -556,12 +614,12 @@ Deno.serve(async (req) => {
           price_commission,
           conditions,
           aircraft_id,
-          aircraft!inner (
+          aircraft (
             id,
             tail_number,
             model,
             operator_id,
-            operator!inner (
+            operator (
               id,
               name
             )
@@ -573,8 +631,10 @@ Deno.serve(async (req) => {
         .single();
 
       if (optErr) {
-        console.error("Option query error:", optErr);
-        console.error("Query details:", {
+        console.error("❌ Option query error:", {
+          error: optErr,
+          message: optErr.message,
+          code: optErr.code,
           selectedOptionId,
           quote_id,
           quoteSelectedOptionId: quote.selected_option_id,
@@ -585,6 +645,7 @@ Deno.serve(async (req) => {
             ok: false,
             error: `Selected option not found`,
             details: optErr.message,
+            code: optErr.code,
             selectedOptionId,
             quote_id,
           }),
@@ -596,7 +657,7 @@ Deno.serve(async (req) => {
       }
 
       if (!option) {
-        console.error("Option not found:", { selectedOptionId, quote_id });
+        console.error("❌ Option not found (no data returned):", { selectedOptionId, quote_id });
         return new Response(
           JSON.stringify({
             ok: false,
@@ -611,8 +672,26 @@ Deno.serve(async (req) => {
         );
       }
 
-      const aircraft = option.aircraft;
-      const operator = aircraft?.operator;
+      console.log("✅ Option found:", { 
+        option_id: option.id, 
+        label: option.label,
+        hasAircraft: !!option.aircraft,
+        aircraft_id: option.aircraft_id,
+      });
+
+      // Handle aircraft data - can be null if relationship doesn't exist
+      const aircraft = Array.isArray(option.aircraft) ? option.aircraft[0] : option.aircraft;
+      const operator = aircraft?.operator 
+        ? (Array.isArray(aircraft.operator) ? aircraft.operator[0] : aircraft.operator)
+        : null;
+      
+      console.log("✅ Aircraft data:", {
+        hasAircraft: !!aircraft,
+        tail_number: aircraft?.tail_number,
+        model: aircraft?.model,
+        hasOperator: !!operator,
+        operatorName: operator?.name,
+      });
 
       // Calculate totals
       const operatorCost = Number(option.cost_operator) || 0;
@@ -661,55 +740,6 @@ Deno.serve(async (req) => {
       );
     } else if (action_type === "quote_declined") {
       const declinedDate = formatDateTime(quote.updated_at || new Date().toISOString());
-
-      // Get broker email - try to get the user who created the quote first
-      // Never use the email parameter as fallback for quote notifications (it's the customer email)
-      let brokerEmail: string | null = null;
-      
-      if (metadata?.created_by) {
-        const { data: creator } = await supabase
-          .from("user")
-          .select("email")
-          .eq("id", metadata.created_by)
-          .single();
-        if (creator?.email) {
-          brokerEmail = creator.email;
-        }
-      }
-      
-      // If no creator email found, get first user from tenant
-      if (!brokerEmail) {
-        const { data: brokerUsers } = await supabase
-          .from("user")
-          .select("email")
-          .eq("tenant_id", tenant_id)
-          .limit(1);
-        if (brokerUsers?.[0]?.email) {
-          brokerEmail = brokerUsers[0].email;
-        }
-      }
-      
-      // If still no broker email found, return error (don't send to customer)
-      if (!brokerEmail) {
-        console.error("Could not find broker email:", {
-          tenant_id,
-          created_by: metadata?.created_by,
-        });
-        return new Response(
-          JSON.stringify({
-            ok: false,
-            error: "Could not find broker email to send notification to",
-            details: {
-              tenant_id,
-              created_by: metadata?.created_by,
-            },
-          }),
-          {
-            status: 500,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          }
-        );
-      }
 
       const html = quoteDeclinedEmailHtml({
         logoUrl: logoUrlPath,
