@@ -501,9 +501,10 @@ Deno.serve(async (req) => {
     
     // Now fetch full quote data
     // Note: legs are stored in quote_detail table, not as a column in quote
+    // Also fetch contact fields directly from quote as fallback
     const { data: quote, error: qErr } = await supabase
       .from("quote")
-      .select("id, currency, trip_summary, selected_option_id, contact_id, updated_at")
+      .select("id, currency, trip_summary, selected_option_id, contact_id, contact_name, contact_email, contact_phone, updated_at")
       .eq("id", quote_id)
       .eq("tenant_id", tenant_id)
       .single();
@@ -548,7 +549,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log("✅ Quote found:", { quote_id: quote.id, customer_id: quote.customer_id });
+    console.log("✅ Quote found:", { quote_id: quote.id, contact_id: quote.contact_id });
 
     // Get tenant info
     const { data: tenant, error: tenantErr } = await supabase
@@ -563,17 +564,68 @@ Deno.serve(async (req) => {
 
     const tenantName = tenant?.name || "Team";
 
-    // Get customer info - use contact_id from quote table
-    // Note: quote table stores contact_id, not customer_id
+    // Get customer info - use contact_id from quote table if available
+    // Fallback to contact fields directly on quote table (contact_name, contact_email, contact_phone)
     const contactId = quote.contact_id;
-    console.log("🔍 Fetching customer:", { contact_id: contactId });
+    console.log("🔍 Getting customer info:", { 
+      contact_id: contactId,
+      hasContactFields: !!(quote.contact_name || quote.contact_email),
+    });
     
-    if (!contactId) {
-      console.error("❌ Quote has no contact_id");
+    let customer: { name: string | null; email: string | null; phone: string | null } | null = null;
+    
+    if (contactId) {
+      // Try to fetch from contact table first
+      const { data: contactData, error: customerErr } = await supabase
+        .from("contact")
+        .select("name, email, phone")
+        .eq("id", contactId)
+        .maybeSingle();
+
+      if (customerErr) {
+        console.error("⚠️ Customer query error (will use quote contact fields):", {
+          error: customerErr,
+          message: customerErr.message,
+          code: customerErr.code,
+          contact_id: contactId,
+        });
+        // Don't return error, fall through to use quote contact fields
+      } else if (contactData) {
+        customer = {
+          name: contactData.name,
+          email: contactData.email,
+          phone: contactData.phone,
+        };
+        console.log("✅ Customer found in contact table:", { 
+          customer_id: contactId, 
+          email: customer.email 
+        });
+      }
+    }
+    
+    // Fallback to contact fields directly on quote table
+    if (!customer && (quote.contact_name || quote.contact_email)) {
+      customer = {
+        name: quote.contact_name || null,
+        email: quote.contact_email || null,
+        phone: quote.contact_phone || null,
+      };
+      console.log("✅ Using contact fields from quote table:", { 
+        name: customer.name,
+        email: customer.email,
+      });
+    }
+    
+    // If still no customer info, return error
+    if (!customer || !customer.email) {
+      console.error("❌ No customer information available:", { 
+        hasContactId: !!contactId,
+        hasContactFields: !!(quote.contact_name || quote.contact_email),
+      });
       return new Response(
         JSON.stringify({
           ok: false,
-          error: "Quote has no contact associated",
+          error: "Quote has no contact information (no contact_id and no contact fields)",
           quote_id,
         }),
         {
@@ -582,51 +634,12 @@ Deno.serve(async (req) => {
         }
       );
     }
-    
-    const { data: customer, error: customerErr } = await supabase
-      .from("contact")
-      .select("name, email, phone")
-      .eq("id", contactId)
-      .maybeSingle();
 
-    if (customerErr) {
-      console.error("❌ Customer query error:", {
-        error: customerErr,
-        message: customerErr.message,
-        code: customerErr.code,
-        contact_id: contactId,
-      });
-      return new Response(
-        JSON.stringify({
-          ok: false,
-          error: "Customer not found",
-          details: customerErr.message,
-          code: customerErr.code,
-          contact_id: contactId,
-        }),
-        {
-          status: 404,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
-    }
-
-    if (!customer) {
-      console.error("❌ Customer not found (no data returned):", { contact_id: contactId });
-      return new Response(
-        JSON.stringify({
-          ok: false,
-          error: "Customer not found",
-          contact_id: contactId,
-        }),
-        {
-          status: 404,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
-    }
-
-    console.log("✅ Customer found:", { customer_id: customer.id, email: customer.email });
+    console.log("✅ Customer info ready:", { 
+      name: customer.name, 
+      email: customer.email,
+      phone: customer.phone,
+    });
 
     // Get tenant branding (following book-trip-email pattern)
     console.log("🔍 Fetching tenant branding:", { tenant_id });
